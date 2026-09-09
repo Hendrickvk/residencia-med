@@ -9,11 +9,13 @@ ficam centralizadas aqui, para manter a interface (app.py) enxuta.
 import os
 import json
 import datetime
+import threading
 from contextlib import contextmanager
 
 import psycopg2
 import psycopg2.errors
 import psycopg2.extensions
+import psycopg2.pool
 from psycopg2.extras import RealDictCursor
 
 # Postgres retorna colunas NUMERIC/DECIMAL (ex: resultado de ROUND()) como
@@ -126,6 +128,28 @@ class _PGConnection:
         self._conn.close()
 
 
+# Pool de conexões: abrir uma conexão nova ao Postgres custa ~200-250ms
+# (handshake TCP+TLS+autenticação, mais ainda se o Neon tiver "dormido"
+# por inatividade), contra ~20ms pra reaproveitar uma conexão já aberta —
+# medido contra o banco de produção. Como quase toda função deste arquivo
+# abre sua própria conexão via `with get_conn()`, e uma única página pode
+# chamar várias dessas funções, sem pool cada clique no menu abria de 2 a
+# 10 conexões novas do zero — é isso que fazia a navegação parecer lenta.
+# O pool é um único objeto por processo (módulo), compartilhado entre
+# todas as sessões/usuários que essa instância do Streamlit atender.
+_pool = None
+_pool_lock = threading.Lock()
+
+
+def _get_pool():
+    global _pool
+    if _pool is None:
+        with _pool_lock:
+            if _pool is None:
+                _pool = psycopg2.pool.ThreadedConnectionPool(1, 10, _database_url())
+    return _pool
+
+
 @contextmanager
 def get_conn():
     # Importante: código que precisa capturar uma exceção de SQL e
@@ -134,13 +158,20 @@ def get_conn():
     # for capturada por dentro do `with`, a função segue normalmente e o
     # conn.commit() abaixo roda em cima de uma transação já abortada
     # pelo Postgres (InFailedSqlTransaction).
-    raw_conn = psycopg2.connect(_database_url())
+    pool = _get_pool()
+    raw_conn = pool.getconn()
     conn = _PGConnection(raw_conn)
     try:
         yield conn
         conn.commit()
+    except Exception:
+        # limpa o estado de transação abortada antes de devolver a conexão
+        # pro pool — senão o próximo a pegar essa conexão emperra em
+        # InFailedSqlTransaction logo na primeira query.
+        raw_conn.rollback()
+        raise
     finally:
-        conn.close()
+        pool.putconn(raw_conn)
 
 
 def init_db():
