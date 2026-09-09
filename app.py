@@ -29,16 +29,16 @@ if "usuario_id" not in st.session_state:
 # Sidebar / navegação
 # ---------------------------------------------------------------------------
 st.sidebar.markdown(
-    """
-    <div style="display:flex; align-items:center; gap:0.6rem; padding: 0.2rem 0 1rem 0;">
-        <span style="font-size:1.6rem;">🩺</span>
+    f"""
+    <div style="display:flex; align-items:center; gap:0.6rem; padding: 0.2rem 0 1rem 0; color:#2DD4BF;">
+        {ui.icon_svg("stethoscope", size=22)}
         <span style="font-size:1.25rem; font-weight:700; color:#E2E8F0;">Residência Med</span>
     </div>
     """,
     unsafe_allow_html=True,
 )
 st.sidebar.caption(f"Logado como: {st.session_state.get('usuario_email', '')}")
-if st.sidebar.button("Sair", use_container_width=True):
+if st.sidebar.button("Sair", use_container_width=True, icon=":material/logout:"):
     for chave in ("usuario_id", "usuario_email"):
         st.session_state.pop(chave, None)
     st.rerun()
@@ -73,7 +73,7 @@ def controle_paginacao(chave, total, por_pagina=50):
 
     col1, col2, col3 = st.columns([1, 2, 1])
     with col1:
-        if st.button("⬅️ Anterior", key=f"{chave}_prev", disabled=st.session_state[chave] <= 0):
+        if st.button("Anterior", key=f"{chave}_prev", icon=":material/arrow_back:", disabled=st.session_state[chave] <= 0):
             st.session_state[chave] -= 1
             st.rerun()
     with col2:
@@ -83,7 +83,7 @@ def controle_paginacao(chave, total, por_pagina=50):
             unsafe_allow_html=True,
         )
     with col3:
-        if st.button("Próxima ➡️", key=f"{chave}_next", disabled=st.session_state[chave] >= total_paginas - 1):
+        if st.button("Próxima", key=f"{chave}_next", icon=":material/arrow_forward:", disabled=st.session_state[chave] >= total_paginas - 1):
             st.session_state[chave] += 1
             st.rerun()
 
@@ -117,7 +117,7 @@ def consolidar_simulado_no_historico(simulado_id, usuario_id):
 # DASHBOARD
 # ---------------------------------------------------------------------------
 if pagina == "Dashboard":
-    ui.page_header("📊", "Dashboard de Desempenho")
+    ui.page_header("layout-dashboard", "Dashboard de Desempenho")
 
     desemp_area = db.desempenho_por_area(usuario_id=st.session_state.usuario_id)
     if not desemp_area:
@@ -140,7 +140,7 @@ if pagina == "Dashboard":
         piores = df_area.sort_values("pct_acerto").head(5)
         for _, row in piores.iterrows():
             st.write(
-                f"🔴 **{row['area']}** — {row['pct_acerto']}% de acerto "
+                f":material/priority_high: **{row['area']}** — {row['pct_acerto']}% de acerto "
                 f"({int(row['acertos'])}/{int(row['total'])})"
             )
 
@@ -166,11 +166,11 @@ if pagina == "Dashboard":
             sem_banca = db.contar_respostas_sem_banca(usuario_id=st.session_state.usuario_id)
             if sem_banca:
                 st.caption(
-                    f"ℹ️ {sem_banca} resposta(s) de questões sem banca definida "
+                    f":material/info: {sem_banca} resposta(s) de questões sem banca definida "
                     "não entram nessa comparação."
                 )
 
-            with st.expander("📋 Comparar bancas por área"):
+            with st.expander("Comparar bancas por área", icon=":material/table_chart:"):
                 desemp_banca_area = db.desempenho_por_banca_e_area(usuario_id=st.session_state.usuario_id)
                 df_ba = pd.DataFrame([dict(r) for r in desemp_banca_area])
                 pivot = df_ba.pivot_table(index="area", columns="banca", values="pct_acerto")
@@ -178,13 +178,13 @@ if pagina == "Dashboard":
                 st.caption("% de acerto por área, banca a banca ('—' = sem respostas dessa combinação).")
                 st.dataframe(pivot_fmt, use_container_width=True)
 
-        with st.expander("🎯 Desempenho por subtópico"):
+        with st.expander("Desempenho por subtópico", icon=":material/insights:"):
             desemp_sub = db.desempenho_por_subtopico(usuario_id=st.session_state.usuario_id)
             if desemp_sub:
                 df_sub = pd.DataFrame([dict(r) for r in desemp_sub])
                 st.dataframe(df_sub, use_container_width=True, hide_index=True)
 
-        with st.expander("❌ Questões mais erradas"):
+        with st.expander("Questões mais erradas", icon=":material/error:"):
             piores_q = db.questoes_mais_erradas(usuario_id=st.session_state.usuario_id)
             if piores_q:
                 df_q = pd.DataFrame([dict(r) for r in piores_q])
@@ -197,7 +197,7 @@ if pagina == "Dashboard":
 # RESPONDER QUESTÕES
 # ---------------------------------------------------------------------------
 elif pagina == "Responder Questões":
-    ui.page_header("✏️", "Responder Questões")
+    ui.page_header("pencil-line", "Responder Questões")
 
     areas = mapa_areas()
     if not areas:
@@ -207,7 +207,7 @@ elif pagina == "Responder Questões":
         area_nome = col_a.selectbox("Filtrar por área (opcional)", ["Todas"] + list(areas.keys()))
         area_id = areas[area_nome] if area_nome != "Todas" else None
 
-        if "fila_questoes" not in st.session_state or st.button("🔄 Gerar novo lote"):
+        if "fila_questoes" not in st.session_state or st.button("Gerar novo lote", icon=":material/refresh:"):
             questoes = db.listar_questoes(area_id=area_id)
             ids = [q["id"] for q in questoes]
             random.shuffle(ids)
@@ -235,31 +235,31 @@ elif pagina == "Responder Questões":
                 key=f"resp_{q['id']}",
             )
 
-            if st.button("Confirmar resposta", key=f"conf_{q['id']}"):
+            if st.button("Confirmar resposta", key=f"conf_{q['id']}", icon=":material/check:"):
                 correta = (resposta == q["resposta_correta"])
                 db.registrar_resposta(q["id"], resposta, correta, usuario_id=st.session_state.usuario_id)
 
                 if correta:
-                    st.success(f"✅ Correto! Resposta: {q['resposta_correta']}")
+                    st.success(f"Correto! Resposta: {q['resposta_correta']}", icon=":material/check_circle:")
                 else:
-                    st.error(f"❌ Errado. A resposta correta é: {q['resposta_correta']}")
+                    st.error(f"Errado. A resposta correta é: {q['resposta_correta']}", icon=":material/cancel:")
 
                 if q["explicacao"]:
-                    st.info(f"💡 {q['explicacao']}")
+                    st.info(q["explicacao"], icon=":material/lightbulb:")
 
                 # qualidade simples para a repetição espaçada
                 qualidade = 5 if correta else 1
                 sr.registrar_revisao(q["id"], qualidade, usuario_id=st.session_state.usuario_id)
 
                 st.session_state.idx_atual += 1
-                if st.button("Próxima questão ➡️"):
+                if st.button("Próxima questão", icon=":material/arrow_forward:"):
                     st.rerun()
 
 # ---------------------------------------------------------------------------
 # SIMULADO (prova cronometrada)
 # ---------------------------------------------------------------------------
 elif pagina == "Simulado":
-    ui.page_header("🎯", "Simulado Cronometrado")
+    ui.page_header("timer", "Simulado Cronometrado")
 
     simulado_id = st.session_state.get("simulado_id")
 
@@ -308,7 +308,7 @@ elif pagina == "Simulado":
                 f"(pediu {num_questoes}). Ajuste os filtros ou a quantidade."
             )
 
-        if st.button("🚀 Iniciar simulado", disabled=disponiveis == 0 or disponiveis < num_questoes):
+        if st.button("Iniciar simulado", icon=":material/play_arrow:", disabled=disponiveis == 0 or disponiveis < num_questoes):
             questoes = db.questoes_aleatorias(area_id, banca, limite=num_questoes)
             ids = [q["id"] for q in questoes]
             novo_id = db.criar_simulado(
@@ -320,7 +320,7 @@ elif pagina == "Simulado":
             st.session_state.simulado_idx = 0
             st.rerun()
 
-        with st.expander("📜 Histórico de simulados"):
+        with st.expander("Histórico de simulados", icon=":material/history:"):
             historico = db.listar_simulados(10, usuario_id=st.session_state.usuario_id)
             if not historico:
                 st.caption("Nenhum simulado concluído ainda.")
@@ -362,21 +362,24 @@ elif pagina == "Simulado":
             for item in itens:
                 alternativas = json.loads(item["alternativas"])
                 if item["resposta_dada"] is None:
-                    marcador = "⬜ não respondida"
+                    marcador, icone_item = "não respondida", "radio_button_unchecked"
                 elif item["correta"]:
-                    marcador = "✅ correta"
+                    marcador, icone_item = "correta", "check_circle"
                 else:
-                    marcador = "❌ errada"
-                with st.expander(f"[{item['ordem'] + 1}] {marcador} — {item['enunciado'][:80]}..."):
+                    marcador, icone_item = "errada", "cancel"
+                with st.expander(
+                    f"[{item['ordem'] + 1}] {marcador} — {item['enunciado'][:80]}...",
+                    icon=f":material/{icone_item}:",
+                ):
                     st.markdown(item["enunciado"])
                     for letra, texto in alternativas.items():
-                        prefixo = "✅" if letra == item["resposta_correta"] else "▫️"
+                        prefixo = ":material/check_circle:" if letra == item["resposta_correta"] else ":material/radio_button_unchecked:"
                         sufixo = " (sua resposta)" if letra == item["resposta_dada"] else ""
                         st.write(f"{prefixo} **{letra})** {texto}{sufixo}")
                     if item["explicacao"]:
-                        st.info(f"💡 {item['explicacao']}")
+                        st.info(item["explicacao"], icon=":material/lightbulb:")
 
-            if st.button("🆕 Novo Simulado"):
+            if st.button("Novo Simulado", icon=":material/add:"):
                 for chave in ["simulado_id", "simulado_questoes", "simulado_idx"]:
                     st.session_state.pop(chave, None)
                 st.rerun()
@@ -391,7 +394,7 @@ elif pagina == "Simulado":
             if restante_seg <= 0:
                 db.finalizar_simulado(simulado_id, usuario_id=st.session_state.usuario_id)
                 consolidar_simulado_no_historico(simulado_id, st.session_state.usuario_id)
-                st.warning("⏰ Tempo esgotado! Confira seu resultado abaixo.")
+                st.warning("Tempo esgotado! Confira seu resultado abaixo.", icon=":material/schedule:")
                 st.rerun()
             else:
                 ids = st.session_state.get("simulado_questoes") or [
@@ -430,7 +433,7 @@ elif pagina == "Simulado":
 
                 col_a, col_b, col_c = st.columns(3)
                 with col_a:
-                    if st.button("⬅️ Anterior", disabled=idx <= 0):
+                    if st.button("Anterior", icon=":material/arrow_back:", disabled=idx <= 0):
                         st.session_state.simulado_idx = idx - 1
                         st.rerun()
                 with col_b:
@@ -446,12 +449,12 @@ elif pagina == "Simulado":
                         st.session_state.simulado_idx = ir_para
                         st.rerun()
                 with col_c:
-                    if st.button("Próxima ➡️", disabled=idx >= len(ids) - 1):
+                    if st.button("Próxima", icon=":material/arrow_forward:", disabled=idx >= len(ids) - 1):
                         st.session_state.simulado_idx = idx + 1
                         st.rerun()
 
                 st.markdown("---")
-                if st.button("🏁 Finalizar Simulado"):
+                if st.button("Finalizar Simulado", icon=":material/flag:"):
                     db.finalizar_simulado(simulado_id, usuario_id=st.session_state.usuario_id)
                     consolidar_simulado_no_historico(simulado_id, st.session_state.usuario_id)
                     st.rerun()
@@ -460,24 +463,24 @@ elif pagina == "Simulado":
 # CADASTRAR QUESTÃO
 # ---------------------------------------------------------------------------
 elif pagina == "Cadastrar Questão":
-    ui.page_header("➕", "Cadastrar Nova Questão")
+    ui.page_header("square-plus", "Cadastrar Nova Questão")
 
-    with st.expander("Cadastrar nova área ou subtópico"):
+    with st.expander("Cadastrar nova área ou subtópico", icon=":material/add_circle:"):
         col1, col2 = st.columns(2)
         with col1:
             nova_area = st.text_input("Nova área (ex: Cardiologia)")
-            if st.button("Adicionar área") and nova_area:
+            if st.button("Adicionar área", icon=":material/add:") and nova_area:
                 db.criar_area(nova_area)
-                st.success(f"Área '{nova_area}' adicionada.")
+                st.success(f"Área '{nova_area}' adicionada.", icon=":material/check_circle:")
                 st.rerun()
         with col2:
             areas = mapa_areas()
             if areas:
                 area_sub = st.selectbox("Área do novo subtópico", list(areas.keys()), key="area_sub_add")
                 novo_sub = st.text_input("Novo subtópico (ex: Arritmias)")
-                if st.button("Adicionar subtópico") and novo_sub:
+                if st.button("Adicionar subtópico", icon=":material/add:") and novo_sub:
                     db.criar_subtopico(areas[area_sub], novo_sub)
-                    st.success(f"Subtópico '{novo_sub}' adicionado.")
+                    st.success(f"Subtópico '{novo_sub}' adicionado.", icon=":material/check_circle:")
                     st.rerun()
 
     st.markdown("---")
@@ -510,39 +513,40 @@ elif pagina == "Cadastrar Questão":
         banca = col1.text_input("Banca / Instituição (ex: ENAMED, USP-SP, UNIFESP)")
         ano = col2.number_input("Ano", min_value=1990, max_value=2100, value=2025, step=1)
 
-        if st.button("💾 Salvar questão"):
+        if st.button("Salvar questão", icon=":material/save:"):
             alternativas = {"A": alt_a, "B": alt_b, "C": alt_c, "D": alt_d}
             if alt_e.strip():
                 alternativas["E"] = alt_e
 
             if not enunciado.strip() or not all([alt_a, alt_b, alt_c, alt_d]):
-                st.error("Preencha ao menos o enunciado e as alternativas A a D.")
+                st.error("Preencha ao menos o enunciado e as alternativas A a D.", icon=":material/cancel:")
             else:
                 db.criar_questao(
                     area_id, subtopico_id, enunciado, alternativas,
                     resposta_correta, explicacao, banca, int(ano),
                 )
-                st.success("Questão cadastrada com sucesso!")
+                st.success("Questão cadastrada com sucesso!", icon=":material/check_circle:")
                 st.rerun()
 
 # ---------------------------------------------------------------------------
 # IMPORTAR QUESTÕES EM MASSA (PLANILHA)
 # ---------------------------------------------------------------------------
 elif pagina == "Importar Questões (planilha)":
-    ui.page_header("📥", "Importar Questões em Massa")
+    ui.page_header("file-up", "Importar Questões em Massa")
     st.caption(
         "Importe centenas de questões de uma vez a partir de uma planilha "
         "Excel (.xlsx) ou CSV, em vez de cadastrar uma por uma."
     )
 
     st.download_button(
-        "⬇️ Baixar planilha modelo (.xlsx)",
+        "Baixar planilha modelo (.xlsx)",
+        icon=":material/download:",
         data=imp_q.gerar_template_bytes(),
         file_name="modelo_importacao_questoes.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
 
-    with st.expander("📋 Colunas aceitas"):
+    with st.expander("Colunas aceitas", icon=":material/checklist:"):
         st.markdown("""
         - **area** *(obrigatório)*
         - **subtopico** *(opcional)*
@@ -573,20 +577,21 @@ elif pagina == "Importar Questões (planilha)":
             if faltando:
                 st.error(f"Faltam colunas obrigatórias na planilha: {', '.join(faltando)}")
             else:
-                st.success(f"Planilha lida com sucesso: {len(df)} linha(s) encontrada(s).")
+                st.success(f"Planilha lida com sucesso: {len(df)} linha(s) encontrada(s).", icon=":material/check_circle:")
                 st.dataframe(df.head(10), use_container_width=True, hide_index=True)
 
-                if st.button("🚀 Importar todas as questões"):
+                if st.button("Importar todas as questões", icon=":material/upload_file:"):
                     with st.spinner("Importando..."):
                         relatorio = imp_q.importar(df)
 
                     st.success(
                         f"Concluído! {relatorio['importadas']} questão(ões) importada(s), "
                         f"{relatorio['duplicadas']} duplicada(s) ignorada(s), "
-                        f"de {relatorio['total']} linha(s) na planilha."
+                        f"de {relatorio['total']} linha(s) na planilha.",
+                        icon=":material/check_circle:",
                     )
                     if relatorio["erros"]:
-                        st.warning(f"{len(relatorio['erros'])} linha(s) com problema:")
+                        st.warning(f"{len(relatorio['erros'])} linha(s) com problema:", icon=":material/warning:")
                         df_erros = pd.DataFrame(relatorio["erros"], columns=["Linha", "Motivo"])
                         st.dataframe(df_erros, use_container_width=True, hide_index=True)
 
@@ -594,7 +599,7 @@ elif pagina == "Importar Questões (planilha)":
 # REVISÃO (REPETIÇÃO ESPAÇADA)
 # ---------------------------------------------------------------------------
 elif pagina == "Revisão (Repetição Espaçada)":
-    ui.page_header("🔁", "Revisão por Repetição Espaçada")
+    ui.page_header("brain", "Revisão por Repetição Espaçada")
     st.caption(
         "Questões que você errou voltam mais rápido; as que você domina "
         "voltam com intervalos cada vez maiores (algoritmo estilo Anki/SM-2)."
@@ -603,20 +608,23 @@ elif pagina == "Revisão (Repetição Espaçada)":
     pendentes = sr.questoes_para_revisar_hoje(usuario_id=st.session_state.usuario_id)
     novas = sr.questoes_nunca_revisadas(usuario_id=st.session_state.usuario_id)
 
-    st.write(f"📅 **{len(pendentes)}** questões para revisar hoje | 🆕 **{len(novas)}** ainda sem revisão agendada")
+    st.write(
+        f":material/event: **{len(pendentes)}** questões para revisar hoje | "
+        f":material/fiber_new: **{len(novas)}** ainda sem revisão agendada"
+    )
 
     fila = list(pendentes) + list(novas)
 
     if "rev_idx" not in st.session_state:
         st.session_state.rev_idx = 0
 
-    if st.button("🔄 Recomeçar fila de revisão"):
+    if st.button("Recomeçar fila de revisão", icon=":material/restart_alt:"):
         st.session_state.rev_idx = 0
 
     if not fila:
         st.info("Nenhuma questão pendente de revisão. Responda questões novas para alimentar a fila.")
     elif st.session_state.rev_idx >= len(fila):
-        st.success("Fila de revisão concluída por hoje! 🎉")
+        st.success("Fila de revisão concluída por hoje!", icon=":material/celebration:")
     else:
         q = fila[st.session_state.rev_idx]
         st.markdown(f"### {q['enunciado']}")
@@ -628,17 +636,17 @@ elif pagina == "Revisão (Repetição Espaçada)":
             key=f"rev_resp_{q['id']}_{st.session_state.rev_idx}",
         )
 
-        if st.button("Confirmar", key=f"rev_conf_{q['id']}_{st.session_state.rev_idx}"):
+        if st.button("Confirmar", key=f"rev_conf_{q['id']}_{st.session_state.rev_idx}", icon=":material/check:"):
             correta = (resposta == q["resposta_correta"])
             db.registrar_resposta(q["id"], resposta, correta, usuario_id=st.session_state.usuario_id)
             if correta:
-                st.success("✅ Correto!")
+                st.success("Correto!", icon=":material/check_circle:")
                 qualidade = st.slider(
                     "Quão fácil foi lembrar? (afeta o próximo intervalo)",
                     0, 5, 4, key=f"qual_{q['id']}_{st.session_state.rev_idx}",
                 )
             else:
-                st.error(f"❌ Errado. Resposta correta: {q['resposta_correta']}")
+                st.error(f"Errado. Resposta correta: {q['resposta_correta']}", icon=":material/cancel:")
                 qualidade = 1
 
             sr.registrar_revisao(q["id"], qualidade, usuario_id=st.session_state.usuario_id)
@@ -649,7 +657,7 @@ elif pagina == "Revisão (Repetição Espaçada)":
 # MATERIAIS DE ESTUDO (MediaFire)
 # ---------------------------------------------------------------------------
 elif pagina == "Materiais de Estudo":
-    ui.page_header("📚", "Materiais de Estudo (MediaFire)")
+    ui.page_header("book-open", "Materiais de Estudo (MediaFire)")
     st.caption(
         "Organize aqui os links da sua pasta compartilhada do MediaFire, "
         "por área, subtópico e tipo de material. Cada material pode ser "
@@ -662,7 +670,7 @@ elif pagina == "Materiais de Estudo":
     if not areas:
         st.warning("Cadastre uma área primeiro (na página 'Cadastrar Questão').")
     else:
-        with st.expander("➕ Adicionar novo material"):
+        with st.expander("Adicionar novo material", icon=":material/add_circle:"):
             area_nome = st.selectbox("Área", list(areas.keys()), key="mat_area")
             area_id = areas[area_nome]
             subtopicos = db.listar_subtopicos(area_id)
@@ -678,13 +686,13 @@ elif pagina == "Materiais de Estudo":
             titulo = st.text_input("Título do material")
             link = st.text_input("Link do MediaFire")
 
-            if st.button("Salvar material"):
+            if st.button("Salvar material", icon=":material/save:"):
                 if titulo.strip() and link.strip():
                     db.criar_material(area_id, subtopico_id, tipo, titulo, link)
-                    st.success("Material adicionado!")
+                    st.success("Material adicionado!", icon=":material/check_circle:")
                     st.rerun()
                 else:
-                    st.error("Preencha título e link.")
+                    st.error("Preencha título e link.", icon=":material/cancel:")
 
         st.markdown("---")
         st.subheader("Buscar materiais")
@@ -725,7 +733,7 @@ elif pagina == "Materiais de Estudo":
             cache_n, cache_bytes = db.estatisticas_cache()
             if cache_n:
                 st.caption(
-                    f"💾 {cache_n} material(is) em cache local, ocupando "
+                    f":material/save: {cache_n} material(is) em cache local, ocupando "
                     f"{mfc.formatar_tamanho(cache_bytes)} em disco."
                 )
 
@@ -735,27 +743,27 @@ elif pagina == "Materiais de Estudo":
                 for _, m in grupo.iterrows():
                     col1, col2, col3, col4 = st.columns([3, 1, 1.8, 1])
                     col1.write(m["titulo"])
-                    col2.link_button("Abrir 🔗", m["link_mediafire"], key=f"mat_link_{m['id']}")
+                    col2.link_button("Abrir", m["link_mediafire"], icon=":material/open_in_new:", key=f"mat_link_{m['id']}")
 
                     if mfc.esta_em_cache(m):
-                        col3.caption(f"✅ Em cache ({mfc.formatar_tamanho(m['tamanho_bytes'])})")
-                        if col4.button("🗑️", key=f"mat_rmcache_{m['id']}", help="Remover do cache local"):
+                        col3.caption(f":material/check_circle: Em cache ({mfc.formatar_tamanho(m['tamanho_bytes'])})")
+                        if col4.button("", icon=":material/delete:", key=f"mat_rmcache_{m['id']}", help="Remover do cache local"):
                             mfc.remover_cache(int(m["id"]))
                             st.rerun()
                     else:
-                        if col3.button("⬇️ Baixar para cache", key=f"mat_baixar_{m['id']}"):
+                        if col3.button("Baixar para cache", icon=":material/download:", key=f"mat_baixar_{m['id']}"):
                             try:
                                 with st.spinner(f"Baixando '{m['titulo']}'... isso pode demorar se for um vídeo."):
                                     mfc.baixar_material(int(m["id"]))
                                 st.rerun()
                             except mfc.CacheError as e:
-                                st.error(f"Não consegui baixar: {e}")
+                                st.error(f"Não consegui baixar: {e}", icon=":material/cancel:")
 
 # ---------------------------------------------------------------------------
 # SINCRONIZAR MEDIAFIRE (importação em massa dos materiais)
 # ---------------------------------------------------------------------------
 elif pagina == "Sincronizar MediaFire":
-    ui.page_header("🔄", "Sincronizar Pasta do MediaFire")
+    ui.page_header("folder-sync", "Sincronizar Pasta do MediaFire")
     st.caption(
         "Cole o link da sua pasta raiz compartilhada do MediaFire. O app vai "
         "varrer automaticamente todas as subpastas (áreas → assuntos → "
@@ -777,7 +785,7 @@ elif pagina == "Sincronizar MediaFire":
         placeholder="https://www.mediafire.com/folder/xxxxxxxxxxxxx/NomeDaPasta",
     )
 
-    if st.button("🚀 Sincronizar agora", disabled=not link_raiz.strip()):
+    if st.button("Sincronizar agora", icon=":material/sync:", disabled=not link_raiz.strip()):
         status_area = st.empty()
         log_linhas = []
 
@@ -790,10 +798,10 @@ elif pagina == "Sincronizar MediaFire":
             with st.spinner("Varrendo a pasta do MediaFire... isso pode levar alguns minutos."):
                 relatorio = mf.sincronizar_pasta_raiz(link_raiz, on_progress=_progresso)
         except mf.MediaFireError as e:
-            st.error(f"Erro ao sincronizar: {e}")
+            st.error(f"Erro ao sincronizar: {e}", icon=":material/cancel:")
         else:
             status_area.empty()
-            st.success("Sincronização concluída!")
+            st.success("Sincronização concluída!", icon=":material/check_circle:")
             col1, col2, col3, col4 = st.columns(4)
             col1.metric("Áreas", relatorio["areas_criadas"])
             col2.metric("Assuntos", relatorio["subtopicos_criados"])
@@ -801,7 +809,7 @@ elif pagina == "Sincronizar MediaFire":
             col4.metric("Já existiam", relatorio["materiais_duplicados"])
 
             if relatorio["erros"]:
-                with st.expander(f"⚠️ {len(relatorio['erros'])} aviso(s)/erro(s)"):
+                with st.expander(f"{len(relatorio['erros'])} aviso(s)/erro(s)", icon=":material/warning:"):
                     for erro in relatorio["erros"]:
                         st.write(f"- {erro}")
 
@@ -814,7 +822,7 @@ elif pagina == "Sincronizar MediaFire":
 # BANCO DE QUESTÕES (listagem / gestão)
 # ---------------------------------------------------------------------------
 elif pagina == "Banco de Questões":
-    ui.page_header("🗂️", "Banco de Questões")
+    ui.page_header("database", "Banco de Questões")
 
     areas = mapa_areas()
     col1, col2 = st.columns(2)
@@ -839,11 +847,11 @@ elif pagina == "Banco de Questões":
             with st.expander(f"[{q['id']}] {q['enunciado'][:80]}..."):
                 alternativas = json.loads(q["alternativas"])
                 for letra, texto in alternativas.items():
-                    marcador = "✅" if letra == q["resposta_correta"] else "▫️"
+                    marcador = ":material/check_circle:" if letra == q["resposta_correta"] else ":material/radio_button_unchecked:"
                     st.write(f"{marcador} **{letra})** {texto}")
                 if q["explicacao"]:
-                    st.info(q["explicacao"])
+                    st.info(q["explicacao"], icon=":material/lightbulb:")
                 st.caption(f"Banca: {q['banca'] or '-'} | Ano: {q['ano'] or '-'}")
-                if st.button("🗑️ Excluir questão", key=f"del_{q['id']}"):
+                if st.button("Excluir questão", icon=":material/delete:", key=f"del_{q['id']}"):
                     db.excluir_questao(q["id"])
                     st.rerun()

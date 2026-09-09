@@ -10,6 +10,7 @@ import streamlit as st
 import bcrypt
 
 import db
+import ui
 
 
 def hash_senha(senha: str) -> str:
@@ -24,10 +25,15 @@ def render_login_signup():
     _, col_c, _ = st.columns([1, 1.2, 1])
     with col_c:
         st.markdown(
-            """
+            f"""
             <div style="text-align:center; margin-top:3rem; margin-bottom:1.5rem;">
-                <div style="font-size:2.6rem; line-height:1;">🩺</div>
-                <div style="font-size:1.7rem; font-weight:700; margin-top:0.5rem; color:#E2E8F0;">
+                <div style="display:inline-flex; align-items:center; justify-content:center;
+                            width:3.5rem; height:3.5rem; border-radius:14px;
+                            background: linear-gradient(135deg, rgba(45, 212, 191, 0.18), rgba(56, 189, 248, 0.12));
+                            color:#2DD4BF;">
+                    {ui.icon_svg("stethoscope", size=28)}
+                </div>
+                <div style="font-size:1.7rem; font-weight:700; margin-top:0.6rem; color:#E2E8F0;">
                     Residência Med
                 </div>
                 <div style="color:#94A3B8; font-size:0.95rem; margin-top:0.3rem;">
