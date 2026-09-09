@@ -741,7 +741,7 @@ elif pagina == "Materiais de Estudo":
             for tipo, grupo in df_mat.groupby("tipo", sort=False):
                 st.markdown(f"**{tipo}**")
                 for _, m in grupo.iterrows():
-                    col1, col2, col3, col4 = st.columns([3, 1, 1.8, 1])
+                    col1, col2, col3, col4, col5 = st.columns([3, 1, 1.8, 1, 1])
                     col1.write(m["titulo"])
                     col2.link_button("Abrir", m["link_mediafire"], icon=":material/open_in_new:", key=f"mat_link_{m['id']}")
 
@@ -758,6 +758,11 @@ elif pagina == "Materiais de Estudo":
                                 st.rerun()
                             except mfc.CacheError as e:
                                 st.error(f"Não consegui baixar: {e}", icon=":material/cancel:")
+
+                    if col5.button("", icon=":material/delete_forever:", key=f"mat_del_{m['id']}", help="Excluir material"):
+                        mfc.remover_cache(int(m["id"]))
+                        db.excluir_material(int(m["id"]))
+                        st.rerun()
 
 # ---------------------------------------------------------------------------
 # SINCRONIZAR MEDIAFIRE (importação em massa dos materiais)
