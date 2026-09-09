@@ -494,44 +494,49 @@ elif pagina == "Cadastrar Questão":
     if not areas:
         st.warning("Cadastre uma área acima antes de criar questões.")
     else:
-        area_nome = st.selectbox("Área", list(areas.keys()))
-        area_id = areas[area_nome]
+        with st.container(border=True):
+            col_area, col_sub = st.columns(2)
+            area_nome = col_area.selectbox("Área", list(areas.keys()))
+            area_id = areas[area_nome]
 
-        subtopicos = db.listar_subtopicos(area_id)
-        sub_opcoes = {"(nenhum)": None}
-        sub_opcoes.update({s["nome"]: s["id"] for s in subtopicos})
-        sub_nome = st.selectbox("Subtópico", list(sub_opcoes.keys()))
-        subtopico_id = sub_opcoes[sub_nome]
+            subtopicos = db.listar_subtopicos(area_id)
+            sub_opcoes = {"(nenhum)": None}
+            sub_opcoes.update({s["nome"]: s["id"] for s in subtopicos})
+            sub_nome = col_sub.selectbox("Subtópico", list(sub_opcoes.keys()))
+            subtopico_id = sub_opcoes[sub_nome]
 
-        enunciado = st.text_area("Enunciado da questão")
+            enunciado = st.text_area("Enunciado da questão")
 
-        st.write("Alternativas")
-        alt_a = st.text_input("A)")
-        alt_b = st.text_input("B)")
-        alt_c = st.text_input("C)")
-        alt_d = st.text_input("D)")
-        alt_e = st.text_input("E) (opcional)")
+            st.write("Alternativas")
+            col_a, col_b = st.columns(2)
+            alt_a = col_a.text_input("A)")
+            alt_b = col_b.text_input("B)")
+            col_c, col_d = st.columns(2)
+            alt_c = col_c.text_input("C)")
+            alt_d = col_d.text_input("D)")
+            alt_e = st.text_input("E) (opcional)")
 
-        resposta_correta = st.selectbox("Alternativa correta", ["A", "B", "C", "D", "E"])
-        explicacao = st.text_area("Explicação / comentário (opcional)")
-        col1, col2 = st.columns(2)
-        banca = col1.text_input("Banca / Instituição (ex: ENAMED, USP-SP, UNIFESP)")
-        ano = col2.number_input("Ano", min_value=1990, max_value=2100, value=2025, step=1)
+            col_correta, col_banca, col_ano = st.columns([1, 2, 1])
+            resposta_correta = col_correta.selectbox("Alternativa correta", ["A", "B", "C", "D", "E"])
+            banca = col_banca.text_input("Banca / Instituição (ex: ENAMED, USP-SP, UNIFESP)")
+            ano = col_ano.number_input("Ano", min_value=1990, max_value=2100, value=2025, step=1)
 
-        if st.button("Salvar questão", icon=":material/save:"):
-            alternativas = {"A": alt_a, "B": alt_b, "C": alt_c, "D": alt_d}
-            if alt_e.strip():
-                alternativas["E"] = alt_e
+            explicacao = st.text_area("Explicação / comentário (opcional)")
 
-            if not enunciado.strip() or not all([alt_a, alt_b, alt_c, alt_d]):
-                st.error("Preencha ao menos o enunciado e as alternativas A a D.", icon=":material/cancel:")
-            else:
-                db.criar_questao(
-                    area_id, subtopico_id, enunciado, alternativas,
-                    resposta_correta, explicacao, banca, int(ano),
-                )
-                st.success("Questão cadastrada com sucesso!", icon=":material/check_circle:")
-                st.rerun()
+            if st.button("Salvar questão", icon=":material/save:"):
+                alternativas = {"A": alt_a, "B": alt_b, "C": alt_c, "D": alt_d}
+                if alt_e.strip():
+                    alternativas["E"] = alt_e
+
+                if not enunciado.strip() or not all([alt_a, alt_b, alt_c, alt_d]):
+                    st.error("Preencha ao menos o enunciado e as alternativas A a D.", icon=":material/cancel:")
+                else:
+                    db.criar_questao(
+                        area_id, subtopico_id, enunciado, alternativas,
+                        resposta_correta, explicacao, banca, int(ano),
+                    )
+                    st.success("Questão cadastrada com sucesso!", icon=":material/check_circle:")
+                    st.rerun()
 
 # ---------------------------------------------------------------------------
 # IMPORTAR QUESTÕES EM MASSA (PLANILHA)
@@ -694,20 +699,22 @@ elif pagina == "Materiais de Estudo":
         st.warning("Cadastre uma área primeiro (na página 'Cadastrar Questão').")
     else:
         with st.expander("Adicionar novo material", icon=":material/add_circle:"):
-            area_nome = st.selectbox("Área", list(areas.keys()), key="mat_area")
+            col_area, col_sub, col_tipo = st.columns(3)
+            area_nome = col_area.selectbox("Área", list(areas.keys()), key="mat_area")
             area_id = areas[area_nome]
             subtopicos = db.listar_subtopicos(area_id)
             sub_opcoes = {"(nenhum)": None}
             sub_opcoes.update({s["nome"]: s["id"] for s in subtopicos})
-            sub_nome = st.selectbox("Subtópico", list(sub_opcoes.keys()), key="mat_sub")
+            sub_nome = col_sub.selectbox("Subtópico", list(sub_opcoes.keys()), key="mat_sub")
             subtopico_id = sub_opcoes[sub_nome]
 
-            tipo = st.selectbox(
+            tipo = col_tipo.selectbox(
                 "Tipo de material",
                 ["Apostila", "Videoaula", "Vídeo Bônus", "Vídeo Apostila", "Outro"],
             )
-            titulo = st.text_input("Título do material")
-            link = st.text_input("Link do MediaFire")
+            col_titulo, col_link = st.columns(2)
+            titulo = col_titulo.text_input("Título do material")
+            link = col_link.text_input("Link do MediaFire")
 
             if st.button("Salvar material", icon=":material/save:"):
                 if titulo.strip() and link.strip():
@@ -720,22 +727,23 @@ elif pagina == "Materiais de Estudo":
         st.markdown("---")
         st.subheader("Buscar materiais")
 
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            area_filtro = st.selectbox("Área", ["Todas"] + list(areas.keys()), key="mat_filtro_area")
-            area_id_filtro = areas[area_filtro] if area_filtro != "Todas" else None
-        with col2:
-            sub_opcoes_filtro = {"Todos": None}
-            if area_id_filtro:
-                sub_opcoes_filtro.update({s["nome"]: s["id"] for s in db.listar_subtopicos(area_id_filtro)})
-            sub_filtro_nome = st.selectbox("Subtópico", list(sub_opcoes_filtro.keys()), key="mat_filtro_sub")
-            subtopico_id_filtro = sub_opcoes_filtro[sub_filtro_nome]
-        with col3:
-            tipos_disponiveis = db.listar_tipos_materiais()
-            tipo_filtro = st.selectbox("Tipo", ["Todos"] + tipos_disponiveis, key="mat_filtro_tipo")
-            tipo_filtro = None if tipo_filtro == "Todos" else tipo_filtro
+        with st.container(border=True):
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                area_filtro = st.selectbox("Área", ["Todas"] + list(areas.keys()), key="mat_filtro_area")
+                area_id_filtro = areas[area_filtro] if area_filtro != "Todas" else None
+            with col2:
+                sub_opcoes_filtro = {"Todos": None}
+                if area_id_filtro:
+                    sub_opcoes_filtro.update({s["nome"]: s["id"] for s in db.listar_subtopicos(area_id_filtro)})
+                sub_filtro_nome = st.selectbox("Subtópico", list(sub_opcoes_filtro.keys()), key="mat_filtro_sub")
+                subtopico_id_filtro = sub_opcoes_filtro[sub_filtro_nome]
+            with col3:
+                tipos_disponiveis = db.listar_tipos_materiais()
+                tipo_filtro = st.selectbox("Tipo", ["Todos"] + tipos_disponiveis, key="mat_filtro_tipo")
+                tipo_filtro = None if tipo_filtro == "Todos" else tipo_filtro
 
-        busca = st.text_input("Buscar por título (opcional)", key="mat_busca")
+            busca = st.text_input("Buscar por título (opcional)", key="mat_busca")
 
         # zera a paginação sempre que algum filtro muda
         assinatura = (area_id_filtro, subtopico_id_filtro, tipo_filtro, busca)
@@ -831,12 +839,13 @@ elif pagina == "Banco de Questões":
     ui.page_header("database", "Banco de Questões")
 
     areas = mapa_areas()
-    col1, col2 = st.columns(2)
-    with col1:
-        area_nome = st.selectbox("Filtrar por área", ["Todas"] + list(areas.keys()), key="bq_area")
-        area_id = areas[area_nome] if area_nome != "Todas" else None
-    with col2:
-        busca = st.text_input("Buscar no enunciado (opcional)", key="bq_busca")
+    with st.container(border=True):
+        col1, col2 = st.columns(2)
+        with col1:
+            area_nome = st.selectbox("Filtrar por área", ["Todas"] + list(areas.keys()), key="bq_area")
+            area_id = areas[area_nome] if area_nome != "Todas" else None
+        with col2:
+            busca = st.text_input("Buscar no enunciado (opcional)", key="bq_busca")
 
     resetar_paginacao_se_filtro_mudou("bq_pagina", (area_id, busca))
 

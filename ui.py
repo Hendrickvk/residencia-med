@@ -89,6 +89,26 @@ html, body, [class*="css"] {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
 }
 
+/* ---- Largura do conteúdo -------------------------------------------- */
+/* layout="wide" dá espaço extra pra sidebar, mas formulários e listas
+   esticados até a borda da tela ficam com campos enormes e vazios em
+   monitores largos. Centraliza o conteúdo com uma largura confortável
+   de leitura em vez de ocupar 100% da viewport. */
+[data-testid="stAppViewContainer"] .block-container {
+    max-width: 1180px;
+    padding-top: 2rem;
+}
+
+/* ---- Cards (st.container(border=True)) ------------------------------- */
+[data-testid="stVerticalBlockBorderWrapper"] {
+    border: 1px solid #1E293B;
+    border-radius: 12px;
+    background: #0F1729;
+}
+[data-testid="stVerticalBlockBorderWrapper"] > div > [data-testid="stVerticalBlock"] {
+    gap: 0.9rem;
+}
+
 /* ---- Sidebar ------------------------------------------------------ */
 [data-testid="stSidebar"] {
     background-color: #0F1729;
