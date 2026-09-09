@@ -761,17 +761,37 @@ elif pagina == "Materiais de Estudo":
                 limite=POR_PAGINA, offset=offset,
             )
 
+            ICONE_TIPO = {
+                "Apostila": ":material/description:",
+                "Videoaula": ":material/play_circle:",
+                "Vídeo Bônus": ":material/play_circle:",
+                "Vídeo Apostila": ":material/play_circle:",
+            }
+
             df_mat = pd.DataFrame([dict(m) for m in materiais])
             for tipo, grupo in df_mat.groupby("tipo", sort=False):
-                st.markdown(f"**{tipo}**")
-                for _, m in grupo.iterrows():
-                    col1, col2, col3 = st.columns([4, 1, 1])
-                    col1.write(m["titulo"])
-                    col2.link_button("Abrir", m["link_mediafire"], icon=":material/open_in_new:", key=f"mat_link_{m['id']}")
-
-                    if col3.button("", icon=":material/delete_forever:", key=f"mat_del_{m['id']}", help="Excluir material"):
-                        db.excluir_material(int(m["id"]))
-                        st.rerun()
+                icone = ICONE_TIPO.get(tipo, ":material/insert_drive_file:")
+                with st.container(border=True):
+                    st.markdown(f"{icone} **{tipo}** &nbsp;·&nbsp; {len(grupo)} material(is)")
+                    linhas = list(grupo.iterrows())
+                    for i, (_, m) in enumerate(linhas):
+                        col1, col2, col3 = st.columns([5, 1, 1])
+                        col1.write(m["titulo"])
+                        col2.link_button(
+                            "Abrir", m["link_mediafire"], icon=":material/open_in_new:",
+                            key=f"mat_link_{m['id']}", use_container_width=True,
+                        )
+                        if col3.button(
+                            "", icon=":material/delete_forever:", key=f"mat_del_{m['id']}",
+                            help="Excluir material", use_container_width=True,
+                        ):
+                            db.excluir_material(int(m["id"]))
+                            st.rerun()
+                        if i < len(linhas) - 1:
+                            st.markdown(
+                                "<hr style='margin:0.2rem 0; border-color:#1E293B;'>",
+                                unsafe_allow_html=True,
+                            )
 
 # ---------------------------------------------------------------------------
 # SINCRONIZAR MEDIAFIRE (importação em massa dos materiais)
@@ -859,14 +879,14 @@ elif pagina == "Banco de Questões":
         questoes = db.listar_questoes_paginado(area_id=area_id, busca=busca, limite=POR_PAGINA, offset=offset)
 
         for q in questoes:
-            with st.expander(f"[{q['id']}] {q['enunciado'][:80]}..."):
+            rotulo = f"{q['enunciado'][:80]}...  ·  {q['banca'] or 'Banca não informada'} · {q['ano'] or '-'}"
+            with st.expander(rotulo, icon=":material/quiz:"):
                 alternativas = json.loads(q["alternativas"])
                 for letra, texto in alternativas.items():
                     marcador = ":material/check_circle:" if letra == q["resposta_correta"] else ":material/radio_button_unchecked:"
                     st.write(f"{marcador} **{letra})** {texto}")
                 if q["explicacao"]:
                     st.info(q["explicacao"], icon=":material/lightbulb:")
-                st.caption(f"Banca: {q['banca'] or '-'} | Ano: {q['ano'] or '-'}")
                 if st.button("Excluir questão", icon=":material/delete:", key=f"del_{q['id']}"):
                     db.excluir_questao(q["id"])
                     st.rerun()
