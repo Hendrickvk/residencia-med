@@ -48,12 +48,22 @@ if st.sidebar.button("Sair", use_container_width=True, icon=":material/logout:")
         st.session_state.pop(chave, None)
     st.rerun()
 st.sidebar.markdown("---")
+
+# Widgets com `key` não podem ter seu session_state sobrescrito depois de
+# já terem sido instanciados nesta mesma execução (StreamlitWidgetAlready
+# InstantiatedError) — por isso os botões de "ir para" em ui.empty_state
+# gravam numa chave separada (_forcar_pagina) que só é consumida AQUI,
+# antes do widget do menu ser criado.
+if "_forcar_pagina" in st.session_state:
+    st.session_state["nav_pagina"] = st.session_state.pop("_forcar_pagina")
+
 pagina = st.sidebar.radio(
     "Navegação",
     ["Dashboard", "Responder Questões", "Simulado", "Cadastrar Questão",
      "Importar Questões (planilha)", "Revisão (Repetição Espaçada)",
      "Materiais de Estudo", "Sincronizar MediaFire", "Banco de Questões"],
     label_visibility="collapsed",
+    key="nav_pagina",
 )
 
 st.sidebar.markdown("---")
@@ -126,7 +136,12 @@ if pagina == "Dashboard":
 
     desemp_area = db.desempenho_por_area(usuario_id=st.session_state.usuario_id)
     if not desemp_area:
-        st.info("Ainda não há respostas registradas. Vá em **Responder Questões** para começar.")
+        ui.empty_state(
+            "Ainda não há respostas registradas",
+            "Responda algumas questões para começar a acompanhar seu desempenho aqui.",
+            cta_label="Ir para Responder Questões", cta_icon=":material/arrow_forward:",
+            cta_pagina="Responder Questões",
+        )
     else:
         df_area = pd.DataFrame([dict(r) for r in desemp_area])
 
@@ -206,7 +221,12 @@ elif pagina == "Responder Questões":
 
     areas = mapa_areas()
     if not areas:
-        st.warning("Cadastre uma área primeiro.")
+        ui.empty_state(
+            "Nenhuma área cadastrada ainda",
+            "Cadastre uma área (ex: Cardiologia) antes de responder questões.",
+            icon="square-plus", cta_label="Ir para Cadastrar Questão",
+            cta_icon=":material/arrow_forward:", cta_pagina="Cadastrar Questão",
+        )
     else:
         col_a, col_b = st.columns(2)
         area_nome = col_a.selectbox("Filtrar por área (opcional)", ["Todas"] + list(areas.keys()))
@@ -223,7 +243,12 @@ elif pagina == "Responder Questões":
         idx = st.session_state.get("idx_atual", 0)
 
         if not fila:
-            st.info("Nenhuma questão encontrada para esse filtro. Cadastre questões primeiro.")
+            ui.empty_state(
+                "Nenhuma questão encontrada para esse filtro",
+                "Cadastre questões para essa área, ou selecione 'Todas' acima.",
+                icon="square-plus", cta_label="Ir para Cadastrar Questão",
+                cta_icon=":material/arrow_forward:", cta_pagina="Cadastrar Questão",
+            )
         elif idx >= len(fila):
             st.success("Você respondeu todas as questões desse lote! Gere um novo lote acima.")
         else:
@@ -492,7 +517,11 @@ elif pagina == "Cadastrar Questão":
 
     areas = mapa_areas()
     if not areas:
-        st.warning("Cadastre uma área acima antes de criar questões.")
+        ui.empty_state(
+            "Nenhuma área cadastrada ainda",
+            "Use 'Cadastrar nova área ou subtópico' logo acima antes de criar questões.",
+            icon="square-plus",
+        )
     else:
         with st.container(border=True):
             col_area, col_sub = st.columns(2)
@@ -632,7 +661,14 @@ elif pagina == "Revisão (Repetição Espaçada)":
         st.session_state.rev_idx = 0
 
     if not fila:
-        st.info("Nenhuma questão pendente de revisão. Responda questões novas para alimentar a fila.")
+        ui.empty_state(
+            "Tudo em dia por aqui!",
+            "Nenhuma questão pendente de revisão. Responda questões novas em "
+            "'Responder Questões' para alimentar a fila.",
+            icon="circle-check",
+            cta_label="Ir para Responder Questões", cta_icon=":material/arrow_forward:",
+            cta_pagina="Responder Questões",
+        )
     elif st.session_state.rev_idx >= len(fila):
         st.success("Fila de revisão concluída por hoje!", icon=":material/celebration:")
     else:
@@ -696,7 +732,12 @@ elif pagina == "Materiais de Estudo":
 
     areas = mapa_areas()
     if not areas:
-        st.warning("Cadastre uma área primeiro (na página 'Cadastrar Questão').")
+        ui.empty_state(
+            "Nenhuma área cadastrada ainda",
+            "Cadastre uma área (ex: Cardiologia) antes de adicionar materiais.",
+            icon="square-plus", cta_label="Ir para Cadastrar Questão",
+            cta_icon=":material/arrow_forward:", cta_pagina="Cadastrar Questão",
+        )
     else:
         with st.expander("Adicionar novo material", icon=":material/add_circle:"):
             col_area, col_sub, col_tipo = st.columns(3)
@@ -752,7 +793,10 @@ elif pagina == "Materiais de Estudo":
         total = db.contar_materiais_filtrados(area_id_filtro, subtopico_id_filtro, tipo_filtro, busca)
 
         if total == 0:
-            st.info("Nenhum material encontrado para esse filtro.")
+            ui.empty_state(
+                "Nenhum material encontrado",
+                "Tente ajustar os filtros acima, ou adicione um novo material.",
+            )
         else:
             POR_PAGINA = 50
             _, offset = controle_paginacao("mat_pagina", total, POR_PAGINA)
@@ -872,7 +916,12 @@ elif pagina == "Banco de Questões":
     total = db.contar_questoes_filtradas(area_id=area_id, busca=busca)
 
     if total == 0:
-        st.info("Nenhuma questão encontrada para esse filtro.")
+        ui.empty_state(
+            "Nenhuma questão encontrada",
+            "Tente ajustar os filtros acima, ou cadastre uma nova questão.",
+            cta_label="Ir para Cadastrar Questão", cta_icon=":material/arrow_forward:",
+            cta_pagina="Cadastrar Questão",
+        )
     else:
         POR_PAGINA = 50
         _, offset = controle_paginacao("bq_pagina", total, POR_PAGINA)

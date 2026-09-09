@@ -69,6 +69,14 @@ _ICONS = {
         <ellipse cx="12" cy="5" rx="9" ry="3" />
         <path d="M3 5V19A9 3 0 0 0 21 19V5" /><path d="M3 12A9 3 0 0 0 21 12" />
     """,
+    "inbox": """
+        <path d="M22 12h-6l-2 3h-4l-2-3H2" />
+        <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" />
+    """,
+    "circle-check": """
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+        <path d="m9 11 3 3L22 4" />
+    """,
 }
 
 
@@ -203,6 +211,33 @@ html, body, [class*="css"] {
     line-height: 1.2;
     color: #E2E8F0;
 }
+
+/* ---- Estado vazio (ui.empty_state) ------------------------------------ */
+.es-wrap {
+    text-align: center;
+    padding: 1.6rem 1rem 0.6rem;
+}
+.es-icon {
+    width: 3.5rem;
+    height: 3.5rem;
+    margin: 0 auto 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(45, 212, 191, 0.14), rgba(56, 189, 248, 0.08));
+    color: #2DD4BF;
+}
+.es-title {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #E2E8F0;
+}
+.es-subtitle {
+    font-size: 0.9rem;
+    color: #8291AD;
+    margin-top: 0.3rem;
+}
 </style>
 """
 
@@ -221,3 +256,41 @@ def page_header(icon: str, title: str):
         """,
         unsafe_allow_html=True,
     )
+
+
+def empty_state(
+    title: str,
+    subtitle: str = "",
+    icon: str = "inbox",
+    cta_label: str | None = None,
+    cta_icon: str | None = None,
+    cta_pagina: str | None = None,
+):
+    """Bloco visual pra listas/telas sem dados, no lugar de um st.info cru.
+    Se `cta_label` + `cta_pagina` forem passados, mostra um botão que troca
+    de página em vez de só sugerir por texto pra onde o usuário deveria ir.
+    Não escreve direto em `st.session_state["nav_pagina"]` (o widget do
+    menu já foi instanciado nesta execução, o que geraria
+    StreamlitWidgetAlreadyInstantiatedError) — grava numa chave separada
+    que o app.py consome antes de recriar o widget do menu na próxima
+    execução."""
+    with st.container(border=True):
+        st.markdown(
+            f"""
+            <div class="es-wrap">
+                <div class="es-icon">{icon_svg(icon, size=28)}</div>
+                <div class="es-title">{title}</div>
+                {f'<div class="es-subtitle">{subtitle}</div>' if subtitle else ""}
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        if cta_label and cta_pagina:
+            _, col_meio, _ = st.columns([1, 1.4, 1])
+            with col_meio:
+                if st.button(
+                    cta_label, icon=cta_icon, use_container_width=True,
+                    key=f"es_cta_{abs(hash((title, cta_pagina)))}",
+                ):
+                    st.session_state["_forcar_pagina"] = cta_pagina
+                    st.rerun()
