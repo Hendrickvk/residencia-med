@@ -2,11 +2,14 @@ import streamlit as st
 import pandas as pd
 import json
 import random
+import datetime
 
 import db
 import repeticao_espacada as sr
 import importador_questoes as imp_q
 import mediafire_import as mf
+import mediafire_cache as mfc
+import auth
 
 st.set_page_config(
     page_title="Residência Med - Plataforma de Estudos",
@@ -16,13 +19,23 @@ st.set_page_config(
 
 db.init_db()
 
+if "usuario_id" not in st.session_state:
+    auth.render_login_signup()
+    st.stop()
+
 # ---------------------------------------------------------------------------
 # Sidebar / navegação
 # ---------------------------------------------------------------------------
 st.sidebar.title("🩺 Residência Med")
+st.sidebar.caption(f"Logado como: {st.session_state.get('usuario_email', '')}")
+if st.sidebar.button("Sair"):
+    for chave in ("usuario_id", "usuario_email"):
+        st.session_state.pop(chave, None)
+    st.rerun()
+st.sidebar.markdown("---")
 pagina = st.sidebar.radio(
     "Navegação",
-    ["Dashboard", "Responder Questões", "Cadastrar Questão",
+    ["Dashboard", "Responder Questões", "Simulado", "Cadastrar Questão",
      "Importar Questões (planilha)", "Revisão (Repetição Espaçada)",
      "Materiais de Estudo", "Sincronizar MediaFire", "Banco de Questões"],
 )
@@ -76,13 +89,26 @@ def resetar_paginacao_se_filtro_mudou(chave, assinatura_filtro):
         st.session_state[chave] = 0
 
 
+def consolidar_simulado_no_historico(simulado_id, usuario_id):
+    """Joga as respostas do simulado nos mesmos caminhos usados por
+    'Responder Questões' (db.registrar_resposta + sr.registrar_revisao),
+    para que o Dashboard e a fila de repetição espaçada considerem o
+    simulado automaticamente. Chamar uma única vez, ao finalizar."""
+    for item in db.listar_itens_simulado(simulado_id, usuario_id=usuario_id):
+        if item["resposta_dada"] is None:
+            continue
+        correta = bool(item["correta"])
+        db.registrar_resposta(item["id"], item["resposta_dada"], correta, usuario_id=usuario_id)
+        sr.registrar_revisao(item["id"], 5 if correta else 1, usuario_id=usuario_id)
+
+
 # ---------------------------------------------------------------------------
 # DASHBOARD
 # ---------------------------------------------------------------------------
 if pagina == "Dashboard":
     st.title("📊 Dashboard de Desempenho")
 
-    desemp_area = db.desempenho_por_area()
+    desemp_area = db.desempenho_por_area(usuario_id=st.session_state.usuario_id)
     if not desemp_area:
         st.info("Ainda não há respostas registradas. Vá em **Responder Questões** para começar.")
     else:
@@ -108,20 +134,47 @@ if pagina == "Dashboard":
             )
 
         st.subheader("Evolução diária")
-        evol = db.evolucao_diaria()
+        evol = db.evolucao_diaria(usuario_id=st.session_state.usuario_id)
         if evol:
             df_evol = pd.DataFrame([dict(r) for r in evol]).set_index("dia")
             st.line_chart(df_evol[["pct_acerto"]])
             st.bar_chart(df_evol[["total"]])
 
+        st.subheader("Desempenho por banca / instituição")
+        desemp_banca = db.desempenho_por_banca(usuario_id=st.session_state.usuario_id)
+        if not desemp_banca:
+            st.caption(
+                "Nenhuma resposta registrada em questões com banca definida "
+                "ainda. Preencha o campo 'Banca' ao cadastrar ou importar "
+                "questões para acompanhar esse comparativo."
+            )
+        else:
+            df_banca = pd.DataFrame([dict(r) for r in desemp_banca])
+            st.bar_chart(df_banca.set_index("banca")["pct_acerto"])
+
+            sem_banca = db.contar_respostas_sem_banca(usuario_id=st.session_state.usuario_id)
+            if sem_banca:
+                st.caption(
+                    f"ℹ️ {sem_banca} resposta(s) de questões sem banca definida "
+                    "não entram nessa comparação."
+                )
+
+            with st.expander("📋 Comparar bancas por área"):
+                desemp_banca_area = db.desempenho_por_banca_e_area(usuario_id=st.session_state.usuario_id)
+                df_ba = pd.DataFrame([dict(r) for r in desemp_banca_area])
+                pivot = df_ba.pivot_table(index="area", columns="banca", values="pct_acerto")
+                pivot_fmt = pivot.map(lambda v: f"{v:.1f}%" if pd.notna(v) else "—")
+                st.caption("% de acerto por área, banca a banca ('—' = sem respostas dessa combinação).")
+                st.dataframe(pivot_fmt, use_container_width=True)
+
         with st.expander("🎯 Desempenho por subtópico"):
-            desemp_sub = db.desempenho_por_subtopico()
+            desemp_sub = db.desempenho_por_subtopico(usuario_id=st.session_state.usuario_id)
             if desemp_sub:
                 df_sub = pd.DataFrame([dict(r) for r in desemp_sub])
                 st.dataframe(df_sub, use_container_width=True, hide_index=True)
 
         with st.expander("❌ Questões mais erradas"):
-            piores_q = db.questoes_mais_erradas()
+            piores_q = db.questoes_mais_erradas(usuario_id=st.session_state.usuario_id)
             if piores_q:
                 df_q = pd.DataFrame([dict(r) for r in piores_q])
                 st.dataframe(
@@ -173,7 +226,7 @@ elif pagina == "Responder Questões":
 
             if st.button("Confirmar resposta", key=f"conf_{q['id']}"):
                 correta = (resposta == q["resposta_correta"])
-                db.registrar_resposta(q["id"], resposta, correta)
+                db.registrar_resposta(q["id"], resposta, correta, usuario_id=st.session_state.usuario_id)
 
                 if correta:
                     st.success(f"✅ Correto! Resposta: {q['resposta_correta']}")
@@ -185,10 +238,211 @@ elif pagina == "Responder Questões":
 
                 # qualidade simples para a repetição espaçada
                 qualidade = 5 if correta else 1
-                sr.registrar_revisao(q["id"], qualidade)
+                sr.registrar_revisao(q["id"], qualidade, usuario_id=st.session_state.usuario_id)
 
                 st.session_state.idx_atual += 1
                 if st.button("Próxima questão ➡️"):
+                    st.rerun()
+
+# ---------------------------------------------------------------------------
+# SIMULADO (prova cronometrada)
+# ---------------------------------------------------------------------------
+elif pagina == "Simulado":
+    st.title("🎯 Simulado Cronometrado")
+
+    simulado_id = st.session_state.get("simulado_id")
+
+    if simulado_id is None:
+        # --- Tela de configuração ---------------------------------------
+        st.caption(
+            "Monte uma prova no formato das provas de residência: número "
+            "de questões, tempo limite e sem correção até o final."
+        )
+
+        areas = mapa_areas()
+        col1, col2 = st.columns(2)
+        with col1:
+            area_nome = st.selectbox("Área (opcional)", ["Todas"] + list(areas.keys()), key="sim_area")
+            area_id = areas[area_nome] if area_nome != "Todas" else None
+        with col2:
+            bancas = db.listar_bancas()
+            if bancas:
+                banca = st.selectbox("Banca (opcional)", ["Todas"] + bancas, key="sim_banca")
+                banca = None if banca == "Todas" else banca
+            else:
+                banca = None
+
+        col3, col4 = st.columns(2)
+        with col3:
+            preset = st.selectbox("Número de questões", [10, 20, 30, 50, "Personalizado"], key="sim_preset")
+            if preset == "Personalizado":
+                num_questoes = st.number_input(
+                    "Quantas questões?", min_value=1, max_value=200, value=15, step=1,
+                    key="sim_num_custom",
+                )
+            else:
+                num_questoes = preset
+        with col4:
+            if st.session_state.get("sim_num_questoes_anterior") != num_questoes:
+                st.session_state["sim_num_questoes_anterior"] = num_questoes
+                st.session_state["sim_tempo"] = max(5, round(num_questoes * 1.5))
+            tempo_limite_min = st.number_input(
+                "Tempo limite (minutos)", min_value=1, max_value=600, step=1, key="sim_tempo",
+            )
+
+        disponiveis = db.contar_questoes_disponiveis(area_id, banca)
+        if disponiveis < num_questoes:
+            st.warning(
+                f"Só há {disponiveis} questão(ões) disponível(is) para esse filtro "
+                f"(pediu {num_questoes}). Ajuste os filtros ou a quantidade."
+            )
+
+        if st.button("🚀 Iniciar simulado", disabled=disponiveis == 0 or disponiveis < num_questoes):
+            questoes = db.questoes_aleatorias(area_id, banca, limite=num_questoes)
+            ids = [q["id"] for q in questoes]
+            novo_id = db.criar_simulado(
+                area_id, banca, len(ids), int(tempo_limite_min), ids,
+                usuario_id=st.session_state.usuario_id,
+            )
+            st.session_state.simulado_id = novo_id
+            st.session_state.simulado_questoes = ids
+            st.session_state.simulado_idx = 0
+            st.rerun()
+
+        with st.expander("📜 Histórico de simulados"):
+            historico = db.listar_simulados(10, usuario_id=st.session_state.usuario_id)
+            if not historico:
+                st.caption("Nenhum simulado concluído ainda.")
+            else:
+                df_hist = pd.DataFrame([dict(h) for h in historico])
+                df_hist["area"] = df_hist["area"].fillna("Todas")
+                st.dataframe(
+                    df_hist[["finalizado_em", "area", "banca", "num_questoes", "acertos", "pct_acerto"]],
+                    use_container_width=True, hide_index=True,
+                )
+
+    else:
+        simulado = db.obter_simulado(simulado_id, usuario_id=st.session_state.usuario_id)
+        if simulado is None:
+            for chave in ("simulado_id", "simulado_questoes", "simulado_idx"):
+                st.session_state.pop(chave, None)
+            st.warning("Simulado não encontrado.")
+            st.rerun()
+
+        if simulado["finalizado_em"] is not None:
+            # --- Tela de resultado ---------------------------------------
+            acertos = simulado["acertos"] or 0
+            total = simulado["num_questoes"]
+            pct = round(100 * acertos / total, 1) if total else 0
+
+            col1, col2, col3 = st.columns(3)
+            col1.metric("Acertos", f"{acertos}/{total}")
+            col2.metric("% de acerto", f"{pct}%")
+            col3.metric("Respondidas", simulado["total_respondidas"] or 0)
+
+            desemp = db.desempenho_simulado(simulado_id, usuario_id=st.session_state.usuario_id)
+            if desemp:
+                st.subheader("Desempenho por área (neste simulado)")
+                df_desemp = pd.DataFrame([dict(r) for r in desemp])
+                st.bar_chart(df_desemp.set_index("area")["pct_acerto"])
+
+            st.subheader("Revisão completa")
+            itens = db.listar_itens_simulado(simulado_id, usuario_id=st.session_state.usuario_id)
+            for item in itens:
+                alternativas = json.loads(item["alternativas"])
+                if item["resposta_dada"] is None:
+                    marcador = "⬜ não respondida"
+                elif item["correta"]:
+                    marcador = "✅ correta"
+                else:
+                    marcador = "❌ errada"
+                with st.expander(f"[{item['ordem'] + 1}] {marcador} — {item['enunciado'][:80]}..."):
+                    st.markdown(item["enunciado"])
+                    for letra, texto in alternativas.items():
+                        prefixo = "✅" if letra == item["resposta_correta"] else "▫️"
+                        sufixo = " (sua resposta)" if letra == item["resposta_dada"] else ""
+                        st.write(f"{prefixo} **{letra})** {texto}{sufixo}")
+                    if item["explicacao"]:
+                        st.info(f"💡 {item['explicacao']}")
+
+            if st.button("🆕 Novo Simulado"):
+                for chave in ["simulado_id", "simulado_questoes", "simulado_idx"]:
+                    st.session_state.pop(chave, None)
+                st.rerun()
+
+        else:
+            # --- Simulado em andamento ------------------------------------
+            iniciado_em = datetime.datetime.fromisoformat(simulado["iniciado_em"])
+            limite_seg = simulado["tempo_limite_min"] * 60
+            decorrido_seg = (datetime.datetime.now() - iniciado_em).total_seconds()
+            restante_seg = limite_seg - decorrido_seg
+
+            if restante_seg <= 0:
+                db.finalizar_simulado(simulado_id, usuario_id=st.session_state.usuario_id)
+                consolidar_simulado_no_historico(simulado_id, st.session_state.usuario_id)
+                st.warning("⏰ Tempo esgotado! Confira seu resultado abaixo.")
+                st.rerun()
+            else:
+                ids = st.session_state.get("simulado_questoes") or [
+                    i["id"] for i in db.listar_itens_simulado(simulado_id, usuario_id=st.session_state.usuario_id)
+                ]
+                idx = st.session_state.get("simulado_idx", 0)
+                idx = max(0, min(idx, len(ids) - 1))
+
+                itens = db.listar_itens_simulado(simulado_id, usuario_id=st.session_state.usuario_id)
+                respostas_dadas = {i["id"]: i["resposta_dada"] for i in itens}
+
+                minutos, segundos = divmod(int(restante_seg), 60)
+                cor = "🔴" if restante_seg < 60 else ("🟡" if restante_seg < limite_seg * 0.1 else "🟢")
+                col1, col2 = st.columns([1, 3])
+                col1.metric("Tempo restante", f"{cor} {minutos:02d}:{segundos:02d}")
+                col2.progress((idx + 1) / len(ids))
+                col2.caption(f"Questão {idx + 1} de {len(ids)}")
+
+                q = db.obter_questao(ids[idx])
+                st.markdown(f"### {q['enunciado']}")
+
+                alternativas = json.loads(q["alternativas"])
+                opcoes = list(alternativas.keys())
+                resposta_atual = respostas_dadas.get(q["id"])
+                resposta = st.radio(
+                    "Alternativas",
+                    options=opcoes,
+                    index=opcoes.index(resposta_atual) if resposta_atual in opcoes else None,
+                    format_func=lambda k: f"{k}) {alternativas[k]}",
+                    key=f"sim_resp_{simulado_id}_{q['id']}",
+                )
+                if resposta is not None:
+                    db.registrar_resposta_simulado(
+                        simulado_id, q["id"], resposta, usuario_id=st.session_state.usuario_id,
+                    )
+
+                col_a, col_b, col_c = st.columns(3)
+                with col_a:
+                    if st.button("⬅️ Anterior", disabled=idx <= 0):
+                        st.session_state.simulado_idx = idx - 1
+                        st.rerun()
+                with col_b:
+                    respondidas_marcador = ["✅" if respostas_dadas.get(qid) else "◻️" for qid in ids]
+                    ir_para = st.selectbox(
+                        "Ir para questão",
+                        options=list(range(len(ids))),
+                        index=idx,
+                        format_func=lambda i: f"{i + 1} {respondidas_marcador[i]}",
+                        key=f"sim_nav_{simulado_id}_{idx}",
+                    )
+                    if ir_para != idx:
+                        st.session_state.simulado_idx = ir_para
+                        st.rerun()
+                with col_c:
+                    if st.button("Próxima ➡️", disabled=idx >= len(ids) - 1):
+                        st.session_state.simulado_idx = idx + 1
+                        st.rerun()
+
+                st.markdown("---")
+                if st.button("🏁 Finalizar Simulado"):
+                    db.finalizar_simulado(simulado_id, usuario_id=st.session_state.usuario_id)
+                    consolidar_simulado_no_historico(simulado_id, st.session_state.usuario_id)
                     st.rerun()
 
 # ---------------------------------------------------------------------------
@@ -335,8 +589,8 @@ elif pagina == "Revisão (Repetição Espaçada)":
         "voltam com intervalos cada vez maiores (algoritmo estilo Anki/SM-2)."
     )
 
-    pendentes = sr.questoes_para_revisar_hoje()
-    novas = sr.questoes_nunca_revisadas()
+    pendentes = sr.questoes_para_revisar_hoje(usuario_id=st.session_state.usuario_id)
+    novas = sr.questoes_nunca_revisadas(usuario_id=st.session_state.usuario_id)
 
     st.write(f"📅 **{len(pendentes)}** questões para revisar hoje | 🆕 **{len(novas)}** ainda sem revisão agendada")
 
@@ -365,7 +619,7 @@ elif pagina == "Revisão (Repetição Espaçada)":
 
         if st.button("Confirmar", key=f"rev_conf_{q['id']}_{st.session_state.rev_idx}"):
             correta = (resposta == q["resposta_correta"])
-            db.registrar_resposta(q["id"], resposta, correta)
+            db.registrar_resposta(q["id"], resposta, correta, usuario_id=st.session_state.usuario_id)
             if correta:
                 st.success("✅ Correto!")
                 qualidade = st.slider(
@@ -376,7 +630,7 @@ elif pagina == "Revisão (Repetição Espaçada)":
                 st.error(f"❌ Errado. Resposta correta: {q['resposta_correta']}")
                 qualidade = 1
 
-            sr.registrar_revisao(q["id"], qualidade)
+            sr.registrar_revisao(q["id"], qualidade, usuario_id=st.session_state.usuario_id)
             st.session_state.rev_idx += 1
             st.rerun()
 
@@ -387,7 +641,10 @@ elif pagina == "Materiais de Estudo":
     st.title("📚 Materiais de Estudo (MediaFire)")
     st.caption(
         "Organize aqui os links da sua pasta compartilhada do MediaFire, "
-        "por área, subtópico e tipo de material."
+        "por área, subtópico e tipo de material. Cada material pode ser "
+        "baixado para um cache local (útil para acessar offline) — o "
+        "download é sempre por sua conta, um material de cada vez, já que "
+        "vídeos podem ser grandes."
     )
 
     areas = mapa_areas()
@@ -454,13 +711,34 @@ elif pagina == "Materiais de Estudo":
                 limite=POR_PAGINA, offset=offset,
             )
 
+            cache_n, cache_bytes = db.estatisticas_cache()
+            if cache_n:
+                st.caption(
+                    f"💾 {cache_n} material(is) em cache local, ocupando "
+                    f"{mfc.formatar_tamanho(cache_bytes)} em disco."
+                )
+
             df_mat = pd.DataFrame([dict(m) for m in materiais])
             for tipo, grupo in df_mat.groupby("tipo", sort=False):
                 st.markdown(f"**{tipo}**")
                 for _, m in grupo.iterrows():
-                    col1, col2 = st.columns([4, 1])
+                    col1, col2, col3, col4 = st.columns([3, 1, 1.8, 1])
                     col1.write(m["titulo"])
                     col2.link_button("Abrir 🔗", m["link_mediafire"], key=f"mat_link_{m['id']}")
+
+                    if mfc.esta_em_cache(m):
+                        col3.caption(f"✅ Em cache ({mfc.formatar_tamanho(m['tamanho_bytes'])})")
+                        if col4.button("🗑️", key=f"mat_rmcache_{m['id']}", help="Remover do cache local"):
+                            mfc.remover_cache(int(m["id"]))
+                            st.rerun()
+                    else:
+                        if col3.button("⬇️ Baixar para cache", key=f"mat_baixar_{m['id']}"):
+                            try:
+                                with st.spinner(f"Baixando '{m['titulo']}'... isso pode demorar se for um vídeo."):
+                                    mfc.baixar_material(int(m["id"]))
+                                st.rerun()
+                            except mfc.CacheError as e:
+                                st.error(f"Não consegui baixar: {e}")
 
 # ---------------------------------------------------------------------------
 # SINCRONIZAR MEDIAFIRE (importação em massa dos materiais)

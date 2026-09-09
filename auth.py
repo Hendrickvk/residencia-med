@@ -1,0 +1,59 @@
+"""
+Autenticação simples por e-mail/senha (bcrypt) para a plataforma
+multiusuário. Não usa cookies/tokens — o login vive em
+st.session_state, então não sobrevive a um refresh completo do
+navegador (limitação conhecida e aceita nesta fase; o progresso em si
+fica seguro no Postgres independente disso).
+"""
+
+import streamlit as st
+import bcrypt
+
+import db
+
+
+def hash_senha(senha: str) -> str:
+    return bcrypt.hashpw(senha.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+
+def verificar_senha(senha: str, hash_armazenado: str) -> bool:
+    return bcrypt.checkpw(senha.encode("utf-8"), hash_armazenado.encode("utf-8"))
+
+
+def render_login_signup():
+    st.title("🩺 Residência Med")
+    st.caption("Faça login ou crie sua conta para começar a estudar.")
+    aba_entrar, aba_criar = st.tabs(["Entrar", "Criar conta"])
+
+    with aba_entrar:
+        email = st.text_input("E-mail", key="login_email")
+        senha = st.text_input("Senha", type="password", key="login_senha")
+        if st.button("Entrar", key="btn_entrar"):
+            usuario = db.obter_usuario_por_email(email) if email.strip() else None
+            if usuario and verificar_senha(senha, usuario["senha_hash"]):
+                st.session_state.usuario_id = usuario["id"]
+                st.session_state.usuario_email = usuario["email"]
+                st.rerun()
+            else:
+                st.error("E-mail ou senha incorretos.")
+
+    with aba_criar:
+        novo_email = st.text_input("E-mail", key="signup_email")
+        nova_senha = st.text_input("Senha", type="password", key="signup_senha")
+        confirmar = st.text_input("Confirmar senha", type="password", key="signup_confirma")
+        if st.button("Criar conta", key="btn_criar_conta"):
+            if not novo_email.strip() or "@" not in novo_email:
+                st.error("Informe um e-mail válido.")
+            elif len(nova_senha) < 6:
+                st.error("A senha deve ter ao menos 6 caracteres.")
+            elif nova_senha != confirmar:
+                st.error("As senhas não coincidem.")
+            else:
+                usuario_id = db.criar_usuario(novo_email, hash_senha(nova_senha))
+                if usuario_id is None:
+                    st.error("Já existe uma conta com esse e-mail.")
+                else:
+                    st.session_state.usuario_id = usuario_id
+                    st.session_state.usuario_email = novo_email.strip().lower()
+                    st.success("Conta criada com sucesso!")
+                    st.rerun()

@@ -9,16 +9,24 @@ inspirada em plataformas como a Medcof.
 - **Banco de questões**: cadastro de questões por área/subtópico, com
   alternativas, resposta correta, explicação, banca e ano.
 - **Responder questões**: modo de estudo em lote, com correção imediata.
-- **Dashboard de desempenho**: gráficos de % de acerto por área e por
-  subtópico, evolução diária e ranking das questões mais erradas —
-  para você enxergar rápido onde estão seus pontos fracos.
+- **Dashboard de desempenho**: gráficos de % de acerto por área, por
+  subtópico e por banca/instituição (com comparativo cruzado
+  banca × área), evolução diária e ranking das questões mais
+  erradas — para você enxergar rápido onde estão seus pontos fracos.
 - **Repetição espaçada**: fila de revisão baseada em um algoritmo
   estilo Anki/SM-2 — questões erradas voltam mais cedo, questões
   dominadas voltam com intervalos maiores.
+- **Simulado cronometrado**: monte uma prova no formato ENAMED/SP —
+  escolha o número de questões, filtre por área e/ou banca, defina o
+  tempo limite e responda sem correção imediata (igual numa prova de
+  verdade). Ao final (ou quando o tempo acaba), você vê a nota, o
+  desempenho por área naquele simulado e a revisão completa de cada
+  questão, com gabarito e explicação.
 - **Materiais de estudo (MediaFire)**: biblioteca organizada por
   área → subtópico → tipo de material (Apostila, Videoaula, Vídeo
   Bônus, Vídeo Apostila etc.), com botão que abre o link da sua pasta
-  compartilhada do MediaFire.
+  compartilhada do MediaFire — e um botão para baixar cada material
+  para um cache local (acesso offline), um de cada vez.
 - **Importação em massa de questões**: sobe um Excel (.xlsx) ou CSV
   com centenas de questões de uma vez (tem botão para baixar um
   modelo pronto). Detecta duplicatas e mostra um relatório de erros
@@ -75,6 +83,24 @@ mudar sua API sem aviso, a sincronização pode passar a falhar; nesse
 caso, o cadastro manual (tela "Materiais de Estudo") continua
 funcionando como alternativa.
 
+## Como baixar materiais para acesso offline
+
+A sincronização acima só importa os **links** dos arquivos — o
+conteúdo continua hospedado no MediaFire. Se quiser acesso offline a
+algum material específico:
+
+1. Na tela **"Materiais de Estudo"**, ao lado de cada material, clique
+   em **"⬇️ Baixar para cache"**.
+2. O app resolve o link direto de download da página do MediaFire e
+   baixa o arquivo para `data/materiais_cache/` no seu computador.
+   Isso é sempre manual, material por material — vídeos podem ter
+   centenas de MB, então nada baixa sozinho.
+3. Um material já em cache mostra o tamanho do arquivo baixado e um
+   botão **"🗑️"** para remover o cache (libera espaço em disco sem
+   apagar o material cadastrado nem o link original).
+4. O total de espaço ocupado pelo cache aparece no topo da lista de
+   materiais.
+
 ## Como importar questões em massa
 
 1. Abra **"Importar Questões (planilha)"** no menu lateral.
@@ -86,9 +112,25 @@ funcionando como alternativa.
    relatório com quantas foram importadas, quantas já existiam
    (ignoradas) e quais linhas tiveram problema (com o motivo).
 
-## Próximos passos sugeridos
+## Como fazer um simulado cronometrado
 
-- Simulados cronometrados no formato das provas (ENAMED, SP).
-- Estatísticas comparando seu desempenho por banca/instituição.
-- Baixar e cachear os arquivos do MediaFire localmente (hoje a
-  sincronização importa os links, não o conteúdo dos arquivos).
+1. Abra **"Simulado"** no menu lateral.
+2. Escolha o número de questões (10/20/30/50 ou um valor
+   personalizado), filtre por área e/ou banca se quiser, e ajuste o
+   tempo limite (o app já sugere um valor com base na quantidade de
+   questões, mas você pode editar).
+3. Clique em **"Iniciar simulado"**. Se não houver questões
+   suficientes para o filtro escolhido, o botão fica desabilitado e o
+   app avisa quantas estão disponíveis.
+4. Responda as questões na ordem que preferir — dá para navegar entre
+   elas (Anterior/Próxima ou pelo seletor "Ir para questão") e as
+   respostas ficam salvas mesmo se você voltar. Não há correção
+   imediata, só o cronômetro no topo da tela.
+5. Ao clicar em **"Finalizar Simulado"** (ou quando o tempo acabar
+   sozinho), você vê a nota final, o desempenho por área daquele
+   simulado e a revisão completa — cada questão com sua resposta, o
+   gabarito e a explicação. As respostas também alimentam o Dashboard
+   geral e a fila de Repetição Espaçada, como se você tivesse
+   respondido na tela "Responder Questões".
+6. Um histórico dos últimos simulados concluídos fica disponível na
+   própria tela de configuração.

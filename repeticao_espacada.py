@@ -14,21 +14,21 @@ def _hoje():
     return datetime.date.today()
 
 
-def obter_estado(questao_id):
+def obter_estado(questao_id, *, usuario_id):
     with get_conn() as conn:
         row = conn.execute(
-            "SELECT * FROM revisao WHERE questao_id = ?", (questao_id,)
+            "SELECT * FROM revisao WHERE questao_id = ? AND usuario_id = ?", (questao_id, usuario_id)
         ).fetchone()
         return row
 
 
-def registrar_revisao(questao_id, qualidade: int):
+def registrar_revisao(questao_id, qualidade: int, *, usuario_id):
     """
     qualidade: 0-5 (0 = errou feio, 5 = acertou na hora e com confiança)
     Segue o algoritmo SM-2 clássico.
     """
     qualidade = max(0, min(5, qualidade))
-    estado = obter_estado(questao_id)
+    estado = obter_estado(questao_id, usuario_id=usuario_id)
 
     if estado is None:
         facilidade = 2.5
@@ -59,32 +59,32 @@ def registrar_revisao(questao_id, qualidade: int):
 
     with get_conn() as conn:
         conn.execute("""
-            INSERT INTO revisao (questao_id, facilidade, intervalo_dias, repeticoes, proxima_revisao)
-            VALUES (?, ?, ?, ?, ?)
-            ON CONFLICT(questao_id) DO UPDATE SET
+            INSERT INTO revisao (usuario_id, questao_id, facilidade, intervalo_dias, repeticoes, proxima_revisao)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT (usuario_id, questao_id) DO UPDATE SET
                 facilidade = excluded.facilidade,
                 intervalo_dias = excluded.intervalo_dias,
                 repeticoes = excluded.repeticoes,
                 proxima_revisao = excluded.proxima_revisao
-        """, (questao_id, facilidade, intervalo, repeticoes, proxima.isoformat()))
+        """, (usuario_id, questao_id, facilidade, intervalo, repeticoes, proxima.isoformat()))
 
 
-def questoes_para_revisar_hoje():
+def questoes_para_revisar_hoje(*, usuario_id):
     with get_conn() as conn:
         return conn.execute("""
             SELECT q.*, r.proxima_revisao, r.repeticoes, r.intervalo_dias
             FROM revisao r
             JOIN questoes q ON q.id = r.questao_id
-            WHERE r.proxima_revisao <= ?
+            WHERE r.usuario_id = ? AND r.proxima_revisao <= ?
             ORDER BY r.proxima_revisao ASC
-        """, (_hoje().isoformat(),)).fetchall()
+        """, (usuario_id, _hoje().isoformat())).fetchall()
 
 
-def questoes_nunca_revisadas():
+def questoes_nunca_revisadas(*, usuario_id):
     with get_conn() as conn:
         return conn.execute("""
             SELECT q.* FROM questoes q
-            LEFT JOIN revisao r ON r.questao_id = q.id
+            LEFT JOIN revisao r ON r.questao_id = q.id AND r.usuario_id = ?
             WHERE r.questao_id IS NULL
             ORDER BY q.criada_em ASC
-        """).fetchall()
+        """, (usuario_id,)).fetchall()
