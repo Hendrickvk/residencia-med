@@ -8,7 +8,6 @@ import db
 import repeticao_espacada as sr
 import importador_questoes as imp_q
 import mediafire_import as mf
-import mediafire_cache as mfc
 import auth
 import ui
 
@@ -18,6 +17,12 @@ st.set_page_config(
     layout="wide",
 )
 ui.inject_custom_css()
+
+# Materiais são um recurso compartilhado entre todos os usuários — ações
+# destrutivas em massa (excluir todos de uma vez) ficam restritas a quem
+# está nessa lista, pra não deixar qualquer conta apagar o acervo de todo
+# mundo.
+ADMIN_EMAILS = {"hendrickvk@gmail.com"}
 
 db.init_db()
 
@@ -660,18 +665,15 @@ elif pagina == "Materiais de Estudo":
     ui.page_header("book-open", "Materiais de Estudo (MediaFire)")
     st.caption(
         "Organize aqui os links da sua pasta compartilhada do MediaFire, "
-        "por área, subtópico e tipo de material. Cada material pode ser "
-        "baixado para um cache local (útil para acessar offline) — o "
-        "download é sempre por sua conta, um material de cada vez, já que "
-        "vídeos podem ser grandes."
+        "por área, subtópico e tipo de material."
     )
 
     total_mat_atual = db.contar_materiais()
-    if total_mat_atual:
-        with st.expander("Zona de risco", icon=":material/warning:"):
+    if total_mat_atual and st.session_state.get("usuario_email") in ADMIN_EMAILS:
+        with st.expander("Zona de risco (admin)", icon=":material/warning:"):
             st.write(
                 f"Isso apaga permanentemente **{total_mat_atual}** material(is) "
-                "cadastrados (e qualquer arquivo em cache local). Não tem como desfazer."
+                "cadastrados, para **todos os usuários** da plataforma. Não tem como desfazer."
             )
             confirmar_excluir_todos = st.checkbox(
                 f"Sim, quero excluir todos os {total_mat_atual} materiais cadastrados",
@@ -682,7 +684,6 @@ elif pagina == "Materiais de Estudo":
                 icon=":material/delete_forever:",
                 disabled=not confirmar_excluir_todos,
             ):
-                mfc.limpar_todo_cache()
                 db.excluir_todos_materiais()
                 st.session_state.pop("confirmar_excluir_todos_materiais", None)
                 st.success("Todos os materiais foram excluídos.", icon=":material/check_circle:")
@@ -752,37 +753,15 @@ elif pagina == "Materiais de Estudo":
                 limite=POR_PAGINA, offset=offset,
             )
 
-            cache_n, cache_bytes = db.estatisticas_cache()
-            if cache_n:
-                st.caption(
-                    f":material/save: {cache_n} material(is) em cache local, ocupando "
-                    f"{mfc.formatar_tamanho(cache_bytes)} em disco."
-                )
-
             df_mat = pd.DataFrame([dict(m) for m in materiais])
             for tipo, grupo in df_mat.groupby("tipo", sort=False):
                 st.markdown(f"**{tipo}**")
                 for _, m in grupo.iterrows():
-                    col1, col2, col3, col4, col5 = st.columns([3, 1, 1.8, 1, 1])
+                    col1, col2, col3 = st.columns([4, 1, 1])
                     col1.write(m["titulo"])
                     col2.link_button("Abrir", m["link_mediafire"], icon=":material/open_in_new:", key=f"mat_link_{m['id']}")
 
-                    if mfc.esta_em_cache(m):
-                        col3.caption(f":material/check_circle: Em cache ({mfc.formatar_tamanho(m['tamanho_bytes'])})")
-                        if col4.button("", icon=":material/delete:", key=f"mat_rmcache_{m['id']}", help="Remover do cache local"):
-                            mfc.remover_cache(int(m["id"]))
-                            st.rerun()
-                    else:
-                        if col3.button("Baixar para cache", icon=":material/download:", key=f"mat_baixar_{m['id']}"):
-                            try:
-                                with st.spinner(f"Baixando '{m['titulo']}'... isso pode demorar se for um vídeo."):
-                                    mfc.baixar_material(int(m["id"]))
-                                st.rerun()
-                            except mfc.CacheError as e:
-                                st.error(f"Não consegui baixar: {e}", icon=":material/cancel:")
-
-                    if col5.button("", icon=":material/delete_forever:", key=f"mat_del_{m['id']}", help="Excluir material"):
-                        mfc.remover_cache(int(m["id"]))
+                    if col3.button("", icon=":material/delete_forever:", key=f"mat_del_{m['id']}", help="Excluir material"):
                         db.excluir_material(int(m["id"]))
                         st.rerun()
 
