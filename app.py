@@ -10,12 +10,14 @@ import importador_questoes as imp_q
 import mediafire_import as mf
 import mediafire_cache as mfc
 import auth
+import ui
 
 st.set_page_config(
     page_title="Residência Med - Plataforma de Estudos",
     page_icon="🩺",
     layout="wide",
 )
+ui.inject_custom_css()
 
 db.init_db()
 
@@ -26,9 +28,17 @@ if "usuario_id" not in st.session_state:
 # ---------------------------------------------------------------------------
 # Sidebar / navegação
 # ---------------------------------------------------------------------------
-st.sidebar.title("🩺 Residência Med")
+st.sidebar.markdown(
+    """
+    <div style="display:flex; align-items:center; gap:0.6rem; padding: 0.2rem 0 1rem 0;">
+        <span style="font-size:1.6rem;">🩺</span>
+        <span style="font-size:1.25rem; font-weight:700; color:#E2E8F0;">Residência Med</span>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 st.sidebar.caption(f"Logado como: {st.session_state.get('usuario_email', '')}")
-if st.sidebar.button("Sair"):
+if st.sidebar.button("Sair", use_container_width=True):
     for chave in ("usuario_id", "usuario_email"):
         st.session_state.pop(chave, None)
     st.rerun()
@@ -38,6 +48,7 @@ pagina = st.sidebar.radio(
     ["Dashboard", "Responder Questões", "Simulado", "Cadastrar Questão",
      "Importar Questões (planilha)", "Revisão (Repetição Espaçada)",
      "Materiais de Estudo", "Sincronizar MediaFire", "Banco de Questões"],
+    label_visibility="collapsed",
 )
 
 st.sidebar.markdown("---")
@@ -106,7 +117,7 @@ def consolidar_simulado_no_historico(simulado_id, usuario_id):
 # DASHBOARD
 # ---------------------------------------------------------------------------
 if pagina == "Dashboard":
-    st.title("📊 Dashboard de Desempenho")
+    ui.page_header("📊", "Dashboard de Desempenho")
 
     desemp_area = db.desempenho_por_area(usuario_id=st.session_state.usuario_id)
     if not desemp_area:
@@ -186,7 +197,7 @@ if pagina == "Dashboard":
 # RESPONDER QUESTÕES
 # ---------------------------------------------------------------------------
 elif pagina == "Responder Questões":
-    st.title("✏️ Responder Questões")
+    ui.page_header("✏️", "Responder Questões")
 
     areas = mapa_areas()
     if not areas:
@@ -248,7 +259,7 @@ elif pagina == "Responder Questões":
 # SIMULADO (prova cronometrada)
 # ---------------------------------------------------------------------------
 elif pagina == "Simulado":
-    st.title("🎯 Simulado Cronometrado")
+    ui.page_header("🎯", "Simulado Cronometrado")
 
     simulado_id = st.session_state.get("simulado_id")
 
@@ -449,7 +460,7 @@ elif pagina == "Simulado":
 # CADASTRAR QUESTÃO
 # ---------------------------------------------------------------------------
 elif pagina == "Cadastrar Questão":
-    st.title("➕ Cadastrar Nova Questão")
+    ui.page_header("➕", "Cadastrar Nova Questão")
 
     with st.expander("Cadastrar nova área ou subtópico"):
         col1, col2 = st.columns(2)
@@ -518,7 +529,7 @@ elif pagina == "Cadastrar Questão":
 # IMPORTAR QUESTÕES EM MASSA (PLANILHA)
 # ---------------------------------------------------------------------------
 elif pagina == "Importar Questões (planilha)":
-    st.title("📥 Importar Questões em Massa")
+    ui.page_header("📥", "Importar Questões em Massa")
     st.caption(
         "Importe centenas de questões de uma vez a partir de uma planilha "
         "Excel (.xlsx) ou CSV, em vez de cadastrar uma por uma."
@@ -583,7 +594,7 @@ elif pagina == "Importar Questões (planilha)":
 # REVISÃO (REPETIÇÃO ESPAÇADA)
 # ---------------------------------------------------------------------------
 elif pagina == "Revisão (Repetição Espaçada)":
-    st.title("🔁 Revisão por Repetição Espaçada")
+    ui.page_header("🔁", "Revisão por Repetição Espaçada")
     st.caption(
         "Questões que você errou voltam mais rápido; as que você domina "
         "voltam com intervalos cada vez maiores (algoritmo estilo Anki/SM-2)."
@@ -638,7 +649,7 @@ elif pagina == "Revisão (Repetição Espaçada)":
 # MATERIAIS DE ESTUDO (MediaFire)
 # ---------------------------------------------------------------------------
 elif pagina == "Materiais de Estudo":
-    st.title("📚 Materiais de Estudo (MediaFire)")
+    ui.page_header("📚", "Materiais de Estudo (MediaFire)")
     st.caption(
         "Organize aqui os links da sua pasta compartilhada do MediaFire, "
         "por área, subtópico e tipo de material. Cada material pode ser "
@@ -744,7 +755,7 @@ elif pagina == "Materiais de Estudo":
 # SINCRONIZAR MEDIAFIRE (importação em massa dos materiais)
 # ---------------------------------------------------------------------------
 elif pagina == "Sincronizar MediaFire":
-    st.title("🔄 Sincronizar Pasta do MediaFire")
+    ui.page_header("🔄", "Sincronizar Pasta do MediaFire")
     st.caption(
         "Cole o link da sua pasta raiz compartilhada do MediaFire. O app vai "
         "varrer automaticamente todas as subpastas (áreas → assuntos → "
@@ -803,7 +814,7 @@ elif pagina == "Sincronizar MediaFire":
 # BANCO DE QUESTÕES (listagem / gestão)
 # ---------------------------------------------------------------------------
 elif pagina == "Banco de Questões":
-    st.title("🗂️ Banco de Questões")
+    ui.page_header("🗂️", "Banco de Questões")
 
     areas = mapa_areas()
     col1, col2 = st.columns(2)

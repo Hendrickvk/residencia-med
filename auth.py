@@ -21,39 +21,55 @@ def verificar_senha(senha: str, hash_armazenado: str) -> bool:
 
 
 def render_login_signup():
-    st.title("🩺 Residência Med")
-    st.caption("Faça login ou crie sua conta para começar a estudar.")
-    aba_entrar, aba_criar = st.tabs(["Entrar", "Criar conta"])
+    _, col_c, _ = st.columns([1, 1.2, 1])
+    with col_c:
+        st.markdown(
+            """
+            <div style="text-align:center; margin-top:3rem; margin-bottom:1.5rem;">
+                <div style="font-size:2.6rem; line-height:1;">🩺</div>
+                <div style="font-size:1.7rem; font-weight:700; margin-top:0.5rem; color:#E2E8F0;">
+                    Residência Med
+                </div>
+                <div style="color:#94A3B8; font-size:0.95rem; margin-top:0.3rem;">
+                    Sua plataforma de estudos para residência médica
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
-    with aba_entrar:
-        email = st.text_input("E-mail", key="login_email")
-        senha = st.text_input("Senha", type="password", key="login_senha")
-        if st.button("Entrar", key="btn_entrar"):
-            usuario = db.obter_usuario_por_email(email) if email.strip() else None
-            if usuario and verificar_senha(senha, usuario["senha_hash"]):
-                st.session_state.usuario_id = usuario["id"]
-                st.session_state.usuario_email = usuario["email"]
-                st.rerun()
-            else:
-                st.error("E-mail ou senha incorretos.")
+        with st.container(border=True):
+            aba_entrar, aba_criar = st.tabs(["Entrar", "Criar conta"])
 
-    with aba_criar:
-        novo_email = st.text_input("E-mail", key="signup_email")
-        nova_senha = st.text_input("Senha", type="password", key="signup_senha")
-        confirmar = st.text_input("Confirmar senha", type="password", key="signup_confirma")
-        if st.button("Criar conta", key="btn_criar_conta"):
-            if not novo_email.strip() or "@" not in novo_email:
-                st.error("Informe um e-mail válido.")
-            elif len(nova_senha) < 6:
-                st.error("A senha deve ter ao menos 6 caracteres.")
-            elif nova_senha != confirmar:
-                st.error("As senhas não coincidem.")
-            else:
-                usuario_id = db.criar_usuario(novo_email, hash_senha(nova_senha))
-                if usuario_id is None:
-                    st.error("Já existe uma conta com esse e-mail.")
-                else:
-                    st.session_state.usuario_id = usuario_id
-                    st.session_state.usuario_email = novo_email.strip().lower()
-                    st.success("Conta criada com sucesso!")
-                    st.rerun()
+            with aba_entrar:
+                email = st.text_input("E-mail", key="login_email")
+                senha = st.text_input("Senha", type="password", key="login_senha")
+                if st.button("Entrar", key="btn_entrar", type="primary", use_container_width=True):
+                    usuario = db.obter_usuario_por_email(email) if email.strip() else None
+                    if usuario and verificar_senha(senha, usuario["senha_hash"]):
+                        st.session_state.usuario_id = usuario["id"]
+                        st.session_state.usuario_email = usuario["email"]
+                        st.rerun()
+                    else:
+                        st.error("E-mail ou senha incorretos.")
+
+            with aba_criar:
+                novo_email = st.text_input("E-mail", key="signup_email")
+                nova_senha = st.text_input("Senha", type="password", key="signup_senha")
+                confirmar = st.text_input("Confirmar senha", type="password", key="signup_confirma")
+                if st.button("Criar conta", key="btn_criar_conta", type="primary", use_container_width=True):
+                    if not novo_email.strip() or "@" not in novo_email:
+                        st.error("Informe um e-mail válido.")
+                    elif len(nova_senha) < 6:
+                        st.error("A senha deve ter ao menos 6 caracteres.")
+                    elif nova_senha != confirmar:
+                        st.error("As senhas não coincidem.")
+                    else:
+                        usuario_id = db.criar_usuario(novo_email, hash_senha(nova_senha))
+                        if usuario_id is None:
+                            st.error("Já existe uma conta com esse e-mail.")
+                        else:
+                            st.session_state.usuario_id = usuario_id
+                            st.session_state.usuario_email = novo_email.strip().lower()
+                            st.success("Conta criada com sucesso!")
+                            st.rerun()
