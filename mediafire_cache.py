@@ -125,6 +125,18 @@ def esta_em_cache(material) -> bool:
     return False
 
 
+def limpar_todo_cache():
+    """Remove todos os arquivos da pasta de cache local (não mexe no
+    banco). Usado ao excluir todos os materiais de uma vez, pra não
+    deixar arquivo órfão em disco."""
+    if not os.path.isdir(CACHE_DIR):
+        return
+    for nome in os.listdir(CACHE_DIR):
+        caminho = os.path.join(CACHE_DIR, nome)
+        if os.path.isfile(caminho):
+            os.remove(caminho)
+
+
 def remover_cache(material_id):
     """Apaga o arquivo em cache (se existir) e limpa os campos no banco."""
     material = db.obter_material(material_id)

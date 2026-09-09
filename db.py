@@ -848,6 +848,14 @@ def excluir_material(material_id):
         conn.execute("DELETE FROM materiais WHERE id = ?", (material_id,))
 
 
+def excluir_todos_materiais():
+    """Apaga TODOS os materiais cadastrados — ação irreversível, usada
+    pela 'zona de risco' da tela de Materiais de Estudo (com confirmação
+    explícita do usuário antes de chamar isso)."""
+    with get_conn() as conn:
+        conn.execute("DELETE FROM materiais")
+
+
 # ---------------------------------------------------------------------------
 # Cache local dos arquivos do MediaFire
 # ---------------------------------------------------------------------------

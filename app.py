@@ -666,6 +666,28 @@ elif pagina == "Materiais de Estudo":
         "vídeos podem ser grandes."
     )
 
+    total_mat_atual = db.contar_materiais()
+    if total_mat_atual:
+        with st.expander("Zona de risco", icon=":material/warning:"):
+            st.write(
+                f"Isso apaga permanentemente **{total_mat_atual}** material(is) "
+                "cadastrados (e qualquer arquivo em cache local). Não tem como desfazer."
+            )
+            confirmar_excluir_todos = st.checkbox(
+                f"Sim, quero excluir todos os {total_mat_atual} materiais cadastrados",
+                key="confirmar_excluir_todos_materiais",
+            )
+            if st.button(
+                "Excluir todos os materiais",
+                icon=":material/delete_forever:",
+                disabled=not confirmar_excluir_todos,
+            ):
+                mfc.limpar_todo_cache()
+                db.excluir_todos_materiais()
+                st.session_state.pop("confirmar_excluir_todos_materiais", None)
+                st.success("Todos os materiais foram excluídos.", icon=":material/check_circle:")
+                st.rerun()
+
     areas = mapa_areas()
     if not areas:
         st.warning("Cadastre uma área primeiro (na página 'Cadastrar Questão').")
