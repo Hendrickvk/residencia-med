@@ -327,6 +327,15 @@ def init_db():
         )
         """)
 
+        # Postgres não indexa colunas de FK automaticamente (só o lado
+        # referenciado/PK ganha índice). Sem isso, toda query do Dashboard
+        # (JOIN respostas->questoes->areas filtrando por usuario_id/banca)
+        # faz sequential scan — cresce junto com o histórico de respostas.
+        c.execute("CREATE INDEX IF NOT EXISTS idx_respostas_usuario_id ON respostas(usuario_id)")
+        c.execute("CREATE INDEX IF NOT EXISTS idx_respostas_questao_id ON respostas(questao_id)")
+        c.execute("CREATE INDEX IF NOT EXISTS idx_questoes_area_id ON questoes(area_id)")
+        c.execute("CREATE INDEX IF NOT EXISTS idx_questoes_banca ON questoes(banca)")
+
         conn.commit()
 
         # Seed de áreas padrão (comuns em provas de residência / ENAMED)
@@ -499,23 +508,6 @@ def registrar_resposta(questao_id, resposta_dada, correta: bool, *, usuario_id):
         """, (usuario_id, questao_id, resposta_dada, int(correta), datetime.datetime.now().isoformat()))
 
 
-def desempenho_por_area(*, usuario_id):
-    """Retorna total de respostas, acertos e % de acerto por área."""
-    with get_conn() as conn:
-        return conn.execute("""
-            SELECT a.nome AS area,
-                   COUNT(r.id) AS total,
-                   SUM(r.correta) AS acertos,
-                   ROUND(100.0 * SUM(r.correta) / COUNT(r.id), 1) AS pct_acerto
-            FROM respostas r
-            JOIN questoes q ON q.id = r.questao_id
-            JOIN areas a ON a.id = q.area_id
-            WHERE r.usuario_id = ?
-            GROUP BY a.nome
-            ORDER BY pct_acerto ASC
-        """, (usuario_id,)).fetchall()
-
-
 def desempenho_por_subtopico(area_id=None, *, usuario_id):
     query = """
         SELECT a.nome AS area, s.nome AS subtopico,
@@ -552,52 +544,64 @@ def evolucao_diaria(*, usuario_id):
         """, (usuario_id,)).fetchall()
 
 
-def desempenho_por_banca(*, usuario_id):
-    """Retorna total de respostas, acertos e % de acerto por banca/
-    instituição (ex: ENAMED, USP-SP, UNIFESP). Questões sem banca
-    definida não entram — use `contar_respostas_sem_banca` para saber
-    quantas ficaram de fora."""
+def desempenho_dashboard_combinado(*, usuario_id):
+    """Substitui as antigas desempenho_por_area + desempenho_por_banca +
+    desempenho_por_banca_e_area + contar_respostas_sem_banca — mesmas 4
+    queries de sempre, mas embrulhadas em subqueries jsonb_agg dentro de
+    um único SELECT, pra viajarem num só round-trip ao Postgres em vez
+    de 4 sequenciais (era o gargalo que sobrava depois do cache: toda
+    vez que o cache expira, o Dashboard pagava 4x a latência de rede até
+    o Neon, uma atrás da outra)."""
     with get_conn() as conn:
-        return conn.execute("""
-            SELECT q.banca AS banca,
-                   COUNT(r.id) AS total,
-                   SUM(r.correta) AS acertos,
-                   ROUND(100.0 * SUM(r.correta) / COUNT(r.id), 1) AS pct_acerto
-            FROM respostas r
-            JOIN questoes q ON q.id = r.questao_id
-            WHERE q.banca IS NOT NULL AND TRIM(q.banca) != '' AND r.usuario_id = ?
-            GROUP BY q.banca
-            ORDER BY pct_acerto ASC
-        """, (usuario_id,)).fetchall()
-
-
-def desempenho_por_banca_e_area(*, usuario_id):
-    """Cruza banca x área (para uma tabela pivô comparando o desempenho
-    em cada área, banca a banca). Mesma exclusão de banca em branco de
-    `desempenho_por_banca`."""
-    with get_conn() as conn:
-        return conn.execute("""
-            SELECT q.banca AS banca, a.nome AS area,
-                   COUNT(r.id) AS total,
-                   SUM(r.correta) AS acertos,
-                   ROUND(100.0 * SUM(r.correta) / COUNT(r.id), 1) AS pct_acerto
-            FROM respostas r
-            JOIN questoes q ON q.id = r.questao_id
-            JOIN areas a ON a.id = q.area_id
-            WHERE q.banca IS NOT NULL AND TRIM(q.banca) != '' AND r.usuario_id = ?
-            GROUP BY q.banca, a.nome
-            ORDER BY q.banca, a.nome
-        """, (usuario_id,)).fetchall()
-
-
-def contar_respostas_sem_banca(*, usuario_id):
-    with get_conn() as conn:
-        return conn.execute("""
-            SELECT COUNT(*) AS n
-            FROM respostas r
-            JOIN questoes q ON q.id = r.questao_id
-            WHERE (q.banca IS NULL OR TRIM(q.banca) = '') AND r.usuario_id = ?
-        """, (usuario_id,)).fetchone()["n"]
+        row = conn.execute("""
+            SELECT
+              (SELECT jsonb_agg(t) FROM (
+                  SELECT a.nome AS area,
+                         COUNT(r.id) AS total,
+                         SUM(r.correta) AS acertos,
+                         ROUND(100.0 * SUM(r.correta) / COUNT(r.id), 1) AS pct_acerto
+                  FROM respostas r
+                  JOIN questoes q ON q.id = r.questao_id
+                  JOIN areas a ON a.id = q.area_id
+                  WHERE r.usuario_id = ?
+                  GROUP BY a.nome
+                  ORDER BY pct_acerto ASC
+              ) t) AS por_area,
+              (SELECT jsonb_agg(t) FROM (
+                  SELECT q.banca AS banca,
+                         COUNT(r.id) AS total,
+                         SUM(r.correta) AS acertos,
+                         ROUND(100.0 * SUM(r.correta) / COUNT(r.id), 1) AS pct_acerto
+                  FROM respostas r
+                  JOIN questoes q ON q.id = r.questao_id
+                  WHERE q.banca IS NOT NULL AND TRIM(q.banca) != '' AND r.usuario_id = ?
+                  GROUP BY q.banca
+                  ORDER BY pct_acerto ASC
+              ) t) AS por_banca,
+              (SELECT jsonb_agg(t) FROM (
+                  SELECT q.banca AS banca, a.nome AS area,
+                         COUNT(r.id) AS total,
+                         SUM(r.correta) AS acertos,
+                         ROUND(100.0 * SUM(r.correta) / COUNT(r.id), 1) AS pct_acerto
+                  FROM respostas r
+                  JOIN questoes q ON q.id = r.questao_id
+                  JOIN areas a ON a.id = q.area_id
+                  WHERE q.banca IS NOT NULL AND TRIM(q.banca) != '' AND r.usuario_id = ?
+                  GROUP BY q.banca, a.nome
+                  ORDER BY q.banca, a.nome
+              ) t) AS por_banca_area,
+              (SELECT COUNT(*)
+                  FROM respostas r
+                  JOIN questoes q ON q.id = r.questao_id
+                  WHERE (q.banca IS NULL OR TRIM(q.banca) = '') AND r.usuario_id = ?
+              ) AS sem_banca
+        """, (usuario_id, usuario_id, usuario_id, usuario_id)).fetchone()
+        return {
+            "por_area": row["por_area"] or [],
+            "por_banca": row["por_banca"] or [],
+            "por_banca_area": row["por_banca_area"] or [],
+            "sem_banca": row["sem_banca"] or 0,
+        }
 
 
 def questoes_mais_erradas(limite=15, *, usuario_id):

@@ -24,7 +24,19 @@ ui.inject_custom_css()
 # mundo.
 ADMIN_EMAILS = {"hendrickvk@gmail.com"}
 
-db.init_db()
+# db.init_db() cria tabelas/índices/seed — precisa rodar uma vez, não a
+# cada interação. Sem cache, essa chamada sozinha custava ~1.6s (~27
+# round-trips ao Postgres: 8 CREATE TABLE, 13 INSERT de seed, checagem de
+# colunas, índices) e rodava em TODO clique, porque Streamlit reroda o
+# script inteiro a cada interação. st.cache_resource garante execução
+# única por processo do servidor (compartilhada entre todos os usuários).
+@st.cache_resource
+def _init_db_uma_vez():
+    db.init_db()
+    return True
+
+
+_init_db_uma_vez()
 
 if "usuario_id" not in st.session_state:
     auth.render_login_signup()
@@ -97,28 +109,13 @@ def _listar_bancas_cache():
 # QUALQUER lugar do app (Streamlit reroda o script inteiro a cada
 # interação), sem deixar os números velhos por muito tempo.
 @st.cache_data(ttl=15)
-def _dash_desempenho_por_area(usuario_id):
-    return db.desempenho_por_area(usuario_id=usuario_id)
+def _dash_combinado(usuario_id):
+    return db.desempenho_dashboard_combinado(usuario_id=usuario_id)
 
 
 @st.cache_data(ttl=15)
 def _dash_evolucao_diaria(usuario_id):
     return db.evolucao_diaria(usuario_id=usuario_id)
-
-
-@st.cache_data(ttl=15)
-def _dash_desempenho_por_banca(usuario_id):
-    return db.desempenho_por_banca(usuario_id=usuario_id)
-
-
-@st.cache_data(ttl=15)
-def _dash_contar_respostas_sem_banca(usuario_id):
-    return db.contar_respostas_sem_banca(usuario_id=usuario_id)
-
-
-@st.cache_data(ttl=15)
-def _dash_desempenho_por_banca_e_area(usuario_id):
-    return db.desempenho_por_banca_e_area(usuario_id=usuario_id)
 
 
 @st.cache_data(ttl=15)
@@ -190,7 +187,8 @@ def consolidar_simulado_no_historico(simulado_id, usuario_id):
 if pagina == "Dashboard":
     ui.page_header("layout-dashboard", "Dashboard de Desempenho")
 
-    desemp_area = _dash_desempenho_por_area(st.session_state.usuario_id)
+    dash = _dash_combinado(st.session_state.usuario_id)
+    desemp_area = dash["por_area"]
     if not desemp_area:
         ui.empty_state(
             "Ainda não há respostas registradas",
@@ -228,7 +226,7 @@ if pagina == "Dashboard":
             st.bar_chart(df_evol[["total"]])
 
         st.subheader("Desempenho por banca / instituição")
-        desemp_banca = _dash_desempenho_por_banca(st.session_state.usuario_id)
+        desemp_banca = dash["por_banca"]
         if not desemp_banca:
             st.caption(
                 "Nenhuma resposta registrada em questões com banca definida "
@@ -239,7 +237,7 @@ if pagina == "Dashboard":
             df_banca = pd.DataFrame([dict(r) for r in desemp_banca])
             st.bar_chart(df_banca.set_index("banca")["pct_acerto"])
 
-            sem_banca = _dash_contar_respostas_sem_banca(st.session_state.usuario_id)
+            sem_banca = dash["sem_banca"]
             if sem_banca:
                 st.caption(
                     f":material/info: {sem_banca} resposta(s) de questões sem banca definida "
@@ -247,7 +245,7 @@ if pagina == "Dashboard":
                 )
 
             with st.expander("Comparar bancas por área", icon=":material/table_chart:"):
-                desemp_banca_area = _dash_desempenho_por_banca_e_area(st.session_state.usuario_id)
+                desemp_banca_area = dash["por_banca_area"]
                 df_ba = pd.DataFrame([dict(r) for r in desemp_banca_area])
                 pivot = df_ba.pivot_table(index="area", columns="banca", values="pct_acerto")
                 pivot_fmt = pivot.map(lambda v: f"{v:.1f}%" if pd.notna(v) else "—")
