@@ -67,12 +67,68 @@ pagina = st.sidebar.radio(
 )
 
 st.sidebar.markdown("---")
-st.sidebar.caption(f"Total de questões cadastradas: **{db.contar_questoes()}**")
-st.sidebar.caption(f"Total de materiais cadastrados: **{db.contar_materiais()}**")
 
 
+@st.cache_data(ttl=30)
+def _contadores_sidebar():
+    """Contadores só informativos, iguais pra todo mundo — cachear evita
+    2 round-trips ao Postgres a cada clique em qualquer página."""
+    return db.contar_questoes(), db.contar_materiais()
+
+
+_n_questoes, _n_materiais = _contadores_sidebar()
+st.sidebar.caption(f"Total de questões cadastradas: **{_n_questoes}**")
+st.sidebar.caption(f"Total de materiais cadastrados: **{_n_materiais}**")
+
+
+@st.cache_data(ttl=60)
 def mapa_areas():
     return {a["nome"]: a["id"] for a in db.listar_areas()}
+
+
+@st.cache_data(ttl=60)
+def _listar_bancas_cache():
+    return db.listar_bancas()
+
+
+# TTL curto: o dashboard muda toda vez que o usuário responde uma questão,
+# mas não precisa refletir isso em tempo real — cachear por alguns segundos
+# elimina as 7 idas sequenciais ao Postgres que rodavam a cada clique em
+# QUALQUER lugar do app (Streamlit reroda o script inteiro a cada
+# interação), sem deixar os números velhos por muito tempo.
+@st.cache_data(ttl=15)
+def _dash_desempenho_por_area(usuario_id):
+    return db.desempenho_por_area(usuario_id=usuario_id)
+
+
+@st.cache_data(ttl=15)
+def _dash_evolucao_diaria(usuario_id):
+    return db.evolucao_diaria(usuario_id=usuario_id)
+
+
+@st.cache_data(ttl=15)
+def _dash_desempenho_por_banca(usuario_id):
+    return db.desempenho_por_banca(usuario_id=usuario_id)
+
+
+@st.cache_data(ttl=15)
+def _dash_contar_respostas_sem_banca(usuario_id):
+    return db.contar_respostas_sem_banca(usuario_id=usuario_id)
+
+
+@st.cache_data(ttl=15)
+def _dash_desempenho_por_banca_e_area(usuario_id):
+    return db.desempenho_por_banca_e_area(usuario_id=usuario_id)
+
+
+@st.cache_data(ttl=15)
+def _dash_desempenho_por_subtopico(usuario_id):
+    return db.desempenho_por_subtopico(usuario_id=usuario_id)
+
+
+@st.cache_data(ttl=15)
+def _dash_questoes_mais_erradas(usuario_id):
+    return db.questoes_mais_erradas(usuario_id=usuario_id)
 
 
 def controle_paginacao(chave, total, por_pagina=50):
@@ -134,7 +190,7 @@ def consolidar_simulado_no_historico(simulado_id, usuario_id):
 if pagina == "Dashboard":
     ui.page_header("layout-dashboard", "Dashboard de Desempenho")
 
-    desemp_area = db.desempenho_por_area(usuario_id=st.session_state.usuario_id)
+    desemp_area = _dash_desempenho_por_area(st.session_state.usuario_id)
     if not desemp_area:
         ui.empty_state(
             "Ainda não há respostas registradas",
@@ -165,14 +221,14 @@ if pagina == "Dashboard":
             )
 
         st.subheader("Evolução diária")
-        evol = db.evolucao_diaria(usuario_id=st.session_state.usuario_id)
+        evol = _dash_evolucao_diaria(st.session_state.usuario_id)
         if evol:
             df_evol = pd.DataFrame([dict(r) for r in evol]).set_index("dia")
             st.line_chart(df_evol[["pct_acerto"]])
             st.bar_chart(df_evol[["total"]])
 
         st.subheader("Desempenho por banca / instituição")
-        desemp_banca = db.desempenho_por_banca(usuario_id=st.session_state.usuario_id)
+        desemp_banca = _dash_desempenho_por_banca(st.session_state.usuario_id)
         if not desemp_banca:
             st.caption(
                 "Nenhuma resposta registrada em questões com banca definida "
@@ -183,7 +239,7 @@ if pagina == "Dashboard":
             df_banca = pd.DataFrame([dict(r) for r in desemp_banca])
             st.bar_chart(df_banca.set_index("banca")["pct_acerto"])
 
-            sem_banca = db.contar_respostas_sem_banca(usuario_id=st.session_state.usuario_id)
+            sem_banca = _dash_contar_respostas_sem_banca(st.session_state.usuario_id)
             if sem_banca:
                 st.caption(
                     f":material/info: {sem_banca} resposta(s) de questões sem banca definida "
@@ -191,7 +247,7 @@ if pagina == "Dashboard":
                 )
 
             with st.expander("Comparar bancas por área", icon=":material/table_chart:"):
-                desemp_banca_area = db.desempenho_por_banca_e_area(usuario_id=st.session_state.usuario_id)
+                desemp_banca_area = _dash_desempenho_por_banca_e_area(st.session_state.usuario_id)
                 df_ba = pd.DataFrame([dict(r) for r in desemp_banca_area])
                 pivot = df_ba.pivot_table(index="area", columns="banca", values="pct_acerto")
                 pivot_fmt = pivot.map(lambda v: f"{v:.1f}%" if pd.notna(v) else "—")
@@ -199,13 +255,13 @@ if pagina == "Dashboard":
                 st.dataframe(pivot_fmt, use_container_width=True)
 
         with st.expander("Desempenho por subtópico", icon=":material/insights:"):
-            desemp_sub = db.desempenho_por_subtopico(usuario_id=st.session_state.usuario_id)
+            desemp_sub = _dash_desempenho_por_subtopico(st.session_state.usuario_id)
             if desemp_sub:
                 df_sub = pd.DataFrame([dict(r) for r in desemp_sub])
                 st.dataframe(df_sub, use_container_width=True, hide_index=True)
 
         with st.expander("Questões mais erradas", icon=":material/error:"):
-            piores_q = db.questoes_mais_erradas(usuario_id=st.session_state.usuario_id)
+            piores_q = _dash_questoes_mais_erradas(st.session_state.usuario_id)
             if piores_q:
                 df_q = pd.DataFrame([dict(r) for r in piores_q])
                 st.dataframe(
@@ -306,7 +362,7 @@ elif pagina == "Simulado":
             area_nome = st.selectbox("Área (opcional)", ["Todas"] + list(areas.keys()), key="sim_area")
             area_id = areas[area_nome] if area_nome != "Todas" else None
         with col2:
-            bancas = db.listar_bancas()
+            bancas = _listar_bancas_cache()
             if bancas:
                 banca = st.selectbox("Banca (opcional)", ["Todas"] + bancas, key="sim_banca")
                 banca = None if banca == "Todas" else banca
