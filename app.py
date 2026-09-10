@@ -42,6 +42,8 @@ if "usuario_id" not in st.session_state:
     auth.render_login_signup()
     st.stop()
 
+eh_admin = st.session_state.get("usuario_email") in ADMIN_EMAILS
+
 # ---------------------------------------------------------------------------
 # Sidebar / navegação
 # ---------------------------------------------------------------------------
@@ -764,7 +766,7 @@ elif pagina == "Materiais de Estudo":
     )
 
     total_mat_atual = db.contar_materiais()
-    if total_mat_atual and st.session_state.get("usuario_email") in ADMIN_EMAILS:
+    if total_mat_atual and eh_admin:
         with st.expander("Zona de risco (admin)", icon=":material/warning:"):
             st.write(
                 f"Isso apaga permanentemente **{total_mat_atual}** material(is) "
@@ -984,12 +986,101 @@ elif pagina == "Banco de Questões":
         for q in questoes:
             rotulo = f"{q['enunciado'][:80]}...  ·  {q['banca'] or 'Banca não informada'} · {q['ano'] or '-'}"
             with st.expander(rotulo, icon=":material/quiz:"):
+                chave_editando = f"editando_{q['id']}"
                 alternativas = json.loads(q["alternativas"])
-                for letra, texto in alternativas.items():
-                    marcador = ":material/check_circle:" if letra == q["resposta_correta"] else ":material/radio_button_unchecked:"
-                    st.write(f"{marcador} **{letra})** {texto}")
-                if q["explicacao"]:
-                    st.info(q["explicacao"], icon=":material/lightbulb:")
-                if st.button("Excluir questão", icon=":material/delete:", key=f"del_{q['id']}"):
-                    db.excluir_questao(q["id"])
-                    st.rerun()
+
+                if not st.session_state.get(chave_editando):
+                    for letra, texto in alternativas.items():
+                        marcador = ":material/check_circle:" if letra == q["resposta_correta"] else ":material/radio_button_unchecked:"
+                        st.write(f"{marcador} **{letra})** {texto}")
+                    if q["explicacao"]:
+                        st.info(q["explicacao"], icon=":material/lightbulb:")
+                    else:
+                        st.caption(":material/info: Sem explicação cadastrada ainda.")
+
+                    col_edit, col_del = st.columns(2)
+                    if eh_admin and col_edit.button("Editar questão", icon=":material/edit:", key=f"editar_{q['id']}"):
+                        st.session_state[chave_editando] = True
+                        st.rerun()
+                    if col_del.button("Excluir questão", icon=":material/delete:", key=f"del_{q['id']}"):
+                        db.excluir_questao(q["id"])
+                        st.rerun()
+
+                else:
+                    # Edição restrita a administradores — outras contas nunca
+                    # devem cair aqui (o botão que liga essa chave já é
+                    # gated por eh_admin), mas confere de novo por segurança
+                    # caso a sessão perca privilégio de admin com o form já aberto.
+                    if not eh_admin:
+                        st.session_state[chave_editando] = False
+                        st.rerun()
+
+                    areas_edit = mapa_areas()
+                    area_atual_nome = next((n for n, i in areas_edit.items() if i == q["area_id"]), None)
+                    col_area, col_sub = st.columns(2)
+                    nomes_area = list(areas_edit.keys())
+                    area_nome_ed = col_area.selectbox(
+                        "Área", nomes_area,
+                        index=nomes_area.index(area_atual_nome) if area_atual_nome in nomes_area else 0,
+                        key=f"ed_area_{q['id']}",
+                    )
+                    area_id_ed = areas_edit[area_nome_ed]
+
+                    subtopicos_ed = db.listar_subtopicos(area_id_ed)
+                    sub_opcoes_ed = {"(nenhum)": None}
+                    sub_opcoes_ed.update({s["nome"]: s["id"] for s in subtopicos_ed})
+                    nomes_sub = list(sub_opcoes_ed.keys())
+                    sub_atual_nome = next((n for n, i in sub_opcoes_ed.items() if i == q["subtopico_id"]), "(nenhum)")
+                    sub_nome_ed = col_sub.selectbox(
+                        "Subtópico", nomes_sub,
+                        index=nomes_sub.index(sub_atual_nome) if sub_atual_nome in nomes_sub else 0,
+                        key=f"ed_sub_{q['id']}",
+                    )
+                    subtopico_id_ed = sub_opcoes_ed[sub_nome_ed]
+
+                    enunciado_ed = st.text_area("Enunciado", value=q["enunciado"], key=f"ed_enun_{q['id']}")
+
+                    st.write("Alternativas")
+                    letras = ["A", "B", "C", "D", "E"]
+                    valores_alt = {letra: alternativas.get(letra, "") for letra in letras}
+                    col_a, col_b = st.columns(2)
+                    valores_alt["A"] = col_a.text_input("A)", value=valores_alt["A"], key=f"ed_alt_a_{q['id']}")
+                    valores_alt["B"] = col_b.text_input("B)", value=valores_alt["B"], key=f"ed_alt_b_{q['id']}")
+                    col_c, col_d = st.columns(2)
+                    valores_alt["C"] = col_c.text_input("C)", value=valores_alt["C"], key=f"ed_alt_c_{q['id']}")
+                    valores_alt["D"] = col_d.text_input("D)", value=valores_alt["D"], key=f"ed_alt_d_{q['id']}")
+                    valores_alt["E"] = st.text_input("E) (opcional)", value=valores_alt["E"], key=f"ed_alt_e_{q['id']}")
+
+                    col_correta, col_banca, col_ano = st.columns([1, 2, 1])
+                    resposta_correta_ed = col_correta.selectbox(
+                        "Alternativa correta", letras,
+                        index=letras.index(q["resposta_correta"]) if q["resposta_correta"] in letras else 0,
+                        key=f"ed_correta_{q['id']}",
+                    )
+                    banca_ed = col_banca.text_input("Banca / Instituição", value=q["banca"] or "", key=f"ed_banca_{q['id']}")
+                    ano_ed = col_ano.number_input(
+                        "Ano", min_value=1990, max_value=2100,
+                        value=q["ano"] or 2025, step=1, key=f"ed_ano_{q['id']}",
+                    )
+
+                    explicacao_ed = st.text_area(
+                        "Explicação / comentário", value=q["explicacao"] or "", key=f"ed_exp_{q['id']}",
+                        help="Por que essa é a alternativa correta — o que aparece pro aluno depois de responder.",
+                    )
+
+                    col_salvar, col_cancelar = st.columns(2)
+                    if col_salvar.button("Salvar alterações", icon=":material/save:", key=f"ed_salvar_{q['id']}"):
+                        nova_alternativas = {letra: valores_alt[letra] for letra in letras if valores_alt[letra].strip()}
+                        if not enunciado_ed.strip() or not all(valores_alt[l].strip() for l in ["A", "B", "C", "D"]):
+                            st.error("Preencha ao menos o enunciado e as alternativas A a D.", icon=":material/cancel:")
+                        else:
+                            db.atualizar_questao(
+                                q["id"], area_id_ed, subtopico_id_ed, enunciado_ed, nova_alternativas,
+                                resposta_correta_ed, explicacao_ed, banca_ed, int(ano_ed),
+                            )
+                            st.session_state[chave_editando] = False
+                            st.success("Questão atualizada.", icon=":material/check_circle:")
+                            st.rerun()
+                    if col_cancelar.button("Cancelar", icon=":material/close:", key=f"ed_cancelar_{q['id']}"):
+                        st.session_state[chave_editando] = False
+                        st.rerun()

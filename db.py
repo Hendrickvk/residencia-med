@@ -422,6 +422,20 @@ def criar_questao(area_id, subtopico_id, enunciado, alternativas: dict,
         ))
 
 
+def atualizar_questao(questao_id, area_id, subtopico_id, enunciado, alternativas: dict,
+                       resposta_correta, explicacao="", banca="", ano=None):
+    with get_conn() as conn:
+        conn.execute("""
+            UPDATE questoes
+            SET area_id = ?, subtopico_id = ?, enunciado = ?, alternativas = ?,
+                resposta_correta = ?, explicacao = ?, banca = ?, ano = ?
+            WHERE id = ?
+        """, (
+            area_id, subtopico_id, enunciado, json.dumps(alternativas, ensure_ascii=False),
+            resposta_correta, explicacao, banca, ano, questao_id,
+        ))
+
+
 def listar_questoes(area_id=None, subtopico_id=None):
     """Mantido para compatibilidade (usado na fila de 'Responder Questões',
     que só guarda os ids, então carregar tudo é barato). Para telas que
