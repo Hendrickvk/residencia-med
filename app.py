@@ -130,6 +130,13 @@ def _dash_questoes_mais_erradas(usuario_id):
     return db.questoes_mais_erradas(usuario_id=usuario_id)
 
 
+def exibir_imagem_questao(q):
+    """Mostra a imagem anexada à questão (raio-X, ECG, gráfico, foto clínica
+    etc.), quando houver — vem como bytes (memoryview) direto do Postgres."""
+    if q["imagem"]:
+        st.image(bytes(q["imagem"]), use_container_width=True)
+
+
 def controle_paginacao(chave, total, por_pagina=50):
     """Widget de paginação reutilizável. Guarda a página atual em
     st.session_state[chave] e devolve (pagina_atual, offset).
@@ -312,6 +319,7 @@ elif pagina == "Responder Questões":
             st.progress((idx) / len(fila))
             st.caption(f"Questão {idx + 1} de {len(fila)}")
             st.markdown(f"### {q['enunciado']}")
+            exibir_imagem_questao(q)
 
             alternativas = json.loads(q["alternativas"])
             resposta = st.radio(
@@ -501,6 +509,7 @@ elif pagina == "Simulado":
 
                 q = db.obter_questao(ids[idx])
                 st.markdown(f"### {q['enunciado']}")
+                exibir_imagem_questao(q)
 
                 alternativas = json.loads(q["alternativas"])
                 opcoes = list(alternativas.keys())
@@ -730,6 +739,7 @@ elif pagina == "Revisão (Repetição Espaçada)":
     else:
         q = fila[st.session_state.rev_idx]
         st.markdown(f"### {q['enunciado']}")
+        exibir_imagem_questao(q)
         alternativas = json.loads(q["alternativas"])
         resposta = st.radio(
             "Alternativas",
@@ -990,6 +1000,7 @@ elif pagina == "Banco de Questões":
                 alternativas = json.loads(q["alternativas"])
 
                 if not st.session_state.get(chave_editando):
+                    exibir_imagem_questao(q)
                     for letra, texto in alternativas.items():
                         marcador = ":material/check_circle:" if letra == q["resposta_correta"] else ":material/radio_button_unchecked:"
                         st.write(f"{marcador} **{letra})** {texto}")
@@ -1039,6 +1050,21 @@ elif pagina == "Banco de Questões":
                     subtopico_id_ed = sub_opcoes_ed[sub_nome_ed]
 
                     enunciado_ed = st.text_area("Enunciado", value=q["enunciado"], key=f"ed_enun_{q['id']}")
+
+                    st.write("Imagem da questão (raio-X, ECG, gráfico, foto clínica etc. — opcional)")
+                    if q["imagem"]:
+                        st.image(bytes(q["imagem"]), width=300)
+                        if st.button("Remover imagem", icon=":material/delete:", key=f"ed_rmimg_{q['id']}"):
+                            db.remover_imagem_questao(q["id"])
+                            st.rerun()
+                    nova_imagem = st.file_uploader(
+                        "Substituir imagem" if q["imagem"] else "Anexar imagem",
+                        type=["png", "jpg", "jpeg"], key=f"ed_img_{q['id']}",
+                    )
+                    if nova_imagem is not None:
+                        db.definir_imagem_questao(q["id"], nova_imagem.getvalue(), nova_imagem.type)
+                        st.success("Imagem salva.", icon=":material/check_circle:")
+                        st.rerun()
 
                     st.write("Alternativas")
                     letras = ["A", "B", "C", "D", "E"]

@@ -270,6 +270,19 @@ def init_db():
         )
         """)
 
+        # Migração leve: imagem da questão (raio-X, ECG, gráfico, foto clínica
+        # etc.) guardada como bytes direto no Postgres — não em disco, porque
+        # o Streamlit Community Cloud apaga o filesystem local a cada deploy.
+        c.execute("""
+            SELECT column_name FROM information_schema.columns
+            WHERE table_name = 'questoes'
+        """)
+        colunas_questoes = {row["column_name"] for row in c.fetchall()}
+        if "imagem" not in colunas_questoes:
+            c.execute("ALTER TABLE questoes ADD COLUMN imagem BYTEA")
+        if "imagem_mime" not in colunas_questoes:
+            c.execute("ALTER TABLE questoes ADD COLUMN imagem_mime TEXT")
+
         # Migração leve: adiciona colunas novas em bancos já existentes
         c.execute("""
             SELECT column_name FROM information_schema.columns
@@ -508,6 +521,26 @@ def obter_questao(questao_id):
 def excluir_questao(questao_id):
     with get_conn() as conn:
         conn.execute("DELETE FROM questoes WHERE id = ?", (questao_id,))
+
+
+def definir_imagem_questao(questao_id, imagem_bytes, mime_type):
+    """Anexa/substitui a imagem de uma questão (raio-X, ECG, gráfico, foto
+    clínica etc.), guardada como bytes direto no Postgres via psycopg2.Binary
+    — evita depender do filesystem local, que o Streamlit Community Cloud
+    apaga a cada deploy."""
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE questoes SET imagem = ?, imagem_mime = ? WHERE id = ?",
+            (psycopg2.Binary(imagem_bytes), mime_type, questao_id),
+        )
+
+
+def remover_imagem_questao(questao_id):
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE questoes SET imagem = NULL, imagem_mime = NULL WHERE id = ?",
+            (questao_id,),
+        )
 
 
 # ---------------------------------------------------------------------------
