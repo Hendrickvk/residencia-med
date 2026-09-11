@@ -88,3 +88,15 @@ def questoes_nunca_revisadas(*, usuario_id):
             WHERE r.questao_id IS NULL
             ORDER BY q.criada_em ASC
         """, (usuario_id,)).fetchall()
+
+
+def proxima_leva_revisao(*, usuario_id):
+    """Primeira data futura (> hoje) com revisões agendadas, e quantas —
+    usado no estado vazio da fila ("Nenhuma revisão vencida hoje. As
+    próximas 8 vencem na quinta.")."""
+    with get_conn() as conn:
+        return conn.execute("""
+            SELECT proxima_revisao AS dia, COUNT(*) AS total
+            FROM revisao WHERE usuario_id = ? AND proxima_revisao > ?
+            GROUP BY proxima_revisao ORDER BY proxima_revisao ASC LIMIT 1
+        """, (usuario_id, _hoje().isoformat())).fetchone()

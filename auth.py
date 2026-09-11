@@ -28,15 +28,14 @@ def render_login_signup():
             f"""
             <div style="text-align:center; margin-top:3rem; margin-bottom:1.5rem;">
                 <div style="display:inline-flex; align-items:center; justify-content:center;
-                            width:3.5rem; height:3.5rem; border-radius:14px;
-                            background: linear-gradient(135deg, rgba(15, 118, 110, 0.16), rgba(21, 94, 117, 0.12));
-                            color:#0F766E;">
+                            width:3.5rem; height:3.5rem; border-radius:10px;
+                            background: var(--action-soft); color: var(--action);">
                     {ui.icon_svg("stethoscope", size=28)}
                 </div>
-                <div style="font-size:1.7rem; font-weight:700; margin-top:0.6rem; color:#142523;">
+                <div style="font-size:24px; font-weight:600; margin-top:0.6rem; color:var(--ink-700);">
                     Residência Med
                 </div>
-                <div style="color:#5A6C6A; font-size:0.95rem; margin-top:0.3rem;">
+                <div style="color:var(--ink-500); font-size:0.9rem; margin-top:0.3rem;">
                     Sua plataforma de estudos para residência médica
                 </div>
             </div>

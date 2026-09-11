@@ -254,6 +254,21 @@ def init_db():
         )
         """)
 
+        # Questões marcadas manualmente pelo aluno durante uma sessão de
+        # prática ("Marcar para revisão") — sinal independente do SM-2
+        # (que já agenda revisão automática pra erros): aqui é o aluno
+        # dizendo "quero rever isso", mesmo tendo acertado.
+        c.execute("""
+        CREATE TABLE IF NOT EXISTS questoes_marcadas (
+            usuario_id INTEGER NOT NULL,
+            questao_id INTEGER NOT NULL,
+            criada_em TEXT NOT NULL,
+            PRIMARY KEY (usuario_id, questao_id),
+            FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+            FOREIGN KEY (questao_id) REFERENCES questoes(id) ON DELETE CASCADE
+        )
+        """)
+
         # Materiais (MediaFire) — biblioteca compartilhada entre todos os usuários
         c.execute("""
         CREATE TABLE IF NOT EXISTS materiais (
@@ -282,6 +297,30 @@ def init_db():
             c.execute("ALTER TABLE questoes ADD COLUMN imagem BYTEA")
         if "imagem_mime" not in colunas_questoes:
             c.execute("ALTER TABLE questoes ADD COLUMN imagem_mime TEXT")
+
+        # Migração leve: preferência de tema (claro/escuro) e data da prova
+        # alvo, usadas pelo redesign visual (alternador de tema no topo,
+        # contagem regressiva na barra superior).
+        c.execute("""
+            SELECT column_name FROM information_schema.columns
+            WHERE table_name = 'usuarios'
+        """)
+        colunas_usuarios = {row["column_name"] for row in c.fetchall()}
+        if "tema" not in colunas_usuarios:
+            c.execute("ALTER TABLE usuarios ADD COLUMN tema TEXT NOT NULL DEFAULT 'light'")
+        if "data_prova_alvo" not in colunas_usuarios:
+            c.execute("ALTER TABLE usuarios ADD COLUMN data_prova_alvo TEXT")
+
+        # Migração leve: calibração de confiança ("acertei com segurança" /
+        # "acertei no chute"), usada para ajustar a qualidade informada ao
+        # SM-2 além do simples certo/errado.
+        c.execute("""
+            SELECT column_name FROM information_schema.columns
+            WHERE table_name = 'respostas'
+        """)
+        colunas_respostas = {row["column_name"] for row in c.fetchall()}
+        if "confianca" not in colunas_respostas:
+            c.execute("ALTER TABLE respostas ADD COLUMN confianca TEXT")
 
         # Migração leve: adiciona colunas novas em bancos já existentes
         c.execute("""
@@ -449,6 +488,50 @@ def atualizar_questao(questao_id, area_id, subtopico_id, enunciado, alternativas
         ))
 
 
+def listar_anos():
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT DISTINCT ano FROM questoes WHERE ano IS NOT NULL ORDER BY ano DESC"
+        ).fetchall()
+        return [r["ano"] for r in rows]
+
+
+def ids_questoes_filtro_pratica(*, usuario_id, area_id=None, subtopico_id=None,
+                                 banca=None, ano=None, apenas_erros=False,
+                                 excluir_respondidas=False):
+    """Configurador de Praticar (REDESIGN.md §4.2): filtros combináveis além
+    de área/subtópico — banca, ano, e dois interruptores que olham o
+    histórico de respostas do próprio usuário."""
+    condicoes = ["1=1"]
+    params = []
+    if area_id:
+        condicoes.append("q.area_id = ?")
+        params.append(area_id)
+    if subtopico_id:
+        condicoes.append("q.subtopico_id = ?")
+        params.append(subtopico_id)
+    if banca:
+        condicoes.append("q.banca = ?")
+        params.append(banca)
+    if ano:
+        condicoes.append("q.ano = ?")
+        params.append(ano)
+    if apenas_erros:
+        condicoes.append(
+            "EXISTS (SELECT 1 FROM respostas r WHERE r.questao_id = q.id "
+            "AND r.usuario_id = ? AND r.correta = 0)"
+        )
+        params.append(usuario_id)
+    if excluir_respondidas:
+        condicoes.append(
+            "NOT EXISTS (SELECT 1 FROM respostas r WHERE r.questao_id = q.id AND r.usuario_id = ?)"
+        )
+        params.append(usuario_id)
+    query = f"SELECT q.id FROM questoes q WHERE {' AND '.join(condicoes)}"
+    with get_conn() as conn:
+        return [row["id"] for row in conn.execute(query, params).fetchall()]
+
+
 def listar_questoes(area_id=None, subtopico_id=None):
     """Mantido para compatibilidade (usado na fila de 'Responder Questões',
     que só guarda os ids, então carregar tudo é barato). Para telas que
@@ -483,7 +566,12 @@ def _clausulas_filtro_questoes(area_id, subtopico_id, busca):
 
 def listar_questoes_paginado(area_id=None, subtopico_id=None, busca=None, limite=50, offset=0):
     condicao, params = _clausulas_filtro_questoes(area_id, subtopico_id, busca)
-    query = f"SELECT * FROM questoes WHERE {condicao} ORDER BY criada_em DESC LIMIT ? OFFSET ?"
+    condicao = condicao.replace("area_id", "q.area_id").replace("subtopico_id", "q.subtopico_id")
+    query = f"""
+        SELECT q.*, a.nome AS area
+        FROM questoes q JOIN areas a ON a.id = q.area_id
+        WHERE {condicao} ORDER BY q.criada_em DESC LIMIT ? OFFSET ?
+    """
     with get_conn() as conn:
         return conn.execute(query, params + [limite, offset]).fetchall()
 
@@ -513,9 +601,13 @@ def contar_questoes():
 
 def obter_questao(questao_id):
     with get_conn() as conn:
-        return conn.execute(
-            "SELECT * FROM questoes WHERE id = ?", (questao_id,)
-        ).fetchone()
+        return conn.execute("""
+            SELECT q.*, a.nome AS area, s.nome AS subtopico
+            FROM questoes q
+            JOIN areas a ON a.id = q.area_id
+            LEFT JOIN subtopicos s ON s.id = q.subtopico_id
+            WHERE q.id = ?
+        """, (questao_id,)).fetchone()
 
 
 def excluir_questao(questao_id):
@@ -547,12 +639,115 @@ def remover_imagem_questao(questao_id):
 # Respostas / desempenho
 # ---------------------------------------------------------------------------
 
-def registrar_resposta(questao_id, resposta_dada, correta: bool, *, usuario_id):
+def registrar_resposta(questao_id, resposta_dada, correta: bool, *, usuario_id, confianca=None):
+    """`confianca`: None (não perguntado), 'seguro' ou 'chute' — calibração
+    exibida só quando o aluno acerta, usada para ajustar a qualidade
+    enviada ao SM-2 além do simples certo/errado."""
     with get_conn() as conn:
         conn.execute("""
-            INSERT INTO respostas (usuario_id, questao_id, resposta_dada, correta, respondida_em)
-            VALUES (?, ?, ?, ?, ?)
-        """, (usuario_id, questao_id, resposta_dada, int(correta), datetime.datetime.now().isoformat()))
+            INSERT INTO respostas (usuario_id, questao_id, resposta_dada, correta, respondida_em, confianca)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (usuario_id, questao_id, resposta_dada, int(correta), datetime.datetime.now().isoformat(), confianca))
+
+
+def distribuicao_respostas_questao(questao_id, *, excluir_usuario_id=None):
+    """% de escolha de cada alternativa entre todas as respostas já dadas
+    a essa questão (por qualquer usuário) — usado pra mostrar a barra fina
+    de 'percentual dos demais usuários' em cada alternativa no modo
+    interativo. `excluir_usuario_id` tira a própria resposta do aluno atual
+    da conta, pra o rótulo continuar correto ('demais usuários')."""
+    query = "SELECT resposta_dada, COUNT(*) AS total FROM respostas WHERE questao_id = ?"
+    params = [questao_id]
+    if excluir_usuario_id is not None:
+        query += " AND usuario_id != ?"
+        params.append(excluir_usuario_id)
+    query += " GROUP BY resposta_dada"
+    with get_conn() as conn:
+        linhas = conn.execute(query, params).fetchall()
+    total = sum(r["total"] for r in linhas)
+    if not total:
+        return {}
+    return {r["resposta_dada"]: round(100 * r["total"] / total, 1) for r in linhas}
+
+
+def contar_respondidas_hoje(*, usuario_id):
+    with get_conn() as conn:
+        row = conn.execute("""
+            SELECT COUNT(*) AS total FROM respostas
+            WHERE usuario_id = ? AND respondida_em::date = CURRENT_DATE
+        """, (usuario_id,)).fetchone()
+        return row["total"] if row else 0
+
+
+def calcular_ofensiva(*, usuario_id):
+    """Dias consecutivos com pelo menos 1 resposta registrada, contando pra
+    trás a partir de hoje (ou de ontem, se hoje ainda não tem resposta —
+    a ofensiva de ontem continua 'valendo' até o fim do dia de hoje).
+    Retorna (dias_consecutivos, respondeu_hoje)."""
+    with get_conn() as conn:
+        linhas = conn.execute("""
+            SELECT DISTINCT (respondida_em::date) AS dia
+            FROM respostas WHERE usuario_id = ?
+        """, (usuario_id,)).fetchall()
+    dias = {r["dia"] for r in linhas}
+    hoje = datetime.date.today()
+    respondeu_hoje = hoje in dias
+    cursor = hoje if respondeu_hoje else hoje - datetime.timedelta(days=1)
+    streak = 0
+    while cursor in dias:
+        streak += 1
+        cursor -= datetime.timedelta(days=1)
+    return streak, respondeu_hoje
+
+
+def definir_prova_alvo(usuario_id, data_iso: str | None):
+    """`data_iso`: 'YYYY-MM-DD' ou None pra limpar."""
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE usuarios SET data_prova_alvo = ? WHERE id = ?",
+            (data_iso, usuario_id),
+        )
+
+
+def atualizar_tema_usuario(usuario_id, tema: str):
+    with get_conn() as conn:
+        conn.execute("UPDATE usuarios SET tema = ? WHERE id = ?", (tema, usuario_id))
+
+
+def marcar_questao(usuario_id, questao_id):
+    with get_conn() as conn:
+        conn.execute("""
+            INSERT INTO questoes_marcadas (usuario_id, questao_id, criada_em)
+            VALUES (?, ?, ?)
+            ON CONFLICT (usuario_id, questao_id) DO NOTHING
+        """, (usuario_id, questao_id, datetime.datetime.now().isoformat()))
+
+
+def desmarcar_questao(usuario_id, questao_id):
+    with get_conn() as conn:
+        conn.execute(
+            "DELETE FROM questoes_marcadas WHERE usuario_id = ? AND questao_id = ?",
+            (usuario_id, questao_id),
+        )
+
+
+def questao_esta_marcada(usuario_id, questao_id):
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT 1 FROM questoes_marcadas WHERE usuario_id = ? AND questao_id = ?",
+            (usuario_id, questao_id),
+        ).fetchone()
+        return row is not None
+
+
+def listar_questoes_marcadas(*, usuario_id):
+    with get_conn() as conn:
+        return conn.execute("""
+            SELECT q.* FROM questoes_marcadas m
+            JOIN questoes q ON q.id = m.questao_id
+            WHERE m.usuario_id = ?
+            ORDER BY m.criada_em DESC
+        """, (usuario_id,)).fetchall()
 
 
 def desempenho_por_subtopico(area_id=None, *, usuario_id):
@@ -603,7 +798,7 @@ def desempenho_dashboard_combinado(*, usuario_id):
         row = conn.execute("""
             SELECT
               (SELECT jsonb_agg(t) FROM (
-                  SELECT a.nome AS area,
+                  SELECT a.id AS area_id, a.nome AS area,
                          COUNT(r.id) AS total,
                          SUM(r.correta) AS acertos,
                          ROUND(100.0 * SUM(r.correta) / COUNT(r.id), 1) AS pct_acerto
@@ -611,7 +806,7 @@ def desempenho_dashboard_combinado(*, usuario_id):
                   JOIN questoes q ON q.id = r.questao_id
                   JOIN areas a ON a.id = q.area_id
                   WHERE r.usuario_id = ?
-                  GROUP BY a.nome
+                  GROUP BY a.id, a.nome
                   ORDER BY pct_acerto ASC
               ) t) AS por_area,
               (SELECT jsonb_agg(t) FROM (
@@ -834,6 +1029,14 @@ def criar_material(area_id, subtopico_id, tipo, titulo, link_mediafire, mediafir
         return cur.rowcount > 0
 
 
+def ultima_sincronizacao():
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT MAX(sincronizado_em) AS ult FROM materiais WHERE sincronizado_em IS NOT NULL"
+        ).fetchone()
+        return row["ult"] if row else None
+
+
 def contar_materiais():
     with get_conn() as conn:
         return conn.execute("SELECT COUNT(*) AS n FROM materiais").fetchone()["n"]
@@ -876,7 +1079,12 @@ def listar_materiais(area_id=None, subtopico_id=None):
 def listar_materiais_paginado(area_id=None, subtopico_id=None, tipo=None, busca=None,
                                limite=50, offset=0):
     condicao, params = _clausulas_filtro_materiais(area_id, subtopico_id, tipo, busca)
-    query = f"SELECT * FROM materiais WHERE {condicao} ORDER BY tipo, titulo LIMIT ? OFFSET ?"
+    condicao = condicao.replace("area_id", "m.area_id")
+    query = f"""
+        SELECT m.*, s.nome AS subtopico
+        FROM materiais m LEFT JOIN subtopicos s ON s.id = m.subtopico_id
+        WHERE {condicao} ORDER BY m.tipo, m.titulo LIMIT ? OFFSET ?
+    """
     with get_conn() as conn:
         return conn.execute(query, params + [limite, offset]).fetchall()
 
