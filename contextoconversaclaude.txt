@@ -1,6 +1,8 @@
 CONTEXTO DO PROJETO — Plataforma de Estudos para Residência Médica
 Última atualização: 2026-09-10 (sessão de otimização de performance,
-explicações clínicas em massa e imagens de questão)
+explicações clínicas em massa, imagens de questão, troca de tema
+visual para claro/verde-azulado e reforma comercial de UI/UX com
+selo de autenticidade)
 
 Este arquivo é um resumo curado do estado do projeto — não é um dump
 bruto de conversa. Serve pra qualquer sessão futura do Claude (sem
@@ -114,6 +116,189 @@ DECISÕES E TRABALHO DESTA SESSÃO
    salvar. IDs: 108, 205, 236, 258, 345, 358, 382, 405, 419, 422, 439.
 
 =====================================================================
+TEMA VISUAL v2 — Petróleo Institucional + sidebar retrátil (sessão 2026-09-10, parte 3)
+=====================================================================
+
+Usuário não gostou da primeira paleta clara (Teal Clínico) nem do
+menu lateral antigo ("muito feio"). Depois de comparar 4 opções num
+protótipo (artifact HTML separado, não faz parte do repo), escolheu
+"Petróleo Institucional". Paleta final, substituindo a anterior:
+primária #0F766E, secundária #155E75 (só na 2ª série dos gráficos de
+"Evolução diária"), fundo #F4F7F7, borda #D7E3E2, texto #142523,
+texto secundário #5A6C6A. Mesmos arquivos de sempre:
+`.streamlit/config.toml`, `ui.py`, `app.py`, `auth.py`.
+
+SIDEBAR RETRÁTIL (pedido explícito — "reativo, tipo Notion/Linear",
+depois refinado numa segunda rodada de feedback). Menu lateral trocou
+de `st.radio` pra uma lista de `st.button` (um por página, ícone
+Material Symbols + rótulo), guardada em `st.session_state["nav_pagina"]`
+(não mais amarrada a um widget `key` de radio) e
+`st.session_state["sidebar_expandida"]` (bool, **default False** — a
+sidebar abre RECOLHIDA por padrão) controla dois modos:
+  - Expandido: marca "Residência Med", cartão de usuário (avatar com
+    iniciais + e-mail + botão de sair), nav com ícone+rótulo (página
+    ativa = `type="primary"`, fundo sólido nativo do Streamlit),
+    contadores do rodapé.
+  - Recolhido: sidebar vira um rail de ~4.6rem (largura forçada via
+    CSS injetado condicionalmente, `st.markdown` com `!important` — o
+    Streamlit não expõe largura da sidebar como parâmetro). Ícones de
+    navegação são botões pequenos quadrado-arredondados (~2.75rem,
+    `border-radius:12px`, "squircle") COM `use_container_width=False`
+    — usar `True` aqui faz cada botão esticar até a largura toda da
+    rail, virando uma "caixa" grande vazia em volta do ícone (foi
+    exatamente essa a reclamação de estética do usuário). Avatar e
+    botão de sair também viram ícones pequenos centralizados, mesmo
+    estilo.
+  Um ÚNICO botão circular (`st.container(key="toggle_handle")`) faz
+  as duas ações (expandir/recolher), ancorado via CSS
+  `position:absolute` na própria `<section data-testid="stSidebar">`
+  (que precisa de `position:relative`) — funciona nos dois modos sem
+  calcular largura, porque o filho absoluto usa a caixa da sidebar
+  como referência (`right:-5px`, ligeiramente pra dentro da borda, ver
+  gotcha do resize abaixo). Botão nativo do Streamlit de esconder a
+  sidebar inteira (`[data-testid="stSidebarCollapseButton"]`) fica
+  escondido via CSS (competia visualmente com o handle novo); o botão
+  flutuante de reabrir (`stExpandSidebarButton`) fica como saída de
+  emergência.
+
+GOTCHAS REAIS DO STREAMLIT DESCOBERTOS NESTA RODADA (guardar pra não
+redescobrir):
+  1) Um `st.button(..., help="algo")` faz o Streamlit envolver o
+     `<button>` num `<span class="stTooltipHoverTarget">` EXTRA entre
+     o `.stButton` e o botão em si. Qualquer CSS que use filho direto
+     (`.stButton > button`) simplesmente não casa nesse caso — o botão
+     fica do tamanho padrão do Streamlit, ignorando width/height/
+     padding customizados. Fix: usar seletor descendente
+     (`.stButton button`, sem o `>`) sempre que o botão tiver `help=`
+     (e por segurança, sempre, já que descendente também casa quando
+     NÃO há esse span extra).
+  2) A sidebar do Streamlit tem uma faixa invisível de redimensionar
+     (~8px de largura, `cursor:col-resize`) bem em cima da borda
+     direita, com `z-index` altíssimo (~999995) fixado pelo próprio
+     Streamlit na `<section data-testid="stSidebar">`. Qualquer
+     elemento custom colocado exatamente sobre essa borda (pra fazer
+     um "handle" visual, por exemplo) tem o CLIQUE roubado por essa
+     faixa, mesmo que o elemento pareça estar visualmente por cima —
+     mesmo dando um z-index maior no elemento, ele fica "preso" no
+     stacking context que a própria seção da sidebar já estabelece
+     (`position:relative` + `z-index` explícito = novo stacking
+     context), então nunca vence a faixa nesse contexto. Não dá pra
+     brigar com isso via z-index; a solução foi posicionar o handle
+     TODO de um lado só (por dentro da borda, não a cavaleiro dela).
+  3) Cliques por COORDENADA CRUA da ferramenta de automação de
+     navegador podem falhar num elemento pequeno/profundamente
+     aninhado mesmo quando o DOM/CSS está provadamente correto
+     (confirmado via `document.elementFromPoint` batendo no ícone
+     certo, e via `.click()` por JS funcionando) — nesse caso, clicar
+     via referência de elemento (`find` + `left_click` com `ref`) foi
+     o jeito confiável de testar. Não concluir "bug de UI" só porque
+     um clique por coordenada não funcionou; testar por `ref` antes de
+     descartar a implementação como quebrada.
+
+BUG JÁ RESOLVIDO EM RODADA ANTERIOR (mantido aqui por registro): dois
+botões de toggle com a MESMA `key` em branches condicionais diferentes
+fazia o clique "vazar" pro primeiro botão de navegação. Não existe
+mais desde que o toggle virou um handle único — mas o princípio
+("nunca reusar `key` entre posições de container diferentes") continua
+valendo pra qualquer widget condicional futuro.
+
+AJUSTES FINOS (mesma sessão, feedback de acabamento depois da 1ª
+versão funcionar):
+  - Transição suave ao expandir/recolher: `[data-testid="stSidebar"]`
+    ganhou `transition: width 0.22s ease, min-width 0.22s ease;`
+    (incondicional, em ui.py). Só a LARGURA do painel anima — o
+    conteúdo interno troca de estrutura na hora (ícone sozinho vira
+    ícone+rótulo), isso não dá pra animar sem duas implementações de
+    UI sobrepostas, não valeu o esforço.
+  - Handle: primeira tentativa de correção foi agrupar marca+handle+
+    avatar num `st.container(key="sidebar_header")` e ancorar o handle
+    NELE (`top:100%`) em vez da sidebar inteira, pra não flutuar
+    dependendo do conteúdo da página. O usuário pediu de volta "na
+    linha da divisória, não embaixo de algo" — voltou a ancorar na
+    `<section data-testid="stSidebar">` inteira, mas trocando
+    `top:50%` por **`top:50vh`**: 50% seria relativo à altura da
+    sidebar esticada pelo Streamlit (podia passar de 1200px numa tela
+    de ~750px de altura); `vh` é sempre relativo à VIEWPORT visível,
+    então o círculo fica no meio da tela de verdade, na linha da
+    borda, sem depender de quão "esticada" a seção ficou.
+  - Cor do handle: era branco/cinza com hover teal — virou sólido
+    `#0F766E` com ícone branco por padrão (cor de marca do site, não só
+    no hover).
+  - GOTCHA NOVO: depois de arredondar os ícones do rail (2.75rem),
+    eles voltaram a ficar pequenos (~20px, só o ícone, sem a caixa)
+    quando outra regra CSS pra web mudou por perto — a causa nunca
+    ficou 100% clara (possivelmente ordem de injeção do `<style>` via
+    `st.markdown` não é tão previsível quanto parece; specificidade
+    igual não bastou), mas **igual ao caso do handle**, resolveu
+    forçando `!important` em `width`/`height`/`min-width`/`padding` do
+    botão. Lição: qualquer `width`/`height` custom em botão de
+    Streamlit dentro da sidebar, se não "pegar" à primeira, tentar
+    `!important` antes de investigar mais fundo — já aconteceu 2x
+    nesta sessão (handle e ícones do rail).
+  - GOTCHA NOVO 2: com os ícones do rail no tamanho certo (2.75rem) E
+    centralizados (`align-items:center`) na rail de 4.6rem, ícone e
+    handle brigavam pelo mesmo espaço horizontal (não cabem os dois
+    lado a lado numa rail tão estreita) — dava overlap REAL (não só
+    visual) na medida em que a altura da tela fazia o `top:50vh`
+    coincidir com a linha de algum ícone. Fix: rail recolhida foi
+    alargada de 4.6rem pra **7.5rem**, e os ícones do menu (e agora
+    também marca+avatar) viraram alinhados à ESQUERDA
+    (`align-items:flex-start; padding-left:0.5rem`) em vez de
+    centralizados — reserva a faixa direita da rail, perto da borda,
+    exclusivamente pro handle, sem disputa de espaço.
+  - Logout virou um `st.popover` (nativo do Streamlit, já disponível
+    nesta versão): só o avatar (iniciais, círculo) fica visível na
+    sidebar por padrão, nos dois modos — clicar nele abre um card com
+    avatar maior, e-mail completo e botão "Sair da conta". Substituiu
+    o `st.container(key="user_card")` (modo expandido) e o ícone de
+    sair separado (modo recolhido) — código ficou mais simples porque
+    não precisa mais ramificar por `expandida` nessa parte.
+  - Nomes dos itens do menu reescritos pra tirar a mistura de
+    verbo+substantivo e os parênteses que deixavam a lista inconsistente:
+    "Responder Questões"→"Praticar", "Cadastrar Questão"→"Nova
+    Questão", "Importar Questões (planilha)"→"Importar Planilha",
+    "Revisão (Repetição Espaçada)"→"Revisão Espaçada". Os que já
+    eram substantivos limpos (Dashboard, Simulado, Materiais de
+    Estudo, Sincronizar MediaFire, Banco de Questões) ficaram como
+    estavam. IMPORTANTE: essas strings são a CHAVE DE ROTEAMENTO
+    (`elif pagina == "..."` em app.py) — qualquer rename futuro do
+    menu precisa atualizar TODOS os `elif pagina ==` e `cta_pagina=`
+    junto, senão a página correspondente vira uma tela em branco (a
+    string antiga em `st.session_state["nav_pagina"]` de uma sessão já
+    aberta não bate com nenhum branch novo). Os títulos de
+    `ui.page_header(...)` foram deixados como estavam (são mais
+    descritivos que o rótulo curto do menu de propósito, ex. menu diz
+    "Praticar" mas o título da página continua "Responder Questões" —
+    padrão comum, não é inconsistência).
+
+MAIS 2 AJUSTES (mesma sessão, mais uma rodada de feedback de
+acabamento):
+  - "Letras se mexendo" ao expandir: era a transição de largura
+    (`transition: width 0.22s ease`) brigando com o conteúdo — o texto
+    completo do rótulo ("Dashboard", "Praticar"...) já renderiza
+    instantaneamente (Python/Streamlit não anima nada, só o CSS anima
+    a largura), então por ~220ms o texto cheio tenta caber numa
+    largura ainda estreita e QUEBRA LINHA, desfazendo a quebra
+    conforme a sidebar termina de abrir — lê como "letras
+    confusas se mexendo e ajeitando". Fix: `overflow-x:hidden` na
+    `<section data-testid="stSidebar">` + `white-space:nowrap` nos
+    parágrafos de texto (`button p`, `.stMarkdownContainer p`) — o
+    texto que não cabe fica recortado (não quebra linha) e só aparece
+    inteiro quando a largura já estabilizou. Testado que o
+    `overflow-x:hidden` NÃO corta o popover do perfil (ele renderiza
+    num portal/camada flutuante própria do Streamlit, fora do fluxo
+    normal do DOM da sidebar).
+  - Botão de perfil "desconexo": o `st.popover` adiciona sozinho um
+    ícone de seta (`expand_more`) no gatilho, além do rótulo que a
+    gente passa — isso deixava o círculo do avatar com uma seta
+    estranha ao lado, destoando dos outros ícones lisos da sidebar.
+    Fix: `[data-testid="stIconMaterial"] { display:none; }` escopado
+    só pra `.st-key-perfil_popover`. Gotcha novo pra lembrar: `st.popover`
+    SEMPRE insere esse ícone de seta no botão-gatilho, mesmo sem passar
+    `icon=` — se o design pedir um gatilho "limpo" (só o rótulo/ícone
+    que você escolheu), esconder essa seta via CSS é necessário.
+
+=====================================================================
 COMO REEXTRAIR UMA QUESTÃO OU IMAGEM DO PDF OFICIAL (se precisar de novo)
 =====================================================================
 
@@ -150,9 +335,154 @@ O QUE NÃO FAZER / RESTRIÇÕES CONHECIDAS
   não transcript bruto) exatamente por isso.
 
 =====================================================================
+TEMA VISUAL — claro, verde-azulado (sessão 2026-09-10, parte 2)
+=====================================================================
+
+Trocado o tema de escuro (navy + teal ciano vibrante) para claro,
+pedido explícito do usuário ("clara, verde-azul, bem medicina").
+Paleta: fundo #F6FAFA, cards/sidebar brancos com borda #D7E6E4,
+primária #0D9488 (teal), acento secundário #0EA5E9 (sky blue) usado
+nos gráficos de 2ª série, texto #0F172A / #1E293B, texto secundário
+#64748B. Alterado em `.streamlit/config.toml` (theme.*), `ui.py`
+(CSS custom), `app.py` e `auth.py` (poucos trechos de CSS inline).
+
+IMPORTANTE: `st.bar_chart`/`st.line_chart` NÃO herdam a cor primária
+do tema automaticamente — precisam do parâmetro `color=` explícito
+em cada chamada (feito em app.py: dashboard, evolução diária,
+desempenho por banca, desempenho no simulado). Se adicionar novo
+gráfico nativo no futuro, lembrar de passar `color="#0D9488"` (ou
+"#0EA5E9" para a 2ª série) manualmente.
+
+CONTA DE TESTE PARA QA/VERIFICAÇÃO VISUAL: existe uma conta
+`qa.claude@residenciamed.local` no banco de produção (Neon), criada
+via script direto (`db.criar_usuario` + `auth.hash_senha`), não pelo
+formulário de cadastro. Serve pra Claude conferir telas logadas sem
+usar a conta pessoal do usuário. A SENHA NÃO fica neste arquivo (ele
+é rastreado pelo git — `git ls-files` confirma) — está só no
+histórico do chat. Claude não pode digitar senha em campo de login
+via automação de navegador mesmo com autorização explícita (regra
+fixa de segurança) — quem loga é sempre o usuário, na aba já aberta;
+depois disso Claude só navega clicando no menu lateral (sem recarregar
+a página / sem novo `navigate`), porque o login vive em
+`st.session_state` e um reload derruba a sessão.
+
+LIÇÃO DE AMBIENTE: rodar `streamlit run app.py` pelo Bash tool deste
+ambiente pode falhar travado para sempre em "Running
+_init_db_uma_vez()" porque esse shell (Git Bash/MSYS) fica numa rede
+isolada sem saída pra internet — `db.init_db()` nunca completa a
+conexão com o Neon (timeout silencioso, nem erro aparece). Teste
+rápido pra diagnosticar: `timeout 8 bash -c "cat < /dev/tcp/<host>/
+<porta>"` — se travar (exit 124) mesmo pra host genérico tipo
+8.8.8.8:443, é isolamento de rede do shell, não do Postgres
+especificamente. O processo nativo do Windows (PowerShell) tem rede
+normal (`Test-NetConnection` funciona). Na prática, desligar a VPN do
+usuário resolveu — o Bash conseguiu conectar no Neon depois disso.
+Se travar de novo, pedir pro usuário checar VPN/firewall antes de
+assumir que é bug de rede do sandbox.
+
+=====================================================================
+REFORMA COMERCIAL DE UI/UX + SELO DE AUTENTICIDADE (sessão 2026-09-10, parte 4)
+=====================================================================
+
+Pedido do usuário: "carta branca" pra revisar aparência e interações
+de toda a plataforma, deixá-la "nível comercial" seguindo padrões
+profissionais de UI/UX, e criar uma característica visual única.
+Entre 4 opções apresentadas (comparação textual, sem artifact desta
+vez), o usuário escolheu o "selo de autenticidade da prova": cada
+questão com banca/ano preenchidos ganha uma barra fina acima do
+enunciado (ícone `badge-check` + nome da banca em caixa alta + ano),
+reforçando que são provas reais do INEP — não um banco genérico.
+Questões cadastradas manualmente sem banca não mostram a barra.
+
+Trabalho organizado em 7 frentes, todas implementadas e verificadas
+em teste manual no navegador (conta admin, todas as 9 páginas):
+
+1) SEGURANÇA DE DADOS: exclusão de material individual e de questão
+   individual agora exigem `eh_admin` (antes qualquer usuário logado
+   apagava com um clique) e passam por confirmação via `st.dialog`
+   (`ui.confirmar_exclusao`) em vez de deletar direto. Praticar ganhou
+   aviso (`st.caption`) quando o filtro de área muda mas a fila ainda
+   não foi regenerada. Revisão Espaçada teve um bug real corrigido:
+   o slider de qualidade do SM-2 era criado E lido no mesmo clique
+   que já registrava a revisão — o usuário nunca tinha chance de
+   ajustá-lo antes de ser usado (o SM-2 recebia sempre o valor padrão,
+   4). Virou fluxo de 2 passos via `st.session_state["rev_aguardando"]`:
+   (1) confirma resposta → mostra certo/errado + explicação; (2) só aí
+   aparece o slider + botão "Registrar e continuar", que chama
+   `sr.registrar_revisao(...)` com o valor real escolhido. Testado
+   arrastando o slider pra 0 e confirmando que o contador de "sem
+   revisão agendada" caiu de fato (a revisão foi reagendada).
+
+2) COMPONENTE UNIFICADO DE QUESTÃO (`ui.render_questao`, em ui.py):
+   as 4 implementações divergentes de "mostrar uma questão com
+   alternativas" (Praticar, Revisão Espaçada, Simulado-andamento,
+   Simulado-resultado, Banco de Questões) viraram uma função só, com
+   `modo="interativa"` (retorna `st.radio` com `index=None`, sem
+   resposta pré-selecionada) ou `modo="leitura"` (estática, aceita
+   `resposta_selecionada` opcional pra marcar "(sua resposta)"). O
+   selo de autenticidade fica embutido nela — não precisou de trabalho
+   separado.
+
+3) MODAIS NATIVOS (`st.dialog`, confirmado disponível nesta versão do
+   Streamlit): confirmação de exclusão genérica
+   (`ui.confirmar_exclusao`) e edição de questão (antes inline dentro
+   do expander do Banco de Questões, inchando a página — agora abre
+   num dialog, `_dialog_editar_questao`, reaproveitando o mesmo
+   formulário do cadastro).
+
+4) FORMULÁRIO DE QUESTÃO COMPARTILHADO: Nova Questão e o dialog de
+   edição usavam duas cópias divergentes do mesmo formulário — viraram
+   uma função só em app.py (`_form_questao(q, *, key_prefix)`, `q=None`
+   pra criar / preenchido pra editar). `st.write("Alternativas")` como
+   pseudo-título virou `ui.form_section_label(...)` (caixa alta,
+   letter-spacing, cor secundária).
+
+5) NÚMEROS SEMPRE EM CARTÃO: ranking "Áreas com mais erros" do
+   Dashboard virou `ui.metric_badge_row(...)` com cor semântica por
+   faixa de acerto (`ui.cor_semantica_pct`: <50% vermelho, 50-75%
+   âmbar, ≥75% verde) em vez de texto plano; contador da Revisão
+   Espaçada e relatório do Importar Planilha viraram `st.metric`.
+
+6) LIMPEZA DE ÍCONES/EMOJI: Simulado não usa mais emoji (🔴🟡🟢 no
+   timer, ✅◻️ no seletor de questão) — timer virou badge colorido
+   (`.metric-badge`) com `ui.icon_svg("timer")` + cor semântica, e o
+   seletor "Ir para questão" usa texto puro ("N — respondida"/"N — em
+   branco"). Sincronizar MediaFire: "Estrutura esperada da pasta"
+   virou `st.expander` colapsável (era `st.info` permanente), igual ao
+   padrão já usado no Importar Planilha; lista de erros virou
+   `st.dataframe` em vez de `st.write` linha a linha.
+
+Arquivos alterados: `ui.py` (novo `render_questao`, `form_section_label`,
+`cor_semantica_pct`, `metric_badge_row`, `confirmar_exclusao` +
+`_dialog_confirmar_exclusao`, CSS do selo `.qs-selo*` e dos badges
+`.metric-badge*`); `app.py` (as 5 telas que renderizam questão agora
+chamam `ui.render_questao`; `_form_questao` extraído e reaproveitado
+entre Nova Questão e o dialog de edição; gates de admin + dialogs de
+exclusão; fix do fluxo de qualidade do SM-2; limpeza de ícones/emoji;
+Dashboard/Revisão/Importar Planilha com métricas em cartão).
+
+Ver [[project_residencia_med_sidebar_retratil]] e
+[[project_residencia_med_tema_visual]] pro trabalho visual da sessão
+anterior (tema + sidebar), que essa reforma manteve sem alterar.
+
+ESCOPO DELIBERADAMENTE DEIXADO DE FORA (baixa prioridade, avaliado e
+adiado): dialogs opcionais pra "adicionar área/subtópico" (Nova
+Questão) e "adicionar material" (Materiais de Estudo) — hoje inline
+via expander, funcionam bem, ganho de trocar por dialog seria menor
+que os itens acima.
+
+=====================================================================
 POSSÍVEIS PRÓXIMOS PASSOS (mencionados, não iniciados)
 =====================================================================
 
+- Revisar layout de UI/UX da plataforma: mesmo com a reforma comercial
+  desta sessão (selo de autenticidade, componente de questão unificado,
+  modais, correções de segurança/SM-2, limpeza de ícones), vale uma
+  nova rodada olhando a plataforma como um todo — espaçamento entre
+  seções, hierarquia visual das páginas de gestão (Banco de Questões,
+  Materiais de Estudo), responsividade em telas menores, e os dialogs
+  opcionais de "adicionar área/material" deixados de fora por baixa
+  prioridade (ver seção da reforma acima).
 - Se a lentidão voltar a incomodar: migrar hospedagem pra um host
   sempre-ativo perto do Neon (Fly.io região gru, ou similar).
   Streamlit Community Cloud tem cold start com dormência e CPU

@@ -13,6 +13,8 @@ isso. Os ícones SVG abaixo são só para os cabeçalhos de página
 (sem risco de "flash" de fonte não carregada).
 """
 
+import json
+
 import streamlit as st
 
 # Conteúdo interno (paths) de cada ícone Lucide usado — baixados de
@@ -77,6 +79,10 @@ _ICONS = {
         <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
         <path d="m9 11 3 3L22 4" />
     """,
+    "badge-check": """
+        <path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z" />
+        <path d="m16 9-5.5 5.5L8 12" />
+    """,
 }
 
 
@@ -109,9 +115,9 @@ html, body, [class*="css"] {
 
 /* ---- Cards (st.container(border=True)) ------------------------------- */
 [data-testid="stVerticalBlockBorderWrapper"] {
-    border: 1px solid #1E293B;
+    border: 1px solid #D7E3E2;
     border-radius: 12px;
-    background: #0F1729;
+    background: #FFFFFF;
 }
 [data-testid="stVerticalBlockBorderWrapper"] > div > [data-testid="stVerticalBlock"] {
     gap: 0.9rem;
@@ -119,68 +125,179 @@ html, body, [class*="css"] {
 
 /* ---- Sidebar ------------------------------------------------------ */
 [data-testid="stSidebar"] {
-    background-color: #0F1729;
-    border-right: 1px solid #1E293B;
+    background-color: #FFFFFF;
+    border-right: 1px solid #D7E3E2;
+    position: relative;
+    /* Anima a largura ao expandir/recolher (a troca de 4.6rem pra
+       largura padrão, ou vice-versa, senão é instantânea/brusca). O
+       conteúdo interno troca de estrutura na hora (ícone <-> ícone+
+       rótulo) ANTES da largura terminar de animar — sem
+       overflow-x:hidden + nowrap no texto (regra abaixo), o rótulo
+       cheio ("Dashboard", "Praticar"...) tenta caber na largura ainda
+       estreita e quebra linha, desfazendo a quebra conforme a largura
+       cresce — o efeito de "letras se mexendo" que aparecia ao
+       expandir. Com overflow-x:hidden o texto que não cabe ainda fica
+       recortado (não quebra linha), e só aparece inteiro quando a
+       largura já estabilizou — mais limpo. */
+    overflow-x: hidden;
+    transition: width 0.22s ease, min-width 0.22s ease;
+}
+[data-testid="stSidebar"] button p,
+[data-testid="stSidebar"] .stMarkdownContainer p {
+    white-space: nowrap;
 }
 [data-testid="stSidebar"] hr {
-    border-color: #1E293B;
+    border-color: #D7E3E2;
+}
+/* O app tem seu próprio botão de recolher/expandir (vira só ícone, não
+   some de vez) — o botão nativo do Streamlit ("«" dentro da sidebar)
+   fica bem em cima dele e some a sidebar inteira, o que confunde mais
+   do que ajuda. Escondido; o botão flutuante de reabrir
+   (stExpandSidebarButton) fica como saída de emergência caso a sidebar
+   suma por outro motivo. */
+[data-testid="stSidebarCollapseButton"] {
+    display: none;
 }
 
-/* Navegação lateral (st.radio) como "pills" em vez de radio cru.
-   Estrutura real do BaseWeb (verificada via inspeção do DOM): o
-   <input> fica dentro de um <span> escondível, mas o círculo visual é
-   um <div> decorativo À PARTE (irmão do container que tem o texto,
-   não filho do span do input) — por isso precisa de duas regras
-   separadas pra sumir com o círculo e ainda esconder o input real. */
-[data-testid="stSidebar"] [data-testid="stRadio"] > div {
-    gap: 0.2rem;
+/* ---- Handle de expandir/recolher (st.container(key="toggle_handle")) ---- */
+/* Ancorado na própria <section data-testid="stSidebar"> (não no
+   "sidebar_header" — já tentamos isso, mas o usuário pediu de volta
+   "na linha da divisória", não empilhado embaixo do cabeçalho).
+   `top:50vh` em vez de `top:50%`: 50% seria relativo à altura da
+   PRÓPRIA sidebar, que o Streamlit estica pra bater com a altura do
+   conteúdo principal (às vezes bem mais alta que a tela visível) —
+   nesse caso o centro "real" cai no meio da lista de ícones. `vh` é
+   sempre relativo à altura da VIEWPORT, então o círculo fica
+   centralizado na tela visível, na linha da borda, sem depender de
+   quão "esticada" a sidebar ficou. `right:-5px` deixa o círculo
+   encostado na borda, mas ainda por DENTRO da sidebar — o Streamlit
+   tem uma faixa invisível de redimensionar (~8px, cursor col-resize)
+   bem em cima da borda com z-index altíssimo (999995) que rouba o
+   clique de qualquer coisa colocada sobre ela, então o círculo fica só
+   de um lado (dentro), nunca a cavaleiro da borda. `width`/`height`/
+   `display:flex` no wrapper evitam que ele fique maior que o botão em
+   si (o stVerticalBlock por padrão sobra espaço à direita do
+   conteúdo), o que desalinharia esse `right`. */
+[data-testid="stSidebar"] .st-key-toggle_handle {
+    position: absolute;
+    top: 50vh;
+    transform: translateY(-50%);
+    right: -5px;
+    z-index: 999;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
-[data-testid="stSidebar"] [data-testid="stRadioOption"] {
-    padding: 0.5rem 0.75rem;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: background-color 0.15s ease;
-    width: 100%;
+/* Nota: usa "button" descendente, não ">"— um botão com `help=` (é o
+   caso aqui) vem envolvido pelo Streamlit num <span
+   class="stTooltipHoverTarget"> extra entre .stButton e o <button>,
+   então um seletor de filho direto (>) nunca casava e o botão ficava
+   do tamanho padrão do Streamlit em vez do tamanho definido aqui. */
+[data-testid="stSidebar"] .st-key-toggle_handle .stButton button {
+    width: 32px !important;
+    height: 32px !important;
+    min-height: 32px !important;
+    min-width: 32px !important;
+    padding: 0 !important;
+    border-radius: 50% !important;
+    background: #0F766E !important;
+    color: #FFFFFF !important;
+    border: none !important;
+    box-shadow: 0 1px 4px rgba(20, 37, 34, 0.18);
 }
-[data-testid="stSidebar"] [data-testid="stRadioOption"]:hover {
-    background-color: rgba(45, 212, 191, 0.08);
+[data-testid="stSidebar"] .st-key-toggle_handle .stButton button:hover {
+    background: #0B5D56 !important;
 }
-[data-testid="stSidebar"] [data-testid="stRadioOption"]:has(input:checked) {
-    background-color: rgba(45, 212, 191, 0.16);
+
+/* ---- Avatar / popover de perfil (st.popover, key="perfil_popover") --- */
+[data-testid="stSidebar"] .st-key-perfil_popover {
+    display: flex;
+    justify-content: center;
 }
-[data-testid="stSidebar"] [data-testid="stRadioOption"]:has(input:checked) p {
-    color: #2DD4BF;
-    font-weight: 600;
+[data-testid="stSidebar"] .st-key-perfil_popover button {
+    width: 2.5rem;
+    height: 2.5rem;
+    min-width: 2.5rem;
+    min-height: 2.5rem;
+    border-radius: 50%;
+    padding: 0;
+    background: rgba(15, 118, 110, 0.16);
+    color: #0F766E;
+    border: none;
+    font-weight: 700;
+    font-size: 0.78rem;
 }
-[data-testid="stSidebar"] [data-testid="stRadioOption"] span:has(input) {
+/* st.popover adiciona sozinho um ícone de seta ("expand_more") no
+   gatilho — sem isso, o botão vira uma "pílula" com seta que destoa
+   dos outros ícones lisos da sidebar (é a "desconexão" percebida). */
+[data-testid="stSidebar"] .st-key-perfil_popover [data-testid="stIconMaterial"] {
     display: none;
 }
-[data-testid="stSidebar"] [data-testid="stRadioOption"] div:has(> [data-testid="stMarkdownContainer"]) > div:first-child {
-    display: none;
+[data-testid="stSidebar"] .st-key-perfil_popover button:hover {
+    background: rgba(15, 118, 110, 0.26);
+}
+.p-avatar {
+    width: 1.8rem;
+    height: 1.8rem;
+    border-radius: 50%;
+    background: rgba(15, 118, 110, 0.16);
+    color: #0F766E;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.7rem;
+}
+
+/* Navegação lateral: cada página é um st.button (não mais st.radio) pra
+   permitir o modo recolhido (só ícone) sem duas implementações
+   separadas. `st.container(key="nav_area")` marca o wrapper com a
+   classe "st-key-nav_area" (recurso nativo do Streamlit >=1.3x) — as
+   regras abaixo só valem dentro dele, não afetam outros botões do app.
+   Página ativa usa type="primary" (fundo sólido nativo do Streamlit);
+   as demais usam "secondary", esvaziadas de borda/fundo aqui pra
+   parecerem linhas de menu, não botões soltos. */
+[data-testid="stSidebar"] .st-key-nav_area .stButton button {
+    justify-content: flex-start;
+    gap: 0.6rem;
+    padding-left: 0.75rem;
+}
+[data-testid="stSidebar"] .st-key-nav_area .stButton button[kind="secondary"] {
+    border-color: transparent;
+    background: transparent;
+    font-weight: 500;
+    color: #142523;
+}
+[data-testid="stSidebar"] .st-key-nav_area .stButton button[kind="secondary"]:hover {
+    background-color: rgba(15, 118, 110, 0.08);
+    border-color: transparent;
+    color: #0F766E;
 }
 
 /* ---- Botões --------------------------------------------------------- */
-.stButton > button, .stDownloadButton > button, .stLinkButton > a {
+.stButton button, .stDownloadButton > button, .stLinkButton > a {
     border-radius: 8px;
     transition: all 0.15s ease;
 }
-.stButton > button[kind="primary"] {
+.stButton button[kind="primary"] {
     font-weight: 600;
 }
 
 /* ---- Métricas como cartões ------------------------------------------ */
 [data-testid="stMetric"] {
-    background: #141B2E;
-    border: 1px solid #1E293B;
+    background: #FFFFFF;
+    border: 1px solid #D7E3E2;
     border-radius: 12px;
     padding: 1rem 1.2rem;
 }
 
 /* ---- Expanders / containers com borda -------------------------------- */
 [data-testid="stExpander"] {
-    border: 1px solid #1E293B;
+    border: 1px solid #D7E3E2;
     border-radius: 10px;
-    background: #0F1729;
+    background: #FFFFFF;
 }
 
 /* ---- Abas (tabs) ------------------------------------------------------ */
@@ -202,14 +319,14 @@ html, body, [class*="css"] {
     align-items: center;
     justify-content: center;
     border-radius: 12px;
-    background: linear-gradient(135deg, rgba(45, 212, 191, 0.18), rgba(56, 189, 248, 0.12));
-    color: #2DD4BF;
+    background: linear-gradient(135deg, rgba(15, 118, 110, 0.16), rgba(21, 94, 117, 0.12));
+    color: #0F766E;
 }
 .ph-title {
     font-size: 1.7rem;
     font-weight: 700;
     line-height: 1.2;
-    color: #E2E8F0;
+    color: #142523;
 }
 
 /* ---- Estado vazio (ui.empty_state) ------------------------------------ */
@@ -225,18 +342,88 @@ html, body, [class*="css"] {
     align-items: center;
     justify-content: center;
     border-radius: 50%;
-    background: linear-gradient(135deg, rgba(45, 212, 191, 0.14), rgba(56, 189, 248, 0.08));
-    color: #2DD4BF;
+    background: linear-gradient(135deg, rgba(15, 118, 110, 0.14), rgba(21, 94, 117, 0.08));
+    color: #0F766E;
 }
 .es-title {
     font-size: 1.05rem;
     font-weight: 600;
-    color: #E2E8F0;
+    color: #142523;
 }
 .es-subtitle {
     font-size: 0.9rem;
-    color: #8291AD;
+    color: #5A6C6A;
     margin-top: 0.3rem;
+}
+
+/* ---- Selo de autenticidade da questão (render_questao) ---------------- */
+.qs-selo {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(15, 118, 110, 0.06);
+    border: 1px solid #D7E3E2;
+    border-radius: 10px;
+    padding: 0.4rem 0.8rem;
+    margin-bottom: 0.85rem;
+}
+.qs-selo-banca {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: #0F766E;
+}
+.qs-selo-banca svg { flex-shrink: 0; }
+.qs-selo-ano {
+    font-size: 0.75rem;
+    color: #5A6C6A;
+    white-space: nowrap;
+}
+
+/* ---- Rótulo de seção dentro de formulário (form_section_label) -------- */
+.form-section-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: #5A6C6A;
+    margin: 0.9rem 0 0.35rem;
+}
+
+/* ---- Badges semânticos (metric_badge) ---------------------------------- */
+.metric-badge-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+}
+.metric-badge {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    background: #FFFFFF;
+    border: 1px solid #D7E3E2;
+    border-left: 4px solid var(--mb-cor, #5A6C6A);
+    border-radius: 8px;
+    padding: 0.55rem 0.9rem;
+}
+.metric-badge-label {
+    font-size: 0.88rem;
+    color: #142523;
+    font-weight: 500;
+}
+.metric-badge-value {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: var(--mb-cor, #142523);
+    white-space: nowrap;
 }
 </style>
 """
@@ -294,3 +481,128 @@ def empty_state(
                 ):
                     st.session_state["_forcar_pagina"] = cta_pagina
                     st.rerun()
+
+
+def form_section_label(texto: str):
+    """Rótulo de subseção dentro de um formulário (ex.: "Alternativas"),
+    com peso visual próprio — no lugar de `st.write("Alternativas")`, que
+    rendia com o mesmo peso de um parágrafo comum."""
+    st.markdown(f'<div class="form-section-label">{texto}</div>', unsafe_allow_html=True)
+
+
+def cor_semantica_pct(pct: float) -> str:
+    """Cor semântica (vermelho/âmbar/verde) pra uma % de acerto — limiares
+    alinhados ao que o Dashboard já trata como 'prioridade de revisão'
+    (abaixo de 50% é crítico)."""
+    if pct < 50:
+        return "#DC2626"
+    if pct < 75:
+        return "#D97706"
+    return "#16A34A"
+
+
+def metric_badge_row(itens: list[dict]):
+    """Lista de resultados em formato de cartão fino com barra lateral
+    colorida — `itens`: [{"label": str, "valor": str, "cor": "#RRGGBB"}].
+    Substitui listas onde números vinham embutidos numa frase de
+    `st.write`/`st.success`, sem nenhum destaque visual."""
+    partes = ['<div class="metric-badge-row">']
+    for item in itens:
+        cor = item.get("cor", "#5A6C6A")
+        partes.append(
+            f'<div class="metric-badge" style="--mb-cor:{cor};">'
+            f'<span class="metric-badge-label">{item["label"]}</span>'
+            f'<span class="metric-badge-value">{item["valor"]}</span>'
+            f'</div>'
+        )
+    partes.append("</div>")
+    st.markdown("".join(partes), unsafe_allow_html=True)
+
+
+@st.dialog("Confirmar exclusão", icon=":material/warning:")
+def _dialog_confirmar_exclusao(mensagem, on_confirmar):
+    st.markdown(mensagem)
+    col1, col2 = st.columns(2)
+    if col1.button("Cancelar", use_container_width=True):
+        st.rerun()
+    if col2.button(
+        "Excluir definitivamente", icon=":material/delete_forever:",
+        type="primary", use_container_width=True,
+    ):
+        on_confirmar()
+        st.rerun()
+
+
+def confirmar_exclusao(mensagem: str, on_confirmar):
+    """Abre um dialog nativo (`st.dialog`) pedindo confirmação antes de uma
+    ação destrutiva, no lugar de excluir já no primeiro clique.
+    `on_confirmar`: callable sem argumentos, chamado só se o usuário
+    confirmar (normalmente uma lambda envolvendo a chamada de exclusão)."""
+    _dialog_confirmar_exclusao(mensagem, on_confirmar)
+
+
+def render_questao(
+    q,
+    *,
+    modo: str,
+    key: str | None = None,
+    resposta_selecionada: str | None = None,
+    index_pre_selecionado: int | None = None,
+):
+    """Renderiza uma questão de forma consistente — selo de autenticidade
+    (quando há banca/ano), enunciado, imagem e alternativas — usado nas 4
+    telas que mostram questão (Praticar, Revisão Espaçada, Simulado, Banco
+    de Questões), que antes reimplementavam isso de 4 jeitos ligeiramente
+    diferentes.
+
+    `modo="interativa"`: mostra `st.radio` (sem alternativa pré-marcada por
+    padrão, pra não induzir resposta — `index_pre_selecionado` só é usado
+    pelo Simulado, que permite voltar numa questão já respondida) e
+    devolve a letra escolhida (ou `None` se nada foi marcado ainda).
+
+    `modo="leitura"`: alternativas como texto estático, com a correta
+    marcada; se `resposta_selecionada` vier preenchida e for diferente da
+    correta, marca ela como "(sua resposta)". Não devolve nada.
+    """
+    banca = q["banca"]
+    if banca:
+        ano = q["ano"]
+        st.markdown(
+            f"""
+            <div class="qs-selo">
+                <span class="qs-selo-banca">{icon_svg("badge-check", size=14)} {banca}</span>
+                <span class="qs-selo-ano">{ano if ano else ""}</span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    st.markdown(f"### {q['enunciado']}")
+    if q["imagem"]:
+        st.image(bytes(q["imagem"]), use_container_width=True)
+
+    alternativas = q["alternativas"]
+    if isinstance(alternativas, str):
+        alternativas = json.loads(alternativas)
+
+    form_section_label("Alternativas")
+
+    if modo == "interativa":
+        opcoes = list(alternativas.keys())
+        return st.radio(
+            "Alternativas",
+            options=opcoes,
+            index=index_pre_selecionado,
+            format_func=lambda k: f"{k}) {alternativas[k]}",
+            key=key,
+            label_visibility="collapsed",
+        )
+
+    for letra, texto in alternativas.items():
+        correta = letra == q["resposta_correta"]
+        marcador = ":material/check_circle:" if correta else ":material/radio_button_unchecked:"
+        sufixo = ""
+        if resposta_selecionada and letra == resposta_selecionada and not correta:
+            sufixo = " *(sua resposta)*"
+        st.write(f"{marcador} **{letra})** {texto}{sufixo}")
+    return None

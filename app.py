@@ -47,40 +47,20 @@ eh_admin = st.session_state.get("usuario_email") in ADMIN_EMAILS
 # ---------------------------------------------------------------------------
 # Sidebar / navegação
 # ---------------------------------------------------------------------------
-st.sidebar.markdown(
-    f"""
-    <div style="display:flex; align-items:center; gap:0.6rem; padding: 0.2rem 0 1rem 0; color:#2DD4BF;">
-        {ui.icon_svg("stethoscope", size=22)}
-        <span style="font-size:1.25rem; font-weight:700; color:#E2E8F0;">Residência Med</span>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
-st.sidebar.caption(f"Logado como: {st.session_state.get('usuario_email', '')}")
-if st.sidebar.button("Sair", use_container_width=True, icon=":material/logout:"):
-    for chave in ("usuario_id", "usuario_email"):
-        st.session_state.pop(chave, None)
-    st.rerun()
-st.sidebar.markdown("---")
-
-# Widgets com `key` não podem ter seu session_state sobrescrito depois de
-# já terem sido instanciados nesta mesma execução (StreamlitWidgetAlready
-# InstantiatedError) — por isso os botões de "ir para" em ui.empty_state
-# gravam numa chave separada (_forcar_pagina) que só é consumida AQUI,
-# antes do widget do menu ser criado.
-if "_forcar_pagina" in st.session_state:
-    st.session_state["nav_pagina"] = st.session_state.pop("_forcar_pagina")
-
-pagina = st.sidebar.radio(
-    "Navegação",
-    ["Dashboard", "Responder Questões", "Simulado", "Cadastrar Questão",
-     "Importar Questões (planilha)", "Revisão (Repetição Espaçada)",
-     "Materiais de Estudo", "Sincronizar MediaFire", "Banco de Questões"],
-    label_visibility="collapsed",
-    key="nav_pagina",
-)
-
-st.sidebar.markdown("---")
+# Cada página é um st.button (não mais st.radio) pra dar pra ter um modo
+# "recolhido" (só ícone, como em plataformas tipo Notion/Linear) sem manter
+# duas implementações de menu separadas — só muda o rótulo exibido.
+PAGINAS_NAV = [
+    ("Dashboard", "dashboard"),
+    ("Praticar", "edit_note"),
+    ("Simulado", "timer"),
+    ("Nova Questão", "post_add"),
+    ("Importar Planilha", "upload_file"),
+    ("Revisão Espaçada", "psychology"),
+    ("Materiais de Estudo", "menu_book"),
+    ("Sincronizar MediaFire", "sync"),
+    ("Banco de Questões", "database"),
+]
 
 
 @st.cache_data(ttl=30)
@@ -90,9 +70,161 @@ def _contadores_sidebar():
     return db.contar_questoes(), db.contar_materiais()
 
 
-_n_questoes, _n_materiais = _contadores_sidebar()
-st.sidebar.caption(f"Total de questões cadastradas: **{_n_questoes}**")
-st.sidebar.caption(f"Total de materiais cadastrados: **{_n_materiais}**")
+# Widgets com `key` não podem ter seu session_state sobrescrito depois de
+# já terem sido instanciados nesta mesma execução (StreamlitWidgetAlready
+# InstantiatedError) — por isso os botões de "ir para" em ui.empty_state
+# gravam numa chave separada (_forcar_pagina) que só é consumida AQUI,
+# antes de qualquer botão de navegação ser criado.
+if "_forcar_pagina" in st.session_state:
+    st.session_state["nav_pagina"] = st.session_state.pop("_forcar_pagina")
+st.session_state.setdefault("nav_pagina", PAGINAS_NAV[0][0])
+st.session_state.setdefault("sidebar_expandida", False)
+
+expandida = st.session_state["sidebar_expandida"]
+
+if not expandida:
+    # Só dá pra mudar a largura da sidebar via CSS (o Streamlit não expõe
+    # isso como parâmetro) — injeta só quando recolhida pra não interferir
+    # no redimensionamento manual normal quando expandida. Também redesenha
+    # os botões de navegação/sair como ícones quadrado-arredondados
+    # pequenos e centralizados — sem isso, use_container_width=True (usado
+    # no modo expandido) estica cada botão até a largura toda da rail,
+    # virando uma "caixa" grande e vazia em volta de um ícone pequeno.
+    st.markdown(
+        """
+        <style>
+        [data-testid="stSidebar"] {
+            min-width: 7.5rem !important;
+            width: 7.5rem !important;
+        }
+        [data-testid="stSidebarUserContent"] {
+            padding-left: 0.4rem !important;
+            padding-right: 0.4rem !important;
+        }
+        /* Ícones alinhados à esquerda (não centralizados na rail toda) —
+           reserva a faixa direita, perto da borda, só pro handle de
+           expandir/recolher (CSS em ui.py). Com a rail mais estreita e
+           os ícones centralizados, ícone (2.75rem) e handle (32px)
+           não cabem lado a lado sem se sobrepor. */
+        [data-testid="stSidebar"] .st-key-nav_area {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            padding-left: 0.5rem;
+            gap: 0.35rem;
+        }
+        [data-testid="stSidebar"] .st-key-nav_area .stButton button {
+            width: 2.75rem !important;
+            height: 2.75rem !important;
+            min-height: 2.75rem !important;
+            min-width: 2.75rem !important;
+            padding: 0 !important;
+            border-radius: 12px;
+            justify-content: center;
+        }
+        [data-testid="stSidebar"] .st-key-nav_area .stButton button[kind="secondary"] {
+            border-color: transparent;
+            background: transparent;
+        }
+        /* Avatar alinhado com os ícones do menu (mesmo padding-left),
+           em vez de centralizado na rail toda (regra padrão em ui.py,
+           usada só no modo expandido). */
+        [data-testid="stSidebar"] .st-key-perfil_popover {
+            justify-content: flex-start !important;
+            padding-left: 0.5rem;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+with st.sidebar:
+    # Marca + toggle + usuário ficam num container próprio
+    # (key="sidebar_header") porque o handle de expandir/recolher é
+    # ancorado NELE (altura constante), não na sidebar inteira — assim
+    # ele sempre fica logo abaixo do cabeçalho, acima do primeiro item
+    # do menu, em vez de "flutuar" no meio da tela dependendo de quanto
+    # conteúdo a página atual tem.
+    with st.container(key="sidebar_header"):
+        if expandida:
+            st.markdown(
+                f"""
+                <div style="display:flex; align-items:center; gap:0.55rem;">
+                    <span style="color:#0F766E; display:flex;">{ui.icon_svg("stethoscope", size=21)}</span>
+                    <span style="font-size:1.15rem; font-weight:700; color:#142523;">Residência Med</span>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        else:
+            st.markdown(
+                f'<div style="display:flex; justify-content:flex-start; padding-left:0.5rem; '
+                f'color:#0F766E; margin-top:0.2rem;">'
+                f'{ui.icon_svg("stethoscope", size=22)}</div>',
+                unsafe_allow_html=True,
+            )
+
+        # Botão único de expandir/recolher — um "handle" redondo ancorado
+        # na borda da sidebar (CSS em ui.py), em vez dos dois botões
+        # separados de antes (um no cabeçalho expandido, outro full-width
+        # recolhido).
+        with st.container(key="toggle_handle"):
+            if expandida:
+                if st.button("", icon=":material/left_panel_close:", key="toggle_fechar", help="Recolher menu"):
+                    st.session_state["sidebar_expandida"] = False
+                    st.rerun()
+            else:
+                if st.button("", icon=":material/left_panel_open:", key="toggle_abrir", help="Expandir menu"):
+                    st.session_state["sidebar_expandida"] = True
+                    st.rerun()
+
+        email_usuario = st.session_state.get("usuario_email", "")
+        iniciais = "".join(p[0] for p in email_usuario.replace("@", " ").split()[:1])[:2].upper() or "?"
+
+        # Perfil como popover: só o avatar (iniciais) fica visível por
+        # padrão nos dois modos — clicar nele abre um card com e-mail
+        # completo e o botão de sair, em vez de deixar o e-mail/logout
+        # sempre expostos na sidebar.
+        with st.popover(iniciais, key="perfil_popover", help=email_usuario):
+            st.markdown(
+                f'<div class="p-avatar" style="width:2.4rem; height:2.4rem; '
+                f'margin:0 auto 0.6rem; font-size:0.85rem;">{iniciais}</div>',
+                unsafe_allow_html=True,
+            )
+            st.markdown(
+                f'<div style="text-align:center; font-size:0.85rem; color:#142523; '
+                f'margin-bottom:0.75rem; word-break:break-all;">{email_usuario}</div>',
+                unsafe_allow_html=True,
+            )
+            if st.button("Sair da conta", icon=":material/logout:", use_container_width=True, key="sair_popover"):
+                for chave in ("usuario_id", "usuario_email"):
+                    st.session_state.pop(chave, None)
+                st.rerun()
+
+    st.markdown("---")
+
+    with st.container(key="nav_area"):
+        for nome, icone in PAGINAS_NAV:
+            ativo = st.session_state["nav_pagina"] == nome
+            if st.button(
+                nome if expandida else "",
+                icon=f":material/{icone}:",
+                key=f"nav_{nome}",
+                type="primary" if ativo else "secondary",
+                use_container_width=expandida,
+                help=None if expandida else nome,
+            ):
+                st.session_state["nav_pagina"] = nome
+                st.rerun()
+
+    pagina = st.session_state["nav_pagina"]
+
+    st.markdown("---")
+
+    if expandida:
+        _n_questoes, _n_materiais = _contadores_sidebar()
+        st.caption(f"Total de questões cadastradas: **{_n_questoes}**")
+        st.caption(f"Total de materiais cadastrados: **{_n_materiais}**")
 
 
 @st.cache_data(ttl=60)
@@ -128,13 +260,6 @@ def _dash_desempenho_por_subtopico(usuario_id):
 @st.cache_data(ttl=15)
 def _dash_questoes_mais_erradas(usuario_id):
     return db.questoes_mais_erradas(usuario_id=usuario_id)
-
-
-def exibir_imagem_questao(q):
-    """Mostra a imagem anexada à questão (raio-X, ECG, gráfico, foto clínica
-    etc.), quando houver — vem como bytes (memoryview) direto do Postgres."""
-    if q["imagem"]:
-        st.image(bytes(q["imagem"]), use_container_width=True)
 
 
 def controle_paginacao(chave, total, por_pagina=50):
@@ -177,9 +302,142 @@ def resetar_paginacao_se_filtro_mudou(chave, assinatura_filtro):
         st.session_state[chave] = 0
 
 
+def _form_questao(q, *, key_prefix):
+    """Formulário de criar/editar questão, compartilhado entre 'Nova
+    Questão' e o dialog de edição do Banco de Questões — antes eram duas
+    cópias quase idênticas (uma com variáveis soltas, outra com dict),
+    já levemente divergentes. `q=None` cria; `q` preenchido edita.
+    Devolve "salvo", "cancelado" ou None (nada aconteceu ainda)."""
+    areas_form = mapa_areas()
+    if not areas_form:
+        ui.empty_state(
+            "Nenhuma área cadastrada ainda",
+            "Use 'Cadastrar nova área ou subtópico' antes de criar questões.",
+            icon="square-plus",
+        )
+        return None
+
+    nomes_area = list(areas_form.keys())
+    area_atual_nome = next((n for n, i in areas_form.items() if i == q["area_id"]), None) if q else None
+    col_area, col_sub = st.columns(2)
+    area_nome_f = col_area.selectbox(
+        "Área", nomes_area,
+        index=nomes_area.index(area_atual_nome) if area_atual_nome in nomes_area else 0,
+        key=f"{key_prefix}_area",
+    )
+    area_id_f = areas_form[area_nome_f]
+
+    subtopicos_f = db.listar_subtopicos(area_id_f)
+    sub_opcoes_f = {"(nenhum)": None}
+    sub_opcoes_f.update({s["nome"]: s["id"] for s in subtopicos_f})
+    nomes_sub = list(sub_opcoes_f.keys())
+    sub_atual_nome = next((n for n, i in sub_opcoes_f.items() if i == q["subtopico_id"]), "(nenhum)") if q else "(nenhum)"
+    sub_nome_f = col_sub.selectbox(
+        "Subtópico", nomes_sub,
+        index=nomes_sub.index(sub_atual_nome) if sub_atual_nome in nomes_sub else 0,
+        key=f"{key_prefix}_sub",
+    )
+    subtopico_id_f = sub_opcoes_f[sub_nome_f]
+
+    enunciado_f = st.text_area("Enunciado da questão", value=q["enunciado"] if q else "", key=f"{key_prefix}_enun")
+
+    ui.form_section_label("Imagem da questão (opcional)")
+    imagem_atual = q["imagem"] if q else None
+    if imagem_atual:
+        st.image(bytes(imagem_atual), width=300)
+        if st.button("Remover imagem", icon=":material/delete:", key=f"{key_prefix}_rmimg"):
+            db.remover_imagem_questao(q["id"])
+            st.rerun()
+    nova_imagem = st.file_uploader(
+        "Substituir imagem" if imagem_atual else "Anexar imagem (raio-X, ECG, gráfico, foto clínica etc.)",
+        type=["png", "jpg", "jpeg"], key=f"{key_prefix}_img",
+    )
+    if nova_imagem is not None and q is not None:
+        # Em edição a imagem salva na hora, como já era — em criação (q
+        # é None) a questão ainda não tem id, então o arquivo só é
+        # aplicado depois do INSERT, no bloco de salvar abaixo.
+        db.definir_imagem_questao(q["id"], nova_imagem.getvalue(), nova_imagem.type)
+        st.success("Imagem salva.", icon=":material/check_circle:")
+        st.rerun()
+
+    ui.form_section_label("Alternativas")
+    letras = ["A", "B", "C", "D", "E"]
+    alternativas_atuais = {}
+    if q is not None:
+        alternativas_atuais = q["alternativas"]
+        if isinstance(alternativas_atuais, str):
+            alternativas_atuais = json.loads(alternativas_atuais)
+    valores_alt = {letra: alternativas_atuais.get(letra, "") for letra in letras}
+    col_a, col_b = st.columns(2)
+    valores_alt["A"] = col_a.text_input("A)", value=valores_alt["A"], key=f"{key_prefix}_alt_a")
+    valores_alt["B"] = col_b.text_input("B)", value=valores_alt["B"], key=f"{key_prefix}_alt_b")
+    col_c, col_d = st.columns(2)
+    valores_alt["C"] = col_c.text_input("C)", value=valores_alt["C"], key=f"{key_prefix}_alt_c")
+    valores_alt["D"] = col_d.text_input("D)", value=valores_alt["D"], key=f"{key_prefix}_alt_d")
+    valores_alt["E"] = st.text_input("E) (opcional)", value=valores_alt["E"], key=f"{key_prefix}_alt_e")
+
+    col_correta, col_banca, col_ano = st.columns([1, 2, 1])
+    correta_atual = q["resposta_correta"] if q and q["resposta_correta"] in letras else "A"
+    resposta_correta_f = col_correta.selectbox(
+        "Alternativa correta", letras, index=letras.index(correta_atual), key=f"{key_prefix}_correta",
+    )
+    banca_f = col_banca.text_input(
+        "Banca / Instituição (ex: ENAMED, USP-SP, UNIFESP)",
+        value=(q["banca"] if q else "") or "", key=f"{key_prefix}_banca",
+    )
+    ano_f = col_ano.number_input(
+        "Ano", min_value=1990, max_value=2100,
+        value=(q["ano"] if q else None) or 2025, step=1, key=f"{key_prefix}_ano",
+    )
+
+    explicacao_f = st.text_area(
+        "Explicação / comentário (opcional)",
+        value=(q["explicacao"] if q else "") or "", key=f"{key_prefix}_exp",
+    )
+
+    if q is not None:
+        col_salvar, col_cancelar = st.columns(2)
+    else:
+        col_salvar, col_cancelar = st.container(), None
+
+    label_botao = "Salvar alterações" if q is not None else "Salvar questão"
+    if col_salvar.button(label_botao, icon=":material/save:", key=f"{key_prefix}_salvar"):
+        nova_alternativas = {l: valores_alt[l] for l in letras if valores_alt[l].strip()}
+        if not enunciado_f.strip() or not all(valores_alt[l].strip() for l in ["A", "B", "C", "D"]):
+            st.error("Preencha ao menos o enunciado e as alternativas A a D.", icon=":material/cancel:")
+        else:
+            if q is not None:
+                db.atualizar_questao(
+                    q["id"], area_id_f, subtopico_id_f, enunciado_f, nova_alternativas,
+                    resposta_correta_f, explicacao_f, banca_f, int(ano_f),
+                )
+                st.success("Questão atualizada.", icon=":material/check_circle:")
+            else:
+                novo_id = db.criar_questao(
+                    area_id_f, subtopico_id_f, enunciado_f, nova_alternativas,
+                    resposta_correta_f, explicacao_f, banca_f, int(ano_f),
+                )
+                if nova_imagem is not None:
+                    db.definir_imagem_questao(novo_id, nova_imagem.getvalue(), nova_imagem.type)
+                st.success("Questão cadastrada com sucesso!", icon=":material/check_circle:")
+            return "salvo"
+
+    if col_cancelar is not None and col_cancelar.button("Cancelar", icon=":material/close:", key=f"{key_prefix}_cancelar"):
+        return "cancelado"
+
+    return None
+
+
+@st.dialog("Editar questão", width="large")
+def _dialog_editar_questao(q):
+    resultado = _form_questao(q, key_prefix=f"editq_{q['id']}")
+    if resultado in ("salvo", "cancelado"):
+        st.rerun()
+
+
 def consolidar_simulado_no_historico(simulado_id, usuario_id):
     """Joga as respostas do simulado nos mesmos caminhos usados por
-    'Responder Questões' (db.registrar_resposta + sr.registrar_revisao),
+    'Praticar' (db.registrar_resposta + sr.registrar_revisao),
     para que o Dashboard e a fila de repetição espaçada considerem o
     simulado automaticamente. Chamar uma única vez, ao finalizar."""
     for item in db.listar_itens_simulado(simulado_id, usuario_id=usuario_id):
@@ -202,8 +460,8 @@ if pagina == "Dashboard":
         ui.empty_state(
             "Ainda não há respostas registradas",
             "Responda algumas questões para começar a acompanhar seu desempenho aqui.",
-            cta_label="Ir para Responder Questões", cta_icon=":material/arrow_forward:",
-            cta_pagina="Responder Questões",
+            cta_label="Ir para Praticar", cta_icon=":material/arrow_forward:",
+            cta_pagina="Praticar",
         )
     else:
         df_area = pd.DataFrame([dict(r) for r in desemp_area])
@@ -217,22 +475,25 @@ if pagina == "Dashboard":
         col3.metric("% de acerto geral", f"{pct_geral}%")
 
         st.subheader("Desempenho por área (% de acerto)")
-        st.bar_chart(df_area.set_index("area")["pct_acerto"])
+        st.bar_chart(df_area.set_index("area")["pct_acerto"], color="#0F766E")
 
         st.subheader("Áreas com mais erros (prioridade de revisão)")
         piores = df_area.sort_values("pct_acerto").head(5)
-        for _, row in piores.iterrows():
-            st.write(
-                f":material/priority_high: **{row['area']}** — {row['pct_acerto']}% de acerto "
-                f"({int(row['acertos'])}/{int(row['total'])})"
-            )
+        ui.metric_badge_row([
+            {
+                "label": row["area"],
+                "valor": f"{row['pct_acerto']}% ({int(row['acertos'])}/{int(row['total'])})",
+                "cor": ui.cor_semantica_pct(row["pct_acerto"]),
+            }
+            for _, row in piores.iterrows()
+        ])
 
         st.subheader("Evolução diária")
         evol = _dash_evolucao_diaria(st.session_state.usuario_id)
         if evol:
             df_evol = pd.DataFrame([dict(r) for r in evol]).set_index("dia")
-            st.line_chart(df_evol[["pct_acerto"]])
-            st.bar_chart(df_evol[["total"]])
+            st.line_chart(df_evol[["pct_acerto"]], color="#0F766E")
+            st.bar_chart(df_evol[["total"]], color="#155E75")
 
         st.subheader("Desempenho por banca / instituição")
         desemp_banca = dash["por_banca"]
@@ -244,7 +505,7 @@ if pagina == "Dashboard":
             )
         else:
             df_banca = pd.DataFrame([dict(r) for r in desemp_banca])
-            st.bar_chart(df_banca.set_index("banca")["pct_acerto"])
+            st.bar_chart(df_banca.set_index("banca")["pct_acerto"], color="#0F766E")
 
             sem_banca = dash["sem_banca"]
             if sem_banca:
@@ -279,7 +540,7 @@ if pagina == "Dashboard":
 # ---------------------------------------------------------------------------
 # RESPONDER QUESTÕES
 # ---------------------------------------------------------------------------
-elif pagina == "Responder Questões":
+elif pagina == "Praticar":
     ui.page_header("pencil-line", "Responder Questões")
 
     areas = mapa_areas()
@@ -287,8 +548,8 @@ elif pagina == "Responder Questões":
         ui.empty_state(
             "Nenhuma área cadastrada ainda",
             "Cadastre uma área (ex: Cardiologia) antes de responder questões.",
-            icon="square-plus", cta_label="Ir para Cadastrar Questão",
-            cta_icon=":material/arrow_forward:", cta_pagina="Cadastrar Questão",
+            icon="square-plus", cta_label="Ir para Nova Questão",
+            cta_icon=":material/arrow_forward:", cta_pagina="Nova Questão",
         )
     else:
         col_a, col_b = st.columns(2)
@@ -301,6 +562,16 @@ elif pagina == "Responder Questões":
             random.shuffle(ids)
             st.session_state.fila_questoes = ids
             st.session_state.idx_atual = 0
+            st.session_state.fila_area_id = area_id
+
+        # O filtro de área não regenera a fila sozinho (só o botão acima
+        # faz isso) — sem esse aviso, o usuário podia trocar o filtro e
+        # continuar respondendo silenciosamente questões da área antiga.
+        if area_id != st.session_state.get("fila_area_id"):
+            st.caption(
+                ":material/info: Filtro mudou — clique em **Gerar novo lote** "
+                "para aplicá-lo (a fila atual continua sendo do filtro anterior)."
+            )
 
         fila = st.session_state.get("fila_questoes", [])
         idx = st.session_state.get("idx_atual", 0)
@@ -309,8 +580,8 @@ elif pagina == "Responder Questões":
             ui.empty_state(
                 "Nenhuma questão encontrada para esse filtro",
                 "Cadastre questões para essa área, ou selecione 'Todas' acima.",
-                icon="square-plus", cta_label="Ir para Cadastrar Questão",
-                cta_icon=":material/arrow_forward:", cta_pagina="Cadastrar Questão",
+                icon="square-plus", cta_label="Ir para Nova Questão",
+                cta_icon=":material/arrow_forward:", cta_pagina="Nova Questão",
             )
         elif idx >= len(fila):
             st.success("Você respondeu todas as questões desse lote! Gere um novo lote acima.")
@@ -318,18 +589,13 @@ elif pagina == "Responder Questões":
             q = db.obter_questao(fila[idx])
             st.progress((idx) / len(fila))
             st.caption(f"Questão {idx + 1} de {len(fila)}")
-            st.markdown(f"### {q['enunciado']}")
-            exibir_imagem_questao(q)
 
-            alternativas = json.loads(q["alternativas"])
-            resposta = st.radio(
-                "Alternativas",
-                options=list(alternativas.keys()),
-                format_func=lambda k: f"{k}) {alternativas[k]}",
-                key=f"resp_{q['id']}",
-            )
+            resposta = ui.render_questao(q, modo="interativa", key=f"resp_{q['id']}")
 
-            if st.button("Confirmar resposta", key=f"conf_{q['id']}", icon=":material/check:"):
+            if st.button(
+                "Confirmar resposta", key=f"conf_{q['id']}", icon=":material/check:",
+                disabled=resposta is None,
+            ):
                 correta = (resposta == q["resposta_correta"])
                 db.registrar_resposta(q["id"], resposta, correta, usuario_id=st.session_state.usuario_id)
 
@@ -449,12 +715,11 @@ elif pagina == "Simulado":
             if desemp:
                 st.subheader("Desempenho por área (neste simulado)")
                 df_desemp = pd.DataFrame([dict(r) for r in desemp])
-                st.bar_chart(df_desemp.set_index("area")["pct_acerto"])
+                st.bar_chart(df_desemp.set_index("area")["pct_acerto"], color="#0F766E")
 
             st.subheader("Revisão completa")
             itens = db.listar_itens_simulado(simulado_id, usuario_id=st.session_state.usuario_id)
             for item in itens:
-                alternativas = json.loads(item["alternativas"])
                 if item["resposta_dada"] is None:
                     marcador, icone_item = "não respondida", "radio_button_unchecked"
                 elif item["correta"]:
@@ -465,11 +730,7 @@ elif pagina == "Simulado":
                     f"[{item['ordem'] + 1}] {marcador} — {item['enunciado'][:80]}...",
                     icon=f":material/{icone_item}:",
                 ):
-                    st.markdown(item["enunciado"])
-                    for letra, texto in alternativas.items():
-                        prefixo = ":material/check_circle:" if letra == item["resposta_correta"] else ":material/radio_button_unchecked:"
-                        sufixo = " (sua resposta)" if letra == item["resposta_dada"] else ""
-                        st.write(f"{prefixo} **{letra})** {texto}{sufixo}")
+                    ui.render_questao(item, modo="leitura", resposta_selecionada=item["resposta_dada"])
                     if item["explicacao"]:
                         st.info(item["explicacao"], icon=":material/lightbulb:")
 
@@ -501,25 +762,33 @@ elif pagina == "Simulado":
                 respostas_dadas = {i["id"]: i["resposta_dada"] for i in itens}
 
                 minutos, segundos = divmod(int(restante_seg), 60)
-                cor = "🔴" if restante_seg < 60 else ("🟡" if restante_seg < limite_seg * 0.1 else "🟢")
+                if restante_seg < 60:
+                    cor_tempo = "#DC2626"
+                elif restante_seg < limite_seg * 0.1:
+                    cor_tempo = "#D97706"
+                else:
+                    cor_tempo = "#16A34A"
                 col1, col2 = st.columns([1, 3])
-                col1.metric("Tempo restante", f"{cor} {minutos:02d}:{segundos:02d}")
+                with col1:
+                    st.markdown(
+                        f'<div class="metric-badge" style="--mb-cor:{cor_tempo};">'
+                        f'<span class="metric-badge-label" style="display:flex;align-items:center;gap:0.4rem;">'
+                        f'{ui.icon_svg("timer", size=15)} Tempo restante</span>'
+                        f'<span class="metric-badge-value">{minutos:02d}:{segundos:02d}</span>'
+                        f'</div>',
+                        unsafe_allow_html=True,
+                    )
                 col2.progress((idx + 1) / len(ids))
                 col2.caption(f"Questão {idx + 1} de {len(ids)}")
 
                 q = db.obter_questao(ids[idx])
-                st.markdown(f"### {q['enunciado']}")
-                exibir_imagem_questao(q)
-
-                alternativas = json.loads(q["alternativas"])
-                opcoes = list(alternativas.keys())
+                alternativas_atuais = json.loads(q["alternativas"])
+                opcoes = list(alternativas_atuais.keys())
                 resposta_atual = respostas_dadas.get(q["id"])
-                resposta = st.radio(
-                    "Alternativas",
-                    options=opcoes,
-                    index=opcoes.index(resposta_atual) if resposta_atual in opcoes else None,
-                    format_func=lambda k: f"{k}) {alternativas[k]}",
+                resposta = ui.render_questao(
+                    q, modo="interativa",
                     key=f"sim_resp_{simulado_id}_{q['id']}",
+                    index_pre_selecionado=opcoes.index(resposta_atual) if resposta_atual in opcoes else None,
                 )
                 if resposta is not None:
                     db.registrar_resposta_simulado(
@@ -532,12 +801,11 @@ elif pagina == "Simulado":
                         st.session_state.simulado_idx = idx - 1
                         st.rerun()
                 with col_b:
-                    respondidas_marcador = ["✅" if respostas_dadas.get(qid) else "◻️" for qid in ids]
                     ir_para = st.selectbox(
                         "Ir para questão",
                         options=list(range(len(ids))),
                         index=idx,
-                        format_func=lambda i: f"{i + 1} {respondidas_marcador[i]}",
+                        format_func=lambda i: f"{i + 1} — respondida" if respostas_dadas.get(ids[i]) else f"{i + 1} — em branco",
                         key=f"sim_nav_{simulado_id}_{idx}",
                     )
                     if ir_para != idx:
@@ -557,7 +825,7 @@ elif pagina == "Simulado":
 # ---------------------------------------------------------------------------
 # CADASTRAR QUESTÃO
 # ---------------------------------------------------------------------------
-elif pagina == "Cadastrar Questão":
+elif pagina == "Nova Questão":
     ui.page_header("square-plus", "Cadastrar Nova Questão")
 
     with st.expander("Cadastrar nova área ou subtópico", icon=":material/add_circle:"):
@@ -580,62 +848,14 @@ elif pagina == "Cadastrar Questão":
 
     st.markdown("---")
 
-    areas = mapa_areas()
-    if not areas:
-        ui.empty_state(
-            "Nenhuma área cadastrada ainda",
-            "Use 'Cadastrar nova área ou subtópico' logo acima antes de criar questões.",
-            icon="square-plus",
-        )
-    else:
-        with st.container(border=True):
-            col_area, col_sub = st.columns(2)
-            area_nome = col_area.selectbox("Área", list(areas.keys()))
-            area_id = areas[area_nome]
-
-            subtopicos = db.listar_subtopicos(area_id)
-            sub_opcoes = {"(nenhum)": None}
-            sub_opcoes.update({s["nome"]: s["id"] for s in subtopicos})
-            sub_nome = col_sub.selectbox("Subtópico", list(sub_opcoes.keys()))
-            subtopico_id = sub_opcoes[sub_nome]
-
-            enunciado = st.text_area("Enunciado da questão")
-
-            st.write("Alternativas")
-            col_a, col_b = st.columns(2)
-            alt_a = col_a.text_input("A)")
-            alt_b = col_b.text_input("B)")
-            col_c, col_d = st.columns(2)
-            alt_c = col_c.text_input("C)")
-            alt_d = col_d.text_input("D)")
-            alt_e = st.text_input("E) (opcional)")
-
-            col_correta, col_banca, col_ano = st.columns([1, 2, 1])
-            resposta_correta = col_correta.selectbox("Alternativa correta", ["A", "B", "C", "D", "E"])
-            banca = col_banca.text_input("Banca / Instituição (ex: ENAMED, USP-SP, UNIFESP)")
-            ano = col_ano.number_input("Ano", min_value=1990, max_value=2100, value=2025, step=1)
-
-            explicacao = st.text_area("Explicação / comentário (opcional)")
-
-            if st.button("Salvar questão", icon=":material/save:"):
-                alternativas = {"A": alt_a, "B": alt_b, "C": alt_c, "D": alt_d}
-                if alt_e.strip():
-                    alternativas["E"] = alt_e
-
-                if not enunciado.strip() or not all([alt_a, alt_b, alt_c, alt_d]):
-                    st.error("Preencha ao menos o enunciado e as alternativas A a D.", icon=":material/cancel:")
-                else:
-                    db.criar_questao(
-                        area_id, subtopico_id, enunciado, alternativas,
-                        resposta_correta, explicacao, banca, int(ano),
-                    )
-                    st.success("Questão cadastrada com sucesso!", icon=":material/check_circle:")
-                    st.rerun()
+    with st.container(border=True):
+        if _form_questao(None, key_prefix="novaq") == "salvo":
+            st.rerun()
 
 # ---------------------------------------------------------------------------
 # IMPORTAR QUESTÕES EM MASSA (PLANILHA)
 # ---------------------------------------------------------------------------
-elif pagina == "Importar Questões (planilha)":
+elif pagina == "Importar Planilha":
     ui.page_header("file-up", "Importar Questões em Massa")
     st.caption(
         "Importe centenas de questões de uma vez a partir de uma planilha "
@@ -688,12 +908,11 @@ elif pagina == "Importar Questões (planilha)":
                     with st.spinner("Importando..."):
                         relatorio = imp_q.importar(df)
 
-                    st.success(
-                        f"Concluído! {relatorio['importadas']} questão(ões) importada(s), "
-                        f"{relatorio['duplicadas']} duplicada(s) ignorada(s), "
-                        f"de {relatorio['total']} linha(s) na planilha.",
-                        icon=":material/check_circle:",
-                    )
+                    st.success("Importação concluída!", icon=":material/check_circle:")
+                    col_imp, col_dup, col_tot = st.columns(3)
+                    col_imp.metric("Importadas", relatorio["importadas"])
+                    col_dup.metric("Duplicadas (ignoradas)", relatorio["duplicadas"])
+                    col_tot.metric("Total na planilha", relatorio["total"])
                     if relatorio["erros"]:
                         st.warning(f"{len(relatorio['erros'])} linha(s) com problema:", icon=":material/warning:")
                         df_erros = pd.DataFrame(relatorio["erros"], columns=["Linha", "Motivo"])
@@ -702,7 +921,7 @@ elif pagina == "Importar Questões (planilha)":
 # ---------------------------------------------------------------------------
 # REVISÃO (REPETIÇÃO ESPAÇADA)
 # ---------------------------------------------------------------------------
-elif pagina == "Revisão (Repetição Espaçada)":
+elif pagina == "Revisão Espaçada":
     ui.page_header("brain", "Revisão por Repetição Espaçada")
     st.caption(
         "Questões que você errou voltam mais rápido; as que você domina "
@@ -712,10 +931,9 @@ elif pagina == "Revisão (Repetição Espaçada)":
     pendentes = sr.questoes_para_revisar_hoje(usuario_id=st.session_state.usuario_id)
     novas = sr.questoes_nunca_revisadas(usuario_id=st.session_state.usuario_id)
 
-    st.write(
-        f":material/event: **{len(pendentes)}** questões para revisar hoje | "
-        f":material/fiber_new: **{len(novas)}** ainda sem revisão agendada"
-    )
+    col_pend, col_novas = st.columns(2)
+    col_pend.metric("Para revisar hoje", len(pendentes))
+    col_novas.metric("Ainda sem revisão agendada", len(novas))
 
     fila = list(pendentes) + list(novas)
 
@@ -729,28 +947,38 @@ elif pagina == "Revisão (Repetição Espaçada)":
         ui.empty_state(
             "Tudo em dia por aqui!",
             "Nenhuma questão pendente de revisão. Responda questões novas em "
-            "'Responder Questões' para alimentar a fila.",
+            "'Praticar' para alimentar a fila.",
             icon="circle-check",
-            cta_label="Ir para Responder Questões", cta_icon=":material/arrow_forward:",
-            cta_pagina="Responder Questões",
+            cta_label="Ir para Praticar", cta_icon=":material/arrow_forward:",
+            cta_pagina="Praticar",
         )
     elif st.session_state.rev_idx >= len(fila):
         st.success("Fila de revisão concluída por hoje!", icon=":material/celebration:")
     else:
         q = fila[st.session_state.rev_idx]
-        st.markdown(f"### {q['enunciado']}")
-        exibir_imagem_questao(q)
-        alternativas = json.loads(q["alternativas"])
-        resposta = st.radio(
-            "Alternativas",
-            options=list(alternativas.keys()),
-            format_func=lambda k: f"{k}) {alternativas[k]}",
+        resposta = ui.render_questao(
+            q, modo="interativa",
             key=f"rev_resp_{q['id']}_{st.session_state.rev_idx}",
         )
 
-        if st.button("Confirmar", key=f"rev_conf_{q['id']}_{st.session_state.rev_idx}", icon=":material/check:"):
-            correta = (resposta == q["resposta_correta"])
-            db.registrar_resposta(q["id"], resposta, correta, usuario_id=st.session_state.usuario_id)
+        # Fluxo em 2 passos: (1) confirmar resposta certa/errada; só DEPOIS
+        # (2) mostrar o slider de qualidade e registrar a revisão. Antes,
+        # o slider era criado E lido no mesmo clique de "Confirmar" — o
+        # usuário nunca tinha chance de mexer nele antes do valor (sempre
+        # o default 4) ser gravado; o SM-2 nunca recebia a nota real.
+        aguardando = st.session_state.get("rev_aguardando")
+
+        if aguardando is None:
+            if st.button(
+                "Confirmar", key=f"rev_conf_{q['id']}_{st.session_state.rev_idx}",
+                icon=":material/check:", disabled=resposta is None,
+            ):
+                correta = (resposta == q["resposta_correta"])
+                db.registrar_resposta(q["id"], resposta, correta, usuario_id=st.session_state.usuario_id)
+                st.session_state.rev_aguardando = {"correta": correta}
+                st.rerun()
+        else:
+            correta = aguardando["correta"]
             if correta:
                 st.success("Correto!", icon=":material/check_circle:")
                 qualidade = st.slider(
@@ -761,9 +989,14 @@ elif pagina == "Revisão (Repetição Espaçada)":
                 st.error(f"Errado. Resposta correta: {q['resposta_correta']}", icon=":material/cancel:")
                 qualidade = 1
 
-            sr.registrar_revisao(q["id"], qualidade, usuario_id=st.session_state.usuario_id)
-            st.session_state.rev_idx += 1
-            st.rerun()
+            if st.button(
+                "Registrar e continuar", key=f"rev_prox_{q['id']}_{st.session_state.rev_idx}",
+                icon=":material/arrow_forward:",
+            ):
+                sr.registrar_revisao(q["id"], qualidade, usuario_id=st.session_state.usuario_id)
+                st.session_state.pop("rev_aguardando", None)
+                st.session_state.rev_idx += 1
+                st.rerun()
 
 # ---------------------------------------------------------------------------
 # MATERIAIS DE ESTUDO (MediaFire)
@@ -801,8 +1034,8 @@ elif pagina == "Materiais de Estudo":
         ui.empty_state(
             "Nenhuma área cadastrada ainda",
             "Cadastre uma área (ex: Cardiologia) antes de adicionar materiais.",
-            icon="square-plus", cta_label="Ir para Cadastrar Questão",
-            cta_icon=":material/arrow_forward:", cta_pagina="Cadastrar Questão",
+            icon="square-plus", cta_label="Ir para Nova Questão",
+            cta_icon=":material/arrow_forward:", cta_pagina="Nova Questão",
         )
     else:
         with st.expander("Adicionar novo material", icon=":material/add_circle:"):
@@ -891,15 +1124,19 @@ elif pagina == "Materiais de Estudo":
                             "Abrir", m["link_mediafire"], icon=":material/open_in_new:",
                             key=f"mat_link_{m['id']}", use_container_width=True,
                         )
-                        if col3.button(
+                        if eh_admin and col3.button(
                             "", icon=":material/delete_forever:", key=f"mat_del_{m['id']}",
                             help="Excluir material", use_container_width=True,
                         ):
-                            db.excluir_material(int(m["id"]))
-                            st.rerun()
+                            ui.confirmar_exclusao(
+                                f"Excluir o material **{m['titulo']}**? Ele some do "
+                                "acervo compartilhado pra todos os usuários. Essa ação "
+                                "não pode ser desfeita.",
+                                lambda mid=int(m["id"]): db.excluir_material(mid),
+                            )
                         if i < len(linhas) - 1:
                             st.markdown(
-                                "<hr style='margin:0.2rem 0; border-color:#1E293B;'>",
+                                "<hr style='margin:0.2rem 0; border-color:#D7E3E2;'>",
                                 unsafe_allow_html=True,
                             )
 
@@ -915,14 +1152,15 @@ elif pagina == "Sincronizar MediaFire":
         "adicionar link por link."
     )
 
-    st.info(
-        "**Estrutura esperada:** Pasta raiz → pastas de área (ex: Cardiologia, "
-        "Cirurgia, Dermatologia) → pastas de assunto → apostilas/vídeos "
-        "(ou subpastas extras tipo 'Apostilas'/'Videoaulas' dentro do assunto, "
-        "que também são lidas). Funciona apenas com pastas compartilhadas "
-        "publicamente (aquelas com link `mediafire.com/folder/...`) e requer "
-        "conexão com a internet."
-    )
+    with st.expander("Estrutura esperada da pasta", icon=":material/info:"):
+        st.markdown(
+            "Pasta raiz → pastas de área (ex: Cardiologia, Cirurgia, "
+            "Dermatologia) → pastas de assunto → apostilas/vídeos (ou "
+            "subpastas extras tipo 'Apostilas'/'Videoaulas' dentro do "
+            "assunto, que também são lidas). Funciona apenas com pastas "
+            "compartilhadas publicamente (aquelas com link "
+            "`mediafire.com/folder/...`) e requer conexão com a internet."
+        )
 
     link_raiz = st.text_input(
         "Link (ou chave) da pasta raiz do MediaFire",
@@ -954,8 +1192,8 @@ elif pagina == "Sincronizar MediaFire":
 
             if relatorio["erros"]:
                 with st.expander(f"{len(relatorio['erros'])} aviso(s)/erro(s)", icon=":material/warning:"):
-                    for erro in relatorio["erros"]:
-                        st.write(f"- {erro}")
+                    df_erros_mf = pd.DataFrame({"Aviso": relatorio["erros"]})
+                    st.dataframe(df_erros_mf, use_container_width=True, hide_index=True)
 
             st.caption(
                 "Pode rodar a sincronização de novo sempre que adicionar arquivos "
@@ -985,8 +1223,8 @@ elif pagina == "Banco de Questões":
         ui.empty_state(
             "Nenhuma questão encontrada",
             "Tente ajustar os filtros acima, ou cadastre uma nova questão.",
-            cta_label="Ir para Cadastrar Questão", cta_icon=":material/arrow_forward:",
-            cta_pagina="Cadastrar Questão",
+            cta_label="Ir para Nova Questão", cta_icon=":material/arrow_forward:",
+            cta_pagina="Nova Questão",
         )
     else:
         POR_PAGINA = 50
@@ -996,117 +1234,19 @@ elif pagina == "Banco de Questões":
         for q in questoes:
             rotulo = f"{q['enunciado'][:80]}...  ·  {q['banca'] or 'Banca não informada'} · {q['ano'] or '-'}"
             with st.expander(rotulo, icon=":material/quiz:"):
-                chave_editando = f"editando_{q['id']}"
-                alternativas = json.loads(q["alternativas"])
-
-                if not st.session_state.get(chave_editando):
-                    exibir_imagem_questao(q)
-                    for letra, texto in alternativas.items():
-                        marcador = ":material/check_circle:" if letra == q["resposta_correta"] else ":material/radio_button_unchecked:"
-                        st.write(f"{marcador} **{letra})** {texto}")
-                    if q["explicacao"]:
-                        st.info(q["explicacao"], icon=":material/lightbulb:")
-                    else:
-                        st.caption(":material/info: Sem explicação cadastrada ainda.")
-
-                    col_edit, col_del = st.columns(2)
-                    if eh_admin and col_edit.button("Editar questão", icon=":material/edit:", key=f"editar_{q['id']}"):
-                        st.session_state[chave_editando] = True
-                        st.rerun()
-                    if col_del.button("Excluir questão", icon=":material/delete:", key=f"del_{q['id']}"):
-                        db.excluir_questao(q["id"])
-                        st.rerun()
-
+                ui.render_questao(q, modo="leitura")
+                if q["explicacao"]:
+                    st.info(q["explicacao"], icon=":material/lightbulb:")
                 else:
-                    # Edição restrita a administradores — outras contas nunca
-                    # devem cair aqui (o botão que liga essa chave já é
-                    # gated por eh_admin), mas confere de novo por segurança
-                    # caso a sessão perca privilégio de admin com o form já aberto.
-                    if not eh_admin:
-                        st.session_state[chave_editando] = False
-                        st.rerun()
+                    st.caption(":material/info: Sem explicação cadastrada ainda.")
 
-                    areas_edit = mapa_areas()
-                    area_atual_nome = next((n for n, i in areas_edit.items() if i == q["area_id"]), None)
-                    col_area, col_sub = st.columns(2)
-                    nomes_area = list(areas_edit.keys())
-                    area_nome_ed = col_area.selectbox(
-                        "Área", nomes_area,
-                        index=nomes_area.index(area_atual_nome) if area_atual_nome in nomes_area else 0,
-                        key=f"ed_area_{q['id']}",
+                col_edit, col_del = st.columns(2)
+                if eh_admin and col_edit.button("Editar questão", icon=":material/edit:", key=f"editar_{q['id']}"):
+                    _dialog_editar_questao(q)
+                if eh_admin and col_del.button("Excluir questão", icon=":material/delete:", key=f"del_{q['id']}"):
+                    ui.confirmar_exclusao(
+                        f"Excluir a questão **#{q['id']}**? O histórico de respostas e "
+                        "revisões associado a ela deixa de fazer sentido. Essa ação não "
+                        "pode ser desfeita.",
+                        lambda qid=q["id"]: db.excluir_questao(qid),
                     )
-                    area_id_ed = areas_edit[area_nome_ed]
-
-                    subtopicos_ed = db.listar_subtopicos(area_id_ed)
-                    sub_opcoes_ed = {"(nenhum)": None}
-                    sub_opcoes_ed.update({s["nome"]: s["id"] for s in subtopicos_ed})
-                    nomes_sub = list(sub_opcoes_ed.keys())
-                    sub_atual_nome = next((n for n, i in sub_opcoes_ed.items() if i == q["subtopico_id"]), "(nenhum)")
-                    sub_nome_ed = col_sub.selectbox(
-                        "Subtópico", nomes_sub,
-                        index=nomes_sub.index(sub_atual_nome) if sub_atual_nome in nomes_sub else 0,
-                        key=f"ed_sub_{q['id']}",
-                    )
-                    subtopico_id_ed = sub_opcoes_ed[sub_nome_ed]
-
-                    enunciado_ed = st.text_area("Enunciado", value=q["enunciado"], key=f"ed_enun_{q['id']}")
-
-                    st.write("Imagem da questão (raio-X, ECG, gráfico, foto clínica etc. — opcional)")
-                    if q["imagem"]:
-                        st.image(bytes(q["imagem"]), width=300)
-                        if st.button("Remover imagem", icon=":material/delete:", key=f"ed_rmimg_{q['id']}"):
-                            db.remover_imagem_questao(q["id"])
-                            st.rerun()
-                    nova_imagem = st.file_uploader(
-                        "Substituir imagem" if q["imagem"] else "Anexar imagem",
-                        type=["png", "jpg", "jpeg"], key=f"ed_img_{q['id']}",
-                    )
-                    if nova_imagem is not None:
-                        db.definir_imagem_questao(q["id"], nova_imagem.getvalue(), nova_imagem.type)
-                        st.success("Imagem salva.", icon=":material/check_circle:")
-                        st.rerun()
-
-                    st.write("Alternativas")
-                    letras = ["A", "B", "C", "D", "E"]
-                    valores_alt = {letra: alternativas.get(letra, "") for letra in letras}
-                    col_a, col_b = st.columns(2)
-                    valores_alt["A"] = col_a.text_input("A)", value=valores_alt["A"], key=f"ed_alt_a_{q['id']}")
-                    valores_alt["B"] = col_b.text_input("B)", value=valores_alt["B"], key=f"ed_alt_b_{q['id']}")
-                    col_c, col_d = st.columns(2)
-                    valores_alt["C"] = col_c.text_input("C)", value=valores_alt["C"], key=f"ed_alt_c_{q['id']}")
-                    valores_alt["D"] = col_d.text_input("D)", value=valores_alt["D"], key=f"ed_alt_d_{q['id']}")
-                    valores_alt["E"] = st.text_input("E) (opcional)", value=valores_alt["E"], key=f"ed_alt_e_{q['id']}")
-
-                    col_correta, col_banca, col_ano = st.columns([1, 2, 1])
-                    resposta_correta_ed = col_correta.selectbox(
-                        "Alternativa correta", letras,
-                        index=letras.index(q["resposta_correta"]) if q["resposta_correta"] in letras else 0,
-                        key=f"ed_correta_{q['id']}",
-                    )
-                    banca_ed = col_banca.text_input("Banca / Instituição", value=q["banca"] or "", key=f"ed_banca_{q['id']}")
-                    ano_ed = col_ano.number_input(
-                        "Ano", min_value=1990, max_value=2100,
-                        value=q["ano"] or 2025, step=1, key=f"ed_ano_{q['id']}",
-                    )
-
-                    explicacao_ed = st.text_area(
-                        "Explicação / comentário", value=q["explicacao"] or "", key=f"ed_exp_{q['id']}",
-                        help="Por que essa é a alternativa correta — o que aparece pro aluno depois de responder.",
-                    )
-
-                    col_salvar, col_cancelar = st.columns(2)
-                    if col_salvar.button("Salvar alterações", icon=":material/save:", key=f"ed_salvar_{q['id']}"):
-                        nova_alternativas = {letra: valores_alt[letra] for letra in letras if valores_alt[letra].strip()}
-                        if not enunciado_ed.strip() or not all(valores_alt[l].strip() for l in ["A", "B", "C", "D"]):
-                            st.error("Preencha ao menos o enunciado e as alternativas A a D.", icon=":material/cancel:")
-                        else:
-                            db.atualizar_questao(
-                                q["id"], area_id_ed, subtopico_id_ed, enunciado_ed, nova_alternativas,
-                                resposta_correta_ed, explicacao_ed, banca_ed, int(ano_ed),
-                            )
-                            st.session_state[chave_editando] = False
-                            st.success("Questão atualizada.", icon=":material/check_circle:")
-                            st.rerun()
-                    if col_cancelar.button("Cancelar", icon=":material/close:", key=f"ed_cancelar_{q['id']}"):
-                        st.session_state[chave_editando] = False
-                        st.rerun()
