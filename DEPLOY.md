@@ -77,41 +77,48 @@ SEUDOMINIO.com        → 64.181.167.174
 admin.SEUDOMINIO.com  → 64.181.167.174
 ```
 
-## 3. Deploy do código
+## 3. Deploy do código ✅ Concluído (2026-09-12)
+
+Migração completa commitada e enviada pro GitHub
+(`github.com/Hendrickvk/residencia-med`, commit `bf5798d`), clonada no
+servidor em `/var/www/residencia-med`:
 
 ```bash
-git clone <url-do-repo> /var/www/residencia-med
+git clone https://github.com/Hendrickvk/residencia-med.git /var/www/residencia-med
 cd /var/www/residencia-med
-python -m venv .venv
+python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 cd frontend && npm install && npm run build && cd ..
 ```
 
-`frontend/dist/` é o build estático que o Caddy serve (passo 6).
+`frontend/dist/` é o build estático que o Caddy serve (passo 6) — build
+confirmado (`✓ built in 7.13s`, 3 arquivos gerados).
 
-## 4. Segredos
+## 4. Segredos ✅ Concluído (2026-09-12)
+
+`.env.production` gerado no próprio servidor (nunca passou pelo terminal
+local), extraindo `DATABASE_URL` do `.streamlit/secrets.toml` (copiado via
+scp) e gerando um `JWT_SECRET_KEY` novo com `secrets.token_urlsafe(32)`.
+`COOKIE_SECURE=false` e `CORS_ORIGENS=http://64.181.167.174` (ver seção 2
+sobre a decisão de publicar sem domínio por ora).
+
+## 5. Processos (systemd) ✅ Concluído (2026-09-12)
+
+Os `.service` rodam como usuário de sistema dedicado `residenciamed`
+(criado com `useradd --system --create-home --shell /usr/sbin/nologin`),
+dono de `/var/www/residencia-med`:
 
 ```bash
-cp deploy/.env.production.example .env.production
-# editar .env.production: DATABASE_URL (mesma do .streamlit/secrets.toml),
-# JWT_SECRET_KEY (gerar com o comando comentado dentro do arquivo),
-# ADMIN_EMAILS, CORS_ORIGENS
-```
-
-O Streamlit continua lendo `.streamlit/secrets.toml` como sempre — esse
-arquivo (não versionado) precisa existir no servidor também, com a mesma
-`DATABASE_URL`.
-
-## 5. Processos (systemd)
-
-```bash
+sudo useradd --system --create-home --shell /usr/sbin/nologin residenciamed
+sudo chown -R residenciamed:residenciamed /var/www/residencia-med
 sudo cp deploy/residencia-api.service deploy/residencia-streamlit.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now residencia-api residencia-streamlit
-sudo systemctl status residencia-api residencia-streamlit   # conferir que subiram
 ```
 
-## 6. Proxy reverso
+Confirmado `active (running)` para os dois serviços.
+
+## 6. Proxy reverso ✅ Concluído (2026-09-12)
 
 ```bash
 sudo cp deploy/Caddyfile /etc/caddy/Caddyfile
@@ -119,33 +126,32 @@ sudo systemctl reload caddy
 ```
 
 Sem domínio ainda, esse `Caddyfile` serve por IP puro em HTTP (porta 80
-pro frontend+API, porta 8080 pro Streamlit) — sem edição necessária, já
-aponta pros paths certos. Quando houver domínio, usar
+pro frontend+API, porta 8080 pro Streamlit). Quando houver domínio, usar
 `deploy/Caddyfile.com-dominio.example` no lugar (HTTPS automático via
 Let's Encrypt, só editar as duas ocorrências de `SEUDOMINIO.com`).
 
-## 7. Usuário de demonstração
+## 7. Usuário de demonstração ✅ Já populado (executado antes desta publicação)
 
-```bash
-.venv/bin/python scripts/seed_demo_user.py
-```
-
-Semeia ~400 respostas reais (questões existentes, histórico sintético)
-espalhadas em 8 semanas com desempenho desigual entre áreas — pra o Painel
-não parecer amador com uma conta vazia. Credenciais impressas no final do
-script (`demo@residenciamed.com` / senha definida em
-`scripts/seed_demo_user.py`). Rodar uma vez só.
+`demo@residenciamed.com` / `ResidenciaDemo2026!` já tem ~400 respostas
+sintéticas espalhadas em 8 semanas (rodado direto contra o Neon de
+produção, antes mesmo do servidor existir — mesmo banco, então nada a
+refazer). Confirmado via login real na API publicada: ofensiva de 36 dias,
+458 questões, 1646 materiais.
 
 ## 8. Checklist final antes de compartilhar qualquer link
 
-- [ ] `COOKIE_SECURE=false` em `.env.production` (sem HTTPS ainda — trocar
+- [x] `COOKIE_SECURE=false` em `.env.production` (sem HTTPS ainda — trocar
       pra `true` só depois de migrar pro `Caddyfile.com-dominio.example`)
-- [ ] Usuário de demonstração populado (passo 7)
-- [ ] Login funciona em `http://64.181.167.174`
-- [ ] `http://64.181.167.174:8080` abre o Streamlit (só do IP liberado —
-      ver seção 2)
-- [ ] Testar o fluxo de Praticar de ponta a ponta no IP real, não só em
-      `localhost`
+- [x] Usuário de demonstração populado (passo 7)
+- [x] Login funciona em `http://64.181.167.174` (testado via curl:
+      `POST /api/auth/login` → 200, `GET /api/me` autenticado → 200)
+- [x] `http://64.181.167.174:8080` abre o Streamlit (só do IP liberado —
+      ver seção 2) — testado, HTTP 200
+- [x] Testar o fluxo de Praticar de ponta a ponta no navegador (não só
+      curl) — login real no Chrome, painel com dados reais, uma questão
+      respondida com feedback instantâneo e explicação exibidos sem
+      round-trip; Streamlit também confirmado carregando via WebSocket
+      através do proxy Caddy
 
 Quando migrar pra domínio + HTTPS, revisitar esta checklist: `COOKIE_SECURE`
 volta a `true`, `CORS_ORIGENS` e `VITE_STREAMLIT_URL` voltam a usar o

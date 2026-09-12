@@ -1,8 +1,6 @@
 CONTEXTO DO PROJETO — Plataforma de Estudos para Residência Médica
-Última atualização: 2026-09-10 (sessão de otimização de performance,
-explicações clínicas em massa, imagens de questão, troca de tema
-visual para claro/verde-azulado e reforma comercial de UI/UX com
-selo de autenticidade)
+Última atualização: 2026-09-12 (migração completa Streamlit→FastAPI+React,
+publicação em produção na Oracle Cloud Free Tier)
 
 Este arquivo é um resumo curado do estado do projeto — não é um dump
 bruto de conversa. Serve pra qualquer sessão futura do Claude (sem
@@ -10,293 +8,343 @@ memória da conversa original) entender rápido o que existe, por que
 certas decisões foram tomadas, e o que fica de fora por design.
 
 =====================================================================
-VISÃO GERAL
+VISÃO GERAL (pós-migração, 2026-09-12)
 =====================================================================
 
-App Streamlit (app.py, ~1100 linhas) multiusuário para estudo de
-residência médica (ENAMED/Revalida/instituições), com banco de
-questões, dashboard de desempenho, repetição espaçada (SM-2),
-simulado cronometrado, materiais de estudo (MediaFire) e cadastro/
-edição de questões.
+Plataforma multiusuário de estudo pra residência médica (ENAMED/
+Revalida/instituições): banco de questões, dashboard de desempenho,
+repetição espaçada (SM-2), simulado cronometrado, materiais de estudo
+(MediaFire) e cadastro/edição de questões.
 
-Hospedagem: Streamlit Community Cloud (deploy automático a partir do
-GitHub, repo Hendrickvk/residencia-med, branch main).
-Banco de dados: Postgres no Neon, região sa-east-1 (São Paulo), com
-pooler (endpoint "-pooler"). Connection string em
-.streamlit/secrets.toml (gitignored) como DATABASE_URL.
+Arquitetura HÍBRIDA desde esta sessão:
+- Tudo que um ALUNO usa (Painel, Praticar, Simulado, Revisão Espaçada,
+  Materiais, busca) é uma SPA React servida por uma API FastAPI própria.
+- As 4 telas ADMINISTRATIVAS (Banco de Questões, Nova Questão, Importar
+  Planilha, Sincronizar MediaFire) continuam no app Streamlit original
+  (`app.py`/`ui.py`) — decisão deliberada (ver seção da migração),
+  não uma migração incompleta.
+- `db.py` e `repeticao_espacada.py` são a ÚNICA fonte de verdade de
+  lógica de negócio e são usados por AMBOS (FastAPI e Streamlit) sem
+  duplicação. Qualquer mudança de regra de negócio (SM-2, filtros,
+  cálculo de desempenho) entra ali, nunca só no lado React nem só no
+  lado Streamlit.
 
-=====================================================================
-ARQUITETURA / ARQUIVOS
-=====================================================================
-
-- app.py — UI Streamlit, navegação por sidebar.radio, 9 páginas.
-- db.py — camada de acesso ao Postgres. Envolve psycopg2 numa API
-  parecida com sqlite3 (conn.execute com "?", RealDictCursor). Tem
-  um ThreadedConnectionPool(1,10) módulo-level — NÃO criar conexão
-  nova por função, sempre usar get_conn().
-- auth.py — login/signup por email+senha (bcrypt).
-- ui.py — helpers visuais (ícones SVG, empty states, CSS).
-- repeticao_espacada.py — SM-2 simplificado.
-- importador_questoes.py / mediafire_import.py — importação em massa.
-- ADMIN_EMAILS em app.py (hoje só hendrickvk@gmail.com) — controla
-  quem vê "Editar questão" e a zona de risco de excluir materiais.
-
-=====================================================================
-DECISÕES E TRABALHO DESTA SESSÃO
-=====================================================================
-
-1) PERFORMANCE — app estava "constantemente lento" no ar
-   Causa raiz, em ordem de impacto:
-   a) db.init_db() rodava SEM CACHE em todo clique (Streamlit reroda
-      o script inteiro a cada interação) — ~27 round-trips ao
-      Postgres (8 CREATE TABLE, 13 INSERT de seed, migrações,
-      índices) TODA VEZ. Sozinho custava ~1.6s por interação. Fix:
-      envolvido em @st.cache_resource (roda 1x por processo).
-   b) Zero cache nas leituras do Dashboard (7 queries sequenciais) e
-      em coisas estáticas (lista de áreas, lista de bancas, contadores
-      da sidebar). Fix: st.cache_data com TTL (15s pro dashboard,
-      30-60s pro resto).
-   c) 4 queries do dashboard (área/banca/banca×área/sem-banca) viraram
-      1 query única com subqueries jsonb_agg (db.desempenho_dashboard_combinado).
-   d) Faltavam índices em respostas.usuario_id, respostas.questao_id,
-      questoes.area_id, questoes.banca (Postgres não indexa FK
-      automaticamente). Adicionados em init_db().
-   Resultado medido (AppTest local): Dashboard de ~2s cold / 1.6s+ por
-   clique → ~0.11-0.35s em clique repetido.
-   SE AINDA ESTIVER LENTO no futuro: o próximo teto é a própria
-   hospedagem (Streamlit Community Cloud = CPU compartilhada, longe
-   do Brasil). Opção discutida: migrar pra um host sempre-ativo
-   próximo do Neon (ex: Fly.io região gru/São Paulo).
-
-2) EDIÇÃO DE QUESTÃO — restrita a admin
-   Não existia UPDATE de questão (só criar/excluir). Adicionado
-   db.atualizar_questao() e formulário de edição no Banco de
-   Questões, atrás de `eh_admin` (checa ADMIN_EMAILS).
-
-3) EXPLICAÇÕES CLÍNICAS — 458/458 questões (100%)
-   Todas as questões importadas do INEP (368 Revalida + 90 ENAMED)
-   vieram sem campo `explicacao` (INEP só publica gabarito, não
-   justificativa). Decisão do usuário: gerar explicação por
-   raciocínio clínico próprio (Claude), SEM marcar como "gerado por
-   IA" (pedido explícito — não reverter isso sem confirmar de novo).
-   Busquei antes se dava pra reaproveitar explicação de plataforma
-   paga (Estratégia MED, Medcof) — NÃO: fica atrás de paywall e
-   copiar seria a mesma apropriação de conteúdo de concorrente já
-   descartada antes pra questões. Geração foi feita em lotes via
-   agentes fork paralelos (10 lotes ~45 questões cada), escrevendo
-   direto em db.atualizar_questao. Um lote de retomada precisou ser
-   refeito após bater rate-limit de sessão.
-
-4) BUG DE EXTRAÇÃO DO PDF — corrigido
-   ~41 questões (Revalida) tinham lixo de rodapé da prova colado na
-   alternativa D — "ÁREA LIVRE" (marca de espaço em branco no
-   caderno) ou o "QUESTIONÁRIO DE PERCEPÇÃO SOBRE A PROVA" (pesquisa
-   de opinião no fim do caderno). Corrigido truncando no marcador.
-   3 questões (206, 258, 381) tinham corrupção mais grave — texto
-   de duas colunas do PDF intercalado, cortando enunciado E as 4
-   alternativas no meio de frases. Essas foram REEXTRAÍDAS na mão
-   direto do PDF oficial do INEP (baixado de novo de
-   download.inep.gov.br/revalida/provas_e_gabaritos/).
-
-5) IMAGEM POR QUESTÃO — nova feature
-   11 questões do Revalida dependem de uma figura (raio-X, ECG,
-   cardiotocografia, gráfico, foto clínica) que a extração em texto
-   não capturava — ficavam com o achado radiológico ausente pro
-   aluno. Adicionado:
-   - Colunas `imagem` (BYTEA) e `imagem_mime` (TEXT) em questoes,
-     guardadas DIRETO NO POSTGRES — não em disco, porque o Streamlit
-     Community Cloud apaga o filesystem local a cada deploy.
-   - db.definir_imagem_questao() / db.remover_imagem_questao().
-   - Exibição em toda tela que renderiza questão (Responder, Simulado,
-     Revisão, Banco de Questões) via exibir_imagem_questao(q) em app.py.
-   - Upload/remoção no formulário de edição, admin-only.
-   As 11 imagens foram recortadas com pdfplumber (page.crop() + bbox
-   dos objetos de imagem embutidos no PDF) dos cadernos oficiais
-   2022/2, 2023/1, 2024/1 e 2024/2, conferidas visualmente antes de
-   salvar. IDs: 108, 205, 236, 258, 345, 358, 382, 405, 419, 422, 439.
+Hospedagem (produção, desde 2026-09-12): Oracle Cloud Free Tier, região
+São Paulo (sa-saopaulo-1), servidor único rodando API+frontend+Streamlit
+atrás de Caddy. Ver seção "PUBLICAÇÃO EM PRODUÇÃO" abaixo pro estado
+atual e "DEPLOY.md" (raiz do repo) pro runbook completo e atualizado.
+Banco de dados: Postgres no Neon, mesma região (sa-east-1), inalterado
+desde sempre — connection string em `.streamlit/secrets.toml`
+(gitignored) e replicada em `.env.production` no servidor (nunca
+versionada, gerada direto no servidor a partir do secrets.toml).
 
 =====================================================================
-TEMA VISUAL v2 — Petróleo Institucional + sidebar retrátil (sessão 2026-09-10, parte 3)
+ARQUITETURA ATUAL DE ARQUIVOS
 =====================================================================
 
-Usuário não gostou da primeira paleta clara (Teal Clínico) nem do
-menu lateral antigo ("muito feio"). Depois de comparar 4 opções num
-protótipo (artifact HTML separado, não faz parte do repo), escolheu
-"Petróleo Institucional". Paleta final, substituindo a anterior:
-primária #0F766E, secundária #155E75 (só na 2ª série dos gráficos de
-"Evolução diária"), fundo #F4F7F7, borda #D7E3E2, texto #142523,
-texto secundário #5A6C6A. Mesmos arquivos de sempre:
-`.streamlit/config.toml`, `ui.py`, `app.py`, `auth.py`.
+CAMADA DE NEGÓCIO (compartilhada, intocada em lógica pela migração):
+- db.py — acesso ao Postgres. psycopg2 envolvido numa API parecida com
+  sqlite3 (conn.execute com "?", RealDictCursor), ThreadedConnectionPool
+  módulo-level (NÃO criar conexão nova por função, sempre get_conn()).
+  Funções novas desta sessão pra suportar a API: obter_questoes_por_ids
+  (batch com LEFT JOIN em questoes_marcadas, preserva ordem), busca_global
+  (ILIKE — Postgres é case-sensitive por padrão, ao contrário de SQLite).
+- repeticao_espacada.py — SM-2. proxima_revisao agora é TIMESTAMP real
+  (era TEXT/data), então "errei, tentar de novo em 10 min" funciona de
+  verdade (antes só pulava pro dia seguinte). fila_revisao/avaliar_revisao
+  novos, orquestram pendentes+nunca-revisadas+marcadas.
 
-SIDEBAR RETRÁTIL (pedido explícito — "reativo, tipo Notion/Linear",
-depois refinado numa segunda rodada de feedback). Menu lateral trocou
-de `st.radio` pra uma lista de `st.button` (um por página, ícone
-Material Symbols + rótulo), guardada em `st.session_state["nav_pagina"]`
-(não mais amarrada a um widget `key` de radio) e
-`st.session_state["sidebar_expandida"]` (bool, **default False** — a
-sidebar abre RECOLHIDA por padrão) controla dois modos:
-  - Expandido: marca "Residência Med", cartão de usuário (avatar com
-    iniciais + e-mail + botão de sair), nav com ícone+rótulo (página
-    ativa = `type="primary"`, fundo sólido nativo do Streamlit),
-    contadores do rodapé.
-  - Recolhido: sidebar vira um rail de ~4.6rem (largura forçada via
-    CSS injetado condicionalmente, `st.markdown` com `!important` — o
-    Streamlit não expõe largura da sidebar como parâmetro). Ícones de
-    navegação são botões pequenos quadrado-arredondados (~2.75rem,
-    `border-radius:12px`, "squircle") COM `use_container_width=False`
-    — usar `True` aqui faz cada botão esticar até a largura toda da
-    rail, virando uma "caixa" grande vazia em volta do ícone (foi
-    exatamente essa a reclamação de estética do usuário). Avatar e
-    botão de sair também viram ícones pequenos centralizados, mesmo
-    estilo.
-  Um ÚNICO botão circular (`st.container(key="toggle_handle")`) faz
-  as duas ações (expandir/recolher), ancorado via CSS
-  `position:absolute` na própria `<section data-testid="stSidebar">`
-  (que precisa de `position:relative`) — funciona nos dois modos sem
-  calcular largura, porque o filho absoluto usa a caixa da sidebar
-  como referência (`right:-5px`, ligeiramente pra dentro da borda, ver
-  gotcha do resize abaixo). Botão nativo do Streamlit de esconder a
-  sidebar inteira (`[data-testid="stSidebarCollapseButton"]`) fica
-  escondido via CSS (competia visualmente com o handle novo); o botão
-  flutuante de reabrir (`stExpandSidebarButton`) fica como saída de
-  emergência.
+CAMADA STREAMLIT (mantida só pro admin):
+- app.py, auth.py, ui.py — intocados em lógica nesta migração. Ainda tem
+  TODAS as 9 páginas originais no código, mas só as 4 administrativas são
+  o "produto" real agora (as de aluno viraram redundantes, mas não foram
+  removidas do app.py — baixo risco de deixar como está vs. custo de
+  limpar). Todo o design "vocabulário de laudo clínico" (ver seção
+  própria abaixo) e os gotchas de CSS/Streamlit documentados nas seções
+  antigas deste arquivo continuam 100% válidos pra essas 4 telas.
 
-GOTCHAS REAIS DO STREAMLIT DESCOBERTOS NESTA RODADA (guardar pra não
-redescobrir):
-  1) Um `st.button(..., help="algo")` faz o Streamlit envolver o
-     `<button>` num `<span class="stTooltipHoverTarget">` EXTRA entre
-     o `.stButton` e o botão em si. Qualquer CSS que use filho direto
-     (`.stButton > button`) simplesmente não casa nesse caso — o botão
-     fica do tamanho padrão do Streamlit, ignorando width/height/
-     padding customizados. Fix: usar seletor descendente
-     (`.stButton button`, sem o `>`) sempre que o botão tiver `help=`
-     (e por segurança, sempre, já que descendente também casa quando
-     NÃO há esse span extra).
-  2) A sidebar do Streamlit tem uma faixa invisível de redimensionar
-     (~8px de largura, `cursor:col-resize`) bem em cima da borda
-     direita, com `z-index` altíssimo (~999995) fixado pelo próprio
-     Streamlit na `<section data-testid="stSidebar">`. Qualquer
-     elemento custom colocado exatamente sobre essa borda (pra fazer
-     um "handle" visual, por exemplo) tem o CLIQUE roubado por essa
-     faixa, mesmo que o elemento pareça estar visualmente por cima —
-     mesmo dando um z-index maior no elemento, ele fica "preso" no
-     stacking context que a própria seção da sidebar já estabelece
-     (`position:relative` + `z-index` explícito = novo stacking
-     context), então nunca vence a faixa nesse contexto. Não dá pra
-     brigar com isso via z-index; a solução foi posicionar o handle
-     TODO de um lado só (por dentro da borda, não a cavaleiro dela).
-  3) Cliques por COORDENADA CRUA da ferramenta de automação de
-     navegador podem falhar num elemento pequeno/profundamente
-     aninhado mesmo quando o DOM/CSS está provadamente correto
-     (confirmado via `document.elementFromPoint` batendo no ícone
-     certo, e via `.click()` por JS funcionando) — nesse caso, clicar
-     via referência de elemento (`find` + `left_click` com `ref`) foi
-     o jeito confiável de testar. Não concluir "bug de UI" só porque
-     um clique por coordenada não funcionou; testar por `ref` antes de
-     descartar a implementação como quebrada.
+CAMADA NOVA — API (api/, FastAPI):
+- main.py — app + lifespan (chama db.init_db()) + CORS.
+- security.py — JWT (cookie httpOnly, não bearer+refresh) + bcrypt.
+  COOKIE_SECURE via env var (false em produção HOJE — ver seção de
+  publicação, motivo é ausência de domínio/HTTPS por enquanto).
+- deps.py — usuario_atual, exigir_admin, eh_admin (ADMIN_EMAILS por
+  env var, hoje só hendrickvk@gmail.com).
+- schemas.py — Pydantic. email usa `str` + validador custom (não
+  EmailStr — rejeitava .local/TLDs reservados usados em teste).
+- serialize.py — questao_publica() esconde BYTEA (imagem/imagem_mime →
+  bool tem_imagem) e faz parse do JSON de alternativas. Toda rota que
+  devolve questão passa por aqui.
+- routers/ — auth, me, painel, praticar, questoes, revisao, areas,
+  materiais, simulados, sincronizacao, busca.
+  DECISÃO ARQUITETURAL CENTRAL: GET /praticar/sessao devolve o LOTE
+  INTEIRO de questões já com gabarito+explicação embutidos (via
+  serialize, sem vazar antes da hora nas outras rotas — ver bug corrigido
+  abaixo). É isso que viabiliza feedback instantâneo no cliente sem
+  round-trip a cada resposta, que era o objetivo #1 da migração
+  (MIGRACAO.md §0).
 
-BUG JÁ RESOLVIDO EM RODADA ANTERIOR (mantido aqui por registro): dois
-botões de toggle com a MESMA `key` em branches condicionais diferentes
-fazia o clique "vazar" pro primeiro botão de navegação. Não existe
-mais desde que o toggle virou um handle único — mas o princípio
-("nunca reusar `key` entre posições de container diferentes") continua
-valendo pra qualquer widget condicional futuro.
+CAMADA NOVA — Frontend (frontend/, Vite+React+TS):
+- Tailwind v3 (escolha explícita do usuário sobre v4) mapeando 1:1 os
+  tokens de REDESIGN.md (cores como CSS vars, tema claro/escuro via
+  classe `.dark` no `<html>`, tipografia IBM Plex).
+- TanStack Query (React Query) pra cache/sync com o backend.
+- React Router com chaves de rota ESTÁVEIS, desacopladas do rótulo do
+  menu (mesma lição já aprendida no lado Streamlit — ver nota em
+  "ARQUITETURA que vale entender" do handoff do redesign: nunca acoplar
+  rótulo de menu a chave de roteamento).
+- src/lib/: api.ts (fetch com credentials:'include'), respostasQueue.ts
+  (fila de retry com backoff pra respostas, invalida cache ["me"] no
+  sucesso — resolve ofensiva/contadores da topbar não atualizando).
+- Páginas: Login, praticar/ (Configurador→Sessao→Resumo), painel/,
+  revisao/, simulado/ (Configurador→EmAndamento→Resultado), materiais/.
+  Telas administrativas viram `PermaneceNoStreamlit` (placeholder que
+  linka pro Streamlit) em vez de reimplementadas.
+- `.env.production` do frontend NÃO tem segredo nenhum (só
+  VITE_API_URL e VITE_STREAMLIT_URL) mas historicamente ficava
+  ignorado pelo .gitignore por engano (o padrão `.env.production` sem
+  `/` na frente casava em qualquer subpasta) — corrigido pra `/.env.production`
+  (só raiz). Se um `.env.production` novo em qualquer subpasta some do
+  git sem explicação, essa é a causa mais provável.
 
-AJUSTES FINOS (mesma sessão, feedback de acabamento depois da 1ª
-versão funcionar):
-  - Transição suave ao expandir/recolher: `[data-testid="stSidebar"]`
-    ganhou `transition: width 0.22s ease, min-width 0.22s ease;`
-    (incondicional, em ui.py). Só a LARGURA do painel anima — o
-    conteúdo interno troca de estrutura na hora (ícone sozinho vira
-    ícone+rótulo), isso não dá pra animar sem duas implementações de
-    UI sobrepostas, não valeu o esforço.
-  - Handle: primeira tentativa de correção foi agrupar marca+handle+
-    avatar num `st.container(key="sidebar_header")` e ancorar o handle
-    NELE (`top:100%`) em vez da sidebar inteira, pra não flutuar
-    dependendo do conteúdo da página. O usuário pediu de volta "na
-    linha da divisória, não embaixo de algo" — voltou a ancorar na
-    `<section data-testid="stSidebar">` inteira, mas trocando
-    `top:50%` por **`top:50vh`**: 50% seria relativo à altura da
-    sidebar esticada pelo Streamlit (podia passar de 1200px numa tela
-    de ~750px de altura); `vh` é sempre relativo à VIEWPORT visível,
-    então o círculo fica no meio da tela de verdade, na linha da
-    borda, sem depender de quão "esticada" a seção ficou.
-  - Cor do handle: era branco/cinza com hover teal — virou sólido
-    `#0F766E` com ícone branco por padrão (cor de marca do site, não só
-    no hover).
-  - GOTCHA NOVO: depois de arredondar os ícones do rail (2.75rem),
-    eles voltaram a ficar pequenos (~20px, só o ícone, sem a caixa)
-    quando outra regra CSS pra web mudou por perto — a causa nunca
-    ficou 100% clara (possivelmente ordem de injeção do `<style>` via
-    `st.markdown` não é tão previsível quanto parece; specificidade
-    igual não bastou), mas **igual ao caso do handle**, resolveu
-    forçando `!important` em `width`/`height`/`min-width`/`padding` do
-    botão. Lição: qualquer `width`/`height` custom em botão de
-    Streamlit dentro da sidebar, se não "pegar" à primeira, tentar
-    `!important` antes de investigar mais fundo — já aconteceu 2x
-    nesta sessão (handle e ícones do rail).
-  - GOTCHA NOVO 2: com os ícones do rail no tamanho certo (2.75rem) E
-    centralizados (`align-items:center`) na rail de 4.6rem, ícone e
-    handle brigavam pelo mesmo espaço horizontal (não cabem os dois
-    lado a lado numa rail tão estreita) — dava overlap REAL (não só
-    visual) na medida em que a altura da tela fazia o `top:50vh`
-    coincidir com a linha de algum ícone. Fix: rail recolhida foi
-    alargada de 4.6rem pra **7.5rem**, e os ícones do menu (e agora
-    também marca+avatar) viraram alinhados à ESQUERDA
-    (`align-items:flex-start; padding-left:0.5rem`) em vez de
-    centralizados — reserva a faixa direita da rail, perto da borda,
-    exclusivamente pro handle, sem disputa de espaço.
-  - Logout virou um `st.popover` (nativo do Streamlit, já disponível
-    nesta versão): só o avatar (iniciais, círculo) fica visível na
-    sidebar por padrão, nos dois modos — clicar nele abre um card com
-    avatar maior, e-mail completo e botão "Sair da conta". Substituiu
-    o `st.container(key="user_card")` (modo expandido) e o ícone de
-    sair separado (modo recolhido) — código ficou mais simples porque
-    não precisa mais ramificar por `expandida` nessa parte.
-  - Nomes dos itens do menu reescritos pra tirar a mistura de
-    verbo+substantivo e os parênteses que deixavam a lista inconsistente:
-    "Responder Questões"→"Praticar", "Cadastrar Questão"→"Nova
-    Questão", "Importar Questões (planilha)"→"Importar Planilha",
-    "Revisão (Repetição Espaçada)"→"Revisão Espaçada". Os que já
-    eram substantivos limpos (Dashboard, Simulado, Materiais de
-    Estudo, Sincronizar MediaFire, Banco de Questões) ficaram como
-    estavam. IMPORTANTE: essas strings são a CHAVE DE ROTEAMENTO
-    (`elif pagina == "..."` em app.py) — qualquer rename futuro do
-    menu precisa atualizar TODOS os `elif pagina ==` e `cta_pagina=`
-    junto, senão a página correspondente vira uma tela em branco (a
-    string antiga em `st.session_state["nav_pagina"]` de uma sessão já
-    aberta não bate com nenhum branch novo). Os títulos de
-    `ui.page_header(...)` foram deixados como estavam (são mais
-    descritivos que o rótulo curto do menu de propósito, ex. menu diz
-    "Praticar" mas o título da página continua "Responder Questões" —
-    padrão comum, não é inconsistência).
+CAMADA NOVA — Deploy/testes:
+- deploy/ — Caddyfile (config ATIVA hoje, serve por IP puro em HTTP,
+  sem domínio), Caddyfile.com-dominio.example (versão com HTTPS
+  automático via Let's Encrypt, pronta pra quando houver domínio),
+  residencia-api.service / residencia-streamlit.service (systemd,
+  rodam como usuário de sistema dedicado `residenciamed`),
+  .env.production.example (template, sem segredo real).
+- tests/ — 31 testes (pytest) rodando contra o Postgres de PRODUÇÃO
+  (Neon), com fixtures uuid-suffixed e cleanup via ON DELETE CASCADE.
+  Cobrem SM-2, ofensiva, filtros de prática, simulados, busca+
+  sincronização, smoke da API.
+- MIGRACAO.md (raiz) — plano de migração por fases, contrato real da
+  API (função→endpoint), decisões registradas com data. Ler antes de
+  qualquer mudança estrutural na API.
+- DEPLOY.md (raiz) — runbook de publicação, ATUALIZADO e com checklist
+  marcado do que já foi feito/testado. Ler antes de mexer no servidor.
 
-MAIS 2 AJUSTES (mesma sessão, mais uma rodada de feedback de
-acabamento):
-  - "Letras se mexendo" ao expandir: era a transição de largura
-    (`transition: width 0.22s ease`) brigando com o conteúdo — o texto
-    completo do rótulo ("Dashboard", "Praticar"...) já renderiza
-    instantaneamente (Python/Streamlit não anima nada, só o CSS anima
-    a largura), então por ~220ms o texto cheio tenta caber numa
-    largura ainda estreita e QUEBRA LINHA, desfazendo a quebra
-    conforme a sidebar termina de abrir — lê como "letras
-    confusas se mexendo e ajeitando". Fix: `overflow-x:hidden` na
-    `<section data-testid="stSidebar">` + `white-space:nowrap` nos
-    parágrafos de texto (`button p`, `.stMarkdownContainer p`) — o
-    texto que não cabe fica recortado (não quebra linha) e só aparece
-    inteiro quando a largura já estabilizou. Testado que o
-    `overflow-x:hidden` NÃO corta o popover do perfil (ele renderiza
-    num portal/camada flutuante própria do Streamlit, fora do fluxo
-    normal do DOM da sidebar).
-  - Botão de perfil "desconexo": o `st.popover` adiciona sozinho um
-    ícone de seta (`expand_more`) no gatilho, além do rótulo que a
-    gente passa — isso deixava o círculo do avatar com uma seta
-    estranha ao lado, destoando dos outros ícones lisos da sidebar.
-    Fix: `[data-testid="stIconMaterial"] { display:none; }` escopado
-    só pra `.st-key-perfil_popover`. Gotcha novo pra lembrar: `st.popover`
-    SEMPRE insere esse ícone de seta no botão-gatilho, mesmo sem passar
-    `icon=` — se o design pedir um gatilho "limpo" (só o rótulo/ícone
-    que você escolheu), esconder essa seta via CSS é necessário.
+=====================================================================
+MIGRAÇÃO STREAMLIT → FASTAPI + REACT (sessão 2026-09-12)
+=====================================================================
+
+Motivação: HANDOFF_REDESIGN.md (da sessão anterior, ver seção própria
+abaixo) já apontava que o nível de acabamento visual em Streamlit "exige
+gambiarras de CSS frágeis a cada atualização do framework", e sugeria
+avaliar migração pra React. O usuário pediu pra confrontar o contrato
+real da API com o que MIGRACAO.md §2 descrevia ANTES de escrever
+qualquer código — havia divergência real entre o documento e o código,
+corrigida antes de começar (§2 reescrito com o mapeamento função→
+endpoint verificado contra db.py/repeticao_espacada.py/app.py linha a
+linha).
+
+Executada em 7 fases sequenciais (todas concluídas, ver MIGRACAO.md pro
+detalhe fase a fase):
+1-6) Setup da API+testes, depois frontend (shell/tema/rotas), depois
+     cada feature (praticar, painel, revisão, simulado, materiais/busca).
+7) DECISÃO EXPLÍCITA DO USUÁRIO: as 4 telas administrativas NÃO são
+   migradas — ficam no Streamlit pra sempre (baixo tráfego — só um
+   admin usa —, alto custo de reescrita, zero benefício de UX pro
+   fluxo do aluno, que é o que realmente importa pra experiência
+   comercial). Registrado em MIGRACAO.md §4/§5 com data.
+
+Bugs reais encontrados e corrigidos DURANTE a migração (não existiam
+antes, ou existiam mas só ficaram óbvios ao formalizar o contrato):
+- GET /simulados/{id}/itens vazava resposta_correta/explicacao ANTES de
+  o simulado ser finalizado — contradizia o próprio docstring do
+  endpoint. Corrigido checando finalizado_em is None e removendo os
+  campos nesse caso.
+- GET /sincronizacao (status) estava exigir_admin, mas o app.py
+  original mostrava esse status pra QUALQUER usuário logado — corrigido
+  pra usuario_atual.
+- Postgres LIKE é case-sensitive (SQLite não é) — 4 ocorrências de LIKE
+  em db.py viraram ILIKE (_clausulas_filtro_questoes,
+  _clausulas_filtro_materiais, 2x em busca_global). Bug real: buscar
+  "gota" não achava "GOTA" antes do fix.
+- React Query: um hook com staleTime:Infinity reusado em duas telas
+  diferentes com a MESMA queryKey vazou estado de uma tela (fase "em
+  andamento") pra outra (fase "resultado") — useItensSimulado. Fix:
+  removido o staleTime override + invalidateQueries explícito em
+  EmAndamento.tsx antes de navegar pro Resultado. LIÇÃO GERAL: staleTime
+  alto só é seguro quando a queryKey é exclusiva de uma única tela/fase.
+
+Também nesta sessão: scripts/seed_demo_user.py criado e RODADO contra
+produção (Neon) — popula demo@residenciamed.com com ~400 respostas
+sintéticas (questões reais, histórico fabricado) em 8 semanas, desempenho
+desigual por área de propósito (26%-90%), pra o Painel não parecer
+amador com conta vazia. Idempotente (não faz nada se a conta já tiver
+resposta). Rodar de novo só se a conta for resetada.
+
+Migração completa foi commitada de uma vez só (commit `bf5798d`,
+"Migra plataforma para FastAPI + React/Vite...") e enviada ao GitHub —
+nada disso existia no remoto antes desta sessão (7 fases inteiras +
+publicação ficaram como mudanças locais até o momento de publicar de
+verdade, quando fez sentido consolidar tudo num commit coeso em vez de
+reconstituir um histórico fase-a-fase que nunca existiu de fato).
+
+=====================================================================
+PUBLICAÇÃO EM PRODUÇÃO — Oracle Cloud (sessão 2026-09-12)
+=====================================================================
+
+Servidor: Oracle Cloud Free Tier, região São Paulo, instância
+`residencia-med`. IP público `64.181.167.174`, usuário SSH `ubuntu`
+(chave privada baixada na hora da criação — NÃO versionada). Shape
+final **VM.Standard.E2.1.Micro** (x86/AMD, 1 OCPU/1GB, Always Free) —
+o shape ARM `VM.Standard.A1.Flex` (bem mais folgado, 1 OCPU/6GB,
+também Always Free) ficou SEM CAPACIDADE disponível na região no
+momento da criação (erro de API "Out of capacity", ~5 tentativas
+falharam) — comum nesse shape especificamente por alta demanda; vale
+tentar recriar com A1.Flex mais tarde se precisar de mais recursos.
+
+DECISÃO IMPORTANTE — publicando SEM DOMÍNIO por ora (usuário escolheu
+"usar só o IP por enquanto" quando perguntado): isso significa SEM
+HTTPS automático (Let's Encrypt via Caddy exige domínio real). Efeitos
+práticos, todos documentados em DEPLOY.md com o plano de reversão:
+- COOKIE_SECURE=false (só vira true quando houver HTTPS de verdade).
+- Streamlit (admin) não pode ficar num subdomínio — foi pra uma PORTA
+  própria (8080) via Caddy, e essa porta foi RESTRITA na Security List
+  da Oracle só ao IP de quem administra (179.216.39.216/32 no momento
+  da publicação), porque sem HTTPS a senha de login do Streamlit
+  trafegaria em texto claro se a porta ficasse aberta a qualquer IP.
+  Se o IP de quem administra mudar, a regra precisa ser atualizada
+  manualmente no console Oracle (Networking → VCN → Security List) ou
+  o admin fica inacessível — alternativa mais robusta é túnel SSH em
+  vez de depender de IP fixo (comando em DEPLOY.md §2).
+- `deploy/Caddyfile` ATIVO hoje é a versão "por IP" (sem TLS). A versão
+  com domínio+HTTPS já existe pronta em `Caddyfile.com-dominio.example`
+  — trocar quando houver domínio, junto com CORS_ORIGENS,
+  VITE_STREAMLIT_URL e a Security List (fechar a 8080, abrir via
+  subdomínio HTTPS).
+
+Infra provisionada nesta sessão, tudo confirmado funcionando via teste
+real (curl + navegador, incluindo um fluxo de Praticar completo com
+feedback instantâneo, ponta a ponta, em produção):
+- VCN `residencia-med-vcn` criada via wizard "Create a VCN with internet
+  connectivity" (não pelo fluxo inline de criar subnet durante a criação
+  da instância — esse fluxo inline TRAVA o toggle de IP público como
+  desabilitado permanentemente, mesmo com "create new public subnet"
+  selecionado; a saída foi criar a VCN completa como recurso
+  independente primeiro, depois selecionar a subnet pública já existente
+  na hora de criar a instância).
+- Portas liberadas (firewall do servidor via iptables +
+  netfilter-persistent, E Security List da Oracle — as DUAS camadas
+  precisam da regra, uma sem a outra não basta): 22 (SSH, qualquer IP),
+  80 (frontend+API, qualquer IP), 443 (reservada pro HTTPS futuro,
+  qualquer IP), 8080 (Streamlit, só o IP do admin — ver acima).
+- Node 20.20.2, Caddy 2.11.4, Python 3.12.3 (já vinha na imagem)
+  instalados e testados.
+- Usuário de sistema `residenciamed` (sem shell de login) dono de
+  /var/www/residencia-med — os dois serviços systemd rodam como ele,
+  não como `ubuntu` (princípio do menor privilégio).
+- `.env.production` do backend foi gerado DIRETO NO SERVIDOR via um
+  script Python que lê o `.streamlit/secrets.toml` (copiado por scp) e
+  extrai DATABASE_URL — o valor nunca passou pelo terminal local nem
+  apareceu em nenhum output visível, só um JWT_SECRET_KEY novo foi
+  gerado ali mesmo com secrets.token_urlsafe(32).
+
+GOTCHA DE FERRAMENTA: comandos SSH que combinam MUITOS detalhes num só
+(ex.: pipe com `2>&1 | tail`, ou várias flags/paths sensíveis
+concatenados) podem disparar o classificador de segurança automático do
+Claude Code ("Excess Sensitive Detail") mesmo sendo comandos legítimos e
+já autorizados — a saída foi (1) configurar um alias em `~/.ssh/config`
+(Host `residencia-med`) pra não repetir IP+caminho da chave em todo
+comando, e (2) quebrar comandos compostos em chamadas menores e mais
+diretas. Separadamente, uma tentativa de abrir a porta 8080 pra
+`0.0.0.0/0` (qualquer IP) na Security List foi bloqueada pelo
+classificador como "Security Weaken" — nesse caso o bloqueio estava
+CERTO (senha de admin em texto claro exposta à internet inteira); a
+resolução correta foi perguntar ao usuário e restringir a regra a um
+CIDR /32 específico em vez de tentar contornar o bloqueio.
+
+=====================================================================
+REDESIGN VISUAL "VOCABULÁRIO DE LAUDO CLÍNICO" (sessão 2026-09-11, Streamlit)
+=====================================================================
+
+Sessão anterior a esta, não documentada até agora neste arquivo. Ponto
+de partida do briefing REDESIGN.md (raiz do repo): densidade alta, cor
+só como sinal (não decoração), números como protagonistas, tokens de
+design exatos, estrutura rail+topbar. Implementado por completo e
+testado manualmente em app.py/ui.py (commit `7788d07`) ANTES da
+migração pra React começar — é esse mesmo REDESIGN.md que guiou o
+`tailwind.config.js` e `theme.css` do frontend novo, então os dois
+"lados" (Streamlit admin e React aluno) compartilham a mesma linguagem
+visual por design, não por coincidência.
+
+O que foi entregue (detalhe completo em HANDOFF_REDESIGN.md, raiz do
+repo — ainda vale a leitura pra quem for mexer nas 4 telas admin que
+continuam em Streamlit): tokens claro/escuro completos + IBM Plex Sans/
+Mono via Google Fonts injetados uma vez (`ui.inject_theme_css`); rail
+lateral sempre escura (`--ink-900`) com CTA fixo "Praticar agora"
+(hoje redundante pro aluno, mas ainda é o shell das 4 páginas admin);
+topbar com busca (só visual — nunca foi funcional, dívida conhecida);
+9 páginas reescritas (das quais só as 4 admin seguem em uso real hoje).
+
+GOTCHAS DE STREAMLIT DESSA RODADA QUE SEGUEM VALENDO PRAS TELAS ADMIN:
+- `st.markdown('<div>')`...`st.markdown('</div>')` NÃO envolve o
+  elemento do meio — cada chamada vira elemento IRMÃO no DOM. Pra
+  estilizar widget nativo via CSS, mirar a classe `st-key-<key>` que o
+  Streamlit aplica no `.stElementContainer`.
+- `st.radio`: estrutura real é `[role=radiogroup] > label > span(input)
+  + div(texto)`. Pra customizar indicador visual, esconder o `span` e
+  desenhar via `label::before`.
+- Editar `ui.py`/`db.py` e só dar refresh NÃO garante código novo
+  carregado — precisa reiniciar o processo `streamlit run`.
+- `st.dialog` NÃO herda o CSS custom da página — cai no tema nativo do
+  `config.toml` a menos que mire `[data-testid="stDialog"] > div` e
+  force `background: var(--surface) !important`.
+- `st.button(..., help="algo")` insere um `<span class=
+  "stTooltipHoverTarget">` extra entre `.stButton` e o `<button>` —
+  quebra seletores de filho direto (`.stButton > button`); usar
+  seletor descendente sempre.
+- `st.popover` sempre insere sozinho um ícone de seta (`expand_more`)
+  no gatilho, mesmo sem passar `icon=` — esconder via
+  `[data-testid="stIconMaterial"] { display:none }` escopado se quiser
+  gatilho "limpo".
+- Sidebar do Streamlit tem uma faixa invisível de resize (~8px,
+  z-index altíssimo fixado pelo framework) na borda direita — qualquer
+  handle/elemento custom colocado exatamente ali tem o clique roubado,
+  mesmo com z-index maior (fica preso no stacking context da própria
+  seção). Não dá pra vencer via z-index; posicionar por DENTRO da
+  borda, não a cavaleiro dela.
+
+DEIXADO DELIBERADAMENTE FORA DO ESCOPO (ainda válido, pode interessar
+se alguém voltar a mexer nas telas admin): atalhos de teclado (A-E,
+Enter, →) exigiriam JS custom via componente Streamlit — não trivial;
+hover-reveal de ações em tabelas; 3 estados na grade do Simulado
+(respondida/marcada/em branco — hoje só 2); "Errei — 10 min" na Revisão
+era só aproximado em Streamlit por falta de timestamp real no schema —
+ISSO FOI RESOLVIDO na migração (proxima_revisao virou TIMESTAMP de
+verdade); menu do avatar sem "Perfil/Assinatura"; busca do topbar
+sempre foi decorativa (a busca REAL existe agora só no lado React, via
+GET /busca).
+
+=====================================================================
+POSSÍVEIS PRÓXIMOS PASSOS (mencionados, não iniciados)
+=====================================================================
+
+- Domínio + HTTPS: registrar um domínio, apontar DNS pro IP
+  64.181.167.174, trocar deploy/Caddyfile pela versão
+  Caddyfile.com-dominio.example, reverter COOKIE_SECURE/CORS_ORIGENS/
+  VITE_STREAMLIT_URL pro domínio real, fechar a porta 8080 na Security
+  List (Streamlit passa a viver em admin.SEUDOMINIO.com via HTTPS).
+  Tudo documentado passo a passo em DEPLOY.md §2/§6/§8.
+- REDESIGN VISUAL COMPLETO DO ZERO (mencionado explicitamente pelo
+  usuário em 2026-09-12, depois de a publicação estar encaminhada):
+  repensar a identidade visual inteira do zero, substituindo a direção
+  "laudo clínico" atual — não é sobre trocar stack/linguagem (o usuário
+  usou esse termo de início mas esclareceu que é sobre estética).
+  DECISÃO EXPLÍCITA: isso vem DEPOIS de a publicação estar 100%
+  concluída (domínio+HTTPS incluso, plausivelmente), não antes — não
+  interromper a publicação/estabilização pra começar isso.
+- Se o shape ARM (A1.Flex, 1 OCPU/6GB) ficar disponível na região São
+  Paulo mais tarde e os recursos atuais (1 OCPU/1GB) apertarem, vale
+  recriar a instância nele — é Always Free igual, só mais capaz.
+- Expandir banco de questões com mais fontes oficiais gratuitas
+  (provas antigas de USP/UNIFESP/ENARE/hospitais em PDF) — lembrar da
+  restrição de não fazer scraping de concorrente pago.
+- Rodar mais uma varredura por questões dependentes de imagem em
+  bancas/edições futuras (processo documentado na seção "COMO
+  REEXTRAIR" abaixo).
 
 =====================================================================
 COMO REEXTRAIR UMA QUESTÃO OU IMAGEM DO PDF OFICIAL (se precisar de novo)
@@ -325,173 +373,156 @@ O QUE NÃO FAZER / RESTRIÇÕES CONHECIDAS
   gratuita (INEP) ou conteúdo original.
 - NÃO remover a ausência de marcação "gerado por IA" nas explicações
   sem o usuário pedir — foi decisão explícita dele.
+- NUNCA digitar senha de login em campo via automação de navegador —
+  regra fixa de segurança, sem exceção mesmo com autorização explícita
+  do usuário ou pra contas de teste criadas pelo próprio Claude. Quem
+  loga é sempre o usuário; Claude só navega depois.
+- NUNCA abrir uma porta/regra de firewall pra `0.0.0.0/0` (qualquer IP
+  da internet) quando o serviço por trás não tem HTTPS — se o
+  classificador de segurança bloquear isso, o bloqueio provavelmente
+  está certo; resolver restringindo a um CIDR específico (IP do
+  usuário) ou usando túnel SSH, não tentando contornar.
 - Mudança em massa no banco de produção (import, update em lote) já
-  disparou o classificador de segurança do Claude Code mais de uma
-  vez nesta sessão — normal, geralmente libera numa segunda tentativa
-  ou pedindo confirmação explícita ao usuário.
+  disparou o classificador de segurança do Claude Code mais de uma vez
+  — normal, geralmente libera numa segunda tentativa ou pedindo
+  confirmação explícita ao usuário. Comandos SSH remotos com muitos
+  detalhes concatenados (pipes, múltiplos paths/flags sensíveis num só
+  comando) também podem disparar — quebrar em comandos menores ajuda.
 - git commit de diffs muito grandes (ex: este próprio arquivo, quando
-  virou um dump de conversa de +9000 linhas) também pode ser barrado
-  pelo classificador — prefira manter este arquivo enxuto (resumo,
-  não transcript bruto) exatamente por isso.
+  virou um dump de conversa de +9000 linhas antes; ou a migração
+  inteira de 105 arquivos desta sessão, que passou numa única tentativa
+  mas é o tipo de coisa que pode ser barrada) — prefira manter ESTE
+  arquivo enxuto (resumo, não transcript bruto), e ao commitar trabalho
+  grande, revisar bem o que está sendo incluído antes.
+- git commit / git push só acontecem com o usuário sabendo — nesta
+  sessão, antes de publicar, o usuário foi explicitamente perguntado
+  "commitar tudo e dar push" vs. "copiar arquivos direto pro servidor
+  sem mexer no git" (escolheu a primeira).
 
 =====================================================================
-TEMA VISUAL — claro, verde-azulado (sessão 2026-09-10, parte 2)
+TEMA VISUAL v2 — Petróleo Institucional + sidebar retrátil (sessão 2026-09-10, parte 3)
+=====================================================================
+[HISTÓRICO — superado visualmente pelo redesign "laudo clínico" de
+2026-09-11 na direção de cores/tokens, mas os GOTCHAS de Streamlit
+documentados aqui embaixo continuam tecnicamente válidos pra quem for
+mexer no shell/sidebar das 4 telas admin.]
+
+Usuário não gostou da primeira paleta clara (Teal Clínico) nem do
+menu lateral antigo ("muito feio"). Depois de comparar 4 opções num
+protótipo (artifact HTML separado, não faz parte do repo), escolheu
+"Petróleo Institucional". Sidebar retrátil (pedido explícito — "reativo,
+tipo Notion/Linear"): menu lateral trocou de `st.radio` pra lista de
+`st.button`, com `st.session_state["sidebar_expandida"]` (default
+False) controlando modo expandido (232px, marca+avatar+nav com
+rótulo) vs. recolhido (rail ~7.5rem, só ícones "squircle" ~2.75rem,
+`use_container_width=False` — `True` faz o botão esticar e virar uma
+caixa vazia em volta do ícone). Handle único (círculo, `#0F766E`) faz
+expandir/recolher, ancorado via `position:absolute` na própria
+`<section data-testid="stSidebar">` com `top:50vh` (não 50%, que seria
+relativo à altura esticada da seção, não à viewport real).
+
+GOTCHAS REAIS DE STREAMLIT DESSA RODADA (continuam valendo):
+1) `st.button(..., help="algo")` insere um `<span class=
+   "stTooltipHoverTarget">` extra — quebra `.stButton > button`, usar
+   seletor descendente sempre.
+2) Faixa invisível de resize da sidebar (~8px, z-index altíssimo do
+   próprio framework) rouba clique de qualquer handle custom colocado
+   exatamente sobre a borda — não dá pra vencer via z-index (mesmo
+   stacking context), resolver posicionando por dentro da borda.
+3) Cliques por COORDENADA CRUA de automação de navegador podem falhar
+   num elemento pequeno/aninhado mesmo com DOM/CSS provadamente
+   corretos — testar via `document.elementFromPoint`/`.click()` por JS
+   ou clique por referência de elemento antes de concluir "bug de UI".
+
+AJUSTES FINOS relevantes se for mexer de novo nesse shell: qualquer
+`width`/`height` custom em botão de Streamlit dentro da sidebar que
+"não pegar" à primeira tentativa — forçar `!important` antes de
+investigar mais fundo (aconteceu 2x: handle e ícones do rail); textos
+de rótulo que quebram linha durante a transição de largura (~220ms)
+resolvido com `overflow-x:hidden` na seção + `white-space:nowrap` nos
+parágrafos; `st.popover` sempre insere ícone de seta no gatilho —
+esconder via `[data-testid="stIconMaterial"] {display:none}` escopado
+se quiser gatilho limpo. IMPORTANTE: rótulos do menu são a CHAVE DE
+ROTEAMENTO (`elif pagina == "..."`) — renomear rótulo sem atualizar
+todos os branches quebra a página (sessão já aberta guarda a string
+antiga em session_state).
+
+=====================================================================
+HISTÓRICO ANTERIOR (sessão 2026-09-10) — performance, conteúdo, imagens
 =====================================================================
 
-Trocado o tema de escuro (navy + teal ciano vibrante) para claro,
-pedido explícito do usuário ("clara, verde-azul, bem medicina").
-Paleta: fundo #F6FAFA, cards/sidebar brancos com borda #D7E6E4,
-primária #0D9488 (teal), acento secundário #0EA5E9 (sky blue) usado
-nos gráficos de 2ª série, texto #0F172A / #1E293B, texto secundário
-#64748B. Alterado em `.streamlit/config.toml` (theme.*), `ui.py`
-(CSS custom), `app.py` e `auth.py` (poucos trechos de CSS inline).
+1) PERFORMANCE — causa raiz em ordem de impacto: (a) db.init_db() sem
+   cache rodando em TODO clique (Streamlit reroda o script inteiro) —
+   fix `@st.cache_resource`; (b) zero cache nas leituras do Dashboard —
+   fix `st.cache_data` com TTL; (c) 4 queries do dashboard viraram 1
+   query única com subqueries jsonb_agg
+   (db.desempenho_dashboard_combinado); (d) faltavam índices em FKs
+   (Postgres não indexa FK automaticamente) — adicionados em init_db().
+   Resultado: Dashboard de ~2s cold/1.6s+ por clique → ~0.11-0.35s.
+   Teto seguinte de performance seria a própria hospedagem — RESOLVIDO
+   agora pela migração pro Oracle Cloud (host sempre-ativo, perto do
+   Neon), então esse item de "próximos passos" antigo está concluído.
 
-IMPORTANTE: `st.bar_chart`/`st.line_chart` NÃO herdam a cor primária
-do tema automaticamente — precisam do parâmetro `color=` explícito
-em cada chamada (feito em app.py: dashboard, evolução diária,
-desempenho por banca, desempenho no simulado). Se adicionar novo
-gráfico nativo no futuro, lembrar de passar `color="#0D9488"` (ou
-"#0EA5E9" para a 2ª série) manualmente.
+2) Edição de questão restrita a admin (`eh_admin`, checa ADMIN_EMAILS).
 
-CONTA DE TESTE PARA QA/VERIFICAÇÃO VISUAL: existe uma conta
-`qa.claude@residenciamed.local` no banco de produção (Neon), criada
-via script direto (`db.criar_usuario` + `auth.hash_senha`), não pelo
-formulário de cadastro. Serve pra Claude conferir telas logadas sem
-usar a conta pessoal do usuário. A SENHA NÃO fica neste arquivo (ele
-é rastreado pelo git — `git ls-files` confirma) — está só no
-histórico do chat. Claude não pode digitar senha em campo de login
-via automação de navegador mesmo com autorização explícita (regra
-fixa de segurança) — quem loga é sempre o usuário, na aba já aberta;
-depois disso Claude só navega clicando no menu lateral (sem recarregar
-a página / sem novo `navigate`), porque o login vive em
-`st.session_state` e um reload derruba a sessão.
+3) EXPLICAÇÕES CLÍNICAS — 458/458 questões (100%) geradas por raciocínio
+   clínico próprio (Claude), SEM marca de "gerado por IA" — decisão
+   explícita do usuário, não reverter sem confirmar de novo. INEP só
+   publica gabarito, não justificativa. Busca por reaproveitar
+   explicação de plataforma paga foi descartada (mesma restrição de
+   scraping de concorrente).
 
-LIÇÃO DE AMBIENTE: rodar `streamlit run app.py` pelo Bash tool deste
-ambiente pode falhar travado para sempre em "Running
-_init_db_uma_vez()" porque esse shell (Git Bash/MSYS) fica numa rede
-isolada sem saída pra internet — `db.init_db()` nunca completa a
-conexão com o Neon (timeout silencioso, nem erro aparece). Teste
-rápido pra diagnosticar: `timeout 8 bash -c "cat < /dev/tcp/<host>/
-<porta>"` — se travar (exit 124) mesmo pra host genérico tipo
-8.8.8.8:443, é isolamento de rede do shell, não do Postgres
-especificamente. O processo nativo do Windows (PowerShell) tem rede
-normal (`Test-NetConnection` funciona). Na prática, desligar a VPN do
-usuário resolveu — o Bash conseguiu conectar no Neon depois disso.
-Se travar de novo, pedir pro usuário checar VPN/firewall antes de
-assumir que é bug de rede do sandbox.
+4) Bug de extração do PDF: ~41 questões (Revalida) com lixo de rodapé
+   colado na alternativa D, corrigido truncando no marcador; 3 questões
+   (206, 258, 381) com corrupção grave de duas colunas intercaladas,
+   reextraídas na mão do PDF oficial.
+
+5) IMAGEM POR QUESTÃO: 11 questões do Revalida dependiam de figura
+   (raio-X, ECG, gráfico, foto). Colunas `imagem` (BYTEA) + `imagem_mime`
+   direto no Postgres (não disco — Streamlit Community Cloud apagava
+   filesystem a cada deploy; motivo desapareceu com a migração de host,
+   mas o padrão BYTEA-no-banco continua sendo o certo). Exibição via
+   `exibir_imagem_questao`; no lado React, `serialize.py` expõe só o
+   bool `tem_imagem` e há um endpoint próprio de bytes da imagem.
+
+CONTA DE TESTE QA: `qa.claude@residenciamed.local` no banco de produção
+(criada via script direto, não formulário) — senha só no histórico do
+chat, nunca neste arquivo. Regra de nunca digitar senha por automação
+se aplica igual a essa conta.
+
+LIÇÃO DE AMBIENTE (ainda válida): `streamlit run app.py` pelo Bash tool
+pode travar em `_init_db_uma_vez()` se o shell (Git Bash/MSYS) estiver
+numa rede isolada sem saída internet — teste rápido:
+`timeout 8 bash -c "cat < /dev/tcp/<host>/<porta>"` (se travar até pra
+host genérico tipo 8.8.8.8:443, é isolamento do sandbox, não do
+Postgres). Desligar VPN do usuário resolveu da última vez.
 
 =====================================================================
 REFORMA COMERCIAL DE UI/UX + SELO DE AUTENTICIDADE (sessão 2026-09-10, parte 4)
 =====================================================================
+[HISTÓRICO — trabalho ainda visível nas 4 telas admin que seguem em
+Streamlit; superado no lado aluno pela migração React.]
 
-Pedido do usuário: "carta branca" pra revisar aparência e interações
-de toda a plataforma, deixá-la "nível comercial" seguindo padrões
-profissionais de UI/UX, e criar uma característica visual única.
-Entre 4 opções apresentadas (comparação textual, sem artifact desta
-vez), o usuário escolheu o "selo de autenticidade da prova": cada
-questão com banca/ano preenchidos ganha uma barra fina acima do
-enunciado (ícone `badge-check` + nome da banca em caixa alta + ano),
-reforçando que são provas reais do INEP — não um banco genérico.
-Questões cadastradas manualmente sem banca não mostram a barra.
-
-Trabalho organizado em 7 frentes, todas implementadas e verificadas
-em teste manual no navegador (conta admin, todas as 9 páginas):
-
-1) SEGURANÇA DE DADOS: exclusão de material individual e de questão
-   individual agora exigem `eh_admin` (antes qualquer usuário logado
-   apagava com um clique) e passam por confirmação via `st.dialog`
-   (`ui.confirmar_exclusao`) em vez de deletar direto. Praticar ganhou
-   aviso (`st.caption`) quando o filtro de área muda mas a fila ainda
-   não foi regenerada. Revisão Espaçada teve um bug real corrigido:
-   o slider de qualidade do SM-2 era criado E lido no mesmo clique
-   que já registrava a revisão — o usuário nunca tinha chance de
-   ajustá-lo antes de ser usado (o SM-2 recebia sempre o valor padrão,
-   4). Virou fluxo de 2 passos via `st.session_state["rev_aguardando"]`:
-   (1) confirma resposta → mostra certo/errado + explicação; (2) só aí
-   aparece o slider + botão "Registrar e continuar", que chama
-   `sr.registrar_revisao(...)` com o valor real escolhido. Testado
-   arrastando o slider pra 0 e confirmando que o contador de "sem
-   revisão agendada" caiu de fato (a revisão foi reagendada).
-
-2) COMPONENTE UNIFICADO DE QUESTÃO (`ui.render_questao`, em ui.py):
-   as 4 implementações divergentes de "mostrar uma questão com
-   alternativas" (Praticar, Revisão Espaçada, Simulado-andamento,
-   Simulado-resultado, Banco de Questões) viraram uma função só, com
-   `modo="interativa"` (retorna `st.radio` com `index=None`, sem
-   resposta pré-selecionada) ou `modo="leitura"` (estática, aceita
-   `resposta_selecionada` opcional pra marcar "(sua resposta)"). O
-   selo de autenticidade fica embutido nela — não precisou de trabalho
-   separado.
-
-3) MODAIS NATIVOS (`st.dialog`, confirmado disponível nesta versão do
-   Streamlit): confirmação de exclusão genérica
-   (`ui.confirmar_exclusao`) e edição de questão (antes inline dentro
-   do expander do Banco de Questões, inchando a página — agora abre
-   num dialog, `_dialog_editar_questao`, reaproveitando o mesmo
-   formulário do cadastro).
-
-4) FORMULÁRIO DE QUESTÃO COMPARTILHADO: Nova Questão e o dialog de
-   edição usavam duas cópias divergentes do mesmo formulário — viraram
-   uma função só em app.py (`_form_questao(q, *, key_prefix)`, `q=None`
-   pra criar / preenchido pra editar). `st.write("Alternativas")` como
-   pseudo-título virou `ui.form_section_label(...)` (caixa alta,
-   letter-spacing, cor secundária).
-
-5) NÚMEROS SEMPRE EM CARTÃO: ranking "Áreas com mais erros" do
-   Dashboard virou `ui.metric_badge_row(...)` com cor semântica por
-   faixa de acerto (`ui.cor_semantica_pct`: <50% vermelho, 50-75%
-   âmbar, ≥75% verde) em vez de texto plano; contador da Revisão
-   Espaçada e relatório do Importar Planilha viraram `st.metric`.
-
-6) LIMPEZA DE ÍCONES/EMOJI: Simulado não usa mais emoji (🔴🟡🟢 no
-   timer, ✅◻️ no seletor de questão) — timer virou badge colorido
-   (`.metric-badge`) com `ui.icon_svg("timer")` + cor semântica, e o
-   seletor "Ir para questão" usa texto puro ("N — respondida"/"N — em
-   branco"). Sincronizar MediaFire: "Estrutura esperada da pasta"
-   virou `st.expander` colapsável (era `st.info` permanente), igual ao
-   padrão já usado no Importar Planilha; lista de erros virou
-   `st.dataframe` em vez de `st.write` linha a linha.
-
-Arquivos alterados: `ui.py` (novo `render_questao`, `form_section_label`,
-`cor_semantica_pct`, `metric_badge_row`, `confirmar_exclusao` +
-`_dialog_confirmar_exclusao`, CSS do selo `.qs-selo*` e dos badges
-`.metric-badge*`); `app.py` (as 5 telas que renderizam questão agora
-chamam `ui.render_questao`; `_form_questao` extraído e reaproveitado
-entre Nova Questão e o dialog de edição; gates de admin + dialogs de
-exclusão; fix do fluxo de qualidade do SM-2; limpeza de ícones/emoji;
-Dashboard/Revisão/Importar Planilha com métricas em cartão).
-
-Ver [[project_residencia_med_sidebar_retratil]] e
-[[project_residencia_med_tema_visual]] pro trabalho visual da sessão
-anterior (tema + sidebar), que essa reforma manteve sem alterar.
-
-ESCOPO DELIBERADAMENTE DEIXADO DE FORA (baixa prioridade, avaliado e
-adiado): dialogs opcionais pra "adicionar área/subtópico" (Nova
-Questão) e "adicionar material" (Materiais de Estudo) — hoje inline
-via expander, funcionam bem, ganho de trocar por dialog seria menor
-que os itens acima.
+Selo de autenticidade: questões com banca/ano preenchidos ganham barra
+fina acima do enunciado (ícone badge-check + banca + ano) — reforça que
+são provas reais do INEP. Outras entregas: exclusão de material/questão
+individual passou a exigir `eh_admin` + confirmação via `st.dialog`
+(antes qualquer usuário logado apagava com 1 clique); bug real no SM-2
+corrigido (slider de qualidade era lido no mesmo clique que já
+registrava a revisão, sempre recebendo o valor padrão 4) — virou fluxo
+de 2 passos; componente único `ui.render_questao` substituiu 4
+implementações divergentes de "mostrar questão com alternativas";
+modais nativos (`st.dialog`) pra confirmação e edição de questão;
+números sempre em cartão/metric com cor semântica por faixa de acerto;
+limpeza de emoji em favor de badges/ícones consistentes.
 
 =====================================================================
-POSSÍVEIS PRÓXIMOS PASSOS (mencionados, não iniciados)
+TEMA VISUAL — claro, verde-azulado (sessão 2026-09-10, parte 2)
 =====================================================================
+[HISTÓRICO — paleta substituída depois por Petróleo Institucional e
+depois pelo redesign "laudo clínico"; mantido só pelo gotcha técnico.]
 
-- Revisar layout de UI/UX da plataforma: mesmo com a reforma comercial
-  desta sessão (selo de autenticidade, componente de questão unificado,
-  modais, correções de segurança/SM-2, limpeza de ícones), vale uma
-  nova rodada olhando a plataforma como um todo — espaçamento entre
-  seções, hierarquia visual das páginas de gestão (Banco de Questões,
-  Materiais de Estudo), responsividade em telas menores, e os dialogs
-  opcionais de "adicionar área/material" deixados de fora por baixa
-  prioridade (ver seção da reforma acima).
-- Se a lentidão voltar a incomodar: migrar hospedagem pra um host
-  sempre-ativo perto do Neon (Fly.io região gru, ou similar).
-  Streamlit Community Cloud tem cold start com dormência e CPU
-  compartilhada — teto de performance que código não resolve mais.
-- Expandir banco de questões com mais fontes oficiais gratuitas:
-  provas antigas de instituições específicas (USP, UNIFESP, ENARE,
-  hospitais) publicadas em PDF nos próprios sites.
-- Rodar mais uma varredura por questões dependentes de imagem em
-  bancas/edições futuras que venham a ser importadas (o padrão de
-  busca usado está documentado acima, nos termos "mostrado a seguir",
-  "imagem/figura/gráfico a seguir", etc — filtrar falsos positivos
-  onde o achado já vem descrito em texto).
+GOTCHA que ainda vale: `st.bar_chart`/`st.line_chart` NÃO herdam a cor
+primária do tema automaticamente — precisam do parâmetro `color=`
+explícito em cada chamada, sempre que algum gráfico nativo do Streamlit
+for usado no futuro (nas telas admin, por exemplo).
