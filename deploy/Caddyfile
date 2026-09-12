@@ -1,0 +1,35 @@
+# MIGRACAO.md §7 — proxy reverso, servindo por IP puro (sem domínio ainda).
+#
+# Decisão de 2026-09-12: publicar direto pelo IP do servidor Oracle Cloud
+# (64.181.167.174), sem domínio por enquanto. Isso significa SEM HTTPS
+# automático — o Caddy só emite certificado Let's Encrypt quando o site é
+# identificado por um domínio real (a validação ACME precisa disso). Por
+# IP, o Caddy serve em HTTP puro.
+#
+# Quando houver um domínio, trocar este arquivo pela versão em
+# `Caddyfile.com-dominio.example` (mesma pasta) — ela já vem pronta pra
+# HTTPS automático, só falta editar o domínio real nela.
+
+:80 {
+	encode gzip
+
+	# Front-end e API no MESMO host:porta (MIGRACAO.md §1) — elimina CORS
+	# entre eles, porque viram same-origin de verdade.
+	handle_path /api/* {
+		reverse_proxy 127.0.0.1:8000
+	}
+
+	handle {
+		root * /var/www/residencia-med/frontend/dist
+		try_files {path} /index.html
+		file_server
+	}
+}
+
+# Streamlit (telas administrativas, decisão da Fase 7 — MIGRACAO.md §5) numa
+# porta própria, já que sem domínio não dá pra usar subdomínio. Acessar em
+# http://<ip-do-servidor>:8080
+:8080 {
+	encode gzip
+	reverse_proxy 127.0.0.1:8501
+}

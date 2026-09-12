@@ -1,0 +1,36 @@
+# MIGRACAO.md §7 — proxy reverso + HTTPS automático (Let's Encrypt via Caddy).
+#
+# Pressupõe DNS já apontando pro IP deste servidor:
+#   SEUDOMINIO.com      → A record → <ip do servidor>
+#   admin.SEUDOMINIO.com → A record → <ip do servidor>
+#
+# Troque SEUDOMINIO.com abaixo (ou exporte a env var DOMAIN e use {$DOMAIN}
+# nas duas linhas de bloco, se preferir não editar o arquivo por ambiente).
+
+SEUDOMINIO.com {
+	encode gzip
+
+	# Front-end e API no MESMO domínio (MIGRACAO.md §1) — isso também
+	# elimina CORS entre eles, porque viram same-origin de verdade.
+	handle_path /api/* {
+		reverse_proxy 127.0.0.1:8000
+	}
+
+	handle {
+		root * /var/www/residencia-med/frontend/dist
+		try_files {path} /index.html
+		file_server
+	}
+}
+
+# Streamlit (telas administrativas, decisão da Fase 7 — MIGRACAO.md §5) num
+# subdomínio próprio, não um path: evita a complicação de configurar
+# `--server.baseUrlPath` no Streamlit e o roteamento de websocket sob um
+# prefixo. Se preferir um path (`/admin`) em vez de subdomínio, é preciso
+# subir o Streamlit com `--server.baseUrlPath=/admin` e trocar o bloco
+# abaixo por `handle_path /admin/* { reverse_proxy 127.0.0.1:8501 }` dentro
+# do bloco principal.
+admin.SEUDOMINIO.com {
+	encode gzip
+	reverse_proxy 127.0.0.1:8501
+}

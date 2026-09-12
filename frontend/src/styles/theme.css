@@ -1,0 +1,75 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Tokens do REDESIGN.md §2. Nenhum hex solto deve aparecer fora daqui —
+ * componentes consomem só as classes Tailwind mapeadas em tailwind.config.js.
+ */
+:root {
+  --ink-900: #0d1b2a;
+  --ink-700: #1b2d42;
+  --ink-500: #46586e;
+  --ink-300: #8797ab;
+  --line: #e1e6ec;
+  --canvas: #f4f6f9;
+  --surface: #ffffff;
+
+  --action: #1f4fd8;
+  --action-hover: #1a43b8;
+  --action-soft: #eaf0ff;
+
+  --correct: #0f7a5a;
+  --wrong: #c2344b;
+  --warn: #b87309;
+  --correct-soft: #e7f4ef;
+  --wrong-soft: #fbebee;
+  --warn-soft: #fdf3e3;
+
+  /* O rail é sempre --ink-900, nos dois temas (REDESIGN.md §3) — variável
+     própria para não confundir com o token de texto de mesmo nome. */
+  --rail-bg: #0d1b2a;
+}
+
+.dark {
+  --ink-900: #e7ecf2;
+  --ink-700: #cdd7e2;
+  --ink-500: #8fa0b3;
+  --ink-300: #56687d;
+  --line: #22313f;
+  --canvas: #0b1420;
+  --surface: #121e2c;
+
+  --action: #4d7bff;
+  --action-hover: #6b90ff;
+  --action-soft: #16244a;
+
+  --correct: #3ecb96;
+  --wrong: #ef6b83;
+  --warn: #e0a53f;
+  --correct-soft: #103228;
+  --wrong-soft: #3a1520;
+  --warn-soft: #3a2a0e;
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
+  body {
+    @apply bg-canvas text-ink-700 font-sans text-corpo antialiased;
+  }
+  :focus-visible {
+    outline: 2px solid var(--action);
+    outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      transition-duration: 0.001ms !important;
+    }
+  }
+}

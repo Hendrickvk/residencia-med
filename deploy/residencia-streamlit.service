@@ -1,0 +1,14 @@
+[Unit]
+Description=Residencia Med - Streamlit (telas administrativas, MIGRACAO.md Fase 7)
+After=network.target
+
+[Service]
+Type=simple
+User=residenciamed
+WorkingDirectory=/var/www/residencia-med
+ExecStart=/var/www/residencia-med/.venv/bin/streamlit run app.py --server.port 8501 --server.address 127.0.0.1 --server.headless true
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

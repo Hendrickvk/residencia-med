@@ -247,7 +247,7 @@ def init_db():
             facilidade REAL NOT NULL DEFAULT 2.5,
             intervalo_dias INTEGER NOT NULL DEFAULT 1,
             repeticoes INTEGER NOT NULL DEFAULT 0,
-            proxima_revisao TEXT NOT NULL,
+            proxima_revisao TIMESTAMP NOT NULL,
             PRIMARY KEY (usuario_id, questao_id),
             FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
             FOREIGN KEY (questao_id) REFERENCES questoes(id) ON DELETE CASCADE
@@ -321,6 +321,29 @@ def init_db():
         colunas_respostas = {row["column_name"] for row in c.fetchall()}
         if "confianca" not in colunas_respostas:
             c.execute("ALTER TABLE respostas ADD COLUMN confianca TEXT")
+
+        # Migração leve: tempo gasto na questão (cronômetro por questão da
+        # API/frontend novo — o Streamlit nunca mediu isso por questão,
+        # só a duração da sessão inteira).
+        if "tempo_ms" not in colunas_respostas:
+            c.execute("ALTER TABLE respostas ADD COLUMN tempo_ms INTEGER")
+
+        # Migração: proxima_revisao era só data (TEXT), sem hora — por isso
+        # "Errei — 10 min" na Revisão Espaçada sempre pulava pro dia
+        # seguinte de verdade no banco (só voltava "logo" via um hack no
+        # session_state do Streamlit). Convertida pra TIMESTAMP; valores
+        # existentes ('2026-09-10') viram meia-noite daquele dia, que é o
+        # comportamento conservador equivalente ao que já valia antes.
+        c.execute("""
+            SELECT data_type FROM information_schema.columns
+            WHERE table_name = 'revisao' AND column_name = 'proxima_revisao'
+        """)
+        tipo_atual = c.fetchone()
+        if tipo_atual and tipo_atual["data_type"] != "timestamp without time zone":
+            c.execute("""
+                ALTER TABLE revisao ALTER COLUMN proxima_revisao
+                TYPE TIMESTAMP USING proxima_revisao::timestamp
+            """)
 
         # Migração leve: adiciona colunas novas em bancos já existentes
         c.execute("""
@@ -532,6 +555,34 @@ def ids_questoes_filtro_pratica(*, usuario_id, area_id=None, subtopico_id=None,
         return [row["id"] for row in conn.execute(query, params).fetchall()]
 
 
+def obter_questoes_por_ids(ids, *, usuario_id):
+    """Busca N questões completas (com gabarito, comentário e o estado
+    'marcada' do usuário) a partir de uma lista de ids, preservando a ORDEM
+    da lista recebida — crucial porque o chamador já embaralhou/cortou essa
+    lista (fila de uma sessão de Praticar). Essa função não existia antes da
+    migração para API: o Streamlit buscava uma questão de cada vez conforme
+    o aluno avançava (`obter_questao`), o que é incompatível com o requisito
+    de feedback instantâneo (MIGRACAO.md §2) porque exigiria uma chamada de
+    rede por questão."""
+    ids = list(ids)
+    if not ids:
+        return []
+    placeholders = ",".join(["?"] * len(ids))
+    query = f"""
+        SELECT q.*, a.nome AS area, s.nome AS subtopico,
+               (m.usuario_id IS NOT NULL) AS marcada
+        FROM questoes q
+        JOIN areas a ON a.id = q.area_id
+        LEFT JOIN subtopicos s ON s.id = q.subtopico_id
+        LEFT JOIN questoes_marcadas m ON m.questao_id = q.id AND m.usuario_id = ?
+        WHERE q.id IN ({placeholders})
+    """
+    with get_conn() as conn:
+        rows = conn.execute(query, [usuario_id] + ids).fetchall()
+    por_id = {r["id"]: r for r in rows}
+    return [por_id[i] for i in ids if i in por_id]
+
+
 def listar_questoes(area_id=None, subtopico_id=None):
     """Mantido para compatibilidade (usado na fila de 'Responder Questões',
     que só guarda os ids, então carregar tudo é barato). Para telas que
@@ -559,7 +610,7 @@ def _clausulas_filtro_questoes(area_id, subtopico_id, busca):
         condicoes.append("subtopico_id = ?")
         params.append(subtopico_id)
     if busca:
-        condicoes.append("enunciado LIKE ?")
+        condicoes.append("enunciado ILIKE ?")
         params.append(f"%{busca}%")
     return " AND ".join(condicoes), params
 
@@ -592,6 +643,25 @@ def questao_ja_existe(area_id, enunciado):
             (area_id, enunciado),
         ).fetchone()
         return row is not None
+
+
+def busca_global(termo, limite=10):
+    """Implementa a busca do topbar (MIGRACAO.md §5): hoje o campo existe
+    na tela mas não consulta nada — 'pior que não existir', segundo o
+    próprio documento de migração. `LIKE` simples em enunciado de questão
+    e título de material, agrupado por tipo."""
+    termo = f"%{termo}%"
+    with get_conn() as conn:
+        questoes = conn.execute("""
+            SELECT q.id, q.enunciado, a.nome AS area
+            FROM questoes q JOIN areas a ON a.id = q.area_id
+            WHERE q.enunciado ILIKE ? ORDER BY q.criada_em DESC LIMIT ?
+        """, (termo, limite)).fetchall()
+        materiais = conn.execute("""
+            SELECT id, titulo, tipo, link_mediafire FROM materiais
+            WHERE titulo ILIKE ? ORDER BY titulo LIMIT ?
+        """, (termo, limite)).fetchall()
+    return {"questoes": questoes, "materiais": materiais}
 
 
 def contar_questoes():
@@ -639,15 +709,15 @@ def remover_imagem_questao(questao_id):
 # Respostas / desempenho
 # ---------------------------------------------------------------------------
 
-def registrar_resposta(questao_id, resposta_dada, correta: bool, *, usuario_id, confianca=None):
+def registrar_resposta(questao_id, resposta_dada, correta: bool, *, usuario_id, confianca=None, tempo_ms=None):
     """`confianca`: None (não perguntado), 'seguro' ou 'chute' — calibração
     exibida só quando o aluno acerta, usada para ajustar a qualidade
     enviada ao SM-2 além do simples certo/errado."""
     with get_conn() as conn:
         conn.execute("""
-            INSERT INTO respostas (usuario_id, questao_id, resposta_dada, correta, respondida_em, confianca)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, (usuario_id, questao_id, resposta_dada, int(correta), datetime.datetime.now().isoformat(), confianca))
+            INSERT INTO respostas (usuario_id, questao_id, resposta_dada, correta, respondida_em, confianca, tempo_ms)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (usuario_id, questao_id, resposta_dada, int(correta), datetime.datetime.now().isoformat(), confianca, tempo_ms))
 
 
 def distribuicao_respostas_questao(questao_id, *, excluir_usuario_id=None):
@@ -1055,7 +1125,7 @@ def _clausulas_filtro_materiais(area_id, subtopico_id, tipo, busca):
         condicoes.append("tipo = ?")
         params.append(tipo)
     if busca:
-        condicoes.append("titulo LIKE ?")
+        condicoes.append("titulo ILIKE ?")
         params.append(f"%{busca}%")
     return " AND ".join(condicoes), params
 
@@ -1268,16 +1338,21 @@ def obter_simulado(simulado_id, *, usuario_id):
 
 
 def listar_itens_simulado(simulado_id, *, usuario_id):
+    """Inclui o estado `marcada` (tabela `questoes_marcadas`, a mesma do
+    Praticar) — é o que sustenta o terceiro estado da grade de navegação do
+    Simulado (respondida/marcada/em branco), dívida registrada no
+    HANDOFF_REDESIGN.md e resolvida na Fase 5 do MIGRACAO.md."""
     with get_conn() as conn:
         return conn.execute("""
             SELECT si.id AS item_id, si.ordem, si.resposta_dada, si.correta,
-                   q.*
+                   q.*, (m.usuario_id IS NOT NULL) AS marcada
             FROM simulado_itens si
             JOIN questoes q ON q.id = si.questao_id
             JOIN simulados s ON s.id = si.simulado_id
+            LEFT JOIN questoes_marcadas m ON m.questao_id = q.id AND m.usuario_id = ?
             WHERE si.simulado_id = ? AND s.usuario_id = ?
             ORDER BY si.ordem
-        """, (simulado_id, usuario_id)).fetchall()
+        """, (usuario_id, simulado_id, usuario_id)).fetchall()
 
 
 def desempenho_simulado(simulado_id, *, usuario_id):
