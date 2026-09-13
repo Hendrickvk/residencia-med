@@ -40,7 +40,7 @@ export default function Login() {
           <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-panel bg-action-soft text-action">
             <Stethoscope size={28} strokeWidth={1.5} />
           </div>
-          <div className="text-h1 text-ink-700">Residência Med</div>
+          <div className="text-h1 text-ink-700">Conduta</div>
           <div className="mt-1 text-apoio text-ink-500">Sua plataforma de estudos para residência médica</div>
         </div>
 

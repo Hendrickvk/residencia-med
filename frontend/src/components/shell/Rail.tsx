@@ -43,7 +43,7 @@ export function Rail({ expandida, onToggle, aberta, onFechar, contadores }: Rail
           <div className="flex items-center gap-2 overflow-hidden">
             <span className="h-4 w-[3px] shrink-0 bg-action" />
             {expandida && (
-              <span className="truncate text-[15px] font-semibold text-white">Residência Med</span>
+              <span className="truncate text-[15px] font-semibold text-white">Conduta</span>
             )}
           </div>
           <button

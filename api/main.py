@@ -14,7 +14,7 @@ async def _lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="Residência Med API", lifespan=_lifespan)
+app = FastAPI(title="Conduta API", lifespan=_lifespan)
 
 _origens = [o.strip() for o in os.environ.get("CORS_ORIGENS", "http://localhost:5173").split(",") if o.strip()]
 app.add_middleware(

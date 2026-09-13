@@ -12,7 +12,7 @@ import auth
 import ui
 
 st.set_page_config(
-    page_title="Residência Med - Plataforma de Estudos",
+    page_title="Conduta - Plataforma de Estudos",
     page_icon="🩺",
     layout="wide",
 )
@@ -123,7 +123,7 @@ with st.sidebar:
         with col_brand:
             st.markdown(
                 f'<div class="rail-brand"><span class="rail-brand-mark"></span>'
-                f'<span class="rail-brand-text">{"Residência Med" if expandida else ""}</span></div>',
+                f'<span class="rail-brand-text">{"Conduta" if expandida else ""}</span></div>',
                 unsafe_allow_html=True,
             )
         with col_toggle:

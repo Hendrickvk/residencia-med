@@ -33,7 +33,7 @@ def render_login_signup():
                     {ui.icon_svg("stethoscope", size=28)}
                 </div>
                 <div style="font-size:24px; font-weight:600; margin-top:0.6rem; color:var(--ink-700);">
-                    Residência Med
+                    Conduta
                 </div>
                 <div style="color:var(--ink-500); font-size:0.9rem; margin-top:0.3rem;">
                     Sua plataforma de estudos para residência médica
