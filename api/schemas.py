@@ -112,6 +112,11 @@ class SimuladoIn(BaseModel):
     tempo_limite_min: int = Field(ge=1, le=600)
 
 
+class SimuladoOficialIn(BaseModel):
+    banca: str
+    edicao: str
+
+
 class RespostaSimuladoIn(BaseModel):
     questao_id: int
     alternativa: str

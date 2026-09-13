@@ -91,12 +91,25 @@ export interface Simulado {
   id: number;
   area_id: number | null;
   banca: string | null;
+  edicao: string | null; // preenchida só no simulado por edição oficial, ex. "2025/1"
   num_questoes: number;
   tempo_limite_min: number;
   iniciado_em: string;
   finalizado_em: string | null;
   acertos: number | null;
   total_respondidas: number | null;
+}
+
+export interface SimuladoEmAndamento extends Simulado {
+  respondidas: number;
+}
+
+export interface EdicaoOficial {
+  banca: string;
+  edicao: string;
+  ano: number;
+  total: number;
+  tempo_limite_min: number;
 }
 
 export interface HistoricoSimulado extends Simulado {
@@ -111,6 +124,8 @@ export interface ItemSimulado extends Omit<Questao, "resposta_correta" | "explic
   correta: number | null; // 0/1/null — coluna INTEGER, não convertida pra bool
   resposta_correta?: string; // só vem preenchido depois de finalizado
   explicacao?: string | null;
+  edicao: string | null;
+  numero_prova: number | null; // número da questão no caderno oficial
 }
 
 export interface DesempenhoAreaSimulado {

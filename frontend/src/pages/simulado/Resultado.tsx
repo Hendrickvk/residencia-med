@@ -1,8 +1,9 @@
 import { ChevronDown, RotateCcw } from "lucide-react";
 import { useState } from "react";
+import { API_URL } from "../../lib/api";
 import { BOTAO_PRIMARIO } from "../../lib/estilos";
 import { formatarPctBR } from "../../lib/format";
-import { useDesempenhoSimulado, useItensSimulado, useSimulado } from "../../lib/simulados";
+import { nomeEdicao, useDesempenhoSimulado, useItensSimulado, useSimulado } from "../../lib/simulados";
 import { CLASSES_NIVEL, NIVEIS, nivelTriagem } from "../../lib/triagem";
 import { AlternativaLinha, type EstadoAlternativa } from "../praticar/AlternativaLinha";
 
@@ -33,6 +34,7 @@ export default function Resultado({ simuladoId, onNovoSimulado }: Props) {
   const pct = total ? Math.round((100 * acertos) / total) : 0;
   const nivel = nivelTriagem(pct);
   const areas = [...(desempenho ?? [])].sort((a, b) => a.pct_acerto - b.pct_acerto);
+  const nomeProva = simulado.edicao && simulado.banca ? nomeEdicao(simulado.banca, simulado.edicao) : null;
 
   function alternar(itemId: number) {
     setAbertos((prev) => {
@@ -46,7 +48,7 @@ export default function Resultado({ simuladoId, onNovoSimulado }: Props) {
   return (
     <div className="mx-auto flex max-w-[840px] flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <span className="rotulo text-muted">Resultado do simulado</span>
+        <span className="rotulo text-muted">{nomeProva ? `Resultado · ${nomeProva}` : "Resultado do simulado"}</span>
         <h1 className="text-titulo">
           {acertos} de {total} questões certas.
         </h1>
@@ -72,7 +74,7 @@ export default function Resultado({ simuladoId, onNovoSimulado }: Props) {
 
       {areas.length > 0 && (
         <div className="flex flex-col gap-3">
-          <h2 className="text-bloco">Desempenho por área neste simulado</h2>
+          <h2 className="text-bloco">Desempenho por área {nomeProva ? "nesta prova" : "neste simulado"}</h2>
           <div className="rounded-caso border border-line bg-surface">
             {areas.map((d) => {
               const nv = nivelTriagem(d.pct_acerto);
@@ -103,6 +105,8 @@ export default function Resultado({ simuladoId, onNovoSimulado }: Props) {
             const aberto = abertos.has(item.item_id);
             const naoRespondida = item.resposta_dada === null;
             const acertou = item.correta === 1;
+            // Na prova oficial, o número do caderno facilita conferir com o gabarito do INEP.
+            const numero = nomeProva && item.numero_prova ? item.numero_prova : item.ordem + 1;
 
             return (
               <div key={item.item_id} className="rounded-card border border-line bg-surface">
@@ -119,7 +123,7 @@ export default function Resultado({ simuladoId, onNovoSimulado }: Props) {
                   ) : (
                     <span className="rotulo rounded-etq bg-t1 px-2 py-1 text-center text-[12px] text-t1-on">Errada</span>
                   )}
-                  <span className="text-[14px] font-semibold tabular-nums">Questão {item.ordem + 1}</span>
+                  <span className="text-[14px] font-semibold tabular-nums">Questão {numero}</span>
                   <span className="truncate text-corpo text-ink-2">{item.enunciado}</span>
                   <ChevronDown
                     size={16}
@@ -130,6 +134,13 @@ export default function Resultado({ simuladoId, onNovoSimulado }: Props) {
                 {aberto && (
                   <div className="flex flex-col gap-5 border-t border-line-soft p-5 md:px-6">
                     <p className="max-w-[68ch] text-enunciado text-ink">{item.enunciado}</p>
+                    {item.tem_imagem && (
+                      <img
+                        src={`${API_URL}/questoes/${item.id}/imagem`}
+                        alt="Imagem da questão"
+                        className="max-w-full rounded-card border border-line"
+                      />
+                    )}
                     <div className="flex flex-col gap-2">
                       {Object.keys(item.alternativas).map((letra) => {
                         let estado: EstadoAlternativa = "neutra";

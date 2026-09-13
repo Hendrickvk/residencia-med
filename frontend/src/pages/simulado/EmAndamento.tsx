@@ -5,8 +5,8 @@ import { Dialog } from "../../components/Dialog";
 import { API_URL, api } from "../../lib/api";
 import { BOTAO_PRIMARIO, BOTAO_SECUNDARIO } from "../../lib/estilos";
 import { BarraFoco } from "../../lib/foco";
-import { formatarMMSS } from "../../lib/format";
-import { finalizarSimulado, responderSimulado, useItensSimulado, useSimulado } from "../../lib/simulados";
+import { formatarTempoRestante } from "../../lib/format";
+import { finalizarSimulado, nomeEdicao, responderSimulado, useItensSimulado, useSimulado } from "../../lib/simulados";
 import type { ItemSimulado, Simulado } from "../../lib/types";
 import { AlternativaLinha } from "../praticar/AlternativaLinha";
 import { useCronometroRegressivo } from "./useCronometroRegressivo";
@@ -48,7 +48,8 @@ function Conteudo({
   itens: ItemSimulado[];
   onFinalizado: () => void;
 }) {
-  const [idx, setIdx] = useState(0);
+  // Ao retomar uma prova, abre na primeira questão ainda em branco.
+  const [idx, setIdx] = useState(() => Math.max(0, itens.findIndex((i) => !i.resposta_dada)));
   const [respostasLocais, setRespostasLocais] = useState<Record<number, string>>(() => {
     const r: Record<number, string> = {};
     for (const item of itens) if (item.resposta_dada) r[item.id] = item.resposta_dada;
@@ -74,6 +75,8 @@ function Conteudo({
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["simulado-itens", simuladoId] }),
         queryClient.invalidateQueries({ queryKey: ["simulado", simuladoId] }),
+        queryClient.invalidateQueries({ queryKey: ["simulado-em-andamento"] }),
+        queryClient.invalidateQueries({ queryKey: ["simulados-historico"] }),
       ]);
     } finally {
       onFinalizado();
@@ -122,12 +125,15 @@ function Conteudo({
   const estadoTempo =
     restanteSeg < 60 ? "bg-t1 text-t1-on" : restanteSeg < 600 ? "bg-t2 text-t2-on" : "text-ink";
   const recorte = [itemAtual.area, itemAtual.subtopico].filter(Boolean).join(" · ");
-  const prova = [itemAtual.banca, itemAtual.ano].filter(Boolean).join(" ");
+  const nomeProva = simulado.edicao && simulado.banca ? nomeEdicao(simulado.banca, simulado.edicao) : null;
+  const prova = nomeProva
+    ? [nomeProva, itemAtual.numero_prova ? `questão ${itemAtual.numero_prova} do caderno` : null].filter(Boolean).join(" · ")
+    : [itemAtual.banca, itemAtual.ano].filter(Boolean).join(" ");
 
   return (
     <>
       <BarraFoco>
-        <span className="hidden text-[14.5px] text-ink-2 xl:block">Simulado</span>
+        <span className="hidden text-[14.5px] text-ink-2 xl:block">{nomeProva ?? "Simulado"}</span>
         <span className="ml-auto shrink-0 text-[14px] font-semibold tabular-nums">
           Questão {idx + 1} de {itens.length}
         </span>
@@ -136,7 +142,7 @@ function Conteudo({
             aria-label="Tempo restante"
             className={`rounded-btn px-2.5 py-1 text-[24px] font-extrabold leading-none tabular-nums [font-stretch:85%] ${estadoTempo}`}
           >
-            {formatarMMSS(restanteSeg, "s")}
+            {formatarTempoRestante(restanteSeg)}
           </span>
           <button
             type="button"

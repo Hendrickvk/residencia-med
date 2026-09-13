@@ -298,6 +298,14 @@ def init_db():
         if "imagem_mime" not in colunas_questoes:
             c.execute("ALTER TABLE questoes ADD COLUMN imagem_mime TEXT")
 
+        # Migração leve: edição oficial ("2025/1") e número da questão no
+        # caderno, para o simulado por edição reproduzir a prova na ordem
+        # original. Continuam NULL em questões sem caderno oficial identificado.
+        if "edicao" not in colunas_questoes:
+            c.execute("ALTER TABLE questoes ADD COLUMN edicao TEXT")
+        if "numero_prova" not in colunas_questoes:
+            c.execute("ALTER TABLE questoes ADD COLUMN numero_prova INTEGER")
+
         # Migração leve: preferência de tema (claro/escuro) e data da prova
         # alvo, usadas pelo redesign visual (alternador de tema no topo,
         # contagem regressiva na barra superior).
@@ -401,6 +409,15 @@ def init_db():
             UNIQUE(simulado_id, ordem)
         )
         """)
+
+        # Migração leve: edição oficial do simulado ("2025/1"); NULL no
+        # simulado montado por filtros.
+        c.execute("""
+            SELECT column_name FROM information_schema.columns
+            WHERE table_name = 'simulados'
+        """)
+        if "edicao" not in {row["column_name"] for row in c.fetchall()}:
+            c.execute("ALTER TABLE simulados ADD COLUMN edicao TEXT")
 
         # Postgres não indexa colunas de FK automaticamente (só o lado
         # referenciado/PK ganha índice). Sem isso, toda query do Dashboard
@@ -1264,16 +1281,72 @@ def questoes_aleatorias(area_id=None, banca=None, limite=10):
         return conn.execute(query, params + [limite]).fetchall()
 
 
-def criar_simulado(area_id, banca, num_questoes, tempo_limite_min, questao_ids, *, usuario_id):
-    """Cria o registro do simulado e seus itens (na ordem sorteada em
-    `questao_ids`). Retorna o id do simulado criado."""
+# Ritmo da prova objetiva oficial (Revalida/INEP): 100 questões em 5 horas.
+# O simulado por edição aplica esse ritmo às questões válidas da edição — as
+# anuladas pelo INEP não estão no banco.
+MINUTOS_POR_QUESTAO_PROVA_OFICIAL = 3
+
+
+def listar_edicoes_oficiais():
+    """Edições com caderno oficial identificado (`questoes.edicao`), mais
+    recentes primeiro, com o total de questões e o tempo de prova no ritmo
+    oficial."""
+    with get_conn() as conn:
+        rows = conn.execute("""
+            SELECT banca, edicao, MIN(ano) AS ano, COUNT(*) AS total
+            FROM questoes
+            WHERE edicao IS NOT NULL AND banca IS NOT NULL
+            GROUP BY banca, edicao
+            ORDER BY edicao DESC, banca
+        """).fetchall()
+    return [{**r, "tempo_limite_min": r["total"] * MINUTOS_POR_QUESTAO_PROVA_OFICIAL} for r in rows]
+
+
+def ids_questoes_da_edicao(banca, edicao):
+    """Ids das questões de uma edição, na ordem do caderno oficial."""
+    with get_conn() as conn:
+        rows = conn.execute("""
+            SELECT id FROM questoes
+            WHERE banca = ? AND edicao = ?
+            ORDER BY numero_prova, id
+        """, (banca, edicao)).fetchall()
+    return [r["id"] for r in rows]
+
+
+def simulado_em_andamento(*, usuario_id):
+    """Simulado mais recente ainda não finalizado e dentro do tempo limite,
+    com quantas questões já foram respondidas. Uma prova oficial dura horas:
+    o aluno pode fechar a aba e voltar. Simulado abandonado com o tempo já
+    esgotado não conta como em andamento."""
+    with get_conn() as conn:
+        rows = conn.execute("""
+            SELECT s.*,
+                   (SELECT COUNT(*) FROM simulado_itens si
+                    WHERE si.simulado_id = s.id AND si.resposta_dada IS NOT NULL) AS respondidas
+            FROM simulados s
+            WHERE s.usuario_id = ? AND s.finalizado_em IS NULL
+            ORDER BY s.iniciado_em DESC
+            LIMIT 5
+        """, (usuario_id,)).fetchall()
+    agora = datetime.datetime.now()
+    for s in rows:
+        inicio = datetime.datetime.fromisoformat(s["iniciado_em"])
+        if inicio + datetime.timedelta(minutes=s["tempo_limite_min"]) > agora:
+            return s
+    return None
+
+
+def criar_simulado(area_id, banca, num_questoes, tempo_limite_min, questao_ids, *, usuario_id, edicao=None):
+    """Cria o registro do simulado e seus itens (na ordem de `questao_ids`:
+    sorteada no simulado montado, a do caderno no simulado por edição).
+    Retorna o id do simulado criado."""
     with get_conn() as conn:
         c = conn.cursor()
         c.execute("""
             INSERT INTO simulados
-                (usuario_id, area_id, banca, num_questoes, tempo_limite_min, iniciado_em)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, (usuario_id, area_id, banca or None, num_questoes, tempo_limite_min,
+                (usuario_id, area_id, banca, edicao, num_questoes, tempo_limite_min, iniciado_em)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (usuario_id, area_id, banca or None, edicao, num_questoes, tempo_limite_min,
               datetime.datetime.now().isoformat()))
         simulado_id = c.lastrowid
         for ordem, questao_id in enumerate(questao_ids):

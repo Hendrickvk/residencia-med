@@ -1,6 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "./api";
-import type { DesempenhoAreaSimulado, HistoricoSimulado, ItemSimulado, Simulado } from "./types";
+import type {
+  DesempenhoAreaSimulado,
+  EdicaoOficial,
+  HistoricoSimulado,
+  ItemSimulado,
+  Simulado,
+  SimuladoEmAndamento,
+} from "./types";
 
 export function useHistoricoSimulados() {
   return useQuery({ queryKey: ["simulados-historico"], queryFn: () => api.get<HistoricoSimulado[]>("/simulados") });
@@ -10,6 +17,21 @@ export function useDisponiveisSimulado(areaId: number | undefined, banca: string
   return useQuery({
     queryKey: ["simulados-disponiveis", areaId, banca],
     queryFn: () => api.get<{ total: number }>("/simulados/disponiveis", { area_id: areaId, banca }),
+  });
+}
+
+export function useEdicoesOficiais() {
+  return useQuery({
+    queryKey: ["simulados-edicoes"],
+    queryFn: () => api.get<EdicaoOficial[]>("/simulados/edicoes"),
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useSimuladoEmAndamento() {
+  return useQuery({
+    queryKey: ["simulado-em-andamento"],
+    queryFn: () => api.get<SimuladoEmAndamento | null>("/simulados/em-andamento"),
   });
 }
 
@@ -55,10 +77,20 @@ export function criarSimulado(dados: {
   return api.post<{ id: number }>("/simulados", dados);
 }
 
+export function criarSimuladoOficial(banca: string, edicao: string) {
+  return api.post<{ id: number }>("/simulados/oficial", { banca, edicao });
+}
+
 export function responderSimulado(simuladoId: number, questaoId: number, alternativa: string) {
   return api.post(`/simulados/${simuladoId}/respostas`, { questao_id: questaoId, alternativa });
 }
 
 export function finalizarSimulado(simuladoId: number) {
   return api.post(`/simulados/${simuladoId}/finalizar`);
+}
+
+// "REVALIDA" -> "Revalida"; siglas curtas como ENAMED ficam em caixa alta.
+export function nomeEdicao(banca: string, edicao: string): string {
+  const nome = banca === "REVALIDA" ? "Revalida" : banca;
+  return `${nome} ${edicao}`;
 }

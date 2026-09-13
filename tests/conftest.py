@@ -75,3 +75,31 @@ def questao_teste(area_teste):
     yield questao_id
     with db.get_conn() as conn:
         conn.execute("DELETE FROM questoes WHERE id = ?", (questao_id,))
+
+
+@pytest.fixture()
+def edicao_teste(area_teste):
+    """Três questões de uma edição fictícia, inseridas fora da ordem do
+    caderno. Devolve (banca, edicao, números inseridos)."""
+    banca = "PYTEST"
+    edicao = f"pytest-{uuid.uuid4().hex[:8]}"
+    numeros = [30, 5, 12]
+    ids = []
+    with db.get_conn() as conn:
+        c = conn.cursor()
+        for numero in numeros:
+            c.execute("""
+                INSERT INTO questoes
+                    (area_id, subtopico_id, enunciado, alternativas, resposta_correta,
+                     explicacao, banca, ano, edicao, numero_prova, criada_em)
+                VALUES (?, NULL, ?, ?, 'A', 'comentário de teste', ?, 2025, ?, ?, ?)
+            """, (
+                area_teste, f"[pytest {edicao}] Questão {numero} de teste automatizado — não é conteúdo real.",
+                json.dumps({"A": "certa", "B": "errada"}, ensure_ascii=False),
+                banca, edicao, numero, datetime.datetime.now().isoformat(),
+            ))
+            ids.append(c.lastrowid)
+    yield banca, edicao, numeros
+    with db.get_conn() as conn:
+        for questao_id in ids:
+            conn.execute("DELETE FROM questoes WHERE id = ?", (questao_id,))

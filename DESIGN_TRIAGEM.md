@@ -204,7 +204,16 @@ Conteúdo das demais telas: largura máxima 1360px, padding 36/40px.
   tempo médio por caso e desempenho por assunto em linhas com barra de nível.
 
 ### Simulado
-- Mesmo cartão e alternativas do Praticar, sem feedback.
+- Configurador com duas abas. **Prova oficial**: lista das edições com caderno
+  identificado (nome, total de questões, duração no ritmo oficial de 3 min por
+  questão e, se houver, o aproveitamento da última tentativa como etiqueta de
+  nível); começar pede confirmação, porque o tempo não para. **Montar simulado**:
+  área, banca, quantidade e tempo.
+- Prova em andamento e ainda dentro do tempo aparece acima das abas, com borda
+  `--ink` e "Continuar prova"; ao retomar, abre na primeira questão em branco.
+- Mesmo cartão e alternativas do Praticar, sem feedback. Na prova oficial, a linha
+  de procedência mostra a edição e o número da questão no caderno.
+- Cronômetro em h:mm:ss a partir de 1 hora (a prova oficial passa de 4 horas).
 - Barra superior em modo foco com o cronômetro regressivo em display condensado:
   `--ink` normal, t2 com menos de 10 min, t1 com menos de 1 min. Sem piscar.
 - Grade de navegação com três estados: respondida (fundo `--ink`), marcada (canto

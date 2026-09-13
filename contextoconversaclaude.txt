@@ -93,6 +93,37 @@ SESSÃO 2026-09-13 — CONDUTA, HTTPS GRATUITO (PENDENTE), REDESIGN "TRIAGEM"
    produção, as questões já aparecem no servidor publicado, sem deploy.
    Processo e armadilhas: seção "COMO REEXTRAIR" abaixo.
 
+5) SIMULADO POR EDIÇÃO OFICIAL: aba "Prova oficial" no Simulado refaz um
+   caderno inteiro do Revalida na ordem original, com 3 min por questão
+   (ritmo do INEP: 100 questões em 5 h) e sem as anuladas. Colunas novas:
+   questoes.edicao ("2025/1"), questoes.numero_prova e simulados.edicao.
+   Preenchidas comparando o texto do banco com os PDFs oficiais para as 555
+   questões do Revalida (2022/2, 2023/1, 2023/2, 2024/1, 2024/2, 2025/1);
+   as ids 206, 258 e 381 (reextraídas à mão numa sessão anterior) tiveram
+   score baixo e foram conferidas lendo o texto. Prova em andamento dentro
+   do tempo pode ser retomada (GET /simulados/em-andamento), porque a prova
+   dura horas e o aluno pode fechar a aba.
+   Toda importação futura de prova oficial precisa preencher edicao e
+   numero_prova.
+
+6) ENAMED 2025 CORRIGIDO: as 90 questões do ENAMED (ids 10–99) eram versões
+   RESUMIDAS das originais (enunciados reescritos, tabelas e dados
+   cortados), apesar do selo "Prova oficial". Foram trocadas pelo texto do
+   caderno 1 do INEP NO PRÓPRIO REGISTRO (UPDATE, não DELETE), preservando as
+   173 respostas de alunos e as revisões. Gabarito definitivo do caderno 1
+   bateu com o do banco nas 90 (10 anuladas no INEP: 2, 7, 9, 10, 11, 40, 43,
+   76, 88, 100). Explicações existentes mantidas após revisão lado a lado;
+   7 ajustadas (ids 18, 23, 38, 41, 45, 53, 95) e 3 imagens anexadas (ids 49,
+   53, 96). edicao = "2025", numero_prova = número no caderno 1 → aparece
+   como "ENAMED 2025" na aba Prova oficial (90 questões, 4h30). Backup do
+   texto anterior ficou só no scratchpad da sessão.
+   Armadilha do PDF do ENAMED: a fonte embutida (Calibri) não tem tabela
+   ToUnicode, e o pdfplumber devolve "(cid:NNN)". Os CIDs são os ids de
+   glifo da Calibri do Windows (C:\Windows\Fonts\calibri*.ttf): dá para
+   decodificar invertendo o cmap com fontTools (inclusive ligaduras fi/fl).
+   O caderno também traz o questionário de percepção com "QUESTÃO 1..9"
+   depois da questão 100 — pegar só a primeira ocorrência de cada número.
+
 =====================================================================
 ARQUITETURA ATUAL DE ARQUIVOS
 =====================================================================

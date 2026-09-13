@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 import db
 import repeticao_espacada as sr
 from api.deps import usuario_atual
-from api.schemas import RespostaSimuladoIn, SimuladoIn
+from api.schemas import RespostaSimuladoIn, SimuladoIn, SimuladoOficialIn
 from api.serialize import questao_publica
 
 router = APIRouter(prefix="/simulados", tags=["simulados"])
@@ -26,12 +26,23 @@ def historico(limite: int = Query(default=10, ge=1, le=100), usuario=Depends(usu
     return db.listar_simulados(limite, usuario_id=usuario["id"])
 
 
+# As rotas GET de caminho fixo ficam antes de `/{simulado_id}` de propósito —
+# senão o FastAPI tenta converter o texto pra int e devolve 422 em vez de
+# bater nelas.
 @router.get("/disponiveis")
 def disponiveis(area_id: int | None = None, banca: str | None = None, usuario=Depends(usuario_atual)):
-    """Declarada antes de `/{simulado_id}` de propósito — senão o FastAPI
-    tenta converter 'disponiveis' pra int e devolve 422 em vez de bater
-    aqui."""
     return {"total": db.contar_questoes_disponiveis(area_id, banca)}
+
+
+@router.get("/edicoes")
+def edicoes(usuario=Depends(usuario_atual)):
+    return db.listar_edicoes_oficiais()
+
+
+@router.get("/em-andamento")
+def em_andamento(usuario=Depends(usuario_atual)):
+    """`null` quando não há simulado em andamento dentro do tempo limite."""
+    return db.simulado_em_andamento(usuario_id=usuario["id"])
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
@@ -46,6 +57,20 @@ def criar(dados: SimuladoIn, usuario=Depends(usuario_atual)):
     ids = [q["id"] for q in questoes]
     simulado_id = db.criar_simulado(
         dados.area_id, dados.banca, len(ids), dados.tempo_limite_min, ids, usuario_id=usuario["id"],
+    )
+    return {"id": simulado_id}
+
+
+@router.post("/oficial", status_code=status.HTTP_201_CREATED)
+def criar_oficial(dados: SimuladoOficialIn, usuario=Depends(usuario_atual)):
+    """Prova de uma edição oficial inteira, na ordem do caderno e com o tempo
+    no ritmo oficial — quantidade e tempo não são escolhidos pelo aluno."""
+    ids = db.ids_questoes_da_edicao(dados.banca, dados.edicao)
+    if not ids:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Edição não encontrada no banco de questões.")
+    simulado_id = db.criar_simulado(
+        None, dados.banca, len(ids), len(ids) * db.MINUTOS_POR_QUESTAO_PROVA_OFICIAL, ids,
+        usuario_id=usuario["id"], edicao=dados.edicao,
     )
     return {"id": simulado_id}
 
