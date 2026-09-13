@@ -120,7 +120,7 @@ export default function Configurador({ onIniciado }: Props) {
                 value={numCustom}
                 aria-label="Quantas questões"
                 onChange={(e) => setNumCustom(Number(e.target.value))}
-                className={`${CAMPO} w-24 tabular-nums`}
+                className={`${CAMPO} !w-24 tabular-nums`}
               />
             )}
           </div>
@@ -138,7 +138,7 @@ export default function Configurador({ onIniciado }: Props) {
               max={600}
               value={tempoLimite}
               onChange={(e) => setTempoManual(Number(e.target.value))}
-              className={`${CAMPO} w-24 tabular-nums`}
+              className={`${CAMPO} !w-24 tabular-nums`}
             />
             <span className="text-corpo text-ink-2">minutos</span>
             {tempoManual === null && <span className="text-apoio text-muted">sugestão de 1,5 min por questão</span>}

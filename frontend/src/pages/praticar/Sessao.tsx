@@ -188,7 +188,11 @@ export default function Sessao({ filtros, nonce, onFinalizar, onVoltar }: Props)
   const recorteSessao = filtros.area_id ? fila[0]?.area : null;
   const recorteCaso = [questaoAtual.area, questaoAtual.subtopico].filter(Boolean).join(" · ");
   const prova = [questaoAtual.banca, questaoAtual.ano].filter(Boolean).join(" ");
-  const pctEscolha = selecionada && distribuicao ? distribuicao[selecionada] : undefined;
+  // `{}` = ninguém além do próprio aluno respondeu ainda (db.distribuicao_respostas_questao
+  // exclui o usuário atual). Sem esse caso, todas as alternativas apareciam com 0%.
+  const distribuicaoVazia = distribuicao !== null && Object.keys(distribuicao).length === 0;
+  const pctEscolha =
+    selecionada && distribuicao && !distribuicaoVazia ? (distribuicao[selecionada] ?? 0) : undefined;
 
   return (
     <>
@@ -277,7 +281,9 @@ export default function Sessao({ filtros, nonce, onFinalizar, onVoltar }: Props)
                   letra={letra}
                   texto={questaoAtual.alternativas[letra]}
                   estado={estado}
-                  percentual={confirmado ? (distribuicao ? (distribuicao[letra] ?? 0) : null) : undefined}
+                  percentual={
+                    confirmado ? (distribuicao && !distribuicaoVazia ? (distribuicao[letra] ?? 0) : null) : undefined
+                  }
                   disabled={confirmado}
                   onClick={() => setSelecionada(letra)}
                 />
@@ -308,10 +314,15 @@ export default function Sessao({ filtros, nonce, onFinalizar, onVoltar }: Props)
                   <span className="text-subtitulo">Resposta correta: {questaoAtual.resposta_correta}</span>
                   {/* Altura reservada: a frase só entra quando a distribuição chega. */}
                   <span className="min-h-[1.45em] text-apoio text-muted">
-                    {pctEscolha !== undefined &&
-                      (correta
-                        ? `Você acertou, como ${Math.round(pctEscolha)}% de quem respondeu`
-                        : `Você marcou ${selecionada}, como ${Math.round(pctEscolha)}% de quem respondeu`)}
+                    {distribuicaoVazia
+                      ? "Ninguém mais respondeu este caso ainda."
+                      : pctEscolha === undefined
+                        ? null
+                        : pctEscolha === 0
+                          ? `Nenhum outro aluno marcou ${selecionada}.`
+                          : correta
+                            ? `Você acertou, como ${Math.round(pctEscolha)}% dos outros alunos`
+                            : `Você marcou ${selecionada}, como ${Math.round(pctEscolha)}% dos outros alunos`}
                   </span>
                 </div>
                 {questaoAtual.explicacao && (

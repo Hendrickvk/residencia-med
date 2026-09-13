@@ -84,7 +84,8 @@ export default function Materiais() {
   }
 
   const classeArea = (ativa: boolean) =>
-    `block w-full truncate rounded-btn px-3 py-2 text-left text-corpo transition duration-hover ${
+    // shrink-0: dentro da coluna com rolagem os botões encolhiam e os nomes se sobrepunham.
+    `block w-full shrink-0 truncate rounded-btn px-3 py-2 text-left text-corpo transition duration-hover ${
       ativa ? "bg-ink font-semibold text-onink" : "text-ink-2 hover:bg-ground hover:text-ink"
     }`;
 
@@ -114,7 +115,7 @@ export default function Materiais() {
       <div className="flex flex-col gap-5 md:flex-row">
         <nav aria-label="Áreas" className="md:w-60 md:shrink-0">
           <div className="rotulo mb-2 text-muted">Áreas</div>
-          <div className="flex max-h-[520px] flex-col gap-0.5 overflow-y-auto rounded-card border border-line bg-surface p-1.5">
+          <div className="flex max-h-64 flex-col gap-0.5 overflow-y-auto rounded-card border border-line bg-surface p-1.5 md:max-h-[520px]">
             <button type="button" onClick={() => mudarArea(undefined)} className={classeArea(areaId === undefined)}>
               Todas
             </button>
@@ -172,8 +173,8 @@ export default function Materiais() {
                     <tr className="border-b border-line">
                       <th className="w-10 px-4 py-2.5" />
                       <th className="rotulo px-3 py-2.5 text-muted">Título</th>
-                      <th className="rotulo px-3 py-2.5 text-muted">Assunto</th>
-                      <th className="rotulo px-3 py-2.5 text-right text-muted">Tamanho</th>
+                      <th className="rotulo hidden px-3 py-2.5 text-muted xl:table-cell">Assunto</th>
+                      <th className="rotulo hidden px-3 py-2.5 text-right text-muted sm:table-cell">Tamanho</th>
                       <th className="w-24 px-3 py-2.5" />
                     </tr>
                   </thead>
@@ -185,16 +186,24 @@ export default function Materiais() {
                           <td className="px-4">
                             <Icone size={16} strokeWidth={2} className="text-muted" aria-label={m.tipo} />
                           </td>
-                          <td className="px-3 py-2 text-ink">{destacarTrecho(m.titulo, buscaDebounced)}</td>
-                          <td className="px-3 py-2 text-muted">{m.subtopico ?? "—"}</td>
-                          <td className="px-3 py-2 text-right tabular-nums text-muted">{formatarTamanho(m.tamanho_bytes)}</td>
+                          {/* overflow-wrap: nomes de arquivo sem espaço empurravam a tabela para fora do contêiner. */}
+                          <td className="px-3 py-2 text-ink [overflow-wrap:anywhere]">
+                            {destacarTrecho(m.titulo, buscaDebounced)}
+                            {/* Abaixo de 1280px o assunto vem sob o título: a coluna própria sumia para a direita. */}
+                            {m.subtopico && <div className="text-apoio text-muted xl:hidden">{m.subtopico}</div>}
+                          </td>
+                          <td className="hidden px-3 py-2 text-muted xl:table-cell">{m.subtopico ?? "—"}</td>
+                          <td className="hidden px-3 py-2 text-right tabular-nums text-muted sm:table-cell">
+                            {formatarTamanho(m.tamanho_bytes)}
+                          </td>
                           <td className="px-3 py-2 text-right">
-                            {/* opacity em vez de display: o link continua alcançável pelo teclado. */}
+                            {/* opacity em vez de display: o link continua alcançável pelo teclado.
+                                Em tela de toque não existe hover, então ele fica sempre visível. */}
                             <a
                               href={m.link_mediafire}
                               target="_blank"
                               rel="noreferrer"
-                              className="inline-flex items-center gap-1 rounded-btn border border-line bg-surface px-2.5 py-1 text-apoio font-semibold text-ink opacity-0 transition duration-hover hover:border-muted focus-visible:opacity-100 group-hover:opacity-100"
+                              className="inline-flex items-center gap-1 rounded-btn border border-line bg-surface px-2.5 py-1 text-apoio font-semibold text-ink opacity-0 transition duration-hover hover:border-muted focus-visible:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100"
                             >
                               Abrir
                               <ExternalLink size={13} strokeWidth={2} />

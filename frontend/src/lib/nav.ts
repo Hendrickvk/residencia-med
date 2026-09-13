@@ -13,6 +13,8 @@ import {
 
 export interface ItemNav {
   label: string;
+  // Rótulo da aba na barra superior, quando o completo não cabe (DESIGN_TRIAGEM.md §5).
+  curto?: string;
   path: string;
   icon: LucideIcon;
 }
@@ -23,7 +25,7 @@ export const NAV: ItemNav[] = [
   { label: "Painel", path: "/painel", icon: LayoutDashboard },
   { label: "Praticar", path: "/praticar", icon: PencilLine },
   { label: "Simulado", path: "/simulado", icon: Timer },
-  { label: "Revisão espaçada", path: "/revisao", icon: Brain },
+  { label: "Revisão espaçada", curto: "Revisão", path: "/revisao", icon: Brain },
   { label: "Materiais", path: "/materiais", icon: BookOpen },
 ];
 

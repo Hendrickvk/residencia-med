@@ -9,9 +9,9 @@ interface Props {
   onPraticar: (areaId: number) => void;
 }
 
+// Vírgula em vez de "e" final: nomes de área já têm "e" ("Ginecologia e Obstetrícia").
 function listaNatural(itens: string[]): string {
-  if (itens.length <= 1) return itens.join("");
-  return `${itens.slice(0, -1).join(", ")} e ${itens[itens.length - 1]}`;
+  return itens.join(", ");
 }
 
 function CartaoArea({
@@ -96,7 +96,8 @@ export function QuadroTriagem({ areas, onAbrir, onPraticar }: Props) {
               <span className="text-[15px] font-bold tabular-nums">{col.areas.length}</span>
             </div>
             {col.areas.length === 0 ? (
-              <div className="rounded-card border border-dashed border-line px-3.5 py-4 text-apoio text-muted">
+              // Só na tela larga (5 colunas lado a lado); empilhado, o cabeçalho com 0 já basta.
+              <div className="hidden rounded-card border border-dashed border-line px-3.5 py-4 text-apoio text-muted xl:block">
                 {col.nivel === 5 ? "Nenhuma área acima de 85% ainda." : "Nenhuma área nesta faixa."}
               </div>
             ) : (

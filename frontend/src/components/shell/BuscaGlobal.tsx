@@ -49,9 +49,9 @@ export function BuscaGlobal() {
         value={termo}
         onChange={(e) => setTermo(e.target.value)}
         onFocus={() => setAberto(true)}
-        placeholder="Buscar questões e materiais"
+        placeholder="Buscar"
         aria-label="Buscar questões e materiais (atalho /)"
-        className="h-9 w-52 rounded-btn border border-line bg-surface pl-9 pr-8 text-apoio text-ink outline-none transition duration-hover placeholder:text-faint focus:border-ink xl:w-64"
+        className="h-9 w-44 rounded-btn border border-line bg-surface pl-9 pr-8 text-apoio text-ink outline-none transition duration-hover placeholder:text-faint focus:border-ink xl:w-64"
       />
       {termo ? (
         <button

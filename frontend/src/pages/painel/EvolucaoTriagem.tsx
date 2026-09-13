@@ -94,7 +94,18 @@ export function EvolucaoTriagem({ evolucao }: { evolucao: DiaEvolucao[] }) {
           </circle>
         ))}
         <circle cx={ultimo.x} cy={ultimo.y} r={5.5} strokeWidth={2} pointerEvents="none" className="fill-ink stroke-surface" />
-        <text x={ultimo.x - 10} y={yRotuloUltimo} textAnchor="end" fontSize={13} fontWeight={700} className="fill-ink">
+        {/* Contorno na cor da superfície: o rótulo continua legível quando cai sobre a linha. */}
+        <text
+          x={ultimo.x - 10}
+          y={yRotuloUltimo}
+          textAnchor="end"
+          fontSize={13}
+          fontWeight={700}
+          strokeWidth={4}
+          strokeLinejoin="round"
+          style={{ paintOrder: "stroke" }}
+          className="fill-ink stroke-surface"
+        >
           {formatarPctBR(ultimo.dia.pct_acerto, 0)}%
         </text>
         <text x={X0} y={ALTURA - 2} fontSize={10} className="fill-muted">

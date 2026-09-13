@@ -146,9 +146,10 @@ rótulo      13px / largura 70% / 700 / CAIXA ALTA / tracking 0.06em, cor --mute
 ## 5. Estrutura
 
 **Barra superior (64px, `--surface`, borda inferior)** substitui o rail lateral.
-Esquerda: marca. Centro-esquerda: abas Painel, Praticar, Simulado, Revisão
-espaçada (com contagem numa etiqueta t1 quando houver revisões vencidas),
-Materiais — aba ativa com sublinhado de 2px `--ink`. Direita: busca global (atalho
+Esquerda: marca. Centro-esquerda: abas Painel, Praticar, Simulado, Revisão (rótulo
+curto; o menu em gaveta mostra "Revisão espaçada"), com contagem numa etiqueta t1
+quando houver revisões vencidas, e Materiais — aba ativa com sublinhado de 2px
+`--ink`. Entre 1024 e 1279px a etiqueta de ofensiva mostra só o número. Direita: busca global (atalho
 `/`), etiqueta de ofensiva (t4-soft se já respondeu hoje, t2-soft se não), botão de
 tema e avatar. O menu do avatar tem e-mail, prova alvo, **Acervo** (links do
 Streamlit, só para `is_admin`) e Sair.
@@ -193,8 +194,9 @@ Conteúdo das demais telas: largura máxima 1360px, padding 36/40px.
   `--line` pendente).
 - **Após confirmar**: estados de alternativa (§4) com percentual de escolha;
   bloco "Discussão do caso" com "Resposta correta: {letra}", "Você marcou {letra},
-  como {x}% de quem respondeu" (só quando a distribuição chegar; o espaço fica
-  reservado) e a explicação. Acertou: "Acertei com segurança" (primário) e "Acertei
+  como {x}% dos outros alunos" (só quando a distribuição chegar; o espaço fica
+  reservado; sem respostas de outros alunos: "Ninguém mais respondeu este caso
+  ainda." e nenhum percentual nas alternativas) e a explicação. Acertou: "Acertei com segurança" (primário) e "Acertei
   no chute" (secundário). Errou: "Volta na sua revisão em 10 min" (é verdade: o SM-2
   agenda qualidade abaixo de 3 para 10 minutos, `repeticao_espacada.py`) e "Próximo
   caso" com `Enter`.

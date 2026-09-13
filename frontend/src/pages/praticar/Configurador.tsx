@@ -34,7 +34,7 @@ function Interruptor({
         }`}
       >
         <span
-          className={`absolute top-0.5 h-4 w-4 rounded-pill bg-surface transition-transform duration-hover ease-brand ${
+          className={`absolute top-0.5 h-4 w-4 rounded-pill bg-surface shadow-[0_1px_2px_rgba(0,0,0,0.3)] transition-transform duration-hover ease-brand ${
             ligado ? "translate-x-[18px]" : "translate-x-0.5"
           }`}
         />

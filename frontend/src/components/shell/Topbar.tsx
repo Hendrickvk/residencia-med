@@ -55,7 +55,7 @@ export function Topbar({ tema, onAlternarTema, me, revisoesHoje, onSair }: Topba
 
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-surface">
-      <div className="flex h-16 items-center gap-6 px-4 md:px-10">
+      <div className="flex h-16 items-center gap-4 px-4 md:px-6 xl:gap-6 xl:px-10">
         {!emFoco && (
           <button
             type="button"
@@ -74,20 +74,20 @@ export function Topbar({ tema, onAlternarTema, me, revisoesHoje, onSair }: Topba
           <div ref={setSlot} className="flex min-w-0 flex-1 items-center gap-6" />
         ) : (
           <>
-            <nav className="hidden h-16 gap-7 lg:flex">
+            <nav className="hidden h-16 gap-5 lg:flex xl:gap-7">
               {NAV.map((item) => (
                 <NavLink
                   key={item.path}
                   to={item.path}
                   className={({ isActive }) =>
-                    `flex h-16 items-center gap-2 border-b-2 text-[14.5px] transition duration-hover ${
+                    `flex h-16 items-center gap-2 whitespace-nowrap border-b-2 text-[14.5px] transition duration-hover ${
                       isActive
                         ? "border-ink font-semibold text-ink"
                         : "border-transparent font-medium text-muted hover:text-ink"
                     }`
                   }
                 >
-                  {item.label}
+                  {item.curto ?? item.label}
                   {contagemRevisao(item.path)}
                 </NavLink>
               ))}
@@ -98,13 +98,17 @@ export function Topbar({ tema, onAlternarTema, me, revisoesHoje, onSair }: Topba
 
               {me && (
                 <span
-                  className={`rotulo flex h-9 items-center gap-1.5 rounded-btn px-3 text-ink ${
+                  className={`rotulo flex h-9 items-center gap-1.5 whitespace-nowrap rounded-btn px-3 text-ink ${
                     me.respondeu_hoje ? "bg-t4-soft" : "bg-t2-soft"
                   }`}
-                  title={me.respondeu_hoje ? "Ofensiva mantida hoje" : "Responda uma questão hoje para manter a ofensiva"}
+                  title={`Ofensiva de ${me.ofensiva_dias} dia${me.ofensiva_dias !== 1 ? "s" : ""}${
+                    me.respondeu_hoje ? ", mantida hoje" : ": responda uma questão hoje para manter"
+                  }`}
                 >
                   <Flame size={14} strokeWidth={2} />
-                  {me.ofensiva_dias} dia{me.ofensiva_dias !== 1 ? "s" : ""}
+                  {me.ofensiva_dias}
+                  {/* Abaixo de 1280px só o número: a barra não comporta tudo. */}
+                  <span className="hidden xl:inline">dia{me.ofensiva_dias !== 1 ? "s" : ""}</span>
                 </span>
               )}
 
