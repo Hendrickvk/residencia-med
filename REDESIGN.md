@@ -1,5 +1,9 @@
 # Prompt: redesign visual completo — plataforma de residência médica / ENAMED
 
+> **Escopo atual (2026-09-13):** este briefing ("laudo clínico") vale só para as 4
+> telas administrativas que continuam no Streamlit (`app.py`/`ui.py`). O app do aluno
+> em React segue o sistema "Triagem", especificado em `DESIGN_TRIAGEM.md`.
+
 > Cole o bloco abaixo inteiro na ferramenta que está construindo o app (Claude Code, Cursor, v0, Lovable, etc.).
 > Se o app for Streamlit, mantenha a seção 9. Se for React/Next, apague a seção 9 e diga o stack no início.
 

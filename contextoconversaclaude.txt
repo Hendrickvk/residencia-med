@@ -39,6 +39,50 @@ desde sempre — connection string em `.streamlit/secrets.toml`
 versionada, gerada direto no servidor a partir do secrets.toml).
 
 =====================================================================
+SESSÃO 2026-09-13 — CONDUTA, HTTPS GRATUITO (PENDENTE), REDESIGN "TRIAGEM"
+=====================================================================
+
+1) NOME: o app passou a se chamar "Conduta" (título, login, menu React e
+   Streamlit, título da API). Identificadores internos (usuário systemd
+   `residenciamed`, nomes dos serviços, cookie de sessão, e-mail da conta
+   demo, paths) NÃO mudaram — mudar quebraria deploy e sessões abertas.
+
+2) HTTPS: domínio pago descartado por custo. Escolhido subdomínio gratuito
+   do DuckDNS: conduta.duckdns.org (+ admin.conduta.duckdns.org, que o
+   DuckDNS resolve sozinho), ambos já apontando pra 64.181.167.174.
+   deploy/Caddyfile, frontend/.env.production e deploy/.env.production.example
+   já estão no origin/main com a config HTTPS (commits 59cd72a e f8bb4d1),
+   MAS O SERVIDOR AINDA RODA A CONFIG ANTIGA POR IP. Motivo: a chave SSH
+   original ficou em outro computador do usuário (a Oracle não deixa baixar
+   de novo nem trocar as chaves de uma instância existente). Foi gerada
+   ~/.ssh/conduta-oracle no notebook atual (alias `residencia-med` em
+   ~/.ssh/config), ainda NÃO autorizada no servidor — falta, a partir do
+   outro PC, anexar a .pub em ~/.ssh/authorized_keys. Host key ED25519
+   esperada do servidor: SHA256:c5q+FAcRSupd1hNDvfaGk6Su6oepMnb1cf+8DTQJN6A
+   (conferir antes de aceitar). DEPLOY.md ainda descreve o estado por IP e
+   só deve ser atualizado depois do deploy testado. NÃO fechar a porta 8080
+   antes disso — o admin roda nela até lá.
+
+3) REDESIGN "TRIAGEM" (app do aluno, React), substituindo o "laudo
+   clínico". Escolhido depois de 2 rodadas de protótipo num canvas de
+   design (claude.ai/code/artifact/87944974-08d7-4e94-a572-391cfd63abbb):
+   rodada 1 "Minimalista refinado" x "Marca forte" (o usuário gostou da
+   Marca forte, mas achou parecida com concorrentes e pediu algo mais
+   único); rodada 2 "Triagem" x "Traçado" (ECG) x "Sinalização" → Triagem.
+   Especificação completa: DESIGN_TRIAGEM.md. Ideia central: a escala de
+   classificação de risco do pronto-socorro (5 cores, t1–t5) é a marca e
+   só aparece quando significa um nível; o Painel virou um quadro de
+   triagem por área; no Praticar e na Revisão cada questão é um "caso";
+   botão primário é tinta preta; fonte única Archivo (variável em largura).
+   REDESIGN.md segue valendo só pro Streamlit admin.
+   Mudanças estruturais no front: rail lateral removido (barra superior com
+   abas); links do Acervo só no menu da conta e só pra admin; modo foco nas
+   sessões (lib/foco.tsx, <BarraFoco> via portal); lib/triagem.ts com a
+   classificação (é apresentação — migra pra db.py se virar regra de
+   negócio). Bug antigo corrigido junto: a classe `transition-hover`, usada
+   no app todo, não existia no Tailwind (nenhum hover tinha transição).
+
+=====================================================================
 ARQUITETURA ATUAL DE ARQUIVOS
 =====================================================================
 
@@ -322,20 +366,14 @@ GET /busca).
 POSSÍVEIS PRÓXIMOS PASSOS (mencionados, não iniciados)
 =====================================================================
 
-- Domínio + HTTPS: registrar um domínio, apontar DNS pro IP
-  64.181.167.174, trocar deploy/Caddyfile pela versão
-  Caddyfile.com-dominio.example, reverter COOKIE_SECURE/CORS_ORIGENS/
-  VITE_STREAMLIT_URL pro domínio real, fechar a porta 8080 na Security
-  List (Streamlit passa a viver em admin.SEUDOMINIO.com via HTTPS).
-  Tudo documentado passo a passo em DEPLOY.md §2/§6/§8.
-- REDESIGN VISUAL COMPLETO DO ZERO (mencionado explicitamente pelo
-  usuário em 2026-09-12, depois de a publicação estar encaminhada):
-  repensar a identidade visual inteira do zero, substituindo a direção
-  "laudo clínico" atual — não é sobre trocar stack/linguagem (o usuário
-  usou esse termo de início mas esclareceu que é sobre estética).
-  DECISÃO EXPLÍCITA: isso vem DEPOIS de a publicação estar 100%
-  concluída (domínio+HTTPS incluso, plausivelmente), não antes — não
-  interromper a publicação/estabilização pra começar isso.
+- Deploy do HTTPS via DuckDNS (ver sessão 2026-09-13): autorizar a chave
+  nova a partir do outro PC, `git pull`, rebuild do front, COOKIE_SECURE=true
+  e CORS_ORIGENS=https://conduta.duckdns.org no .env.production, copiar o
+  Caddyfile, reload do caddy, restart de api e streamlit, testar, fechar a
+  8080 (iptables + Security List) e atualizar DEPLOY.md.
+- Redesign "Triagem": implementado na sessão 2026-09-13 (ver seção
+  própria). Pendências conhecidas: tema escuro só definido por tokens, sem
+  protótipo próprio; Streamlit admin continua no visual "laudo clínico".
 - Se o shape ARM (A1.Flex, 1 OCPU/6GB) ficar disponível na região São
   Paulo mais tarde e os recursos atuais (1 OCPU/1GB) apertarem, vale
   recriar a instância nele — é Always Free igual, só mais capaz.
