@@ -61,7 +61,7 @@ export function enfileirarResposta(payload: RespostaPayload) {
   void processar();
 }
 
-export function usarRespostasPendentes(): number {
+export function useRespostasPendentes(): number {
   const [pendentes, setPendentes] = useState(fila.length);
   useEffect(() => {
     ouvintes.add(setPendentes);

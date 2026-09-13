@@ -54,6 +54,7 @@ export default function Praticar() {
         filtros={fase.filtros}
         nonce={fase.nonce}
         onFinalizar={(resumo) => setFase({ tipo: "resumo", resumo })}
+        onVoltar={() => setFase({ tipo: "config" })}
       />
     );
   }

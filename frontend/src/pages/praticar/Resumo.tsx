@@ -1,5 +1,7 @@
-import { RefreshCw } from "lucide-react";
-import { classesTextoPct } from "../../lib/format";
+import { RotateCcw } from "lucide-react";
+import { BOTAO_PRIMARIO } from "../../lib/estilos";
+import { formatarMMSS, formatarPctBR } from "../../lib/format";
+import { CLASSES_NIVEL, NIVEIS, nivelTriagem } from "../../lib/triagem";
 import type { ResumoSessao } from "../../lib/types";
 
 interface Props {
@@ -14,48 +16,68 @@ export default function Resumo({ resumo, onNovaSessao }: Props) {
   const erros = n - acertos;
   const pctAcerto = n ? Math.round((100 * acertos) / n) : 0;
   const tempoMedioSeg = n ? Math.round(respondidas.reduce((s, r) => s + r.tempoMs, 0) / n / 1000) : 0;
+  const nivel = n ? nivelTriagem(pctAcerto) : null;
 
   const porAssunto = new Map<string, { total: number; acertos: number }>();
   for (const r of respondidas) {
-    const chave = r.subtopico ?? "(sem assunto)";
+    const chave = r.subtopico ?? "Sem assunto";
     const atual = porAssunto.get(chave) ?? { total: 0, acertos: 0 };
     atual.total += 1;
     if (r.correta) atual.acertos += 1;
     porAssunto.set(chave, atual);
   }
+  // Do pior para o melhor, como no quadro de triagem do Painel.
+  const assuntos = [...porAssunto.entries()]
+    .map(([assunto, v]) => ({ assunto, ...v, pct: (100 * v.acertos) / v.total }))
+    .sort((a, b) => a.pct - b.pct);
 
   return (
-    <div className="rounded-panel border border-line bg-surface p-6">
-      <h1 className="mb-5 text-h1 text-ink-700">Resumo da sessão</h1>
+    <div className="mx-auto flex max-w-[840px] flex-col gap-6">
+      <div className="flex flex-col gap-2">
+        <span className="rotulo text-muted">Resumo da sessão</span>
+        <h1 className="text-titulo">{n ? `${acertos} de ${n} casos certos.` : "Nenhum caso respondido."}</h1>
+      </div>
 
-      <div className="grid grid-cols-1 gap-4 border-b border-line pb-5 sm:grid-cols-3">
-        <div>
-          <div className="text-apoio text-ink-500">Acertos</div>
-          <div className="text-h1 tabular-nums text-ink-700">
-            {acertos}/{n}
-          </div>
+      <div className="grid grid-cols-1 divide-y divide-line-soft rounded-caso border border-line bg-surface sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+        <div className="flex flex-col gap-2 p-6">
+          <span className="rotulo text-muted">Aproveitamento</span>
+          <span className="num-lg">{n ? `${pctAcerto}%` : "—"}</span>
+          {nivel && (
+            <span
+              className={`rotulo self-start rounded-etq px-2 py-1 text-[12px] ${CLASSES_NIVEL[nivel].cheio} ${CLASSES_NIVEL[nivel].texto}`}
+            >
+              {NIVEIS[nivel - 1].nome}
+            </span>
+          )}
         </div>
-        <div>
-          <div className="text-apoio text-ink-500">% de acerto</div>
-          <div className={`text-h1 tabular-nums ${classesTextoPct(pctAcerto)}`}>{n ? `${pctAcerto}%` : "—"}</div>
+        <div className="flex flex-col gap-2 p-6">
+          <span className="rotulo text-muted">Tempo médio por caso</span>
+          <span className="num-lg">{n ? `${tempoMedioSeg}s` : "—"}</span>
         </div>
-        <div>
-          <div className="text-apoio text-ink-500">Tempo médio por questão</div>
-          <div className="text-h1 tabular-nums text-ink-700">{n ? `${tempoMedioSeg}s` : "—"}</div>
+        <div className="flex flex-col gap-2 p-6">
+          <span className="rotulo text-muted">Duração total</span>
+          <span className="num-lg">{formatarMMSS(duracaoTotalMs)}</span>
         </div>
       </div>
 
-      {porAssunto.size > 0 && (
-        <div className="mt-5">
-          <div className="mb-2 text-apoio font-medium text-ink-500">Desempenho por assunto</div>
-          <div className="space-y-1.5">
-            {[...porAssunto.entries()].map(([assunto, v]) => {
-              const pct = Math.round((100 * v.acertos) / v.total);
+      {assuntos.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <h2 className="text-bloco">Desempenho por assunto</h2>
+          <div className="rounded-caso border border-line bg-surface">
+            {assuntos.map((a) => {
+              const nv = nivelTriagem(a.pct);
               return (
-                <div key={assunto} className="flex items-center justify-between rounded-btn border border-line px-3 py-2">
-                  <span className="text-corpo text-ink-700">{assunto}</span>
-                  <span className={`font-mono text-apoio tabular-nums ${classesTextoPct(pct)}`}>
-                    {pct}% ({v.acertos}/{v.total})
+                <div
+                  key={a.assunto}
+                  className="grid grid-cols-[minmax(0,1fr)_minmax(80px,200px)_52px_48px] items-center gap-4 border-b border-line-soft px-5 py-3 last:border-0"
+                >
+                  <span className="truncate text-corpo">{a.assunto}</span>
+                  <div className="h-1 overflow-hidden rounded-[2px] bg-line-soft">
+                    <div className={`h-1 ${CLASSES_NIVEL[nv].cheio}`} style={{ width: `${a.pct}%` }} />
+                  </div>
+                  <span className="text-right text-apoio font-semibold tabular-nums">{formatarPctBR(a.pct, 0)}%</span>
+                  <span className="text-right text-apoio tabular-nums text-muted">
+                    {a.acertos}/{a.total}
                   </span>
                 </div>
               );
@@ -65,22 +87,18 @@ export default function Resumo({ resumo, onNovaSessao }: Props) {
       )}
 
       {erros > 0 && (
-        <p className="mt-5 text-apoio text-ink-500">
-          {erros} erro{erros !== 1 && "s"} desta sessão já {erros !== 1 ? "foram adicionados" : "foi adicionado"} à
-          revisão espaçada automaticamente.
+        <p className="text-apoio text-ink-2">
+          {erros === 1 ? "O caso que você errou já está" : `Os ${erros} casos que você errou já estão`} na sua revisão
+          espaçada e voltam em 10 minutos.
         </p>
       )}
 
-      <p className="mt-1 text-apoio text-ink-300">Duração total: {Math.round(duracaoTotalMs / 1000)}s</p>
-
-      <button
-        type="button"
-        onClick={onNovaSessao}
-        className="mt-5 flex h-10 items-center gap-2 rounded-btn bg-action px-4 text-sm font-medium text-white transition-hover hover:bg-action-hover"
-      >
-        <RefreshCw size={16} strokeWidth={1.5} />
-        Nova sessão
-      </button>
+      <div>
+        <button type="button" onClick={onNovaSessao} className={BOTAO_PRIMARIO}>
+          <RotateCcw size={16} strokeWidth={2} />
+          Nova sessão
+        </button>
+      </div>
     </div>
   );
 }

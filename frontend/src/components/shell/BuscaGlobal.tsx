@@ -4,9 +4,9 @@ import { useBusca } from "../../lib/busca";
 import { useDebounced } from "../../lib/useDebounced";
 
 // MIGRACAO.md §5: "a busca global não é opcional: hoje ela é um campo que
-// parece funcional e não busca nada, o que é pior que não existir." LIKE
+// parece funcional e não busca nada, o que é pior que não existir." ILIKE
 // real em enunciado de questão e título de material, agrupado por tipo —
-// atalho "/" foca o campo (REDESIGN.md §3).
+// atalho "/" foca o campo (DESIGN_TRIAGEM.md §5).
 export function BuscaGlobal() {
   const [termo, setTermo] = useState("");
   const [aberto, setAberto] = useState(false);
@@ -39,9 +39,9 @@ export function BuscaGlobal() {
   return (
     <div className="relative hidden sm:block">
       <Search
-        size={14}
-        strokeWidth={1.5}
-        className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-300"
+        size={16}
+        strokeWidth={2}
+        className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint"
       />
       <input
         ref={inputRef}
@@ -49,61 +49,62 @@ export function BuscaGlobal() {
         value={termo}
         onChange={(e) => setTermo(e.target.value)}
         onFocus={() => setAberto(true)}
-        placeholder="Buscar... (/)"
-        className="h-8 w-48 rounded-btn border border-line bg-canvas pl-8 pr-7 text-apoio text-ink-700 outline-none placeholder:text-ink-300 focus:border-action focus:ring-[3px] focus:ring-action-soft lg:w-64"
+        placeholder="Buscar questões e materiais"
+        aria-label="Buscar questões e materiais (atalho /)"
+        className="h-9 w-52 rounded-btn border border-line bg-surface pl-9 pr-8 text-apoio text-ink outline-none transition duration-hover placeholder:text-faint focus:border-ink xl:w-64"
       />
-      {termo && (
+      {termo ? (
         <button
           type="button"
           onClick={() => {
             setTermo("");
             inputRef.current?.focus();
           }}
-          className="absolute right-2 top-1/2 -translate-y-1/2 text-ink-300 hover:text-ink-500"
+          className="absolute right-2 top-1/2 -translate-y-1/2 text-faint hover:text-ink"
           aria-label="Limpar busca"
         >
-          <X size={14} strokeWidth={1.5} />
+          <X size={14} strokeWidth={2} />
         </button>
+      ) : (
+        <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 rounded-etq border border-line px-1.5 text-[11px] font-semibold text-faint">
+          /
+        </span>
       )}
 
       {mostrarPainel && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setAberto(false)} />
-          <div className="absolute right-0 top-10 z-50 max-h-96 w-96 overflow-y-auto overflow-x-hidden rounded-panel border border-line bg-surface shadow-sm">
+          <div className="absolute right-0 top-11 z-50 max-h-96 w-[26rem] overflow-y-auto overflow-x-hidden rounded-card border border-line bg-surface">
             {isFetching && !data ? (
-              <div className="p-4 text-apoio text-ink-500">Buscando...</div>
+              <div className="p-4 text-apoio text-muted">Buscando…</div>
             ) : !temResultados ? (
-              <div className="p-4 text-apoio text-ink-500">Nenhum resultado para "{termo}".</div>
+              <div className="p-4 text-apoio text-muted">Nenhum resultado para "{termo}".</div>
             ) : (
-              <div className="divide-y divide-line">
+              <div className="divide-y divide-line-soft">
                 {questoes.length > 0 && (
                   <div className="p-2">
-                    <div className="px-2 py-1 text-apoio font-medium uppercase tracking-wide text-ink-300">
-                      Questões ({questoes.length})
-                    </div>
+                    <div className="rotulo px-2 py-1.5 text-muted">Questões ({questoes.length})</div>
                     {questoes.map((q) => (
                       <div key={q.id} className="rounded-btn px-2 py-2">
-                        <div className="truncate text-corpo text-ink-700">{q.enunciado}</div>
-                        <div className="text-apoio text-ink-500">{q.area}</div>
+                        <div className="truncate text-corpo text-ink">{q.enunciado}</div>
+                        <div className="text-apoio text-muted">{q.area}</div>
                       </div>
                     ))}
                   </div>
                 )}
                 {materiais.length > 0 && (
                   <div className="p-2">
-                    <div className="px-2 py-1 text-apoio font-medium uppercase tracking-wide text-ink-300">
-                      Materiais ({materiais.length})
-                    </div>
+                    <div className="rotulo px-2 py-1.5 text-muted">Materiais ({materiais.length})</div>
                     {materiais.map((m) => (
                       <a
                         key={m.id}
                         href={m.link_mediafire}
                         target="_blank"
                         rel="noreferrer"
-                        className="block truncate rounded-btn px-2 py-2 text-corpo text-ink-700 transition-hover hover:bg-canvas"
+                        className="block truncate rounded-btn px-2 py-2 text-corpo text-ink transition duration-hover hover:bg-ground"
                       >
                         {m.titulo}
-                        <span className="ml-2 text-apoio text-ink-500">{m.tipo}</span>
+                        <span className="ml-2 text-apoio text-muted">{m.tipo}</span>
                       </a>
                     ))}
                   </div>

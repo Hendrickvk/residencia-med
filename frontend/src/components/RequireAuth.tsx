@@ -5,14 +5,15 @@ export function RequireAuth() {
   const { data, isLoading, isError } = useMe();
 
   if (isLoading) {
-    // Skeleton com as dimensões finais do shell, não um spinner de tela
-    // cheia (REDESIGN.md §5) — evita o "pisca e troca" na primeira carga.
+    // Skeleton com as dimensões finais do shell (barra superior de 64px +
+    // conteúdo), não um spinner de tela cheia — evita o "pisca e troca" na
+    // primeira carga.
     return (
-      <div className="flex min-h-screen bg-canvas">
-        <div className="hidden h-full w-rail bg-railbg md:block" />
-        <div className="flex-1 p-8">
-          <div className="mb-6 h-14 animate-pulse rounded-btn bg-line/40" />
-          <div className="h-40 animate-pulse rounded-panel bg-line/40" />
+      <div className="min-h-screen bg-ground">
+        <div className="h-16 border-b border-line bg-surface" />
+        <div className="mx-auto flex max-w-[1360px] flex-col gap-7 px-4 py-6 md:px-10 md:py-9">
+          <div className="h-[150px] animate-pulse rounded-card bg-line-soft" />
+          <div className="h-[300px] animate-pulse rounded-card bg-line-soft" />
         </div>
       </div>
     );

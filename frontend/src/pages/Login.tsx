@@ -1,8 +1,9 @@
-import { Stethoscope } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Marca } from "../components/shell/Marca";
 import { ApiError } from "../lib/api";
 import { useAuthActions } from "../lib/auth";
+import { BOTAO_PRIMARIO, CAMPO } from "../lib/estilos";
 
 export default function Login() {
   const [aba, setAba] = useState<"entrar" | "criar">("entrar");
@@ -34,28 +35,27 @@ export default function Login() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-canvas px-4">
-      <div className="w-full max-w-sm">
-        <div className="mb-6 flex flex-col items-center text-center">
-          <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-panel bg-action-soft text-action">
-            <Stethoscope size={28} strokeWidth={1.5} />
-          </div>
-          <div className="text-h1 text-ink-700">Conduta</div>
-          <div className="mt-1 text-apoio text-ink-500">Sua plataforma de estudos para residência médica</div>
+    <div className="flex min-h-screen items-center justify-center bg-ground px-4 py-10">
+      <div className="flex w-full max-w-[400px] flex-col gap-8">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <Marca grande />
+          <p className="text-corpo text-ink-2">Sua plataforma de estudos para residência médica</p>
         </div>
 
-        <div className="rounded-panel border border-line bg-surface p-6">
-          <div className="mb-5 flex gap-1 rounded-btn bg-canvas p-1">
+        <div className="flex flex-col gap-5 rounded-caso border border-line bg-surface p-6 md:p-7">
+          <div role="tablist" aria-label="Acesso" className="grid grid-cols-2 gap-1 rounded-btn bg-ground p-1">
             {(["entrar", "criar"] as const).map((valor) => (
               <button
                 key={valor}
                 type="button"
+                role="tab"
+                aria-selected={aba === valor}
                 onClick={() => {
                   setAba(valor);
                   setErro(null);
                 }}
-                className={`flex-1 rounded-btn py-1.5 text-apoio font-medium transition-hover ${
-                  aba === valor ? "bg-surface text-ink-700 shadow-sm" : "text-ink-500"
+                className={`h-9 rounded-col text-[14px] transition duration-hover ${
+                  aba === valor ? "border border-line bg-surface font-semibold text-ink" : "text-muted hover:text-ink"
                 }`}
               >
                 {valor === "entrar" ? "Entrar" : "Criar conta"}
@@ -63,49 +63,55 @@ export default function Login() {
             ))}
           </div>
 
-          <form onSubmit={onSubmit} className="flex flex-col gap-3">
-            <label className="flex flex-col gap-1">
-              <span className="text-apoio text-ink-500">E-mail</span>
+          <form onSubmit={onSubmit} className="flex flex-col gap-4">
+            <label htmlFor="login-email" className="flex flex-col gap-1.5">
+              <span className="rotulo text-muted">E-mail</span>
               <input
+                id="login-email"
                 type="email"
+                autoComplete="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="h-9 rounded-btn border border-line bg-surface px-3 text-corpo text-ink-700 outline-none focus:border-action focus:ring-[3px] focus:ring-action-soft"
+                className={CAMPO}
               />
             </label>
-            <label className="flex flex-col gap-1">
-              <span className="text-apoio text-ink-500">Senha</span>
+            <label htmlFor="login-senha" className="flex flex-col gap-1.5">
+              <span className="rotulo text-muted">Senha</span>
               <input
+                id="login-senha"
                 type="password"
+                autoComplete={aba === "entrar" ? "current-password" : "new-password"}
                 required
                 minLength={6}
                 value={senha}
                 onChange={(e) => setSenha(e.target.value)}
-                className="h-9 rounded-btn border border-line bg-surface px-3 text-corpo text-ink-700 outline-none focus:border-action focus:ring-[3px] focus:ring-action-soft"
+                className={CAMPO}
               />
             </label>
             {aba === "criar" && (
-              <label className="flex flex-col gap-1">
-                <span className="text-apoio text-ink-500">Confirmar senha</span>
+              <label htmlFor="login-confirmar" className="flex flex-col gap-1.5">
+                <span className="rotulo text-muted">Confirmar senha</span>
                 <input
+                  id="login-confirmar"
                   type="password"
+                  autoComplete="new-password"
                   required
                   minLength={6}
                   value={confirmar}
                   onChange={(e) => setConfirmar(e.target.value)}
-                  className="h-9 rounded-btn border border-line bg-surface px-3 text-corpo text-ink-700 outline-none focus:border-action focus:ring-[3px] focus:ring-action-soft"
+                  className={CAMPO}
                 />
               </label>
             )}
 
-            {erro && <p className="text-apoio text-wrong">{erro}</p>}
+            {erro && (
+              <p role="alert" className="text-apoio font-medium text-t1">
+                {erro}
+              </p>
+            )}
 
-            <button
-              type="submit"
-              disabled={enviando}
-              className="mt-2 h-10 rounded-btn bg-action text-sm font-medium text-white transition-hover hover:bg-action-hover disabled:cursor-not-allowed disabled:bg-line disabled:text-ink-300"
-            >
+            <button type="submit" disabled={enviando} className={`${BOTAO_PRIMARIO} mt-1 w-full`}>
               {aba === "entrar" ? "Entrar" : "Criar conta"}
             </button>
           </form>

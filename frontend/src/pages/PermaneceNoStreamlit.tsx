@@ -1,4 +1,5 @@
 import { ExternalLink } from "lucide-react";
+import { BOTAO_PRIMARIO } from "../lib/estilos";
 
 interface Props {
   titulo: string;
@@ -14,20 +15,16 @@ const STREAMLIT_URL = import.meta.env.VITE_STREAMLIT_URL ?? "http://localhost:85
 // então o link abre a raiz do app, não a tela específica.
 export function PermaneceNoStreamlit({ titulo }: Props) {
   return (
-    <div className="flex h-[60vh] flex-col items-center justify-center gap-3 rounded-panel border border-line bg-surface text-center">
-      <h1 className="text-h1 text-ink-700">{titulo}</h1>
-      <p className="max-w-md text-corpo text-ink-500">
-        Tela administrativa — continua no Streamlit por decisão registrada no MIGRACAO.md, apontando para o mesmo
-        banco de dados.
+    <div className="mx-auto flex max-w-[640px] flex-col items-start gap-4 rounded-caso border border-dashed border-line px-8 py-12">
+      <span className="rotulo text-muted">Acervo · Streamlit</span>
+      <h1 className="text-titulo">{titulo}</h1>
+      <p className="text-corpo text-ink-2">
+        Esta tela administrativa continua no Streamlit, ligada ao mesmo banco de dados. O Streamlit não abre telas
+        por endereço: depois de entrar, escolha "{titulo}" no menu lateral.
       </p>
-      <a
-        href={STREAMLIT_URL}
-        target="_blank"
-        rel="noreferrer"
-        className="flex items-center gap-2 rounded-btn bg-action px-4 py-2 text-sm font-medium text-white transition-hover hover:bg-action-hover"
-      >
+      <a href={STREAMLIT_URL} target="_blank" rel="noreferrer" className={BOTAO_PRIMARIO}>
         Abrir no Streamlit
-        <ExternalLink size={16} strokeWidth={1.5} />
+        <ExternalLink size={16} strokeWidth={2} />
       </a>
     </div>
   );

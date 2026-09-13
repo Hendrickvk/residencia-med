@@ -3,53 +3,69 @@
 @tailwind utilities;
 
 /*
- * Tokens do REDESIGN.md §2. Nenhum hex solto deve aparecer fora daqui —
+ * Tokens do DESIGN_TRIAGEM.md §3. Nenhum hex solto deve aparecer fora daqui —
  * componentes consomem só as classes Tailwind mapeadas em tailwind.config.js.
  */
 :root {
-  --ink-900: #0d1b2a;
-  --ink-700: #1b2d42;
-  --ink-500: #46586e;
-  --ink-300: #8797ab;
-  --line: #e1e6ec;
-  --canvas: #f4f6f9;
+  --ground: #f2f3ef;
   --surface: #ffffff;
+  --ink: #111315;
+  --ink-2: #3e4247;
+  --muted: #6c7178;
+  --faint: #8a8f96;
+  --line: #dfe1dc;
+  --line-soft: #ecede9;
+  --on-ink: #ffffff;
 
-  --action: #1f4fd8;
-  --action-hover: #1a43b8;
-  --action-soft: #eaf0ff;
+  /* Escala de triagem (§2). */
+  --t1: #cf3328;
+  --t2: #f17c1b;
+  --t3: #edbb1c;
+  --t4: #23804a;
+  --t5: #2d6cd2;
+  --t1-soft: #fce4e1;
+  --t2-soft: #fdebdb;
+  --t3-soft: #fbf2d3;
+  --t4-soft: #e1f2e7;
+  --t5-soft: #e1eaf9;
+  /* Texto sobre a cor cheia de cada nível — pares medidos para AA (§2). */
+  --t1-on: #ffffff;
+  --t2-on: #111315;
+  --t3-on: #111315;
+  --t4-on: #ffffff;
+  --t5-on: #ffffff;
 
-  --correct: #0f7a5a;
-  --wrong: #c2344b;
-  --warn: #b87309;
-  --correct-soft: #e7f4ef;
-  --wrong-soft: #fbebee;
-  --warn-soft: #fdf3e3;
-
-  /* O rail é sempre --ink-900, nos dois temas (REDESIGN.md §3) — variável
-     própria para não confundir com o token de texto de mesmo nome. */
-  --rail-bg: #0d1b2a;
+  --focus: #2d6cd2;
 }
 
 .dark {
-  --ink-900: #e7ecf2;
-  --ink-700: #cdd7e2;
-  --ink-500: #8fa0b3;
-  --ink-300: #56687d;
-  --line: #22313f;
-  --canvas: #0b1420;
-  --surface: #121e2c;
+  --ground: #0e1012;
+  --surface: #16191c;
+  --ink: #ecedea;
+  --ink-2: #c3c6c2;
+  --muted: #8e949a;
+  --faint: #6b7077;
+  --line: #2a2e32;
+  --line-soft: #22262a;
+  --on-ink: #0e1012;
 
-  --action: #4d7bff;
-  --action-hover: #6b90ff;
-  --action-soft: #16244a;
+  --t1: #f0574c;
+  --t2: #f58a34;
+  --t3: #f2c94c;
+  --t4: #3db372;
+  --t5: #5b8fea;
+  --t1-soft: #3a1714;
+  --t2-soft: #3a2410;
+  --t3-soft: #3a3110;
+  --t4-soft: #10301e;
+  --t5-soft: #142540;
+  --t1-on: #0e1012;
+  --t2-on: #0e1012;
+  --t3-on: #0e1012;
+  --t4-on: #0e1012;
+  --t5-on: #0e1012;
 
-  --correct: #3ecb96;
-  --wrong: #ef6b83;
-  --warn: #e0a53f;
-  --correct-soft: #103228;
-  --wrong-soft: #3a1520;
-  --warn-soft: #3a2a0e;
+  --focus: #5b8fea;
 }
 
 @layer base {
@@ -60,10 +76,10 @@
     color-scheme: dark;
   }
   body {
-    @apply bg-canvas text-ink-700 font-sans text-corpo antialiased;
+    @apply bg-ground font-sans text-corpo text-ink antialiased;
   }
   :focus-visible {
-    outline: 2px solid var(--action);
+    outline: 2px solid var(--focus);
     outline-offset: 2px;
   }
   @media (prefers-reduced-motion: reduce) {
@@ -71,5 +87,51 @@
       animation-duration: 0.001ms !important;
       transition-duration: 0.001ms !important;
     }
+  }
+}
+
+/*
+ * Papéis tipográficos que dependem de `font-stretch` (a Archivo é variável em
+ * largura) — o Tailwind v3 não tem utilitário para isso.
+ */
+@layer components {
+  .rotulo {
+    font-size: 13px;
+    line-height: 1.2;
+    font-weight: 700;
+    font-stretch: 70%;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .num-xl {
+    font-size: 88px;
+    line-height: 0.88;
+    font-weight: 800;
+    font-stretch: 118%;
+    letter-spacing: -0.045em;
+    font-variant-numeric: tabular-nums;
+  }
+  .num-lg {
+    font-size: 60px;
+    line-height: 0.85;
+    font-weight: 800;
+    font-stretch: 118%;
+    letter-spacing: -0.04em;
+    font-variant-numeric: tabular-nums;
+  }
+  .num-md {
+    font-size: 30px;
+    line-height: 1.05;
+    font-weight: 800;
+    font-stretch: 110%;
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+  }
+  .marca-texto {
+    font-size: 21px;
+    line-height: 1;
+    font-weight: 800;
+    font-stretch: 115%;
+    letter-spacing: -0.03em;
   }
 }

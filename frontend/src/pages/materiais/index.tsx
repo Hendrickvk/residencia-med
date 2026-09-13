@@ -1,10 +1,12 @@
-import { File, FileText, RefreshCw, Video } from "lucide-react";
+import { ExternalLink, File, FileText, RefreshCw, Search, Video } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { EstadoVazio } from "../../components/EstadoVazio";
 import { Paginacao } from "../../components/Paginacao";
+import { useMe } from "../../lib/auth";
 import { useAreas } from "../../lib/catalogo";
+import { CAMPO } from "../../lib/estilos";
 import { useMateriais, useStatusSincronizacao, useTiposMateriais } from "../../lib/materiais";
 import { useDebounced } from "../../lib/useDebounced";
 
@@ -22,10 +24,10 @@ function formatarTamanho(bytes: number | null): string {
   const unidades = ["B", "KB", "MB", "GB"];
   let valor = bytes;
   for (const u of unidades) {
-    if (valor < 1024) return u === "B" ? `${valor.toFixed(0)} ${u}` : `${valor.toFixed(1)} ${u}`;
+    if (valor < 1024) return u === "B" ? `${valor.toFixed(0)} ${u}` : `${valor.toFixed(1).replace(".", ",")} ${u}`;
     valor /= 1024;
   }
-  return `${valor.toFixed(1)} TB`;
+  return `${valor.toFixed(1).replace(".", ",")} TB`;
 }
 
 function formatarSincronizacao(iso: string | null): string {
@@ -33,12 +35,12 @@ function formatarSincronizacao(iso: string | null): string {
   const deltaMs = Date.now() - new Date(iso).getTime();
   const horas = Math.floor(deltaMs / 3_600_000);
   const dias = Math.floor(horas / 24);
-  if (dias >= 1) return `Sincronizado há ${dias} dia(s)`;
-  if (horas >= 1) return `Sincronizado há ${horas}h`;
-  return "Sincronizado agora há pouco";
+  if (dias >= 1) return `Sincronizado há ${dias} dia${dias !== 1 ? "s" : ""}`;
+  if (horas >= 1) return `Sincronizado há ${horas} h`;
+  return "Sincronizado há pouco";
 }
 
-// REDESIGN.md §4.5: busca "em tempo real com destaque do trecho encontrado".
+// Busca "em tempo real com destaque do trecho encontrado".
 function destacarTrecho(texto: string, trecho: string): ReactNode {
   if (!trecho) return texto;
   const idx = texto.toLowerCase().indexOf(trecho.toLowerCase());
@@ -46,7 +48,7 @@ function destacarTrecho(texto: string, trecho: string): ReactNode {
   return (
     <>
       {texto.slice(0, idx)}
-      <mark className="rounded-sm bg-warn-soft text-ink-700">{texto.slice(idx, idx + trecho.length)}</mark>
+      <mark className="rounded-[2px] bg-t3-soft px-0.5 text-ink">{texto.slice(idx, idx + trecho.length)}</mark>
       {texto.slice(idx + trecho.length)}
     </>
   );
@@ -54,6 +56,7 @@ function destacarTrecho(texto: string, trecho: string): ReactNode {
 
 export default function Materiais() {
   const navigate = useNavigate();
+  const { data: me } = useMe();
   const [areaId, setAreaId] = useState<number | undefined>(undefined);
   const [tipo, setTipo] = useState<string | undefined>(undefined);
   const [buscaInput, setBuscaInput] = useState("");
@@ -80,59 +83,59 @@ export default function Materiais() {
     setPagina(0);
   }
 
-  return (
-    <div>
-      <h1 className="mb-4 text-h1 text-ink-700">Materiais</h1>
+  const classeArea = (ativa: boolean) =>
+    `block w-full truncate rounded-btn px-3 py-2 text-left text-corpo transition duration-hover ${
+      ativa ? "bg-ink font-semibold text-onink" : "text-ink-2 hover:bg-ground hover:text-ink"
+    }`;
 
-      <div className="mb-5 flex items-center justify-between rounded-btn border border-line bg-surface px-4 py-2.5">
-        <span className="text-apoio text-ink-500">{formatarSincronizacao(status?.ultima_sincronizacao ?? null)}</span>
-        <button
-          type="button"
-          onClick={() => navigate("/sincronizar")}
-          className="flex items-center gap-1.5 text-apoio text-action hover:underline"
-        >
-          <RefreshCw size={13} strokeWidth={1.5} />
-          Sincronizar agora
-        </button>
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="flex flex-col gap-2">
+          <span className="rotulo text-muted">Acervo de estudo</span>
+          <h1 className="text-titulo">Materiais</h1>
+        </div>
+        <div className="flex items-center gap-4 text-apoio text-muted">
+          <span>{formatarSincronizacao(status?.ultima_sincronizacao ?? null)}</span>
+          {/* A sincronização é tela do Acervo (Streamlit), só para admin. */}
+          {me?.is_admin && (
+            <button
+              type="button"
+              onClick={() => navigate("/sincronizar")}
+              className="flex items-center gap-1.5 font-semibold text-ink underline-offset-2 hover:underline"
+            >
+              <RefreshCw size={14} strokeWidth={2} />
+              Sincronizar agora
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="flex flex-col gap-5 md:flex-row">
-        <div className="md:w-60 md:shrink-0">
-          <div className="mb-2 text-apoio font-medium text-ink-500">Áreas</div>
-          <div className="max-h-[420px] overflow-y-auto rounded-panel border border-line bg-surface p-1">
-            <button
-              type="button"
-              onClick={() => mudarArea(undefined)}
-              className={`block w-full rounded-btn px-3 py-2 text-left text-corpo transition-hover ${
-                areaId === undefined ? "bg-action-soft text-action" : "text-ink-700 hover:bg-canvas"
-              }`}
-            >
+        <nav aria-label="Áreas" className="md:w-60 md:shrink-0">
+          <div className="rotulo mb-2 text-muted">Áreas</div>
+          <div className="flex max-h-[520px] flex-col gap-0.5 overflow-y-auto rounded-card border border-line bg-surface p-1.5">
+            <button type="button" onClick={() => mudarArea(undefined)} className={classeArea(areaId === undefined)}>
               Todas
             </button>
             {areas?.map((a) => (
-              <button
-                key={a.id}
-                type="button"
-                onClick={() => mudarArea(a.id)}
-                className={`block w-full truncate rounded-btn px-3 py-2 text-left text-corpo transition-hover ${
-                  areaId === a.id ? "bg-action-soft text-action" : "text-ink-700 hover:bg-canvas"
-                }`}
-              >
+              <button key={a.id} type="button" onClick={() => mudarArea(a.id)} className={classeArea(areaId === a.id)}>
                 {a.nome}
               </button>
             ))}
           </div>
-        </div>
+        </nav>
 
-        <div className="min-w-0 flex-1">
-          <div className="mb-3 flex flex-col gap-2 sm:flex-row">
+        <div className="flex min-w-0 flex-1 flex-col gap-3">
+          <div className="flex flex-col gap-2 sm:flex-row">
             <select
+              aria-label="Tipo de material"
               value={tipo ?? ""}
               onChange={(e) => {
                 setTipo(e.target.value || undefined);
                 setPagina(0);
               }}
-              className="h-9 rounded-btn border border-line bg-surface px-3 text-corpo text-ink-700 outline-none focus:border-action focus:ring-[3px] focus:ring-action-soft sm:w-48"
+              className={`${CAMPO} sm:w-52`}
             >
               <option value="">Todos os tipos</option>
               {tipos?.map((t) => (
@@ -141,56 +144,60 @@ export default function Materiais() {
                 </option>
               ))}
             </select>
-            <input
-              type="search"
-              value={buscaInput}
-              onChange={(e) => {
-                setBuscaInput(e.target.value);
-                setPagina(0);
-              }}
-              placeholder="Buscar por título..."
-              className="h-9 flex-1 rounded-btn border border-line bg-surface px-3 text-corpo text-ink-700 outline-none focus:border-action focus:ring-[3px] focus:ring-action-soft"
-            />
+            <div className="relative flex-1">
+              <Search size={16} strokeWidth={2} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint" />
+              <input
+                type="search"
+                aria-label="Buscar por título"
+                value={buscaInput}
+                onChange={(e) => {
+                  setBuscaInput(e.target.value);
+                  setPagina(0);
+                }}
+                placeholder="Buscar por título"
+                className={`${CAMPO} pl-9`}
+              />
+            </div>
           </div>
 
           {isLoading ? (
-            <div className="h-64 animate-pulse rounded-panel bg-line/40" />
+            <div className="h-64 animate-pulse rounded-card bg-line-soft" />
           ) : total === 0 ? (
-            <EstadoVazio mensagem="Nenhum material encontrado. Ajuste os filtros ou adicione um novo." />
+            <EstadoVazio mensagem="Nenhum material encontrado. Ajuste a área, o tipo ou a busca." />
           ) : (
             <>
-              <div className="overflow-x-auto rounded-panel border border-line">
+              <div className="overflow-x-auto rounded-card border border-line bg-surface">
                 <table className="w-full text-left text-corpo">
                   <thead>
-                    <tr className="border-b border-line bg-canvas text-apoio text-ink-500">
-                      <th className="w-8 px-3 py-2" />
-                      <th className="px-3 py-2">Título</th>
-                      <th className="px-3 py-2">Assunto</th>
-                      <th className="px-3 py-2 text-right">Tamanho</th>
-                      <th className="w-24 px-3 py-2" />
+                    <tr className="border-b border-line">
+                      <th className="w-10 px-4 py-2.5" />
+                      <th className="rotulo px-3 py-2.5 text-muted">Título</th>
+                      <th className="rotulo px-3 py-2.5 text-muted">Assunto</th>
+                      <th className="rotulo px-3 py-2.5 text-right text-muted">Tamanho</th>
+                      <th className="w-24 px-3 py-2.5" />
                     </tr>
                   </thead>
                   <tbody>
                     {itens.map((m) => {
                       const Icone = iconePorTipo(m.tipo);
                       return (
-                        <tr key={m.id} className="group h-11 border-b border-line last:border-0 hover:bg-canvas">
-                          <td className="px-3">
-                            <Icone size={16} strokeWidth={1.5} className="text-ink-500" />
+                        <tr key={m.id} className="group h-11 border-b border-line-soft last:border-0 hover:bg-ground">
+                          <td className="px-4">
+                            <Icone size={16} strokeWidth={2} className="text-muted" aria-label={m.tipo} />
                           </td>
-                          <td className="px-3 py-2 text-ink-700">{destacarTrecho(m.titulo, buscaDebounced)}</td>
-                          <td className="px-3 py-2 text-ink-500">{m.subtopico ?? "—"}</td>
-                          <td className="px-3 py-2 text-right font-mono tabular-nums text-ink-500">
-                            {formatarTamanho(m.tamanho_bytes)}
-                          </td>
+                          <td className="px-3 py-2 text-ink">{destacarTrecho(m.titulo, buscaDebounced)}</td>
+                          <td className="px-3 py-2 text-muted">{m.subtopico ?? "—"}</td>
+                          <td className="px-3 py-2 text-right tabular-nums text-muted">{formatarTamanho(m.tamanho_bytes)}</td>
                           <td className="px-3 py-2 text-right">
+                            {/* opacity em vez de display: o link continua alcançável pelo teclado. */}
                             <a
                               href={m.link_mediafire}
                               target="_blank"
                               rel="noreferrer"
-                              className="hidden rounded-btn border border-line px-2.5 py-1 text-apoio text-ink-700 transition-hover hover:border-action group-hover:inline-block"
+                              className="inline-flex items-center gap-1 rounded-btn border border-line bg-surface px-2.5 py-1 text-apoio font-semibold text-ink opacity-0 transition duration-hover hover:border-muted focus-visible:opacity-100 group-hover:opacity-100"
                             >
                               Abrir
+                              <ExternalLink size={13} strokeWidth={2} />
                             </a>
                           </td>
                         </tr>
@@ -199,9 +206,7 @@ export default function Materiais() {
                   </tbody>
                 </table>
               </div>
-              <div className="mt-4">
-                <Paginacao pagina={pagina} totalPaginas={totalPaginas} total={total} onMudar={setPagina} />
-              </div>
+              <Paginacao pagina={pagina} totalPaginas={totalPaginas} total={total} onMudar={setPagina} />
             </>
           )}
         </div>

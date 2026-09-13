@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { usarRespostasPendentes } from "../lib/respostasQueue";
+import { useRespostasPendentes } from "../lib/respostasQueue";
 
 const ATRASO_PARA_AVISAR_MS = 4000;
 
@@ -7,7 +7,7 @@ const ATRASO_PARA_AVISAR_MS = 4000;
 // §2) — a maioria das gravações termina em milissegundos e nunca deveria
 // piscar um toast pra isso.
 export function FilaPendenteAviso() {
-  const pendentes = usarRespostasPendentes();
+  const pendentes = useRespostasPendentes();
   const [mostrar, setMostrar] = useState(false);
 
   useEffect(() => {
@@ -22,8 +22,12 @@ export function FilaPendenteAviso() {
   if (!mostrar || pendentes === 0) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 rounded-panel border border-line bg-surface px-4 py-3 text-apoio text-ink-500 shadow-sm">
-      {pendentes} resposta{pendentes !== 1 && "s"} aguardando envio...
+    <div
+      role="status"
+      className="fixed bottom-4 right-4 z-50 flex items-center gap-2.5 rounded-card border border-line bg-surface px-4 py-3 text-apoio text-ink-2"
+    >
+      <span className="h-2 w-2 rounded-pill bg-t2" aria-hidden="true" />
+      {pendentes} resposta{pendentes !== 1 && "s"} aguardando envio…
     </div>
   );
 }

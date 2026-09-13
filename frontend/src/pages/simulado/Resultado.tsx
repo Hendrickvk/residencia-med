@@ -1,9 +1,10 @@
-import { CheckCircle2, ChevronDown, CircleDashed, RefreshCw, XCircle } from "lucide-react";
+import { ChevronDown, RotateCcw } from "lucide-react";
 import { useState } from "react";
-import { BarraDesempenho } from "../../components/BarraDesempenho";
-import { classesTextoPct, formatarPctBR } from "../../lib/format";
+import { BOTAO_PRIMARIO } from "../../lib/estilos";
+import { formatarPctBR } from "../../lib/format";
 import { useDesempenhoSimulado, useItensSimulado, useSimulado } from "../../lib/simulados";
-import { AlternativaLinha } from "../praticar/AlternativaLinha";
+import { CLASSES_NIVEL, NIVEIS, nivelTriagem } from "../../lib/triagem";
+import { AlternativaLinha, type EstadoAlternativa } from "../praticar/AlternativaLinha";
 
 interface Props {
   simuladoId: number;
@@ -17,102 +18,132 @@ export default function Resultado({ simuladoId, onNovoSimulado }: Props) {
   const [abertos, setAbertos] = useState<Set<number>>(new Set());
 
   if (!simulado || !itens) {
-    return <div className="h-96 animate-pulse rounded-panel bg-line/40" />;
+    return (
+      <div className="mx-auto flex max-w-[840px] flex-col gap-6">
+        <div className="h-[110px] animate-pulse rounded-card bg-line-soft" />
+        <div className="h-[160px] animate-pulse rounded-caso bg-line-soft" />
+        <div className="h-[320px] animate-pulse rounded-caso bg-line-soft" />
+      </div>
+    );
   }
 
   const total = simulado.num_questoes;
   const acertos = simulado.acertos ?? 0;
+  const respondidas = simulado.total_respondidas ?? 0;
   const pct = total ? Math.round((100 * acertos) / total) : 0;
+  const nivel = nivelTriagem(pct);
+  const areas = [...(desempenho ?? [])].sort((a, b) => a.pct_acerto - b.pct_acerto);
 
   function alternar(itemId: number) {
     setAbertos((prev) => {
       const novo = new Set(prev);
-      novo.has(itemId) ? novo.delete(itemId) : novo.add(itemId);
+      if (novo.has(itemId)) novo.delete(itemId);
+      else novo.add(itemId);
       return novo;
     });
   }
 
   return (
-    <div>
-      <h1 className="mb-5 text-h1 text-ink-700">Resultado do simulado</h1>
+    <div className="mx-auto flex max-w-[840px] flex-col gap-6">
+      <div className="flex flex-col gap-2">
+        <span className="rotulo text-muted">Resultado do simulado</span>
+        <h1 className="text-titulo">
+          {acertos} de {total} questões certas.
+        </h1>
+      </div>
 
-      <div className="grid grid-cols-1 gap-4 rounded-panel border border-line bg-surface p-6 sm:grid-cols-3">
-        <div>
-          <div className="text-apoio text-ink-500">Acertos</div>
-          <div className="text-h1 tabular-nums text-ink-700">
-            {acertos}/{total}
-          </div>
+      <div className="grid grid-cols-1 divide-y divide-line-soft rounded-caso border border-line bg-surface sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+        <div className="flex flex-col gap-2 p-6">
+          <span className="rotulo text-muted">Aproveitamento</span>
+          <span className="num-lg">{pct}%</span>
+          <span className={`rotulo self-start rounded-etq px-2 py-1 text-[12px] ${CLASSES_NIVEL[nivel].cheio} ${CLASSES_NIVEL[nivel].texto}`}>
+            {NIVEIS[nivel - 1].nome}
+          </span>
         </div>
-        <div>
-          <div className="text-apoio text-ink-500">% de acerto</div>
-          <div className={`text-h1 tabular-nums ${classesTextoPct(pct)}`}>{formatarPctBR(pct, 0)}%</div>
+        <div className="flex flex-col gap-2 p-6">
+          <span className="rotulo text-muted">Respondidas</span>
+          <span className="num-lg">{respondidas}</span>
         </div>
-        <div>
-          <div className="text-apoio text-ink-500">Respondidas</div>
-          <div className="text-h1 tabular-nums text-ink-700">{simulado.total_respondidas ?? 0}</div>
+        <div className="flex flex-col gap-2 p-6">
+          <span className="rotulo text-muted">Em branco</span>
+          <span className="num-lg">{Math.max(total - respondidas, 0)}</span>
         </div>
       </div>
 
-      {desempenho && desempenho.length > 0 && (
-        <div className="mt-6">
-          <div className="mb-3 text-corpo font-semibold text-ink-700">Desempenho por área (neste simulado)</div>
-          <div className="space-y-2">
-            {desempenho.map((d) => (
-              <BarraDesempenho key={d.area} label={d.area} pct={d.pct_acerto} fracao={`${d.acertos}/${d.total}`} />
-            ))}
+      {areas.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <h2 className="text-bloco">Desempenho por área neste simulado</h2>
+          <div className="rounded-caso border border-line bg-surface">
+            {areas.map((d) => {
+              const nv = nivelTriagem(d.pct_acerto);
+              return (
+                <div
+                  key={d.area}
+                  className="grid grid-cols-[minmax(0,1fr)_minmax(80px,200px)_52px_48px] items-center gap-4 border-b border-line-soft px-5 py-3 last:border-0"
+                >
+                  <span className="truncate text-corpo">{d.area}</span>
+                  <div className="h-1 overflow-hidden rounded-[2px] bg-line-soft">
+                    <div className={`h-1 ${CLASSES_NIVEL[nv].cheio}`} style={{ width: `${d.pct_acerto}%` }} />
+                  </div>
+                  <span className="text-right text-apoio font-semibold tabular-nums">{formatarPctBR(d.pct_acerto, 0)}%</span>
+                  <span className="text-right text-apoio tabular-nums text-muted">
+                    {d.acertos}/{d.total}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
 
-      <div className="mt-6">
-        <div className="mb-3 text-corpo font-semibold text-ink-700">Revisão completa</div>
-        <div className="space-y-2">
+      <div className="flex flex-col gap-3">
+        <h2 className="text-bloco">Revisão completa</h2>
+        <div className="flex flex-col gap-2">
           {itens.map((item) => {
             const aberto = abertos.has(item.item_id);
             const naoRespondida = item.resposta_dada === null;
-            const Icone = naoRespondida ? CircleDashed : item.correta === 1 ? CheckCircle2 : XCircle;
-            const corIcone = naoRespondida ? "text-ink-300" : item.correta === 1 ? "text-correct" : "text-wrong";
-            const rotulo = naoRespondida ? "não respondida" : item.correta === 1 ? "correta" : "errada";
+            const acertou = item.correta === 1;
 
             return (
-              <div key={item.item_id} className="rounded-panel border border-line bg-surface">
+              <div key={item.item_id} className="rounded-card border border-line bg-surface">
                 <button
                   type="button"
                   onClick={() => alternar(item.item_id)}
-                  className="flex w-full items-center gap-3 px-4 py-3 text-left"
+                  aria-expanded={aberto}
+                  className="grid w-full grid-cols-[92px_auto_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 text-left"
                 >
-                  <Icone size={18} strokeWidth={1.5} className={`shrink-0 ${corIcone}`} />
-                  <span className="flex-1 truncate text-corpo text-ink-700">
-                    [{item.ordem + 1}] {rotulo} — {item.enunciado.slice(0, 80)}…
-                  </span>
+                  {naoRespondida ? (
+                    <span className="rotulo rounded-etq border border-line px-2 py-1 text-center text-[12px] text-muted">Em branco</span>
+                  ) : acertou ? (
+                    <span className="rotulo rounded-etq bg-t4 px-2 py-1 text-center text-[12px] text-t4-on">Correta</span>
+                  ) : (
+                    <span className="rotulo rounded-etq bg-t1 px-2 py-1 text-center text-[12px] text-t1-on">Errada</span>
+                  )}
+                  <span className="text-[14px] font-semibold tabular-nums">Questão {item.ordem + 1}</span>
+                  <span className="truncate text-corpo text-ink-2">{item.enunciado}</span>
                   <ChevronDown
                     size={16}
-                    strokeWidth={1.5}
-                    className={`shrink-0 text-ink-500 transition-transform ${aberto ? "rotate-180" : ""}`}
+                    strokeWidth={2}
+                    className={`shrink-0 text-muted transition-transform duration-toggle ${aberto ? "rotate-180" : ""}`}
                   />
                 </button>
                 {aberto && (
-                  <div className="border-t border-line p-4">
-                    <p className="max-w-[68ch] text-enunciado text-ink-700">{item.enunciado}</p>
-                    <div className="mt-4 space-y-2">
+                  <div className="flex flex-col gap-5 border-t border-line-soft p-5 md:px-6">
+                    <p className="max-w-[68ch] text-enunciado text-ink">{item.enunciado}</p>
+                    <div className="flex flex-col gap-2">
                       {Object.keys(item.alternativas).map((letra) => {
-                        let estado: "correta" | "errada" | "neutra" = "neutra";
+                        let estado: EstadoAlternativa = "neutra";
                         if (item.resposta_correta && letra === item.resposta_correta) estado = "correta";
                         else if (letra === item.resposta_dada) estado = "errada";
                         return (
-                          <AlternativaLinha
-                            key={letra}
-                            letra={letra}
-                            texto={item.alternativas[letra]}
-                            estado={estado}
-                            disabled
-                          />
+                          <AlternativaLinha key={letra} letra={letra} texto={item.alternativas[letra]} estado={estado} disabled />
                         );
                       })}
                     </div>
                     {item.explicacao && (
-                      <div className="mt-3 rounded-btn border border-line bg-canvas p-3 text-corpo text-ink-700">
-                        {item.explicacao}
+                      <div className="flex flex-col gap-2 border-t border-line-soft pt-5">
+                        <span className="rotulo text-muted">Comentário</span>
+                        <p className="max-w-[66ch] text-[16.5px] leading-[1.7] text-ink-2">{item.explicacao}</p>
                       </div>
                     )}
                   </div>
@@ -123,14 +154,12 @@ export default function Resultado({ simuladoId, onNovoSimulado }: Props) {
         </div>
       </div>
 
-      <button
-        type="button"
-        onClick={onNovoSimulado}
-        className="mt-6 flex h-10 items-center gap-2 rounded-btn bg-action px-4 text-sm font-medium text-white transition-hover hover:bg-action-hover"
-      >
-        <RefreshCw size={16} strokeWidth={1.5} />
-        Novo simulado
-      </button>
+      <div>
+        <button type="button" onClick={onNovoSimulado} className={BOTAO_PRIMARIO}>
+          <RotateCcw size={16} strokeWidth={2} />
+          Novo simulado
+        </button>
+      </div>
     </div>
   );
 }

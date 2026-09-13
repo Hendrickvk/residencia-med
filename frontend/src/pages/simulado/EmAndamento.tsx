@@ -1,12 +1,14 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, ArrowRight, Flag } from "lucide-react";
+import { ArrowLeft, ArrowRight, BadgeCheck, Flag } from "lucide-react";
 import { useState } from "react";
+import { Dialog } from "../../components/Dialog";
 import { API_URL, api } from "../../lib/api";
+import { BOTAO_PRIMARIO, BOTAO_SECUNDARIO } from "../../lib/estilos";
+import { BarraFoco } from "../../lib/foco";
 import { formatarMMSS } from "../../lib/format";
 import { finalizarSimulado, responderSimulado, useItensSimulado, useSimulado } from "../../lib/simulados";
 import type { ItemSimulado, Simulado } from "../../lib/types";
 import { AlternativaLinha } from "../praticar/AlternativaLinha";
-import { Dialog } from "../../components/Dialog";
 import { useCronometroRegressivo } from "./useCronometroRegressivo";
 
 interface Props {
@@ -19,12 +21,20 @@ export default function EmAndamento({ simuladoId, onFinalizado }: Props) {
   const { data: itens, isLoading: carregandoItens } = useItensSimulado(simuladoId);
 
   if (carregandoSimulado || carregandoItens || !simulado || !itens) {
-    return <div className="h-96 animate-pulse rounded-panel bg-line/40" />;
+    return (
+      <>
+        <BarraFoco>
+          <span className="text-[14.5px] text-ink-2">Simulado</span>
+        </BarraFoco>
+        <div className="mx-auto flex max-w-[840px] flex-col gap-5">
+          <div className="h-[72px] w-32 animate-pulse rounded-card bg-line-soft" />
+          <div className="h-[520px] animate-pulse rounded-caso bg-line-soft" />
+        </div>
+      </>
+    );
   }
 
-  return (
-    <Conteudo simuladoId={simuladoId} simulado={simulado} itens={itens} onFinalizado={onFinalizado} />
-  );
+  return <Conteudo simuladoId={simuladoId} simulado={simulado} itens={itens} onFinalizado={onFinalizado} />;
 }
 
 function Conteudo({
@@ -90,7 +100,8 @@ function Conteudo({
     const estava = marcadasLocais.has(itemAtual.id);
     setMarcadasLocais((prev) => {
       const novo = new Set(prev);
-      estava ? novo.delete(itemAtual.id) : novo.add(itemAtual.id);
+      if (estava) novo.delete(itemAtual.id);
+      else novo.add(itemAtual.id);
       return novo;
     });
     const chamada = estava
@@ -99,139 +110,188 @@ function Conteudo({
     chamada.catch(() => {
       setMarcadasLocais((prev) => {
         const novo = new Set(prev);
-        estava ? novo.add(itemAtual.id) : novo.delete(itemAtual.id);
+        if (estava) novo.add(itemAtual.id);
+        else novo.delete(itemAtual.id);
         return novo;
       });
     });
   }
 
-  const corTempo = restanteSeg < 60 ? "text-wrong" : restanteSeg < 600 ? "text-warn" : "text-ink-700";
-  const metadados = [itemAtual.banca, itemAtual.ano, itemAtual.area, itemAtual.subtopico].filter(Boolean).join("  ·  ");
+  // DESIGN_TRIAGEM.md §6: t2 com menos de 10 min, t1 com menos de 1 min — como
+  // fundo cheio, porque laranja em texto sobre branco não passa em contraste.
+  const estadoTempo =
+    restanteSeg < 60 ? "bg-t1 text-t1-on" : restanteSeg < 600 ? "bg-t2 text-t2-on" : "text-ink";
+  const recorte = [itemAtual.area, itemAtual.subtopico].filter(Boolean).join(" · ");
+  const prova = [itemAtual.banca, itemAtual.ano].filter(Boolean).join(" ");
 
   return (
-    <div>
-      <div className="mb-4 flex items-center gap-4">
-        <div className={`font-mono text-h1 tabular-nums ${corTempo}`}>{formatarMMSS(restanteSeg, "s")}</div>
-        <div className="flex-1 text-apoio text-ink-500">
+    <>
+      <BarraFoco>
+        <span className="hidden text-[14.5px] text-ink-2 xl:block">Simulado</span>
+        <span className="ml-auto shrink-0 text-[14px] font-semibold tabular-nums">
           Questão {idx + 1} de {itens.length}
-        </div>
-        <button
-          type="button"
-          onClick={alternarMarcacao}
-          title={marcadaAtual ? "Desmarcar" : "Marcar para revisão"}
-          className={`rounded-btn border p-2 transition-hover ${
-            marcadaAtual ? "border-warn bg-warn-soft text-warn" : "border-line text-ink-500 hover:border-ink-300"
-          }`}
-        >
-          <Flag size={16} strokeWidth={1.5} />
-        </button>
-      </div>
-
-      <div className="rounded-panel border border-line bg-surface p-6">
-        {metadados && <div className="mb-3 text-apoio text-ink-500">{metadados}</div>}
-        <p className="max-w-[68ch] text-enunciado text-ink-700">{itemAtual.enunciado}</p>
-        {itemAtual.tem_imagem && (
-          <img
-            src={`${API_URL}/questoes/${itemAtual.id}/imagem`}
-            alt="Imagem da questão"
-            className="mt-4 max-w-full rounded-btn border border-line"
-          />
-        )}
-
-        <div className="mt-5 space-y-2">
-          {Object.keys(itemAtual.alternativas).map((letra) => (
-            <AlternativaLinha
-              key={letra}
-              letra={letra}
-              texto={itemAtual.alternativas[letra]}
-              estado={letra === respostaAtual ? "selecionada" : "normal"}
-              disabled={false}
-              onClick={() => responder(letra)}
-            />
-          ))}
-        </div>
-      </div>
-
-      <div className="mt-4 flex gap-2">
-        <button
-          type="button"
-          onClick={() => setIdx((i) => Math.max(0, i - 1))}
-          disabled={idx <= 0}
-          className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-btn border border-line text-apoio text-ink-700 transition-hover hover:border-ink-300 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          <ArrowLeft size={14} strokeWidth={1.5} />
-          Anterior
-        </button>
-        <button
-          type="button"
-          onClick={() => setIdx((i) => Math.min(itens.length - 1, i + 1))}
-          disabled={idx >= itens.length - 1}
-          className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-btn border border-line text-apoio text-ink-700 transition-hover hover:border-ink-300 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          Próxima
-          <ArrowRight size={14} strokeWidth={1.5} />
-        </button>
-      </div>
-
-      <div className="mt-5">
-        <div className="mb-2 text-apoio text-ink-500">Ir para questão</div>
-        <div className="flex flex-wrap gap-2">
-          {itens.map((item, i) => {
-            const respondida = Boolean(respostasLocais[item.id]);
-            const marcada = marcadasLocais.has(item.id);
-            const atual = i === idx;
-            return (
-              <button
-                key={item.item_id}
-                type="button"
-                onClick={() => setIdx(i)}
-                title={marcada ? "Marcada para revisão" : respondida ? "Respondida" : "Em branco"}
-                className={`relative flex h-8 w-8 items-center justify-center rounded-btn border text-apoio font-medium transition-hover ${
-                  respondida ? "border-action bg-action text-white" : "border-line text-ink-500 hover:border-ink-300"
-                } ${atual ? "ring-2 ring-action ring-offset-1 ring-offset-surface" : ""}`}
-              >
-                {i + 1}
-                {marcada && <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-warn" aria-hidden="true" />}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      <button
-        type="button"
-        onClick={() => setDialogoAberto(true)}
-        className="mt-6 h-10 rounded-btn bg-action px-4 text-sm font-medium text-white transition-hover hover:bg-action-hover"
-      >
-        Finalizar simulado
-      </button>
-
-      <Dialog titulo="Finalizar simulado" aberto={dialogoAberto} onFechar={() => setDialogoAberto(false)}>
-        {emBranco > 0 ? (
-          <p className="text-corpo text-ink-700">
-            <strong>{emBranco}</strong> questão(ões) ficarão em branco. Essa ação não pode ser desfeita.
-          </p>
-        ) : (
-          <p className="text-corpo text-ink-700">Todas as questões foram respondidas. Confirmar o encerramento?</p>
-        )}
-        <div className="mt-5 flex gap-2">
+        </span>
+        <div className="flex shrink-0 items-center gap-2">
+          <span
+            aria-label="Tempo restante"
+            className={`rounded-btn px-2.5 py-1 text-[24px] font-extrabold leading-none tabular-nums [font-stretch:85%] ${estadoTempo}`}
+          >
+            {formatarMMSS(restanteSeg, "s")}
+          </span>
           <button
             type="button"
-            onClick={() => setDialogoAberto(false)}
-            className="h-10 flex-1 rounded-btn border border-line text-sm text-ink-700 transition-hover hover:border-ink-300"
+            onClick={alternarMarcacao}
+            aria-pressed={marcadaAtual}
+            className={`flex h-9 items-center gap-1.5 rounded-btn border px-3 text-[14px] font-medium transition duration-hover ${
+              marcadaAtual ? "border-t3 bg-t3-soft text-ink" : "border-line text-ink-2 hover:border-muted"
+            }`}
           >
-            Cancelar
+            <Flag size={16} strokeWidth={2} />
+            <span className="hidden sm:inline">{marcadaAtual ? "Marcada" : "Marcar"}</span>
           </button>
           <button
             type="button"
-            onClick={finalizarAgora}
-            disabled={finalizando}
-            className="h-10 flex-1 rounded-btn bg-action text-sm font-medium text-white transition-hover hover:bg-action-hover disabled:cursor-not-allowed disabled:opacity-60"
+            onClick={() => setDialogoAberto(true)}
+            className="flex h-9 items-center rounded-btn bg-ink px-3.5 text-[14px] font-semibold text-onink transition duration-hover hover:opacity-90"
           >
             Finalizar
           </button>
         </div>
+      </BarraFoco>
+
+      <div className="mx-auto flex max-w-[840px] flex-col gap-5">
+        <div className="flex items-end justify-between gap-6">
+          <div className="flex flex-col gap-1">
+            <span className="rotulo text-muted">Questão</span>
+            <span className="num-lg">{String(idx + 1).padStart(2, "0")}</span>
+          </div>
+          <div className="flex min-w-0 flex-col items-end gap-1.5 text-right">
+            {recorte && <span className="text-[15px] font-semibold">{recorte}</span>}
+            {prova && (
+              <span className="flex items-center gap-1.5 text-apoio text-muted">
+                <BadgeCheck size={16} strokeWidth={2} className="text-t4" />
+                Prova oficial · {prova}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-6 rounded-caso border border-line bg-surface p-6 md:px-11 md:py-9">
+          <p className="max-w-[68ch] text-enunciado text-ink">{itemAtual.enunciado}</p>
+          {itemAtual.tem_imagem && (
+            <img
+              src={`${API_URL}/questoes/${itemAtual.id}/imagem`}
+              alt="Imagem da questão"
+              className="max-w-full rounded-card border border-line"
+            />
+          )}
+
+          <div className="flex flex-col gap-2">
+            {Object.keys(itemAtual.alternativas).map((letra) => (
+              <AlternativaLinha
+                key={letra}
+                letra={letra}
+                texto={itemAtual.alternativas[letra]}
+                estado={letra === respostaAtual ? "selecionada" : "normal"}
+                disabled={false}
+                onClick={() => responder(letra)}
+              />
+            ))}
+          </div>
+
+          <div className="flex items-center justify-between gap-3 border-t border-line-soft pt-6">
+            <button
+              type="button"
+              onClick={() => setIdx((i) => Math.max(0, i - 1))}
+              disabled={idx <= 0}
+              className={BOTAO_SECUNDARIO}
+            >
+              <ArrowLeft size={16} strokeWidth={2} />
+              Anterior
+            </button>
+            <button
+              type="button"
+              onClick={() => setIdx((i) => Math.min(itens.length - 1, i + 1))}
+              disabled={idx >= itens.length - 1}
+              className={BOTAO_SECUNDARIO}
+            >
+              Próxima
+              <ArrowRight size={16} strokeWidth={2} />
+            </button>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-3 rounded-caso border border-line bg-surface p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <span className="rotulo text-muted">Ir para questão</span>
+            <div className="flex flex-wrap items-center gap-4 text-apoio text-muted">
+              <span className="flex items-center gap-1.5">
+                <span className="h-3 w-3 rounded-[2px] bg-ink" aria-hidden="true" />
+                respondida
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="relative h-3 w-3 overflow-hidden rounded-[2px] border border-line" aria-hidden="true">
+                  <span className="absolute right-0 top-0 h-0 w-0 border-l-[7px] border-t-[7px] border-l-transparent border-t-t3" />
+                </span>
+                marcada
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="h-3 w-3 rounded-[2px] border border-line" aria-hidden="true" />
+                em branco ({emBranco})
+              </span>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {itens.map((item, i) => {
+              const respondida = Boolean(respostasLocais[item.id]);
+              const marcada = marcadasLocais.has(item.id);
+              const atual = i === idx;
+              const estado = [respondida ? "respondida" : "em branco", marcada ? "marcada" : null].filter(Boolean).join(", ");
+              return (
+                <button
+                  key={item.item_id}
+                  type="button"
+                  onClick={() => setIdx(i)}
+                  aria-label={`Questão ${i + 1}: ${estado}`}
+                  aria-current={atual ? "step" : undefined}
+                  className={`relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-btn border text-[13px] font-semibold tabular-nums transition duration-hover ${
+                    respondida ? "border-ink bg-ink text-onink" : "border-line bg-surface text-ink-2 hover:border-muted"
+                  } ${atual ? "ring-2 ring-focus ring-offset-2 ring-offset-surface" : ""}`}
+                >
+                  {i + 1}
+                  {marcada && (
+                    <span
+                      className="absolute right-0 top-0 h-0 w-0 border-l-[10px] border-t-[10px] border-l-transparent border-t-t3"
+                      aria-hidden="true"
+                    />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      <Dialog titulo="Finalizar simulado" aberto={dialogoAberto} onFechar={() => setDialogoAberto(false)}>
+        <p className="text-corpo text-ink-2">
+          {emBranco > 0 ? (
+            <>
+              <strong className="text-ink">{emBranco}</strong> {emBranco === 1 ? "questão vai ficar" : "questões vão ficar"} em
+              branco. Essa ação não pode ser desfeita.
+            </>
+          ) : (
+            "Todas as questões foram respondidas. Confirmar o encerramento?"
+          )}
+        </p>
+        <div className="mt-6 flex gap-2">
+          <button type="button" onClick={() => setDialogoAberto(false)} className={`${BOTAO_SECUNDARIO} flex-1`}>
+            Voltar à prova
+          </button>
+          <button type="button" onClick={finalizarAgora} disabled={finalizando} className={`${BOTAO_PRIMARIO} flex-1`}>
+            Finalizar simulado
+          </button>
+        </div>
       </Dialog>
-    </div>
+    </>
   );
 }
