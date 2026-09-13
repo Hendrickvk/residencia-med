@@ -1,20 +1,21 @@
-# MIGRACAO.md §7 — proxy reverso, servindo por IP puro (sem domínio ainda).
+# MIGRACAO.md §7 — proxy reverso + HTTPS automático (Let's Encrypt via Caddy).
 #
-# Decisão de 2026-09-12: publicar direto pelo IP do servidor Oracle Cloud
-# (64.181.167.174), sem domínio por enquanto. Isso significa SEM HTTPS
-# automático — o Caddy só emite certificado Let's Encrypt quando o site é
-# identificado por um domínio real (a validação ACME precisa disso). Por
-# IP, o Caddy serve em HTTP puro.
+# Decisão de 2026-09-13: domínio pago descartado por custo; HTTPS vem de um
+# subdomínio gratuito do DuckDNS (conduta.duckdns.org → 64.181.167.174). O
+# DuckDNS resolve qualquer sub-subdomínio pro mesmo IP, então
+# admin.conduta.duckdns.org funciona sem registro extra.
 #
-# Quando houver um domínio, trocar este arquivo pela versão em
-# `Caddyfile.com-dominio.example` (mesma pasta) — ela já vem pronta pra
-# HTTPS automático, só falta editar o domínio real nela.
+# Pressupõe portas 80 e 443 abertas (firewall do servidor + Security List da
+# Oracle) — o Caddy precisa das duas pra validar o certificado.
+#
+# Se um dia houver domínio próprio, basta trocar os nomes abaixo (a versão
+# genérica está em `Caddyfile.com-dominio.example`).
 
-:80 {
+conduta.duckdns.org {
 	encode gzip
 
-	# Front-end e API no MESMO host:porta (MIGRACAO.md §1) — elimina CORS
-	# entre eles, porque viram same-origin de verdade.
+	# Front-end e API no MESMO host (MIGRACAO.md §1) — elimina CORS entre
+	# eles, porque viram same-origin de verdade.
 	handle_path /api/* {
 		reverse_proxy 127.0.0.1:8000
 	}
@@ -26,10 +27,19 @@
 	}
 }
 
-# Streamlit (telas administrativas, decisão da Fase 7 — MIGRACAO.md §5) numa
-# porta própria, já que sem domínio não dá pra usar subdomínio. Acessar em
-# http://<ip-do-servidor>:8080
-:8080 {
+# Streamlit (telas administrativas, decisão da Fase 7 — MIGRACAO.md §5) num
+# subdomínio próprio, não um path: evita configurar `--server.baseUrlPath` e
+# o roteamento de websocket sob prefixo. Aberto a qualquer IP por decisão de
+# 2026-09-13 — com HTTPS, a senha não trafega mais em texto claro, que era o
+# motivo da antiga restrição de IP na porta 8080.
+admin.conduta.duckdns.org {
 	encode gzip
 	reverse_proxy 127.0.0.1:8501
+}
+
+# Links antigos por IP (http://64.181.167.174) caem no endereço novo.
+# Redirect temporário (302) de propósito: um 301 fica em cache no navegador
+# e atrapalharia se o endereço mudar de novo (ex.: domínio próprio).
+http://64.181.167.174 {
+	redir https://conduta.duckdns.org{uri}
 }
