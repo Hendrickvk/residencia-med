@@ -18,16 +18,16 @@ export default function Resumo({ resumo, onNovaSessao }: Props) {
   const tempoMedioSeg = n ? Math.round(respondidas.reduce((s, r) => s + r.tempoMs, 0) / n / 1000) : 0;
   const nivel = n ? nivelTriagem(pctAcerto) : null;
 
-  const porAssunto = new Map<string, { total: number; acertos: number }>();
+  const porEspecialidade = new Map<string, { total: number; acertos: number }>();
   for (const r of respondidas) {
-    const chave = r.subtopico ?? "Sem assunto";
-    const atual = porAssunto.get(chave) ?? { total: 0, acertos: 0 };
+    const chave = r.especialidade ?? r.area;
+    const atual = porEspecialidade.get(chave) ?? { total: 0, acertos: 0 };
     atual.total += 1;
     if (r.correta) atual.acertos += 1;
-    porAssunto.set(chave, atual);
+    porEspecialidade.set(chave, atual);
   }
   // Do pior para o melhor, como no quadro de triagem do Painel.
-  const assuntos = [...porAssunto.entries()]
+  const assuntos = [...porEspecialidade.entries()]
     .map(([assunto, v]) => ({ assunto, ...v, pct: (100 * v.acertos) / v.total }))
     .sort((a, b) => a.pct - b.pct);
 
@@ -62,7 +62,7 @@ export default function Resumo({ resumo, onNovaSessao }: Props) {
 
       {assuntos.length > 0 && (
         <div className="flex flex-col gap-3">
-          <h2 className="text-bloco">Desempenho por assunto</h2>
+          <h2 className="text-bloco">Desempenho por especialidade</h2>
           <div className="rounded-caso border border-line bg-surface">
             {assuntos.map((a) => {
               const nv = nivelTriagem(a.pct);

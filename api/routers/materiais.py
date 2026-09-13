@@ -9,13 +9,15 @@ router = APIRouter(prefix="/materiais", tags=["materiais"])
 
 @router.get("")
 def listar(
-    area_id: int | None = None, subtopico_id: int | None = None,
+    area_id: int | None = None, especialidade_id: int | None = None, subtopico_id: int | None = None,
     tipo: str | None = None, q: str | None = None,
     limite: int = Query(default=50, ge=1, le=200), pagina: int = Query(default=0, ge=0),
     usuario=Depends(usuario_atual),
 ):
-    total = db.contar_materiais_filtrados(area_id, subtopico_id, tipo, q)
-    itens = db.listar_materiais_paginado(area_id, subtopico_id, tipo, q, limite=limite, offset=pagina * limite)
+    total = db.contar_materiais_filtrados(area_id, subtopico_id, tipo, q, especialidade_id=especialidade_id)
+    itens = db.listar_materiais_paginado(
+        area_id, subtopico_id, tipo, q, limite=limite, offset=pagina * limite, especialidade_id=especialidade_id,
+    )
     return {"total": total, "itens": itens}
 
 
@@ -26,7 +28,10 @@ def tipos(usuario=Depends(usuario_atual)):
 
 @router.post("", status_code=status.HTTP_201_CREATED)
 def criar(dados: MaterialIn, usuario=Depends(exigir_admin)):
-    db.criar_material(dados.area_id, dados.subtopico_id, dados.tipo, dados.titulo, dados.link)
+    db.criar_material(
+        dados.area_id, dados.subtopico_id, dados.tipo, dados.titulo, dados.link,
+        especialidade_id=dados.especialidade_id,
+    )
     return {"ok": True}
 
 

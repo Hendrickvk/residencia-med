@@ -89,7 +89,7 @@ export default function Revisao() {
     );
   }
 
-  const recorte = [q.area, q.subtopico].filter(Boolean).join(" · ");
+  const recorte = [q.area, q.especialidade, q.subtopico].filter(Boolean).join(" · ");
 
   return (
     <>

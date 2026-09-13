@@ -124,7 +124,7 @@ function Conteudo({
   // fundo cheio, porque laranja em texto sobre branco não passa em contraste.
   const estadoTempo =
     restanteSeg < 60 ? "bg-t1 text-t1-on" : restanteSeg < 600 ? "bg-t2 text-t2-on" : "text-ink";
-  const recorte = [itemAtual.area, itemAtual.subtopico].filter(Boolean).join(" · ");
+  const recorte = [itemAtual.area, itemAtual.especialidade, itemAtual.subtopico].filter(Boolean).join(" · ");
   const nomeProva = simulado.edicao && simulado.banca ? nomeEdicao(simulado.banca, simulado.edicao) : null;
   const prova = nomeProva
     ? [nomeProva, itemAtual.numero_prova ? `questão ${itemAtual.numero_prova} do caderno` : null].filter(Boolean).join(" · ")

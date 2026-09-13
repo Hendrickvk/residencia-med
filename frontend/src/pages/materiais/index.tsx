@@ -5,9 +5,10 @@ import { useNavigate } from "react-router-dom";
 import { EstadoVazio } from "../../components/EstadoVazio";
 import { Paginacao } from "../../components/Paginacao";
 import { useMe } from "../../lib/auth";
-import { useAreas } from "../../lib/catalogo";
+import { useAreas, useEspecialidades } from "../../lib/catalogo";
 import { CAMPO } from "../../lib/estilos";
 import { useMateriais, useStatusSincronizacao, useTiposMateriais } from "../../lib/materiais";
+import type { Material } from "../../lib/types";
 import { useDebounced } from "../../lib/useDebounced";
 
 const POR_PAGINA = 50;
@@ -58,16 +59,19 @@ export default function Materiais() {
   const navigate = useNavigate();
   const { data: me } = useMe();
   const [areaId, setAreaId] = useState<number | undefined>(undefined);
+  const [especialidadeId, setEspecialidadeId] = useState<number | undefined>(undefined);
   const [tipo, setTipo] = useState<string | undefined>(undefined);
   const [buscaInput, setBuscaInput] = useState("");
   const [pagina, setPagina] = useState(0);
   const buscaDebounced = useDebounced(buscaInput, 250);
 
   const { data: areas } = useAreas();
+  const { data: especialidades } = useEspecialidades(areaId);
   const { data: tipos } = useTiposMateriais();
   const { data: status } = useStatusSincronizacao();
   const { data, isLoading } = useMateriais({
     area_id: areaId,
+    especialidade_id: especialidadeId,
     tipo,
     q: buscaDebounced || undefined,
     pagina,
@@ -80,14 +84,34 @@ export default function Materiais() {
 
   function mudarArea(valor: number | undefined) {
     setAreaId(valor);
+    setEspecialidadeId(undefined);
     setPagina(0);
   }
 
-  const classeArea = (ativa: boolean) =>
+  function mudarEspecialidade(valor: number) {
+    setEspecialidadeId(valor);
+    setPagina(0);
+  }
+
+  // "aberta" = área escolhida, mas o filtro ativo é uma especialidade dela.
+  const classeArea = (estado: "ativa" | "aberta" | "normal") =>
     // shrink-0: dentro da coluna com rolagem os botões encolhiam e os nomes se sobrepunham.
     `block w-full shrink-0 truncate rounded-btn px-3 py-2 text-left text-corpo transition duration-hover ${
+      estado === "ativa"
+        ? "bg-ink font-semibold text-onink"
+        : estado === "aberta"
+          ? "font-semibold text-ink hover:bg-ground"
+          : "text-ink-2 hover:bg-ground hover:text-ink"
+    }`;
+
+  const classeEspecialidade = (ativa: boolean) =>
+    `flex w-full shrink-0 items-center justify-between gap-2 rounded-btn py-1.5 pl-6 pr-3 text-left text-apoio transition duration-hover ${
       ativa ? "bg-ink font-semibold text-onink" : "text-ink-2 hover:bg-ground hover:text-ink"
     }`;
+
+  // Com uma especialidade escolhida ela se repetiria em todas as linhas: fica só o assunto.
+  const recorteMaterial = (m: Material) =>
+    (especialidadeId ? m.subtopico : [m.especialidade, m.subtopico].filter(Boolean).join(" · ")) || null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -116,14 +140,43 @@ export default function Materiais() {
         <nav aria-label="Áreas" className="md:w-60 md:shrink-0">
           <div className="rotulo mb-2 text-muted">Áreas</div>
           <div className="flex max-h-64 flex-col gap-0.5 overflow-y-auto rounded-card border border-line bg-surface p-1.5 md:max-h-[520px]">
-            <button type="button" onClick={() => mudarArea(undefined)} className={classeArea(areaId === undefined)}>
+            <button
+              type="button"
+              onClick={() => mudarArea(undefined)}
+              className={classeArea(areaId === undefined ? "ativa" : "normal")}
+            >
               Todas
             </button>
-            {areas?.map((a) => (
-              <button key={a.id} type="button" onClick={() => mudarArea(a.id)} className={classeArea(areaId === a.id)}>
-                {a.nome}
-              </button>
-            ))}
+            {areas?.map((a) => {
+              const aberta = areaId === a.id;
+              return (
+                <div key={a.id} className="flex shrink-0 flex-col gap-0.5">
+                  <button
+                    type="button"
+                    onClick={() => mudarArea(a.id)}
+                    aria-expanded={aberta}
+                    className={classeArea(aberta ? (especialidadeId === undefined ? "ativa" : "aberta") : "normal")}
+                  >
+                    {a.nome}
+                  </button>
+                  {aberta &&
+                    especialidades
+                      ?.filter((e) => e.total_materiais > 0)
+                      .map((e) => (
+                        <button
+                          key={e.id}
+                          type="button"
+                          onClick={() => mudarEspecialidade(e.id)}
+                          aria-pressed={especialidadeId === e.id}
+                          className={classeEspecialidade(especialidadeId === e.id)}
+                        >
+                          <span className="truncate">{e.nome}</span>
+                          <span className="shrink-0 tabular-nums opacity-70">{e.total_materiais}</span>
+                        </button>
+                      ))}
+                </div>
+              );
+            })}
           </div>
         </nav>
 
@@ -173,7 +226,9 @@ export default function Materiais() {
                     <tr className="border-b border-line">
                       <th className="w-10 px-4 py-2.5" />
                       <th className="rotulo px-3 py-2.5 text-muted">Título</th>
-                      <th className="rotulo hidden px-3 py-2.5 text-muted xl:table-cell">Assunto</th>
+                      <th className="rotulo hidden px-3 py-2.5 text-muted xl:table-cell">
+                        {especialidadeId ? "Assunto" : "Especialidade · assunto"}
+                      </th>
                       <th className="rotulo hidden px-3 py-2.5 text-right text-muted sm:table-cell">Tamanho</th>
                       <th className="w-24 px-3 py-2.5" />
                     </tr>
@@ -181,6 +236,7 @@ export default function Materiais() {
                   <tbody>
                     {itens.map((m) => {
                       const Icone = iconePorTipo(m.tipo);
+                      const recorte = recorteMaterial(m);
                       return (
                         <tr key={m.id} className="group h-11 border-b border-line-soft last:border-0 hover:bg-ground">
                           <td className="px-4">
@@ -190,9 +246,9 @@ export default function Materiais() {
                           <td className="px-3 py-2 text-ink [overflow-wrap:anywhere]">
                             {destacarTrecho(m.titulo, buscaDebounced)}
                             {/* Abaixo de 1280px o assunto vem sob o título: a coluna própria sumia para a direita. */}
-                            {m.subtopico && <div className="text-apoio text-muted xl:hidden">{m.subtopico}</div>}
+                            {recorte && <div className="text-apoio text-muted xl:hidden">{recorte}</div>}
                           </td>
-                          <td className="hidden px-3 py-2 text-muted xl:table-cell">{m.subtopico ?? "—"}</td>
+                          <td className="hidden px-3 py-2 text-muted xl:table-cell">{recorte ?? "—"}</td>
                           <td className="hidden px-3 py-2 text-right tabular-nums text-muted sm:table-cell">
                             {formatarTamanho(m.tamanho_bytes)}
                           </td>

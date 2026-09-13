@@ -27,6 +27,7 @@ export default function Sessao({ filtros, nonce, onFinalizar, onVoltar }: Props)
     queryFn: () =>
       api.get<{ questoes: Questao[] }>("/praticar/sessao", {
         area_id: filtros.area_id,
+        especialidade_id: filtros.especialidade_id,
         subtopico_id: filtros.subtopico_id,
         banca: filtros.banca,
         ano: filtros.ano,
@@ -88,7 +89,8 @@ export default function Sessao({ filtros, nonce, onFinalizar, onVoltar }: Props)
     respondidasRef.current.push({
       id: questaoAtual.id,
       correta: foiCorreta,
-      subtopico: questaoAtual.subtopico,
+      area: questaoAtual.area,
+      especialidade: questaoAtual.especialidade,
       tempoMs,
     });
     setResultados((r) => [...r, foiCorreta]);
@@ -185,8 +187,14 @@ export default function Sessao({ filtros, nonce, onFinalizar, onVoltar }: Props)
   }
 
   const marcadaAtual = marcadas.has(questaoAtual.id);
-  const recorteSessao = filtros.area_id ? fila[0]?.area : null;
-  const recorteCaso = [questaoAtual.area, questaoAtual.subtopico].filter(Boolean).join(" · ");
+  const recorteSessao = filtros.especialidade_id
+    ? fila[0]?.especialidade
+    : filtros.area_id
+      ? fila[0]?.area
+      : null;
+  const recorteCaso = [questaoAtual.area, questaoAtual.especialidade, questaoAtual.subtopico]
+    .filter(Boolean)
+    .join(" · ");
   const prova = [questaoAtual.banca, questaoAtual.ano].filter(Boolean).join(" ");
   // `{}` = ninguém além do próprio aluno respondeu ainda (db.distribuicao_respostas_questao
   // exclui o usuário atual). Sem esse caso, todas as alternativas apareciam com 0%.

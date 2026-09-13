@@ -80,9 +80,12 @@ def questoes_para_revisar_hoje(*, usuario_id):
     porque a coluna agora guarda hora exata."""
     with get_conn() as conn:
         return conn.execute("""
-            SELECT q.*, r.proxima_revisao, r.repeticoes, r.intervalo_dias
+            SELECT q.*, a.nome AS area, e.nome AS especialidade,
+                   r.proxima_revisao, r.repeticoes, r.intervalo_dias
             FROM revisao r
             JOIN questoes q ON q.id = r.questao_id
+            JOIN areas a ON a.id = q.area_id
+            LEFT JOIN especialidades e ON e.id = q.especialidade_id
             WHERE r.usuario_id = ? AND r.proxima_revisao <= ?
             ORDER BY r.proxima_revisao ASC
         """, (usuario_id, _agora())).fetchall()
@@ -91,7 +94,10 @@ def questoes_para_revisar_hoje(*, usuario_id):
 def questoes_nunca_revisadas(*, usuario_id):
     with get_conn() as conn:
         return conn.execute("""
-            SELECT q.* FROM questoes q
+            SELECT q.*, a.nome AS area, e.nome AS especialidade
+            FROM questoes q
+            JOIN areas a ON a.id = q.area_id
+            LEFT JOIN especialidades e ON e.id = q.especialidade_id
             LEFT JOIN revisao r ON r.questao_id = q.id AND r.usuario_id = ?
             WHERE r.questao_id IS NULL
             ORDER BY q.criada_em ASC

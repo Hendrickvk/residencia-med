@@ -3,10 +3,13 @@ Importação em massa de questões a partir de uma planilha (.xlsx ou .csv).
 
 Formato esperado (nomes de coluna flexíveis — veja `COLUNAS_ACEITAS`):
 
-area | subtopico | enunciado | alternativa_a | alternativa_b | alternativa_c
-| alternativa_d | alternativa_e | resposta_correta | explicacao | banca | ano
+area | especialidade | subtopico | enunciado | alternativa_a | alternativa_b
+| alternativa_c | alternativa_d | alternativa_e | resposta_correta | explicacao | banca | ano
 
-- `area` é obrigatória; `subtopico` é opcional.
+- `area` é obrigatória e segue a taxonomia fixa (`db.TAXONOMIA`): pode ser a
+  grande área ("Clínica Médica") ou já a especialidade ("Cardiologia"). Um
+  nome que não corresponde a nada vira erro da linha — nunca uma área nova.
+- `especialidade` e `subtopico` são opcionais.
 - `alternativa_e` é opcional (questões com 4 ou 5 alternativas).
 - `resposta_correta` deve ser a letra (A, B, C, D ou E).
 """
@@ -21,6 +24,7 @@ import db
 COLUNAS_ACEITAS = {
     "area": "area",
     "área": "area",
+    "especialidade": "especialidade",
     "subtopico": "subtopico",
     "subtópico": "subtopico",
     "assunto": "subtopico",
@@ -107,6 +111,7 @@ def importar(df: pd.DataFrame):
         resposta_correta = str(row.get("resposta_correta", "")).strip().upper()
         explicacao = str(row.get("explicacao", "")).strip()
         banca = str(row.get("banca", "")).strip()
+        especialidade_nome = str(row.get("especialidade", "")).strip()
         subtopico_nome = str(row.get("subtopico", "")).strip()
         ano_raw = str(row.get("ano", "")).strip()
 
@@ -135,7 +140,13 @@ def importar(df: pd.DataFrame):
         except ValueError:
             ano = None
 
-        area_id = db.obter_ou_criar_area(area_nome)
+        ids = db.resolver_area_especialidade(area_nome, especialidade=especialidade_nome or None)
+        if ids is None:
+            relatorio["erros"].append(
+                (linha_num, f"Área '{area_nome}' não corresponde a nenhuma grande área ou especialidade")
+            )
+            continue
+        area_id, especialidade_id = ids
         subtopico_id = db.obter_ou_criar_subtopico(area_id, subtopico_nome) if subtopico_nome else None
 
         if db.questao_ja_existe(area_id, enunciado):
@@ -144,7 +155,7 @@ def importar(df: pd.DataFrame):
 
         db.criar_questao(
             area_id, subtopico_id, enunciado, alternativas,
-            resposta_correta, explicacao, banca, ano,
+            resposta_correta, explicacao, banca, ano, especialidade_id=especialidade_id,
         )
         relatorio["importadas"] += 1
 
@@ -155,7 +166,8 @@ def gerar_template_bytes() -> bytes:
     """Gera um .xlsx modelo (com um exemplo preenchido) para o usuário
     baixar, preencher e reimportar."""
     df = pd.DataFrame([{
-        "area": "Cardiologia",
+        "area": "Clínica Médica",
+        "especialidade": "Cardiologia",
         "subtopico": "Arritmias",
         "enunciado": "Paciente com fibrilação atrial de início há 6 horas, hemodinamicamente "
                       "instável. Qual a conduta imediata?",

@@ -1,8 +1,10 @@
 export interface Questao {
   id: number;
   area_id: number;
+  especialidade_id: number | null;
   subtopico_id: number | null;
   area: string;
+  especialidade: string | null;
   subtopico: string | null;
   enunciado: string;
   alternativas: Record<string, string>;
@@ -16,6 +18,7 @@ export interface Questao {
 
 export interface FiltrosPratica {
   area_id?: number;
+  especialidade_id?: number;
   subtopico_id?: number;
   banca?: string;
   ano?: number;
@@ -36,16 +39,28 @@ export interface Area {
   nome: string;
 }
 
+// Segundo nível da taxonomia (grande área > especialidade). Os totais servem
+// para os filtros esconderem especialidades sem conteúdo.
+export interface Especialidade {
+  id: number;
+  area_id: number;
+  nome: string;
+  total_questoes: number;
+  total_materiais: number;
+}
+
 export interface Subtopico {
   id: number;
   area_id: number;
+  especialidade_id: number | null;
   nome: string;
 }
 
 export interface RespondidaResumo {
   id: number;
   correta: boolean;
-  subtopico: string | null;
+  area: string;
+  especialidade: string | null;
   tempoMs: number;
 }
 
@@ -138,6 +153,8 @@ export interface DesempenhoAreaSimulado {
 export interface Material {
   id: number;
   area_id: number;
+  especialidade_id: number | null;
+  especialidade: string | null;
   subtopico_id: number | null;
   subtopico: string | null;
   tipo: string;
@@ -150,6 +167,7 @@ export interface ResultadoBuscaQuestao {
   id: number;
   enunciado: string;
   area: string;
+  especialidade: string | null;
 }
 
 export interface ResultadoBuscaMaterial {

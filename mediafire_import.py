@@ -9,14 +9,20 @@ cada link manualmente.
 Estrutura esperada (conforme descrita pelo usuário):
 
     Pasta raiz compartilhada
-    └── Cardiologia/  Cirurgia/  Dermatologia/   ...   <- viram ÁREAS
+    └── Cardiologia/  Cirurgia/  Dermatologia/   ...   <- ÁREA/ESPECIALIDADE
         └── Arritmias/  Insuficiência Cardíaca/  ...   <- viram SUBTÓPICOS
             └── apostila.pdf, aula1.mp4, ...            <- viram MATERIAIS
             └── Apostilas/  Videoaulas/  ...             <- subpastas por
                 └── arquivo1.pdf, arquivo2.mp4              tipo (opcional)
 
+As pastas do primeiro nível NÃO criam áreas: o nome é resolvido contra a
+taxonomia fixa (`db.TAXONOMIA`, grande área > especialidade), então
+"Aprenda Nefro - Gasometria" cai em Clínica Médica > Nefrologia. Pasta cujo
+nome não corresponde a nada é pulada e aparece nos avisos do relatório.
+
 A sincronização é idempotente: rodar de novo não duplica nada, graças à
-`mediafire_key` (quickkey do arquivo) salva em cada material.
+`mediafire_key` (quickkey do arquivo) salva em cada material, e à `origem`
+(nome original da pasta) salva em cada assunto.
 """
 
 import re
@@ -57,6 +63,62 @@ def inferir_tipo(nome_arquivo: str, caminho_pastas):
             if padrao.search(texto):
                 return tipo
     return "Outro"
+
+
+# ---------------------------------------------------------------------------
+# Nome de assunto a partir do nome da pasta do módulo
+# ---------------------------------------------------------------------------
+_PALAVRAS_MINUSCULAS = {"a", "o", "e", "de", "da", "do", "das", "dos", "em", "na", "no", "nas", "nos",
+                        "ao", "aos", "com", "por", "para"}
+
+
+def limpar_nome_assunto(nome_pasta: str) -> str:
+    """'MEDCURSO - CAR 1 - ARRITMIAS CARDIACAS' -> 'Arritmias cardiacas'.
+    Tira o nome do curso e o código do módulo, e desfaz o tudo-maiúsculo
+    mantendo siglas curtas ('DM e dislipidemia')."""
+    texto = re.sub(r"[_\s]+", " ", str(nome_pasta or "")).strip()
+    partes = [p.strip() for p in re.split(r"\s-\s|\s-$|^-\s", texto) if p.strip()]
+    uteis = [p for p in partes if not re.fullmatch(r"(?i)medcurso|[a-z]{2,8} ?\d{1,2}", p)]
+    texto = " - ".join(uteis) or texto
+    if texto.isupper():
+        palavras = [
+            p if len(p) <= 3 and p.lower() not in _PALAVRAS_MINUSCULAS else p.lower()
+            for p in texto.split(" ")
+        ]
+        texto = " ".join(palavras)
+        texto = texto[:1].upper() + texto[1:]
+    return texto
+
+
+def _palavras_significativas(texto):
+    """'Vigilância de saúde' e 'Vigilância em saúde' -> 'vigilancia saude'."""
+    return " ".join(p for p in db.normalizar_nome(texto).split() if p not in _PALAVRAS_MINUSCULAS)
+
+
+def _assunto_da_pasta(area_id, nome_pasta_area, nome_pasta):
+    """Assunto e especialidade de uma pasta de módulo dentro de uma pasta de
+    área. Devolve (subtopico_id ou None, especialidade_id)."""
+    nome_pasta = nome_pasta.strip()
+    existente = db.obter_subtopico_por_origem(area_id, nome_pasta)
+    if existente:
+        # Já sincronizada antes: respeita o nome e a especialidade atuais,
+        # mesmo que tenham sido corrigidos à mão depois.
+        return existente["id"], existente["especialidade_id"]
+
+    nome = limpar_nome_assunto(nome_pasta)
+    area_nome, esp_nome = db.classificar_area_especialidade(nome_pasta_area, especialidade=nome)
+    _, especialidade_id = db.resolver_area_especialidade(nome_pasta_area, especialidade=nome)
+
+    modulo = db.classificar_nome_area(nome)
+    if modulo and modulo[1] and modulo[1] == esp_nome:
+        n_nome, n_esp = _palavras_significativas(nome), _palavras_significativas(esp_nome)
+        if n_esp.startswith(n_nome) or n_nome.startswith(n_esp):
+            # A pasta é a própria especialidade ("MEDCURSO - PSIQUIATRIA"):
+            # os arquivos ficam na especialidade, sem um assunto repetindo o nome.
+            return None, especialidade_id
+
+    sub_id = db.criar_subtopico_de_origem(area_id, nome, origem=nome_pasta, especialidade_id=especialidade_id)
+    return sub_id, especialidade_id
 
 
 # ---------------------------------------------------------------------------
@@ -127,7 +189,8 @@ def _listar_tudo(folder_key, content_type):
 # ---------------------------------------------------------------------------
 # Varredura recursiva
 # ---------------------------------------------------------------------------
-def _processar_pasta(folder_key, nivel, area_id, subtopico_id, caminho, stats, on_progress):
+def _processar_pasta(folder_key, nivel, area_id, subtopico_id, caminho, stats, on_progress,
+                     especialidade_id=None):
     nome_caminho = " / ".join(caminho) if caminho else "(raiz)"
     if on_progress:
         on_progress(f"Explorando: {nome_caminho}")
@@ -153,7 +216,10 @@ def _processar_pasta(folder_key, nivel, area_id, subtopico_id, caminho, stats, o
 
         tipo = inferir_tipo(nome_arquivo, caminho)
         titulo = nome_arquivo
-        inserido = db.criar_material(area_id, subtopico_id, tipo, titulo, link, mediafire_key=quickkey)
+        inserido = db.criar_material(
+            area_id, subtopico_id, tipo, titulo, link,
+            mediafire_key=quickkey, especialidade_id=especialidade_id,
+        )
         if inserido:
             stats["materiais_novos"] += 1
         else:
@@ -167,27 +233,38 @@ def _processar_pasta(folder_key, nivel, area_id, subtopico_id, caminho, stats, o
             continue
 
         if nivel == 0:
-            # nível 0 = pasta raiz -> cada subpasta é uma ÁREA
-            novo_area_id = db.obter_ou_criar_area(nome_pasta)
+            # nível 0 = pasta raiz -> cada subpasta é uma grande área ou especialidade
+            ids = db.resolver_area_especialidade(nome_pasta)
+            if ids is None:
+                stats["erros"].append(
+                    f"Pasta '{nome_pasta}' ignorada: o nome não corresponde a nenhuma grande área "
+                    "ou especialidade. Renomeie a pasta (ex: 'Nefrologia') e sincronize de novo."
+                )
+                continue
+            novo_area_id, nova_esp_id = ids
             stats["areas"].add(nome_pasta)
             _processar_pasta(
                 chave_pasta, nivel=1, area_id=novo_area_id, subtopico_id=None,
                 caminho=caminho + [nome_pasta], stats=stats, on_progress=on_progress,
+                especialidade_id=nova_esp_id,
             )
-        elif nivel == 1:
-            # nível 1 = dentro da área -> cada subpasta é um SUBTÓPICO/assunto
-            novo_sub_id = db.obter_ou_criar_subtopico(area_id, nome_pasta)
-            stats["subtopicos"].add((area_id, nome_pasta))
+        elif nivel == 1 and inferir_tipo(nome_pasta, []) == "Outro":
+            # nível 1 = dentro da área -> cada subpasta é um módulo/assunto
+            novo_sub_id, esp_id = _assunto_da_pasta(area_id, caminho[0], nome_pasta)
+            if novo_sub_id is not None:
+                stats["subtopicos"].add((area_id, nome_pasta))
             _processar_pasta(
                 chave_pasta, nivel=2, area_id=area_id, subtopico_id=novo_sub_id,
                 caminho=caminho + [nome_pasta], stats=stats, on_progress=on_progress,
+                especialidade_id=esp_id or especialidade_id,
             )
         else:
-            # nível >= 2 = pastas de organização por tipo (Apostilas, Videoaulas...)
-            # não criam novas áreas/subtópicos, só continuam a varredura
+            # nível >= 2 = pastas de organização por tipo (Apostilas, Videoaulas...),
+            # ou uma dessas direto na área: não criam assunto, só continuam a varredura
             _processar_pasta(
-                chave_pasta, nivel=nivel, area_id=area_id, subtopico_id=subtopico_id,
+                chave_pasta, nivel=max(nivel, 2), area_id=area_id, subtopico_id=subtopico_id,
                 caminho=caminho + [nome_pasta], stats=stats, on_progress=on_progress,
+                especialidade_id=especialidade_id,
             )
 
 

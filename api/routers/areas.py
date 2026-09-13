@@ -18,9 +18,14 @@ def criar(dados: AreaIn, usuario=Depends(exigir_admin)):
     return {"ok": True}
 
 
+@router.get("/{area_id}/especialidades")
+def listar_especialidades(area_id: int, usuario=Depends(usuario_atual)):
+    return db.listar_especialidades(area_id)
+
+
 @router.get("/{area_id}/subtopicos")
-def listar_subtopicos(area_id: int, usuario=Depends(usuario_atual)):
-    return db.listar_subtopicos(area_id)
+def listar_subtopicos(area_id: int, especialidade_id: int | None = None, usuario=Depends(usuario_atual)):
+    return db.listar_subtopicos(area_id, especialidade_id)
 
 
 @router.post("/{area_id}/subtopicos", status_code=201)

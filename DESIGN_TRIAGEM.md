@@ -184,11 +184,12 @@ Conteúdo das demais telas: largura máxima 1360px, padding 36/40px.
    de estudo.").
 
 ### Praticar
-- **Configurador**: título "Praticar"; campos área, assunto, banca, ano; quantidade
+- **Configurador**: título "Praticar"; campos área, especialidade (só as que têm
+  casos, com a contagem), banca, ano; quantidade
   como botões segmentados (10/20/30/50); dois interruptores; filtros escolhidos
   viram etiquetas removíveis; botão "Iniciar sessão de {n} casos".
 - **Sessão (modo foco)**: acima do cartão, "Caso" + número em display à esquerda,
-  área · assunto e selo de prova oficial à direita. Cartão com enunciado, imagem,
+  área · especialidade e selo de prova oficial à direita. Cartão com enunciado, imagem,
   pergunta, alternativas e, antes de confirmar, dicas de atalho + "Confirmar
   resposta". Progresso na barra superior: um quadrado por caso (t4 acerto, t1 erro,
   `--line` pendente).
@@ -201,7 +202,7 @@ Conteúdo das demais telas: largura máxima 1360px, padding 36/40px.
   agenda qualidade abaixo de 3 para 10 minutos, `repeticao_espacada.py`) e "Próximo
   caso" com `Enter`.
 - **Resumo**: acertos em display, etiqueta de nível do aproveitamento da sessão,
-  tempo médio por caso e desempenho por assunto em linhas com barra de nível.
+  tempo médio por caso e desempenho por especialidade em linhas com barra de nível.
 
 ### Simulado
 - Configurador com duas abas. **Prova oficial**: lista das edições com caderno
@@ -233,8 +234,11 @@ Conteúdo das demais telas: largura máxima 1360px, padding 36/40px.
 
 ### Materiais
 - Faixa de sincronização discreta no topo.
-- Duas colunas: lista de áreas (240px) e tabela densa (ícone por tipo, título com
-  destaque do trecho buscado, assunto, tamanho, "Abrir" no hover).
+- Duas colunas: lista das cinco grandes áreas (240px) — a área escolhida abre, logo
+  abaixo e recuadas, as especialidades dela que têm material, com a contagem — e
+  tabela densa (ícone por tipo, título com destaque do trecho buscado, especialidade
+  · assunto, tamanho, "Abrir" no hover). Com uma especialidade escolhida, a coluna
+  mostra só o assunto.
 
 ### Login
 - Marca grande com o símbolo, frase "Sua plataforma de estudos para residência

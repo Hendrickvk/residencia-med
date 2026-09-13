@@ -15,14 +15,17 @@ router = APIRouter(prefix="/questoes", tags=["questoes"])
 
 @router.get("")
 def listar_questoes(
-    area_id: int | None = None, subtopico_id: int | None = None, q: str | None = None,
+    area_id: int | None = None, especialidade_id: int | None = None, subtopico_id: int | None = None,
+    q: str | None = None,
     limite: int = Query(default=50, ge=1, le=200), pagina: int = Query(default=0, ge=0),
     usuario=Depends(usuario_atual),
 ):
-    total = db.contar_questoes_filtradas(area_id=area_id, subtopico_id=subtopico_id, busca=q)
+    total = db.contar_questoes_filtradas(
+        area_id=area_id, subtopico_id=subtopico_id, busca=q, especialidade_id=especialidade_id,
+    )
     itens = db.listar_questoes_paginado(
         area_id=area_id, subtopico_id=subtopico_id, busca=q,
-        limite=limite, offset=pagina * limite,
+        limite=limite, offset=pagina * limite, especialidade_id=especialidade_id,
     )
     return {"total": total, "itens": [questao_publica(i) for i in itens]}
 
@@ -69,11 +72,12 @@ def obter_questao(questao_id: int, usuario=Depends(usuario_atual)):
 
 @router.post("", status_code=status.HTTP_201_CREATED)
 def criar_questao(dados: QuestaoIn, usuario=Depends(exigir_admin)):
-    db.criar_questao(
+    questao_id = db.criar_questao(
         dados.area_id, dados.subtopico_id, dados.enunciado, dados.alternativas,
         dados.resposta_correta, dados.explicacao, dados.banca, dados.ano,
+        especialidade_id=dados.especialidade_id,
     )
-    return {"ok": True}
+    return {"ok": True, "id": questao_id}
 
 
 @router.put("/{questao_id}")
@@ -83,6 +87,7 @@ def atualizar_questao(questao_id: int, dados: QuestaoIn, usuario=Depends(exigir_
     db.atualizar_questao(
         questao_id, dados.area_id, dados.subtopico_id, dados.enunciado, dados.alternativas,
         dados.resposta_correta, dados.explicacao, dados.banca, dados.ano,
+        especialidade_id=dados.especialidade_id,
     )
     return {"ok": True}
 

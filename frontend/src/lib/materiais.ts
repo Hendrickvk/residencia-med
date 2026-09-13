@@ -4,6 +4,7 @@ import type { Material } from "./types";
 
 export function useMateriais(filtros: {
   area_id?: number;
+  especialidade_id?: number;
   subtopico_id?: number;
   tipo?: string;
   q?: string;

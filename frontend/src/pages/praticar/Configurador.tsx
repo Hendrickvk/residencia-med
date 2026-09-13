@@ -1,6 +1,6 @@
 import { ArrowRight, X } from "lucide-react";
 import { useState } from "react";
-import { useAreas, useAnos, useBancas, useSubtopicos } from "../../lib/catalogo";
+import { useAreas, useAnos, useBancas, useEspecialidades } from "../../lib/catalogo";
 import { BOTAO_PRIMARIO, CAMPO } from "../../lib/estilos";
 import type { FiltrosPratica } from "../../lib/types";
 
@@ -46,7 +46,7 @@ function Interruptor({
 
 export default function Configurador({ onIniciar, areaInicial }: Props) {
   const [areaId, setAreaId] = useState<number | undefined>(areaInicial);
-  const [subtopicoId, setSubtopicoId] = useState<number | undefined>(undefined);
+  const [especialidadeId, setEspecialidadeId] = useState<number | undefined>(undefined);
   const [banca, setBanca] = useState<string | undefined>(undefined);
   const [ano, setAno] = useState<number | undefined>(undefined);
   const [quantidade, setQuantidade] = useState(20);
@@ -54,16 +54,25 @@ export default function Configurador({ onIniciar, areaInicial }: Props) {
   const [excluirRespondidas, setExcluirRespondidas] = useState(false);
 
   const { data: areas } = useAreas();
-  const { data: subtopicos } = useSubtopicos(areaId);
+  const { data: especialidades } = useEspecialidades(areaId);
   const { data: bancas } = useBancas();
   const { data: anos } = useAnos();
 
+  // Só especialidades com casos: escolher uma vazia levaria direto ao "nenhum caso encontrado".
+  const especialidadesComCasos = especialidades?.filter((e) => e.total_questoes > 0);
   const nomeArea = areas?.find((a) => a.id === areaId)?.nome;
-  const nomeSubtopico = subtopicos?.find((s) => s.id === subtopicoId)?.nome;
+  const nomeEspecialidade = especialidades?.find((e) => e.id === especialidadeId)?.nome;
 
   const chips: { label: string; onRemover: () => void }[] = [];
-  if (nomeArea) chips.push({ label: nomeArea, onRemover: () => setAreaId(undefined) });
-  if (nomeSubtopico) chips.push({ label: nomeSubtopico, onRemover: () => setSubtopicoId(undefined) });
+  if (nomeArea)
+    chips.push({
+      label: nomeArea,
+      onRemover: () => {
+        setAreaId(undefined);
+        setEspecialidadeId(undefined);
+      },
+    });
+  if (nomeEspecialidade) chips.push({ label: nomeEspecialidade, onRemover: () => setEspecialidadeId(undefined) });
   if (banca) chips.push({ label: banca, onRemover: () => setBanca(undefined) });
   if (ano) chips.push({ label: String(ano), onRemover: () => setAno(undefined) });
   if (apenasErros) chips.push({ label: "Apenas erros", onRemover: () => setApenasErros(false) });
@@ -86,7 +95,7 @@ export default function Configurador({ onIniciar, areaInicial }: Props) {
               value={areaId ?? ""}
               onChange={(e) => {
                 setAreaId(e.target.value ? Number(e.target.value) : undefined);
-                setSubtopicoId(undefined);
+                setEspecialidadeId(undefined);
               }}
             >
               <option value="">Todas</option>
@@ -98,19 +107,19 @@ export default function Configurador({ onIniciar, areaInicial }: Props) {
             </select>
           </label>
 
-          <label htmlFor="filtro-assunto" className="flex flex-col gap-1.5">
-            <span className="rotulo text-muted">Assunto</span>
+          <label htmlFor="filtro-especialidade" className="flex flex-col gap-1.5">
+            <span className="rotulo text-muted">Especialidade</span>
             <select
-              id="filtro-assunto"
+              id="filtro-especialidade"
               className={CAMPO}
-              value={subtopicoId ?? ""}
+              value={especialidadeId ?? ""}
               disabled={!areaId}
-              onChange={(e) => setSubtopicoId(e.target.value ? Number(e.target.value) : undefined)}
+              onChange={(e) => setEspecialidadeId(e.target.value ? Number(e.target.value) : undefined)}
             >
-              <option value="">{areaId ? "Todos" : "Escolha uma área primeiro"}</option>
-              {subtopicos?.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.nome}
+              <option value="">{areaId ? "Todas" : "Escolha uma área primeiro"}</option>
+              {especialidadesComCasos?.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.nome} ({e.total_questoes})
                 </option>
               ))}
             </select>
@@ -204,7 +213,7 @@ export default function Configurador({ onIniciar, areaInicial }: Props) {
             onClick={() =>
               onIniciar({
                 area_id: areaId,
-                subtopico_id: subtopicoId,
+                especialidade_id: especialidadeId,
                 banca,
                 ano,
                 apenas_erros: apenasErros,

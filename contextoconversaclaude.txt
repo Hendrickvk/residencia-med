@@ -124,6 +124,37 @@ SESSÃO 2026-09-13 — CONDUTA, HTTPS GRATUITO (PENDENTE), REDESIGN "TRIAGEM"
    O caderno também traz o questionário de percepção com "QUESTÃO 1..9"
    depois da questão 100 — pegar só a primeira ocorrência de cada número.
 
+7) TAXONOMIA GRANDE ÁREA > ESPECIALIDADE (2026-09-13): o filtro de área
+   misturava as 5 grandes áreas com especialidades soltas e nomes de pasta
+   do MediaFire ("Aprenda Nefro", "CardioPapers ECG", "MEDCURSO -
+   PSIQUIATRIA"), porque a sincronização criava uma área por pasta.
+   Decisão do usuário: dois níveis, grandes áreas das provas > especialidade;
+   Psiquiatria é especialidade de Clínica Médica. Lista fixa em
+   db.TAXONOMIA (37 especialidades), tabela `especialidades`, colunas
+   `especialidade_id` em questoes/materiais/subtopicos e `subtopicos.origem`.
+   Importadores resolvem nomes com db.classificar_nome_area (nome exato,
+   depois radicais do mais específico ao mais geral); nome desconhecido é
+   erro/aviso, nunca área nova. A tela admin não cria mais área.
+   Migração aplicada com script de uso único (scratchpad da sessão, com
+   backup JSON do estado anterior):
+   - as 645 questões foram reclassificadas LENDO o conteúdo (não pelo rótulo
+     antigo): 212 mudaram de grande área — o grosso estava em Clínica Médica
+     sem ser (58 cirurgia, 44 preventiva, 37 GO, 23 pediatria). Resultado:
+     CM 180, GO 137, Cirurgia 119, Preventiva 105, Pediatria 104.
+     Cirurgia pediátrica ficou em Cirurgia; o Painel agrega por grande área,
+     então o histórico dos alunos por área mudou junto;
+   - os 1.646 materiais: cada módulo MEDCURSO virou assunto com nome legível
+     ("Arritmias cardíacas"), nome da pasta guardado em `origem`; módulos que
+     são a própria especialidade (Neuro, Psiquiatria, Ortopedia, PED 1
+     Neonatologia, PREV 3 Vigilância, CIR 1 Trauma) ficaram sem assunto, e
+     a sincronização repete essa regra para pastas novas;
+   - 23 áreas antigas apagadas depois de conferir que estavam vazias
+     (questoes/materiais têm ON DELETE CASCADE para areas — nunca apagar
+     área sem conferir);
+   - id 304 tinha explicação de outra questão (neuroblastoma) para uma
+     questão de toxoplasmose congênita: reescrita. Achado comparando
+     vocabulário da explicação com o do enunciado; foi o único caso.
+
 =====================================================================
 ARQUITETURA ATUAL DE ARQUIVOS
 =====================================================================

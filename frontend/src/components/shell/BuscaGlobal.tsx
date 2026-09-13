@@ -87,7 +87,9 @@ export function BuscaGlobal() {
                     {questoes.map((q) => (
                       <div key={q.id} className="rounded-btn px-2 py-2">
                         <div className="truncate text-corpo text-ink">{q.enunciado}</div>
-                        <div className="text-apoio text-muted">{q.area}</div>
+                        <div className="text-apoio text-muted">
+                          {[q.area, q.especialidade].filter(Boolean).join(" · ")}
+                        </div>
                       </div>
                     ))}
                   </div>

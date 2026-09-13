@@ -14,6 +14,7 @@ router = APIRouter(tags=["praticar"])
 @router.get("/praticar/sessao")
 def obter_sessao_pratica(
     area_id: int | None = None,
+    especialidade_id: int | None = None,
     subtopico_id: int | None = None,
     banca: str | None = None,
     ano: int | None = None,
@@ -29,7 +30,7 @@ def obter_sessao_pratica(
     ids = db.ids_questoes_filtro_pratica(
         usuario_id=usuario["id"], area_id=area_id, subtopico_id=subtopico_id,
         banca=banca, ano=ano, apenas_erros=apenas_erros,
-        excluir_respondidas=excluir_respondidas,
+        excluir_respondidas=excluir_respondidas, especialidade_id=especialidade_id,
     )
     random.shuffle(ids)
     ids = ids[:quantidade]

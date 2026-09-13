@@ -7,9 +7,11 @@ ficam centralizadas aqui, para manter a interface (app.py) enxuta.
 """
 
 import os
+import re
 import json
 import datetime
 import threading
+import unicodedata
 from contextlib import contextmanager
 
 import psycopg2
@@ -174,8 +176,150 @@ def get_conn():
         pool.putconn(raw_conn)
 
 
+# ---------------------------------------------------------------------------
+# Taxonomia: grande área > especialidade
+# ---------------------------------------------------------------------------
+# As cinco grandes áreas das provas (ENAMED/Revalida) e as especialidades de
+# cada uma. É a fonte única dessa lista: init_db semeia a partir daqui e os
+# importadores (planilha e MediaFire) resolvem nomes livres contra ela em vez
+# de criar áreas novas — era assim que pastas como "Aprenda Nefro" ou
+# "CardioPapers ECG" viravam "áreas" no filtro.
+TAXONOMIA = {
+    "Clínica Médica": [
+        "Cardiologia", "Dermatologia", "Emergências clínicas", "Endocrinologia",
+        "Gastroenterologia", "Geriatria", "Hematologia", "Hepatologia", "Infectologia",
+        "Nefrologia", "Neurologia", "Oncologia e cuidados paliativos", "Pneumologia",
+        "Psiquiatria", "Reumatologia",
+    ],
+    "Cirurgia": [
+        "Cirurgia geral", "Cirurgia pediátrica", "Cirurgia vascular", "Coloproctologia",
+        "Oftalmologia", "Ortopedia", "Otorrinolaringologia", "Trauma", "Urologia",
+    ],
+    "Ginecologia e Obstetrícia": ["Ginecologia", "Mastologia", "Obstetrícia"],
+    "Pediatria": ["Infectologia pediátrica", "Neonatologia", "Pediatria clínica", "Puericultura"],
+    "Medicina Preventiva e Social": [
+        "Atenção primária e saúde da família", "Epidemiologia", "Ética e medicina legal",
+        "Políticas de saúde e SUS", "Saúde do trabalhador", "Vigilância em saúde",
+    ],
+}
+
+_CM, _CIR, _GO, _PED, _MPS = TAXONOMIA
+
+# Padrões procurados no nome normalizado (minúsculo, sem acento), do mais
+# específico para o mais geral: "cirurgia vascular" precisa vencer "cirurg",
+# e "ginecologia e obstetricia" precisa vencer "gineco". Especialidade None =
+# o nome só identifica a grande área.
+_PADROES_TAXONOMIA = [
+    (r"\bginecologia e obstetricia\b", _GO, None),
+    (r"\bmedicina preventiva\b|\bsaude coletiva\b", _MPS, None),
+    (r"\bclinica medica\b", _CM, None),
+    (r"\bcirurgia pediatrica\b", _CIR, "Cirurgia pediátrica"),
+    (r"\bcirurgia vascular\b", _CIR, "Cirurgia vascular"),
+    (r"\bcirurgia geral\b", _CIR, "Cirurgia geral"),
+    (r"\binfectologia pediatrica\b", _PED, "Infectologia pediátrica"),
+    (r"\bneonat", _PED, "Neonatologia"),
+    (r"\bpuericult", _PED, "Puericultura"),
+    (r"\bcardio", _CM, "Cardiologia"),
+    (r"\bdermato", _CM, "Dermatologia"),
+    (r"\bemergencias? clinicas?\b", _CM, "Emergências clínicas"),
+    (r"\bendocrino", _CM, "Endocrinologia"),
+    (r"\bgastro", _CM, "Gastroenterologia"),
+    (r"\bgeriatr", _CM, "Geriatria"),
+    (r"\bhemato", _CM, "Hematologia"),
+    (r"\bhepato", _CM, "Hepatologia"),
+    (r"\binfecto", _CM, "Infectologia"),
+    (r"\bnefro", _CM, "Nefrologia"),
+    (r"\bneuro(?!cirurg)", _CM, "Neurologia"),
+    (r"\boncolog|\bcuidados paliativos\b", _CM, "Oncologia e cuidados paliativos"),
+    (r"\bpneumo", _CM, "Pneumologia"),
+    (r"\bpsiquiatr", _CM, "Psiquiatria"),
+    (r"\breumato", _CM, "Reumatologia"),
+    (r"\bcoloproct|\bproctolog", _CIR, "Coloproctologia"),
+    (r"\boftalmo", _CIR, "Oftalmologia"),
+    (r"\bortoped", _CIR, "Ortopedia"),
+    (r"\botorrino", _CIR, "Otorrinolaringologia"),
+    (r"\btrauma", _CIR, "Trauma"),
+    (r"\burolog", _CIR, "Urologia"),
+    (r"\bcirurg", _CIR, None),
+    (r"\bmastolog", _GO, "Mastologia"),
+    (r"\bobstetr", _GO, "Obstetrícia"),
+    (r"\bgineco", _GO, "Ginecologia"),
+    (r"\bpediatr", _PED, None),
+    (r"\bepidemio", _MPS, "Epidemiologia"),
+    (r"\bvigilancia", _MPS, "Vigilância em saúde"),
+    (r"\bsaude do trabalhador\b|\bmedicina do trabalho\b", _MPS, "Saúde do trabalhador"),
+    (r"\betica\b|\bmedicina legal\b", _MPS, "Ética e medicina legal"),
+    (r"\batencao primaria\b|\bsaude da familia\b", _MPS, "Atenção primária e saúde da família"),
+    (r"\bpoliticas? de saude\b|\bsus\b", _MPS, "Políticas de saúde e SUS"),
+    (r"\bpreventiva\b", _MPS, None),
+]
+
+
+def normalizar_nome(texto):
+    """Minúsculo, sem acento, só letras/dígitos separados por um espaço —
+    'MEDCURSO - Obstetrícia_2' -> 'medcurso obstetricia 2'."""
+    texto = unicodedata.normalize("NFKD", str(texto or "")).lower()
+    texto = "".join(ch for ch in texto if not unicodedata.combining(ch))
+    return re.sub(r"[^a-z0-9]+", " ", texto).strip()
+
+
+def classificar_nome_area(nome):
+    """Traduz um nome livre (pasta do MediaFire, coluna de planilha) para
+    (grande área, especialidade ou None). Devolve None quando o nome não
+    corresponde a nada da TAXONOMIA — quem chama decide se isso é erro."""
+    texto = normalizar_nome(nome)
+    if not texto:
+        return None
+    for area_nome, especialidades in TAXONOMIA.items():
+        if texto == normalizar_nome(area_nome):
+            return area_nome, None
+        for esp in especialidades:
+            if texto == normalizar_nome(esp):
+                return area_nome, esp
+    for padrao, area_nome, esp in _PADROES_TAXONOMIA:
+        if re.search(padrao, texto):
+            return area_nome, esp
+    return None
+
+
+def _ids_taxonomia(c, area_nome, especialidade_nome):
+    area_id = c.execute("SELECT id FROM areas WHERE nome = ?", (area_nome,)).fetchone()["id"]
+    especialidade_id = None
+    if especialidade_nome:
+        especialidade_id = c.execute(
+            "SELECT id FROM especialidades WHERE area_id = ? AND nome = ?", (area_id, especialidade_nome)
+        ).fetchone()["id"]
+    return area_id, especialidade_id
+
+
+def classificar_area_especialidade(nome, especialidade=None):
+    """(grande área, especialidade ou None) para um nome livre de área e,
+    opcional, de especialidade. `nome` pode já ser uma especialidade
+    ("Cardiologia" -> Clínica Médica/Cardiologia). Uma especialidade que não
+    pertence à área de `nome` é ignorada. None se `nome` não for reconhecido."""
+    classe = classificar_nome_area(nome)
+    if classe is None:
+        return None
+    area_nome, esp_nome = classe
+    if especialidade:
+        classe_esp = classificar_nome_area(especialidade)
+        if classe_esp and classe_esp[0] == area_nome and classe_esp[1]:
+            esp_nome = classe_esp[1]
+    return area_nome, esp_nome
+
+
+def resolver_area_especialidade(nome, especialidade=None):
+    """Mesmo que classificar_area_especialidade, mas devolve os ids
+    (area_id, especialidade_id)."""
+    classe = classificar_area_especialidade(nome, especialidade)
+    if classe is None:
+        return None
+    with get_conn() as conn:
+        return _ids_taxonomia(conn.cursor(), *classe)
+
+
 def init_db():
-    """Cria as tabelas caso ainda não existam e popula áreas padrão."""
+    """Cria as tabelas caso ainda não existam e semeia a TAXONOMIA."""
     with get_conn() as conn:
         c = conn.cursor()
 
@@ -430,15 +574,47 @@ def init_db():
 
         conn.commit()
 
-        # Seed de áreas padrão (comuns em provas de residência / ENAMED)
-        areas_padrao = [
-            "Clínica Médica", "Cirurgia Geral", "Pediatria",
-            "Ginecologia e Obstetrícia", "Medicina Preventiva e Social",
-            "Cardiologia", "Dermatologia", "Ortopedia", "Neurologia",
-            "Psiquiatria", "Endocrinologia", "Nefrologia", "Urologia",
-        ]
-        for nome in areas_padrao:
-            c.execute("INSERT INTO areas (nome) VALUES (?) ON CONFLICT (nome) DO NOTHING", (nome,))
+        # Especialidades: segundo nível da taxonomia (grande área > especialidade,
+        # ver TAXONOMIA). Questões, materiais e assuntos (subtopicos) apontam
+        # para a especialidade quando ela é conhecida; a área continua sendo a
+        # grande área, que é o que o Painel agrega.
+        c.execute("""
+        CREATE TABLE IF NOT EXISTS especialidades (
+            id SERIAL PRIMARY KEY,
+            area_id INTEGER NOT NULL,
+            nome TEXT NOT NULL,
+            FOREIGN KEY (area_id) REFERENCES areas(id) ON DELETE CASCADE,
+            UNIQUE(area_id, nome)
+        )
+        """)
+        for tabela in ("questoes", "materiais", "subtopicos"):
+            c.execute(
+                "SELECT column_name FROM information_schema.columns WHERE table_name = ?", (tabela,)
+            )
+            if "especialidade_id" not in {row["column_name"] for row in c.fetchall()}:
+                c.execute(
+                    f"ALTER TABLE {tabela} ADD COLUMN especialidade_id INTEGER "
+                    "REFERENCES especialidades(id) ON DELETE SET NULL"
+                )
+        c.execute("SELECT column_name FROM information_schema.columns WHERE table_name = ?", ("subtopicos",))
+        if "origem" not in {row["column_name"] for row in c.fetchall()}:
+            # Nome original da pasta do MediaFire: é por ele que a sincronização
+            # reencontra o assunto depois de ele ser renomeado/reclassificado.
+            c.execute("ALTER TABLE subtopicos ADD COLUMN origem TEXT")
+        c.execute("CREATE INDEX IF NOT EXISTS idx_questoes_especialidade_id ON questoes(especialidade_id)")
+        c.execute("CREATE INDEX IF NOT EXISTS idx_materiais_especialidade_id ON materiais(especialidade_id)")
+
+        # Seed da taxonomia: só as grandes áreas e suas especialidades. Antes
+        # daqui entravam especialidades soltas como áreas ("Cardiologia",
+        # "Cirurgia Geral"...), o que misturava dois níveis no mesmo filtro.
+        for area_nome, especialidades in TAXONOMIA.items():
+            c.execute("INSERT INTO areas (nome) VALUES (?) ON CONFLICT (nome) DO NOTHING", (area_nome,))
+            area_id = c.execute("SELECT id FROM areas WHERE nome = ?", (area_nome,)).fetchone()["id"]
+            for esp in especialidades:
+                c.execute(
+                    "INSERT INTO especialidades (area_id, nome) VALUES (?, ?) ON CONFLICT (area_id, nome) DO NOTHING",
+                    (area_id, esp),
+                )
         conn.commit()
 
 
@@ -466,18 +642,42 @@ def obter_ou_criar_area(nome):
         return row["id"]
 
 
-def listar_subtopicos(area_id):
+def listar_especialidades(area_id=None):
+    """Especialidades (de uma grande área, ou todas) com quantas questões e
+    materiais cada uma tem — as telas escondem do filtro as que estão vazias."""
+    query = """
+        SELECT e.id, e.area_id, e.nome,
+               (SELECT COUNT(*) FROM questoes q WHERE q.especialidade_id = e.id) AS total_questoes,
+               (SELECT COUNT(*) FROM materiais m WHERE m.especialidade_id = e.id) AS total_materiais
+        FROM especialidades e
+    """
+    params = []
+    if area_id:
+        query += " WHERE e.area_id = ?"
+        params.append(area_id)
     with get_conn() as conn:
-        return conn.execute(
-            "SELECT * FROM subtopicos WHERE area_id = ? ORDER BY nome", (area_id,)
-        ).fetchall()
+        rows = conn.execute(query, params).fetchall()
+    # Ordena ignorando acento: o banco usa collation C.UTF-8, que põe "Ética"
+    # depois de "Vigilância".
+    return sorted(rows, key=lambda r: normalizar_nome(r["nome"]))
 
 
-def criar_subtopico(area_id, nome):
+def listar_subtopicos(area_id, especialidade_id=None):
+    query = "SELECT * FROM subtopicos WHERE area_id = ?"
+    params = [area_id]
+    if especialidade_id:
+        query += " AND especialidade_id = ?"
+        params.append(especialidade_id)
+    with get_conn() as conn:
+        return conn.execute(query + " ORDER BY nome", params).fetchall()
+
+
+def criar_subtopico(area_id, nome, especialidade_id=None):
     with get_conn() as conn:
         conn.execute(
-            "INSERT INTO subtopicos (area_id, nome) VALUES (?, ?) ON CONFLICT (area_id, nome) DO NOTHING",
-            (area_id, nome),
+            "INSERT INTO subtopicos (area_id, nome, especialidade_id) VALUES (?, ?, ?) "
+            "ON CONFLICT (area_id, nome) DO NOTHING",
+            (area_id, nome, especialidade_id),
         )
 
 
@@ -495,35 +695,60 @@ def obter_ou_criar_subtopico(area_id, nome):
         return row["id"]
 
 
+def obter_subtopico_por_origem(area_id, origem):
+    """Assunto criado a partir de uma pasta do MediaFire com esse nome original."""
+    with get_conn() as conn:
+        return conn.execute(
+            "SELECT * FROM subtopicos WHERE area_id = ? AND origem = ?", (area_id, origem)
+        ).fetchone()
+
+
+def criar_subtopico_de_origem(area_id, nome, *, origem, especialidade_id=None):
+    """Assunto vindo de uma pasta do MediaFire: `nome` é o nome legível e
+    `origem` o nome original da pasta. Devolve o id (o existente, se já houver
+    um assunto com esse nome na área)."""
+    with get_conn() as conn:
+        conn.execute(
+            "INSERT INTO subtopicos (area_id, nome, especialidade_id, origem) VALUES (?, ?, ?, ?) "
+            "ON CONFLICT (area_id, nome) DO NOTHING",
+            (area_id, nome, especialidade_id, origem),
+        )
+        return conn.execute(
+            "SELECT id FROM subtopicos WHERE area_id = ? AND nome = ?", (area_id, nome)
+        ).fetchone()["id"]
+
+
 # ---------------------------------------------------------------------------
 # Questões
 # ---------------------------------------------------------------------------
 
 def criar_questao(area_id, subtopico_id, enunciado, alternativas: dict,
-                   resposta_correta, explicacao="", banca="", ano=None):
+                   resposta_correta, explicacao="", banca="", ano=None, especialidade_id=None):
+    """Devolve o id da questão criada (a tela Nova Questão anexa a imagem nele)."""
     with get_conn() as conn:
-        conn.execute("""
+        cur = conn.execute("""
             INSERT INTO questoes
-                (area_id, subtopico_id, enunciado, alternativas, resposta_correta,
+                (area_id, especialidade_id, subtopico_id, enunciado, alternativas, resposta_correta,
                  explicacao, banca, ano, criada_em)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
-            area_id, subtopico_id, enunciado, json.dumps(alternativas, ensure_ascii=False),
+            area_id, especialidade_id, subtopico_id, enunciado, json.dumps(alternativas, ensure_ascii=False),
             resposta_correta, explicacao, banca, ano,
             datetime.datetime.now().isoformat(),
         ))
+        return cur.lastrowid
 
 
 def atualizar_questao(questao_id, area_id, subtopico_id, enunciado, alternativas: dict,
-                       resposta_correta, explicacao="", banca="", ano=None):
+                       resposta_correta, explicacao="", banca="", ano=None, especialidade_id=None):
     with get_conn() as conn:
         conn.execute("""
             UPDATE questoes
-            SET area_id = ?, subtopico_id = ?, enunciado = ?, alternativas = ?,
+            SET area_id = ?, especialidade_id = ?, subtopico_id = ?, enunciado = ?, alternativas = ?,
                 resposta_correta = ?, explicacao = ?, banca = ?, ano = ?
             WHERE id = ?
         """, (
-            area_id, subtopico_id, enunciado, json.dumps(alternativas, ensure_ascii=False),
+            area_id, especialidade_id, subtopico_id, enunciado, json.dumps(alternativas, ensure_ascii=False),
             resposta_correta, explicacao, banca, ano, questao_id,
         ))
 
@@ -538,15 +763,18 @@ def listar_anos():
 
 def ids_questoes_filtro_pratica(*, usuario_id, area_id=None, subtopico_id=None,
                                  banca=None, ano=None, apenas_erros=False,
-                                 excluir_respondidas=False):
+                                 excluir_respondidas=False, especialidade_id=None):
     """Configurador de Praticar (REDESIGN.md §4.2): filtros combináveis além
-    de área/subtópico — banca, ano, e dois interruptores que olham o
-    histórico de respostas do próprio usuário."""
+    de área/especialidade/subtópico — banca, ano, e dois interruptores que
+    olham o histórico de respostas do próprio usuário."""
     condicoes = ["1=1"]
     params = []
     if area_id:
         condicoes.append("q.area_id = ?")
         params.append(area_id)
+    if especialidade_id:
+        condicoes.append("q.especialidade_id = ?")
+        params.append(especialidade_id)
     if subtopico_id:
         condicoes.append("q.subtopico_id = ?")
         params.append(subtopico_id)
@@ -586,10 +814,11 @@ def obter_questoes_por_ids(ids, *, usuario_id):
         return []
     placeholders = ",".join(["?"] * len(ids))
     query = f"""
-        SELECT q.*, a.nome AS area, s.nome AS subtopico,
+        SELECT q.*, a.nome AS area, e.nome AS especialidade, s.nome AS subtopico,
                (m.usuario_id IS NOT NULL) AS marcada
         FROM questoes q
         JOIN areas a ON a.id = q.area_id
+        LEFT JOIN especialidades e ON e.id = q.especialidade_id
         LEFT JOIN subtopicos s ON s.id = q.subtopico_id
         LEFT JOIN questoes_marcadas m ON m.questao_id = q.id AND m.usuario_id = ?
         WHERE q.id IN ({placeholders})
@@ -617,35 +846,36 @@ def listar_questoes(area_id=None, subtopico_id=None):
         return conn.execute(query, params).fetchall()
 
 
-def _clausulas_filtro_questoes(area_id, subtopico_id, busca):
+def _clausulas_filtro_questoes(area_id, subtopico_id, busca, especialidade_id=None, prefixo=""):
     condicoes = ["1=1"]
     params = []
-    if area_id:
-        condicoes.append("area_id = ?")
-        params.append(area_id)
-    if subtopico_id:
-        condicoes.append("subtopico_id = ?")
-        params.append(subtopico_id)
+    for coluna, valor in (("area_id", area_id), ("especialidade_id", especialidade_id),
+                          ("subtopico_id", subtopico_id)):
+        if valor:
+            condicoes.append(f"{prefixo}{coluna} = ?")
+            params.append(valor)
     if busca:
-        condicoes.append("enunciado ILIKE ?")
+        condicoes.append(f"{prefixo}enunciado ILIKE ?")
         params.append(f"%{busca}%")
     return " AND ".join(condicoes), params
 
 
-def listar_questoes_paginado(area_id=None, subtopico_id=None, busca=None, limite=50, offset=0):
-    condicao, params = _clausulas_filtro_questoes(area_id, subtopico_id, busca)
-    condicao = condicao.replace("area_id", "q.area_id").replace("subtopico_id", "q.subtopico_id")
+def listar_questoes_paginado(area_id=None, subtopico_id=None, busca=None, limite=50, offset=0,
+                             especialidade_id=None):
+    condicao, params = _clausulas_filtro_questoes(area_id, subtopico_id, busca, especialidade_id, prefixo="q.")
     query = f"""
-        SELECT q.*, a.nome AS area
-        FROM questoes q JOIN areas a ON a.id = q.area_id
+        SELECT q.*, a.nome AS area, e.nome AS especialidade
+        FROM questoes q
+        JOIN areas a ON a.id = q.area_id
+        LEFT JOIN especialidades e ON e.id = q.especialidade_id
         WHERE {condicao} ORDER BY q.criada_em DESC LIMIT ? OFFSET ?
     """
     with get_conn() as conn:
         return conn.execute(query, params + [limite, offset]).fetchall()
 
 
-def contar_questoes_filtradas(area_id=None, subtopico_id=None, busca=None):
-    condicao, params = _clausulas_filtro_questoes(area_id, subtopico_id, busca)
+def contar_questoes_filtradas(area_id=None, subtopico_id=None, busca=None, especialidade_id=None):
+    condicao, params = _clausulas_filtro_questoes(area_id, subtopico_id, busca, especialidade_id)
     query = f"SELECT COUNT(*) AS n FROM questoes WHERE {condicao}"
     with get_conn() as conn:
         return conn.execute(query, params).fetchone()["n"]
@@ -670,8 +900,10 @@ def busca_global(termo, limite=10):
     termo = f"%{termo}%"
     with get_conn() as conn:
         questoes = conn.execute("""
-            SELECT q.id, q.enunciado, a.nome AS area
-            FROM questoes q JOIN areas a ON a.id = q.area_id
+            SELECT q.id, q.enunciado, a.nome AS area, e.nome AS especialidade
+            FROM questoes q
+            JOIN areas a ON a.id = q.area_id
+            LEFT JOIN especialidades e ON e.id = q.especialidade_id
             WHERE q.enunciado ILIKE ? ORDER BY q.criada_em DESC LIMIT ?
         """, (termo, limite)).fetchall()
         materiais = conn.execute("""
@@ -689,9 +921,10 @@ def contar_questoes():
 def obter_questao(questao_id):
     with get_conn() as conn:
         return conn.execute("""
-            SELECT q.*, a.nome AS area, s.nome AS subtopico
+            SELECT q.*, a.nome AS area, e.nome AS especialidade, s.nome AS subtopico
             FROM questoes q
             JOIN areas a ON a.id = q.area_id
+            LEFT JOIN especialidades e ON e.id = q.especialidade_id
             LEFT JOIN subtopicos s ON s.id = q.subtopico_id
             WHERE q.id = ?
         """, (questao_id,)).fetchone()
@@ -830,8 +1063,11 @@ def questao_esta_marcada(usuario_id, questao_id):
 def listar_questoes_marcadas(*, usuario_id):
     with get_conn() as conn:
         return conn.execute("""
-            SELECT q.* FROM questoes_marcadas m
+            SELECT q.*, a.nome AS area, e.nome AS especialidade
+            FROM questoes_marcadas m
             JOIN questoes q ON q.id = m.questao_id
+            JOIN areas a ON a.id = q.area_id
+            LEFT JOIN especialidades e ON e.id = q.especialidade_id
             WHERE m.usuario_id = ?
             ORDER BY m.criada_em DESC
         """, (usuario_id,)).fetchall()
@@ -961,9 +1197,11 @@ def criar_questoes_em_lote(itens):
       area, subtopico (opcional), enunciado, alternativas (dict),
       resposta_correta, explicacao (opcional), banca (opcional), ano (opcional)
 
-    Cria áreas/subtópicos que ainda não existirem. Retorna (inseridos, erros),
-    onde erros é uma lista de (indice, mensagem) para linhas que falharam
-    (as demais linhas continuam sendo importadas normalmente).
+    `area` pode ser grande área ou especialidade (resolvida pela TAXONOMIA);
+    um nome não reconhecido é erro da linha, nunca uma área nova. Cria
+    subtópicos que ainda não existirem. Retorna (inseridos, erros), onde erros
+    é uma lista de (indice, mensagem) para linhas que falharam (as demais
+    linhas continuam sendo importadas normalmente).
     """
     area_cache = {}
     sub_cache = {}
@@ -973,17 +1211,7 @@ def criar_questoes_em_lote(itens):
         c = conn.cursor()
         for idx, item in enumerate(itens):
             try:
-                area_nome = str(item["area"]).strip()
-                if not area_nome:
-                    raise ValueError("área vazia")
-                if area_nome not in area_cache:
-                    row = c.execute("SELECT id FROM areas WHERE nome = ?", (area_nome,)).fetchone()
-                    if row:
-                        area_cache[area_nome] = row["id"]
-                    else:
-                        c.execute("INSERT INTO areas (nome) VALUES (?)", (area_nome,))
-                        area_cache[area_nome] = c.lastrowid
-                area_id = area_cache[area_nome]
+                area_id, especialidade_id = _resolver_area_em_lote(c, item, area_cache)
 
                 subtopico_nome = str(item.get("subtopico") or "").strip() or None
                 subtopico_id = None
@@ -1013,11 +1241,11 @@ def criar_questoes_em_lote(itens):
 
                 c.execute("""
                     INSERT INTO questoes
-                        (area_id, subtopico_id, enunciado, alternativas, resposta_correta,
+                        (area_id, especialidade_id, subtopico_id, enunciado, alternativas, resposta_correta,
                          explicacao, banca, ano, criada_em)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
-                    area_id, subtopico_id, item["enunciado"],
+                    area_id, especialidade_id, subtopico_id, item["enunciado"],
                     json.dumps(item["alternativas"], ensure_ascii=False),
                     item["resposta_correta"], item.get("explicacao", ""),
                     item.get("banca", ""), item.get("ano"),
@@ -1030,10 +1258,26 @@ def criar_questoes_em_lote(itens):
     return inseridos, erros
 
 
+def _resolver_area_em_lote(c, item, cache):
+    """(area_id, especialidade_id) da coluna `area` (+ `especialidade`, se
+    houver) de uma linha de importação em lote."""
+    area_nome = str(item.get("area") or "").strip()
+    if not area_nome:
+        raise ValueError("área vazia")
+    esp_nome = str(item.get("especialidade") or "").strip() or None
+    chave = (area_nome, esp_nome)
+    if chave not in cache:
+        classe = classificar_area_especialidade(area_nome, esp_nome)
+        if classe is None:
+            raise ValueError(f"área '{area_nome}' não corresponde a nenhuma grande área ou especialidade")
+        cache[chave] = _ids_taxonomia(c, *classe)
+    return cache[chave]
+
+
 def criar_materiais_em_lote(itens):
     """
-    itens: lista de dicts {area, subtopico (opcional), tipo, titulo, link}
-    Cria áreas/subtópicos que ainda não existirem. Retorna (inseridos, erros).
+    itens: lista de dicts {area, especialidade (opcional), subtopico (opcional), tipo, titulo, link}
+    `area` segue a TAXONOMIA (ver criar_questoes_em_lote). Retorna (inseridos, erros).
     """
     area_cache = {}
     sub_cache = {}
@@ -1043,22 +1287,11 @@ def criar_materiais_em_lote(itens):
         c = conn.cursor()
         for idx, item in enumerate(itens):
             try:
-                area_nome = str(item["area"]).strip()
-                if not area_nome:
-                    raise ValueError("área vazia")
                 if not item.get("titulo"):
                     raise ValueError("título vazio")
                 if not item.get("link"):
                     raise ValueError("link vazio")
-
-                if area_nome not in area_cache:
-                    row = c.execute("SELECT id FROM areas WHERE nome = ?", (area_nome,)).fetchone()
-                    if row:
-                        area_cache[area_nome] = row["id"]
-                    else:
-                        c.execute("INSERT INTO areas (nome) VALUES (?)", (area_nome,))
-                        area_cache[area_nome] = c.lastrowid
-                area_id = area_cache[area_nome]
+                area_id, especialidade_id = _resolver_area_em_lote(c, item, area_cache)
 
                 subtopico_nome = str(item.get("subtopico") or "").strip() or None
                 subtopico_id = None
@@ -1080,9 +1313,9 @@ def criar_materiais_em_lote(itens):
                     subtopico_id = sub_cache[chave]
 
                 c.execute("""
-                    INSERT INTO materiais (area_id, subtopico_id, tipo, titulo, link_mediafire)
-                    VALUES (?, ?, ?, ?, ?)
-                """, (area_id, subtopico_id, item.get("tipo") or "Outro", item["titulo"], item["link"]))
+                    INSERT INTO materiais (area_id, especialidade_id, subtopico_id, tipo, titulo, link_mediafire)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                """, (area_id, especialidade_id, subtopico_id, item.get("tipo") or "Outro", item["titulo"], item["link"]))
                 inseridos += 1
             except Exception as e:
                 erros.append((idx, str(e)))
@@ -1094,7 +1327,8 @@ def criar_materiais_em_lote(itens):
 # Materiais (MediaFire) - CRUD individual
 # ---------------------------------------------------------------------------
 
-def criar_material(area_id, subtopico_id, tipo, titulo, link_mediafire, mediafire_key=None):
+def criar_material(area_id, subtopico_id, tipo, titulo, link_mediafire, mediafire_key=None,
+                   especialidade_id=None):
     """Insere um material. Se `mediafire_key` já existir no banco (mesmo
     arquivo importado antes), a inserção é ignorada silenciosamente —
     isso é o que torna a sincronização com o MediaFire segura para
@@ -1106,11 +1340,11 @@ def criar_material(area_id, subtopico_id, tipo, titulo, link_mediafire, mediafir
     with get_conn() as conn:
         cur = conn.execute("""
             INSERT INTO materiais
-                (area_id, subtopico_id, tipo, titulo, link_mediafire, mediafire_key, sincronizado_em)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+                (area_id, especialidade_id, subtopico_id, tipo, titulo, link_mediafire, mediafire_key, sincronizado_em)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT (mediafire_key) WHERE mediafire_key IS NOT NULL DO NOTHING
         """, (
-            area_id, subtopico_id, tipo, titulo, link_mediafire, mediafire_key,
+            area_id, especialidade_id, subtopico_id, tipo, titulo, link_mediafire, mediafire_key,
             datetime.datetime.now().isoformat() if mediafire_key else None,
         ))
         return cur.rowcount > 0
@@ -1129,20 +1363,16 @@ def contar_materiais():
         return conn.execute("SELECT COUNT(*) AS n FROM materiais").fetchone()["n"]
 
 
-def _clausulas_filtro_materiais(area_id, subtopico_id, tipo, busca):
+def _clausulas_filtro_materiais(area_id, subtopico_id, tipo, busca, especialidade_id=None, prefixo=""):
     condicoes = ["1=1"]
     params = []
-    if area_id:
-        condicoes.append("area_id = ?")
-        params.append(area_id)
-    if subtopico_id:
-        condicoes.append("subtopico_id = ?")
-        params.append(subtopico_id)
-    if tipo:
-        condicoes.append("tipo = ?")
-        params.append(tipo)
+    for coluna, valor in (("area_id", area_id), ("especialidade_id", especialidade_id),
+                          ("subtopico_id", subtopico_id), ("tipo", tipo)):
+        if valor:
+            condicoes.append(f"{prefixo}{coluna} = ?")
+            params.append(valor)
     if busca:
-        condicoes.append("titulo ILIKE ?")
+        condicoes.append(f"{prefixo}titulo ILIKE ?")
         params.append(f"%{busca}%")
     return " AND ".join(condicoes), params
 
@@ -1164,20 +1394,26 @@ def listar_materiais(area_id=None, subtopico_id=None):
 
 
 def listar_materiais_paginado(area_id=None, subtopico_id=None, tipo=None, busca=None,
-                               limite=50, offset=0):
-    condicao, params = _clausulas_filtro_materiais(area_id, subtopico_id, tipo, busca)
-    condicao = condicao.replace("area_id", "m.area_id")
+                               limite=50, offset=0, especialidade_id=None):
+    condicao, params = _clausulas_filtro_materiais(
+        area_id, subtopico_id, tipo, busca, especialidade_id, prefixo="m.",
+    )
+    # Agrupa por especialidade e assunto: os arquivos de um mesmo módulo
+    # ficam juntos na página em vez de espalhados pela ordem alfabética.
     query = f"""
-        SELECT m.*, s.nome AS subtopico
-        FROM materiais m LEFT JOIN subtopicos s ON s.id = m.subtopico_id
-        WHERE {condicao} ORDER BY m.tipo, m.titulo LIMIT ? OFFSET ?
+        SELECT m.*, e.nome AS especialidade, s.nome AS subtopico
+        FROM materiais m
+        LEFT JOIN especialidades e ON e.id = m.especialidade_id
+        LEFT JOIN subtopicos s ON s.id = m.subtopico_id
+        WHERE {condicao} ORDER BY e.nome, s.nome, m.tipo, m.titulo LIMIT ? OFFSET ?
     """
     with get_conn() as conn:
         return conn.execute(query, params + [limite, offset]).fetchall()
 
 
-def contar_materiais_filtrados(area_id=None, subtopico_id=None, tipo=None, busca=None):
-    condicao, params = _clausulas_filtro_materiais(area_id, subtopico_id, tipo, busca)
+def contar_materiais_filtrados(area_id=None, subtopico_id=None, tipo=None, busca=None,
+                               especialidade_id=None):
+    condicao, params = _clausulas_filtro_materiais(area_id, subtopico_id, tipo, busca, especialidade_id)
     query = f"SELECT COUNT(*) AS n FROM materiais WHERE {condicao}"
     with get_conn() as conn:
         return conn.execute(query, params).fetchone()["n"]
@@ -1418,9 +1654,11 @@ def listar_itens_simulado(simulado_id, *, usuario_id):
     with get_conn() as conn:
         return conn.execute("""
             SELECT si.id AS item_id, si.ordem, si.resposta_dada, si.correta,
-                   q.*, (m.usuario_id IS NOT NULL) AS marcada
+                   q.*, a.nome AS area, e.nome AS especialidade, (m.usuario_id IS NOT NULL) AS marcada
             FROM simulado_itens si
             JOIN questoes q ON q.id = si.questao_id
+            JOIN areas a ON a.id = q.area_id
+            LEFT JOIN especialidades e ON e.id = q.especialidade_id
             JOIN simulados s ON s.id = si.simulado_id
             LEFT JOIN questoes_marcadas m ON m.questao_id = q.id AND m.usuario_id = ?
             WHERE si.simulado_id = ? AND s.usuario_id = ?

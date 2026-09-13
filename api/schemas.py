@@ -57,6 +57,7 @@ class SubtopicoIn(BaseModel):
 
 class QuestaoIn(BaseModel):
     area_id: int
+    especialidade_id: Optional[int] = None
     subtopico_id: Optional[int] = None
     enunciado: str = Field(min_length=1)
     alternativas: dict[str, str]
@@ -70,6 +71,7 @@ class QuestaoIn(BaseModel):
 
 class FiltrosSessaoIn(BaseModel):
     area_id: Optional[int] = None
+    especialidade_id: Optional[int] = None
     subtopico_id: Optional[int] = None
     banca: Optional[str] = None
     ano: Optional[int] = None
@@ -93,6 +95,7 @@ class MarcarRevisaoIn(BaseModel):
 
 class MaterialIn(BaseModel):
     area_id: int
+    especialidade_id: Optional[int] = None
     subtopico_id: Optional[int] = None
     tipo: str = "Outro"
     titulo: str = Field(min_length=1)

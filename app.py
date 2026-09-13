@@ -334,13 +334,26 @@ def _form_questao(q, *, key_prefix):
 
     nomes_area = list(areas_form.keys())
     area_atual_nome = next((n for n, i in areas_form.items() if i == q["area_id"]), None) if q else None
-    col_area, col_sub = st.columns(2)
+    col_area, col_esp, col_sub = st.columns(3)
     area_nome_f = col_area.selectbox(
         "Área", nomes_area,
         index=nomes_area.index(area_atual_nome) if area_atual_nome in nomes_area else 0,
         key=f"{key_prefix}_area",
     )
     area_id_f = areas_form[area_nome_f]
+
+    esp_opcoes_f = {"(nenhuma)": None}
+    esp_opcoes_f.update({e["nome"]: e["id"] for e in db.listar_especialidades(area_id_f)})
+    nomes_esp = list(esp_opcoes_f.keys())
+    esp_atual_nome = next(
+        (n for n, i in esp_opcoes_f.items() if i == q["especialidade_id"]), "(nenhuma)"
+    ) if q else "(nenhuma)"
+    esp_nome_f = col_esp.selectbox(
+        "Especialidade", nomes_esp,
+        index=nomes_esp.index(esp_atual_nome) if esp_atual_nome in nomes_esp else 0,
+        key=f"{key_prefix}_esp",
+    )
+    especialidade_id_f = esp_opcoes_f[esp_nome_f]
 
     subtopicos_f = db.listar_subtopicos(area_id_f)
     sub_opcoes_f = {"(nenhum)": None}
@@ -422,12 +435,14 @@ def _form_questao(q, *, key_prefix):
                 db.atualizar_questao(
                     q["id"], area_id_f, subtopico_id_f, enunciado_f, nova_alternativas,
                     resposta_correta_f, explicacao_f, banca_f, int(ano_f),
+                    especialidade_id=especialidade_id_f,
                 )
                 st.success("Questão atualizada.", icon=":material/check_circle:")
             else:
                 novo_id = db.criar_questao(
                     area_id_f, subtopico_id_f, enunciado_f, nova_alternativas,
                     resposta_correta_f, explicacao_f, banca_f, int(ano_f),
+                    especialidade_id=especialidade_id_f,
                 )
                 if nova_imagem is not None:
                     db.definir_imagem_questao(novo_id, nova_imagem.getvalue(), nova_imagem.type)
@@ -1176,10 +1191,15 @@ elif pagina_atual == "materiais":
         )
     else:
         with st.expander("Adicionar novo material", icon=":material/add_circle:"):
-            col_area, col_sub, col_tipo = st.columns(3)
+            col_area, col_esp = st.columns(2)
             area_nome = col_area.selectbox("Área", list(areas.keys()), key="mat_area")
             area_id = areas[area_nome]
-            subtopicos = db.listar_subtopicos(area_id)
+            esp_opcoes = {"(nenhuma)": None}
+            esp_opcoes.update({e["nome"]: e["id"] for e in db.listar_especialidades(area_id)})
+            esp_nome = col_esp.selectbox("Especialidade", list(esp_opcoes.keys()), key="mat_esp")
+            especialidade_id = esp_opcoes[esp_nome]
+            col_sub, col_tipo = st.columns(2)
+            subtopicos = db.listar_subtopicos(area_id, especialidade_id)
             sub_opcoes = {"(nenhum)": None}
             sub_opcoes.update({s["nome"]: s["id"] for s in subtopicos})
             sub_nome = col_sub.selectbox("Subtópico", list(sub_opcoes.keys()), key="mat_sub")
@@ -1194,7 +1214,7 @@ elif pagina_atual == "materiais":
 
             if st.button("Salvar material", icon=":material/save:", type="primary"):
                 if titulo.strip() and link.strip():
-                    db.criar_material(area_id, subtopico_id, tipo, titulo, link)
+                    db.criar_material(area_id, subtopico_id, tipo, titulo, link, especialidade_id=especialidade_id)
                     st.success("Material adicionado!", icon=":material/check_circle:")
                     st.rerun()
                 else:
@@ -1232,6 +1252,7 @@ elif pagina_atual == "materiais":
                 )
                 df_mat = pd.DataFrame([dict(m) for m in materiais])
                 df_mat["Tamanho"] = df_mat["tamanho_bytes"].apply(_formatar_tamanho)
+                df_mat["Especialidade"] = df_mat["especialidade"].fillna("—")
                 df_mat["Assunto"] = df_mat["subtopico"].fillna("—")
                 df_view = df_mat.rename(columns={
                     "id": "ID", "tipo": "Tipo", "titulo": "Título", "link_mediafire": "Abrir",
@@ -1239,7 +1260,7 @@ elif pagina_atual == "materiais":
 
                 evento = st.dataframe(
                     df_view, hide_index=True, row_height=44, on_select="rerun", selection_mode="multi-row",
-                    column_order=["Tipo", "Título", "Assunto", "Tamanho", "Abrir"],
+                    column_order=["Tipo", "Título", "Especialidade", "Assunto", "Tamanho", "Abrir"],
                     column_config={"Abrir": st.column_config.LinkColumn("Abrir", display_text="Abrir ↗")},
                     key="mat_tabela",
                 )
@@ -1264,15 +1285,20 @@ elif pagina_atual == "sincronizar":
     ui.page_title(
         "Sincronizar MediaFire",
         "Cole o link da sua pasta raiz compartilhada. O app varre automaticamente todas as "
-        "subpastas (áreas → assuntos → arquivos) e cadastra tudo como material de estudo.",
+        "subpastas (especialidades → assuntos → arquivos) e cadastra tudo como material de estudo.",
     )
 
     with st.expander("Estrutura esperada da pasta", icon=":material/info:"):
         st.markdown(
-            "Pasta raiz → pastas de área (ex: Cardiologia, Cirurgia, Dermatologia) → pastas "
-            "de assunto → apostilas/vídeos (ou subpastas extras tipo 'Apostilas'/'Videoaulas' "
-            "dentro do assunto, que também são lidas). Funciona apenas com pastas compartilhadas "
-            "publicamente (aquelas com link `mediafire.com/folder/...`) e requer conexão com a internet."
+            "Pasta raiz → pastas de especialidade ou grande área (ex: Cardiologia, Cirurgia, "
+            "Obstetrícia) → pastas de assunto → apostilas/vídeos (ou subpastas extras tipo "
+            "'Apostilas'/'Videoaulas' dentro do assunto, que também são lidas).\n\n"
+            "O nome da pasta de primeiro nível é encaixado na classificação fixa grande área > "
+            "especialidade: *Aprenda Nefro - Gasometria* vai para Clínica Médica > Nefrologia. Uma "
+            "pasta cujo nome não corresponde a nenhuma especialidade é pulada e aparece nos avisos — "
+            "renomeie e sincronize de novo.\n\n"
+            "Funciona apenas com pastas compartilhadas publicamente (aquelas com link "
+            "`mediafire.com/folder/...`) e requer conexão com a internet."
         )
 
     link_raiz = st.text_input(
@@ -1297,7 +1323,7 @@ elif pagina_atual == "sincronizar":
             status_area.empty()
             st.success("Sincronização concluída!", icon=":material/check_circle:")
             ui.faixa_row([
-                {"label": "Áreas", "valor": str(relatorio["areas_criadas"])},
+                {"label": "Pastas de área", "valor": str(relatorio["areas_criadas"])},
                 {"label": "Assuntos", "valor": str(relatorio["subtopicos_criados"])},
                 {"label": "Materiais novos", "valor": str(relatorio["materiais_novos"]), "cor": "var(--correct)"},
                 {"label": "Já existiam", "valor": str(relatorio["materiais_duplicados"])},
@@ -1337,11 +1363,12 @@ elif pagina_atual == "banco":
         questoes = db.listar_questoes_paginado(area_id=area_id, busca=busca, limite=POR_PAGINA, offset=offset)
         df_q = pd.DataFrame([dict(q) for q in questoes])
         df_q["Enunciado"] = df_q["enunciado"].str.slice(0, 90) + "…"
+        df_q["Especialidade"] = df_q["especialidade"].fillna("—")
         df_view = df_q.rename(columns={"id": "ID", "banca": "Banca", "ano": "Ano", "area": "Área"})
 
         evento = st.dataframe(
             df_view, hide_index=True, row_height=44, on_select="rerun", selection_mode="multi-row",
-            column_order=["ID", "Banca", "Ano", "Área", "Enunciado"],
+            column_order=["ID", "Banca", "Ano", "Área", "Especialidade", "Enunciado"],
             column_config={
                 "ID": st.column_config.NumberColumn("ID", width="small"),
                 "Ano": st.column_config.NumberColumn("Ano", width="small"),
@@ -1385,23 +1412,26 @@ elif pagina_atual == "banco":
 elif pagina_atual == "nova_questao":
     ui.page_title("Nova questão")
 
-    with st.expander("Adicionar área ou assunto", icon=":material/add_circle:"):
-        col1, col2 = st.columns(2)
-        with col1:
-            nova_area = st.text_input("Nova área (ex: Cardiologia)")
-            if st.button("Adicionar área", icon=":material/add:") and nova_area:
-                db.criar_area(nova_area)
-                st.success(f"Área '{nova_area}' adicionada.", icon=":material/check_circle:")
+    with st.expander("Adicionar assunto", icon=":material/add_circle:"):
+        # Grandes áreas e especialidades vêm de db.TAXONOMIA e não se criam
+        # pela tela: uma área digitada à mão era como nomes soltos acabavam
+        # misturados às grandes áreas no filtro.
+        st.caption(
+            "Grandes áreas e especialidades são fixas. Assunto é o nível abaixo delas "
+            "(ex: Clínica Médica > Cardiologia > Arritmias)."
+        )
+        areas = mapa_areas()
+        if areas:
+            col1, col2 = st.columns(2)
+            area_sub = col1.selectbox("Área", list(areas.keys()), key="area_sub_add")
+            esp_opcoes_add = {"(nenhuma)": None}
+            esp_opcoes_add.update({e["nome"]: e["id"] for e in db.listar_especialidades(areas[area_sub])})
+            esp_sub = col2.selectbox("Especialidade", list(esp_opcoes_add.keys()), key="esp_sub_add")
+            novo_sub = st.text_input("Novo assunto (ex: Arritmias)")
+            if st.button("Adicionar assunto", icon=":material/add:") and novo_sub:
+                db.criar_subtopico(areas[area_sub], novo_sub, especialidade_id=esp_opcoes_add[esp_sub])
+                st.success(f"Assunto '{novo_sub}' adicionado.", icon=":material/check_circle:")
                 st.rerun()
-        with col2:
-            areas = mapa_areas()
-            if areas:
-                area_sub = st.selectbox("Área do novo subtópico", list(areas.keys()), key="area_sub_add")
-                novo_sub = st.text_input("Novo subtópico (ex: Arritmias)")
-                if st.button("Adicionar subtópico", icon=":material/add:") and novo_sub:
-                    db.criar_subtopico(areas[area_sub], novo_sub)
-                    st.success(f"Subtópico '{novo_sub}' adicionado.", icon=":material/check_circle:")
-                    st.rerun()
 
     with st.container(key="form_col"):
         with st.container(border=True):
@@ -1425,7 +1455,8 @@ elif pagina_atual == "importar":
 
     with st.expander("Colunas aceitas", icon=":material/checklist:"):
         st.markdown("""
-        - **area** *(obrigatório)*
+        - **area** *(obrigatório — grande área, ex: Clínica Médica, ou já a especialidade, ex: Cardiologia)*
+        - **especialidade** *(opcional — ex: Cardiologia)*
         - **subtopico** *(opcional)*
         - **enunciado** *(obrigatório)*
         - **alternativa_a, alternativa_b, alternativa_c, alternativa_d** *(obrigatórias)*
@@ -1436,8 +1467,10 @@ elif pagina_atual == "importar":
         - **ano** *(opcional)*
 
         Variações como "Área", "Assunto", "Gabarito" também são reconhecidas
-        automaticamente. Questões com enunciado idêntico já cadastrado na
-        mesma área são ignoradas (não duplicam).
+        automaticamente. A área precisa corresponder a uma grande área ou
+        especialidade existente — um nome desconhecido vira erro da linha, não
+        uma área nova. Questões com enunciado idêntico já cadastrado na mesma
+        área são ignoradas (não duplicam).
         """)
 
     arquivo = st.file_uploader("Selecione a planilha (.xlsx ou .csv)", type=["xlsx", "csv"])
