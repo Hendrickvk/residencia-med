@@ -82,6 +82,17 @@ SESSÃO 2026-09-13 — CONDUTA, HTTPS GRATUITO (PENDENTE), REDESIGN "TRIAGEM"
    negócio). Bug antigo corrigido junto: a classe `transition-hover`, usada
    no app todo, não existia no Tailwind (nenhum hover tinha transição).
 
+4) BANCO DE QUESTÕES: +187 questões oficiais do INEP, de 458 para 645.
+   Revalida 2025-1 (97 questões, ids 825–921; 3 anuladas fora) e Revalida
+   2023-2 (90 questões, ids 922–1011; 9 anuladas fora e a Q55, que dependia
+   de charge de jornal). Gabarito sempre o definitivo do INEP; explicações
+   clínicas escritas do zero, no mesmo estilo e sem marca de "gerado por
+   IA" (decisão já registrada abaixo). 10 questões com imagem (ECG, lesões
+   de pele, radiografias, ecomapa, manobras de Leopold). Área definida
+   pelo assunto, não pela posição no caderno. Como o banco é o Neon de
+   produção, as questões já aparecem no servidor publicado, sem deploy.
+   Processo e armadilhas: seção "COMO REEXTRAIR" abaixo.
+
 =====================================================================
 ARQUITETURA ATUAL DE ARQUIVOS
 =====================================================================
@@ -377,9 +388,12 @@ POSSÍVEIS PRÓXIMOS PASSOS (mencionados, não iniciados)
 - Se o shape ARM (A1.Flex, 1 OCPU/6GB) ficar disponível na região São
   Paulo mais tarde e os recursos atuais (1 OCPU/1GB) apertarem, vale
   recriar a instância nele — é Always Free igual, só mais capaz.
-- Expandir banco de questões com mais fontes oficiais gratuitas
-  (provas antigas de USP/UNIFESP/ENARE/hospitais em PDF) — lembrar da
-  restrição de não fazer scraping de concorrente pago.
+- Expandir banco de questões com mais fontes oficiais gratuitas. Em
+  2026-09-13 entraram Revalida 2023-2 e 2025-1 (ver sessão 2026-09-13).
+  Ainda fora do banco: Revalida 2020, 2021 e 2022-1 (os PDFs não seguem o
+  padrão de nome do INEP e não foram localizados) e provas de
+  USP/UNIFESP/ENARE/hospitais em PDF — lembrar da restrição de não fazer
+  scraping de concorrente pago.
 - Rodar mais uma varredura por questões dependentes de imagem em
   bancas/edições futuras (processo documentado na seção "COMO
   REEXTRAIR" abaixo).
@@ -391,7 +405,11 @@ COMO REEXTRAIR UMA QUESTÃO OU IMAGEM DO PDF OFICIAL (se precisar de novo)
 URLs seguem o padrão:
   https://download.inep.gov.br/revalida/provas_e_gabaritos/{edicao}_PV_objetiva_regular.pdf
 Editions já usadas: 2022-2 (nome de arquivo diferente:
-2022-2_PV_objetiva.pdf), 2023_1, 2024_1, 2024_2.
+2022-2_PV_objetiva.pdf), 2023_1, 2023_2, 2024_1, 2024_2, 2025_1.
+Gabarito definitivo: {edicao}_GB_objetiva.pdf (2023_2, 2024_1) ou
+{edicao}_GB_objetiva_definitivo.pdf (2025_1). A página "Provas e
+Gabaritos" do INEP carrega os links por script (o HTML baixado com curl
+não traz os PDFs), então o jeito é testar os nomes com curl -r 0-0.
 
 Processo: baixar com curl, abrir com pdfplumber, `page.extract_text()`
 pra achar a página certa via trecho único do enunciado, `page.images`
@@ -401,6 +419,27 @@ to_image(resolution=200).save(...)` pra exportar a imagem. SEMPRE
 conferir visualmente antes de salvar (Read do PNG) — já aconteceu de
 pegar imagem da questão vizinha por bbox largo demais, e de faltar um
 rótulo "Figura 1" por bbox alto demais.
+
+Importar uma edição inteira (feito em 2026-09-13):
+- O caderno é em duas colunas: separar os caracteres pelo centro da
+  página (page.filter pelo x de cada char) antes do extract_text, senão
+  as colunas se intercalam.
+- Tabelas saem achatadas numa linha só e subscritos se soltam ("O de
+  96% ... 2"): esses enunciados são reescritos à mão, em prosa. O
+  questionário de percepção do fim do caderno pode grudar na questão 100.
+- Ficam de fora as anuladas (traço no gabarito) e questões que dependem
+  de imagem de terceiros (a Q55 da 2023-2 era uma charge de jornal).
+- Área pelo assunto da questão, não pela ordem do caderno (que roda
+  Clínica, Cirurgia, Pediatria, GO, Preventiva). Psiquiatria só quando o
+  caso é psiquiátrico.
+- O banco guarda uma imagem por questão: com duas figuras, empilhar
+  numa PNG só (feito na Q79 da 2023-2).
+- Validar antes de gravar: a explicação cita a letra do gabarito oficial
+  (isso pegou uma explicação escrita para a letra errada), nenhuma sobra
+  de tabela, imagem existe. Gravar numa transação única, checando
+  duplicata por banca + ano + início do enunciado.
+- Os scripts dessa importação ficaram só no scratchpad da sessão, fora
+  do repositório.
 
 =====================================================================
 O QUE NÃO FAZER / RESTRIÇÕES CONHECIDAS
