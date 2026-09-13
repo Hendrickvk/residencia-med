@@ -12,7 +12,9 @@ A study platform for medical residency exams (ENAMED/Revalida) with a question b
 - `db.py` and `repeticao_espacada.py` are the **single source of truth** for all business logic (SM-2 algorithm, filters, streak/ofensiva calculation, dashboard aggregation) and are shared unchanged by both the FastAPI app and the Streamlit app. Never duplicate business logic into the API layer or the frontend — add it to `db.py`/`repeticao_espacada.py` instead.
 - Content classification is a fixed two-level taxonomy, `db.TAXONOMIA` (the 5 grandes áreas of the exams > especialidades), seeded by `init_db()`. Questions, materials and subtopicos carry `area_id` (the grande área — what the Painel aggregates) plus `especialidade_id`. Importers (spreadsheet, MediaFire sync) resolve free-text names with `db.classificar_nome_area` / `resolver_area_especialidade` and report unknown names as errors — never insert an `areas` row from an imported name (that's how MediaFire folders like "Aprenda Nefro" used to show up as areas). MediaFire subtopicos keep the original folder name in `subtopicos.origem`, which is how a re-sync finds them after they were renamed.
 
-Read `MIGRACAO.md` (migration plan, phase-by-phase decisions, the real function→endpoint contract) and `DEPLOY.md` (production runbook, checklist of what's actually deployed) before making structural changes to the API or touching the production server. `contextoconversaclaude.txt` is a curated running history of decisions/gotchas across sessions — check it for "why was this built this way" before re-deriving from scratch.
+Read `MIGRACAO.md` (migration plan, phase-by-phase decisions, the real function→endpoint contract) and `DEPLOY.md` (production runbook, checklist of what's actually deployed) before making structural changes to the API or touching the production server. `HISTORICO.md` is the condensed history of decisions still in force ("why was this built this way"), the pending work, and the Streamlit admin CSS gotchas — check it before re-deriving a past decision. Superseded history exists only in git (the old `contextoconversaclaude.txt`).
+
+The app is branded **Conduta**, but internal identifiers (systemd user `residenciamed`, service names, session cookie, demo e-mail, paths) deliberately kept the old name — renaming them breaks the deploy and open sessions.
 
 ## Commands
 
@@ -24,7 +26,8 @@ pytest                                     # runs everything in tests/ (pytest.i
 pytest tests/test_sm2.py                   # single file
 pytest tests/test_sm2.py::test_nome        # single test
 ```
-**There is no separate test database** — tests run directly against the production Neon Postgres (same `DATABASE_URL`/secrets as prod). Fixtures in `tests/conftest.py` create uuid-suffixed data (`pytest_<uuid>@teste.local`, `__pytest_area_<uuid>`) and clean up via `ON DELETE CASCADE` in teardown. Any new fixture must follow this pattern — never write a fixture without teardown, and never reuse real user data.
+If `uvicorn --reload` keeps serving old routes after edits (has happened on this Windows machine), stop both uvicorn processes and start it again. `streamlit run` never picks up `db.py`/`ui.py` changes on refresh — restart it.
+**There is no separate test database** — tests run directly against the production Neon Postgres (same `DATABASE_URL`/secrets as prod). Fixtures in `tests/conftest.py` create uuid-suffixed data (`pytest_<uuid>@teste.local`, `__pytest_area_<uuid>`) and clean up via `ON DELETE CASCADE` in teardown. Any new fixture must follow this pattern — never write a fixture without teardown, and never reuse real user data. Production also holds two non-real accounts: `demo@residenciamed.com` (fake history from `scripts/seed_demo_user.py`, idempotent) and `qa.claude@residenciamed.local` for browser QA.
 
 ### Streamlit (admin screens)
 ```bash
@@ -67,12 +70,28 @@ npm run lint                               # oxlint
 - `LIKE` is case-sensitive in Postgres (unlike SQLite, which earlier docs incorrectly assumed). Any free-text filter in `db.py` must use `ILIKE`.
 - Postgres doesn't auto-index foreign keys — indexes on `respostas.usuario_id`, `respostas.questao_id`, `questoes.area_id`, `questoes.banca` are created explicitly in `init_db()`.
 - `revisao.proxima_revisao` is a real `TIMESTAMP` (migrated from `TEXT`/date-only), so short "review again in 10 minutes" scheduling works for real — don't regress this back to date-only comparisons.
+- `questoes.area_id` and `materiais.area_id` are `ON DELETE CASCADE` to `areas`: deleting an area silently deletes its questions and materials. Always verify an area is empty first.
+- Bulk changes to production data (imports, reclassification, text fixes): write a script that runs everything in one transaction, prints a summary and rolls back unless given an explicit apply flag; save a JSON backup of the touched rows; apply only after the user confirms. Update rows in place (never delete and re-insert questions) — `respostas` and `revisao` reference question ids.
+
+### Question bank content
+- One image per question, stored in the DB (`questoes.imagem` BYTEA + `imagem_mime`). Two figures → stack them into a single PNG.
+- **Importing an official INEP exam** (done for Revalida 2022-2 through 2025-1 and ENAMED 2025):
+  - Booklet: `https://download.inep.gov.br/revalida/provas_e_gabaritos/{ed}_PV_objetiva_regular.pdf` (2022-2 is `2022-2_PV_objetiva.pdf`). Answer key: `{ed}_GB_objetiva.pdf` or `{ed}_GB_objetiva_definitivo.pdf` — always the definitive one. INEP's page loads links by script, so probe names with `curl -r 0-0`.
+  - The booklet has two columns: filter pdfplumber chars by x-center relative to the page middle before `extract_text()`, or the columns interleave. Tables flatten into one line and subscripts detach — rewrite those statements in prose. The perception questionnaire after Q100 can stick to the last question.
+  - Figures: `page.images` bboxes (ignore the small repeated header logos ~135×17/145×40), `page.crop(bbox).to_image(resolution=200)`, and look at the PNG before saving — wrong-question crops have happened.
+  - ENAMED 2025's PDF font (Calibri) has no ToUnicode map, so pdfplumber returns `(cid:N)`; the CIDs are Calibri glyph ids — decode by inverting the cmap of `C:\Windows\Fonts\calibri*.ttf` with fontTools (ligatures included). Its questionnaire reuses "QUESTÃO 1..9": take only the first occurrence of each number.
+  - Leave out annulled questions and ones that depend on third-party images. Classify area + especialidade by the question's content, not booklet order. Fill `banca`, `ano`, `edicao`, `numero_prova`.
+  - Explanations are written from scratch. Before saving, check each one argues for the official answer letter (caught one written for the wrong letter), no table debris remains, and images exist. Dedupe by banca + ano + start of statement.
 
 ### Deployment
-Production runs on Oracle Cloud Free Tier (São Paulo region), IP-only for now (no domain yet, so no automatic HTTPS) — see `DEPLOY.md` for the full runbook and current checklist state. `COOKIE_SECURE=false` and the admin Streamlit port is IP-restricted at the network level are both *consequences of not having HTTPS yet*, not independent choices — don't "fix" one without the other when a domain is eventually added (`deploy/Caddyfile.com-dominio.example` has the HTTPS-ready config waiting).
+Production runs on Oracle Cloud Free Tier (São Paulo region); `DEPLOY.md` is the runbook and checklist. The server still serves over plain IP: `COOKIE_SECURE=false` and the admin Streamlit on port 8080 restricted to the admin's IP are both *consequences of not having HTTPS*, not independent choices — change them together.
+
+HTTPS via the free DuckDNS subdomain (`conduta.duckdns.org`, `admin.conduta.duckdns.org`) is already committed (`deploy/Caddyfile`, env files) but **not applied**: the SSH key authorized on the server is on another computer. Every commit since then (Triagem redesign, official-exam simulado, especialidades taxonomy) is waiting on that deploy — steps and the server host key fingerprint are in `HISTORICO.md`. The database is shared, so data changes are already live while the server runs old code. `DEPLOY.md` still describes the IP setup; update it only after the HTTPS deploy is tested, and don't close port 8080 before that. Use the `residencia-med` SSH alias and keep remote commands short — long composite SSH commands have tripped the safety classifier.
 
 ## Known constraints (not stylistic preferences — don't relax these)
 
 - Never copy questions or explanations from paid competitor platforms (Estratégia MED, Medcof, etc.) — official free sources (INEP) or original content only.
 - Clinical explanations authored for questions must not be labeled as AI-generated — explicit user decision, don't reintroduce an "AI-generated" marker without asking first.
 - Never type a password into a login/signup field via browser automation, including for test accounts — the user always logs in manually in an already-open tab.
+- Never open a firewall port or Security List rule to `0.0.0.0/0` for a service without HTTPS — restrict it to the admin's /32 or use an SSH tunnel. If the safety classifier blocks such a change, the block is right.
+- `git commit` / `git push` only when the user asks.
