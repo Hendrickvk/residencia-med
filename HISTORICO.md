@@ -52,8 +52,10 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
      com simulação, backup e amostra revisada pelo usuário. Ferramenta:
      `scripts/classificar_temas.py <json>` (simula; `--aplicar` grava e salva
      backup); os JSONs de classificação ficam em `backups/temas_*.json`.
-     Feito (2026-09-14): Obstetrícia (96) e Ginecologia (92). **Próximo:
-     Mastologia**, depois as outras grandes áreas.
+     Feito (2026-09-14): Ginecologia e Obstetrícia inteira — Obstetrícia (96),
+     Ginecologia (92) e Mastologia (12); 200 de 986 questões com tema.
+     **Próximo: Pediatria**, depois Cirurgia, Medicina Preventiva e Clínica
+     Médica.
   4. Filtro de tema no Praticar e tema no cabeçalho do caso (o cabeçalho já
      mostra `subtopico`).
   5. Estatística por tema só quando houver respostas suficientes (hoje ~30 por
