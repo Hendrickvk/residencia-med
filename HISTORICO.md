@@ -42,14 +42,15 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   Inep nº 540/2020, art. 7º (conteúdos por área do Revalida); a Matriz Comum de
   2025 (Portaria 478) só define áreas, competências e cenários, sem lista de
   doenças. Fases:
-  1. Lista `db.TEMAS`, 196 temas (feita e aprovada). Na classificação entraram
+  1. Lista `db.TEMAS`, 197 temas (feita e aprovada). Na classificação entraram
      temas que faltavam, com aprovação do usuário: "Prolapso genital e
      incontinência urinária" (Ginecologia); em Pediatria clínica, diabetes e
      endócrino, vasculites e reumatologia, desenvolvimento e comportamento,
      síndromes genéticas e doenças digestivas; e "Malformações e síndromes
      genéticas no recém-nascido" (Neonatologia); em Infectologia pediátrica,
-     infecções respiratórias agudas e infecções gastrointestinais e urinárias
-     — todos citados na Portaria
+     infecções respiratórias agudas e infecções gastrointestinais e urinárias;
+     e "Cirurgia bariátrica" (Cirurgia geral, não citada pelo nome na portaria,
+     mas cobrada nas provas) — os demais citados na Portaria
      540/2020, que a primeira lista tinha comprimido demais. Vale conferir as
      próximas especialidades contra o texto da portaria antes de classificar.
   2. Temas no banco (feita): `init_db` grava os temas em `subtopicos`;
@@ -63,9 +64,9 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
      Feito (2026-09-14): Ginecologia e Obstetrícia inteira — Obstetrícia (96),
      Ginecologia (92) e Mastologia (12); em Pediatria, Pediatria clínica (73) e
      Neonatologia (33), Infectologia pediátrica (30) e Puericultura (25) —
-     Pediatria inteira. 361 de 986 questões com tema. **Próximo: Cirurgia**
-     (começando por Cirurgia geral), depois Medicina Preventiva e Clínica
-     Médica.
+     Pediatria inteira; em Cirurgia, Cirurgia geral (57). 418 de 986 questões
+     com tema. **Próximo: Trauma**, depois as outras especialidades de
+     Cirurgia, Medicina Preventiva e Clínica Médica.
   4. Filtro de tema no Praticar e tema no cabeçalho do caso (o cabeçalho já
      mostra `subtopico`).
   5. Estatística por tema só quando houver respostas suficientes (hoje ~30 por

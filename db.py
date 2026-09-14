@@ -319,7 +319,7 @@ TEMAS = {
     "Cirurgia geral": [
         "Abdome agudo", "Doenças das vias biliares", "Hérnias e parede abdominal",
         "Neoplasias do aparelho digestivo", "Pré e pós-operatório e complicações cirúrgicas",
-        "Cirurgia ambulatorial e feridas", "Cirurgia de cabeça e pescoço", "Cirurgia torácica",
+        "Cirurgia ambulatorial e feridas", "Cirurgia de cabeça e pescoço", "Cirurgia torácica", "Cirurgia bariátrica",
     ],
     "Cirurgia pediátrica": [
         "Abdome agudo na criança", "Malformações congênitas cirúrgicas", "Hérnias e afecções inguinoescrotais",
