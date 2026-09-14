@@ -24,13 +24,48 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   migrado: Materiais lá mostra só as 5 grandes áreas, sem especialidades, e a
   Prova oficial lista a Revalida 2025/2 só com as 50 questões próprias (as 43
   comuns com o ENAMED 2025 só entram pela `questoes_provas`).
-- Questões oficiais ainda fora do banco: Revalida 2020, 2021 e 2022-1 (PDFs
-  fora do padrão de nome do INEP, não localizados); edições anteriores da USP
-  (a FUVEST só mantém a atual); UNICAMP de 2024 em diante (respostas curtas);
-  UNIFESP e Santa Casa (caderno não público); ENARE e hospitais.
+- Questões oficiais ainda fora do banco: Revalida 2020, 2021 e 2022-1;
+  edições anteriores da USP (a FUVEST só mantém a atual); UNICAMP de 2024 em
+  diante (respostas curtas); UNIFESP e Santa Casa (caderno não público); ENARE
+  e hospitais.
 - Se o shape ARM `VM.Standard.A1.Flex` (1 OCPU/6 GB, Always Free) aparecer em
   São Paulo e 1 GB apertar, recriar a instância nele.
 - Tema escuro do Triagem só existe por tokens, sem protótipo próprio.
+
+### Próximos passos sugeridos (enquanto o deploy espera)
+Levantados em 2026-09-14, em ordem de valor. O deploy continua sendo o item
+mais importante assim que houver acesso SSH.
+
+1. **Revalida 2020, 2021 e 2022-1.** Procurar pelas abas por ano da página do
+   INEP (`…/revalida/provas-e-gabaritos/2020`, `/2021`, `/2022`), que trazem os
+   links dos PDFs no próprio HTML; foi assim que a 2025/2 e a 2026/1 foram
+   achadas depois de o padrão de nome falhar. Seguir o roteiro de importação do
+   `CLAUDE.md`.
+2. **Revisão clínica de uma amostra das explicações de 2026-09-14**, começando
+   pelas de gabarito discutível: Revalida 2025/2 Q91 (vírus sincicial
+   respiratório em adolescente); USP 2026 Q31 (estadiamento antes de ampliar
+   margens no melanoma T4b), Q108 (ressonância na puberdade precoce aos 6 anos)
+   e Q116 (SIU de levonorgestrel em vez de DIU de cobre na paciente com SAAF
+   anticoagulada); UNICAMP 2023 Q6 (profilaxia meningocócica até 14 dias). Uma
+   página de revisão em que o usuário marca o que ajustar resolve; correções
+   entram por UPDATE, nunca apagando a questão.
+3. **QA no navegador das questões com figura**, sobretudo as de
+   alternativa-imagem (USP 11, 14, 33, 40, 49, 66, 69, 70 e 72) e os recortes
+   altos (USP 1 e 70), também em largura de celular. O usuário faz o login na
+   conta de QA.
+4. **Tempo do simulado oficial por banca.** Hoje todas usam
+   `MINUTOS_POR_QUESTAO_PROVA_OFICIAL` = 3. Bate com o INEP e com a UNICAMP 2023
+   (80 questões em 4 h); conferir no edital da FUVEST a duração da prova da USP
+   (113 questões dão 5h39) e, se diferir, guardar o ritmo por banca.
+5. **Questões comuns a mais de uma prova.** No simulado da Revalida 2025/2, as
+   43 questões compartilhadas aparecem com o selo "ENAMED 2025". Expor na API as
+   provas de `questoes_provas` e mostrar todas na questão.
+6. **Importador reutilizável em `scripts/`.** Os scripts das importações de
+   2026-09-14 ficaram no scratchpad da sessão e se perderam. Fazer um script
+   genérico que recebe o JSON montado (enunciado, alternativas, gabarito, área,
+   especialidade, explicação, imagem, banca, edição e número) e grava as
+   questões e os vínculos em `questoes_provas` numa transação, com simulação por
+   padrão, checagem de duplicatas e backup.
 
 ## Decisões, por data
 
