@@ -371,7 +371,7 @@ TEMAS = {
     "Neonatologia": [
         "Reanimação e cuidados ao recém-nascido", "Prematuridade e baixo peso", "Icterícia neonatal",
         "Distúrbios respiratórios do recém-nascido", "Infecções congênitas e neonatais",
-        "Triagem neonatal e erros inatos do metabolismo",
+        "Triagem neonatal e erros inatos do metabolismo", "Malformações e síndromes genéticas no recém-nascido",
     ],
     "Pediatria clínica": [
         "Doenças respiratórias e asma", "Diarreia e desidratação", "Distúrbios nutricionais",
