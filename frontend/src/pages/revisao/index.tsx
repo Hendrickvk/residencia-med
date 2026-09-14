@@ -106,6 +106,15 @@ export default function Revisao() {
           <RotateCcw size={15} strokeWidth={2} />
           Recomeçar fila
         </button>
+        {/* Cada avaliação já foi gravada ao clicar: sair não perde nada. */}
+        <button
+          type="button"
+          onClick={() => navigate("/painel")}
+          title="Sair da revisão (o que você já avaliou está salvo)"
+          className="flex h-9 shrink-0 items-center px-2.5 text-[14px] font-medium text-muted transition duration-hover hover:text-ink"
+        >
+          Sair
+        </button>
       </BarraFoco>
 
       <div className="mx-auto flex max-w-[840px] flex-col gap-5">

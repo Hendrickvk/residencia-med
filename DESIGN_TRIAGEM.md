@@ -159,7 +159,9 @@ marca; abaixo de 640px a busca some da barra.
 
 **Modo foco** (sessão de Praticar, Simulado em andamento, Revisão com fila): a barra
 superior troca as abas por "Sessão de prática · {área}", progresso, cronômetro,
-Marcar e Encerrar. O conteúdo fica numa coluna de 840px centralizada.
+Marcar e Encerrar. O conteúdo fica numa coluna de 840px centralizada. Toda sessão
+tem uma saída na própria barra (Encerrar, Finalizar ou Sair), e a marca à esquerda
+é sempre um link para o Painel, inclusive no modo foco.
 
 Conteúdo das demais telas: largura máxima 1360px, padding 36/40px.
 
@@ -224,7 +226,8 @@ Conteúdo das demais telas: largura máxima 1360px, padding 36/40px.
   simulado.
 
 ### Revisão espaçada
-- Um caso por vez, contagem restante na barra superior.
+- Um caso por vez, contagem restante na barra superior, "Recomeçar fila" e "Sair"
+  (volta ao Painel; cada avaliação já foi gravada).
 - "Mostrar resposta" revela a alternativa correta e a discussão.
 - Os quatro intervalos usam a escala: "Errei — 10 min" (t1), "Difícil — 1 dia"
   (t2), "Bom — 4 dias" (t4), "Fácil — 10 dias" (t5). São botões secundários com um

@@ -1,6 +1,6 @@
 import { Flame, LogOut, Menu, Moon, Sun, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { NavLink } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 import { useFoco } from "../../lib/focoContexto";
 import { ACERVO, NAV } from "../../lib/nav";
 import type { Tema } from "../../lib/theme";
@@ -68,7 +68,18 @@ export function Topbar({ tema, onAlternarTema, me, revisoesHoje, onSair }: Topba
           </button>
         )}
 
-        <Marca />
+        {/* Saída universal: vale também no modo foco, em que as abas somem.
+            Nada se perde ao sair — respostas e avaliações são gravadas na hora
+            e o simulado em andamento pode ser retomado. */}
+        <Link
+          to="/painel"
+          onClick={() => setGavetaAberta(false)}
+          aria-label="Conduta, ir para o Painel"
+          title="Ir para o Painel"
+          className="shrink-0 rounded-btn"
+        >
+          <Marca />
+        </Link>
 
         {emFoco ? (
           <div ref={setSlot} className="flex min-w-0 flex-1 items-center gap-6" />

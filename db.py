@@ -11,6 +11,7 @@ import re
 import json
 import datetime
 import threading
+import time
 import unicodedata
 from contextlib import contextmanager
 
@@ -152,6 +153,39 @@ def _get_pool():
     return _pool
 
 
+# Conexão parada no pool por mais que isso é testada antes de ser reusada. O
+# Neon fecha as conexões quando suspende o compute por inatividade, e o
+# psycopg2 só descobre na próxima query: sem o teste, a primeira requisição
+# depois de um tempo parado falhava com "connection already closed" (e o app
+# do aluno mandava a pessoa para o login).
+_OCIOSIDADE_MAX_SEG = 30
+_ultimo_uso = {}  # id(conexão) -> time.monotonic() de quando voltou ao pool
+
+
+def _obter_conexao_viva(pool):
+    for _ in range(3):
+        raw_conn = pool.getconn()
+        if raw_conn.closed:
+            pool.putconn(raw_conn, close=True)
+            continue
+        ultimo = _ultimo_uso.get(id(raw_conn))
+        # Sem registro = conexão recém-aberta pelo pool, não precisa de teste.
+        if ultimo is None or time.monotonic() - ultimo < _OCIOSIDADE_MAX_SEG:
+            return raw_conn
+        try:
+            with raw_conn.cursor() as cur:
+                cur.execute("SELECT 1")
+            raw_conn.rollback()
+            return raw_conn
+        except psycopg2.Error:
+            # Qualquer erro no SELECT 1 = conexão inutilizável. Não só
+            # OperationalError: socket SSL cortado chega como DatabaseError
+            # ("SSL SYSCALL error").
+            _ultimo_uso.pop(id(raw_conn), None)
+            pool.putconn(raw_conn, close=True)
+    return pool.getconn()
+
+
 @contextmanager
 def get_conn():
     # Importante: código que precisa capturar uma exceção de SQL e
@@ -161,7 +195,7 @@ def get_conn():
     # conn.commit() abaixo roda em cima de uma transação já abortada
     # pelo Postgres (InFailedSqlTransaction).
     pool = _get_pool()
-    raw_conn = pool.getconn()
+    raw_conn = _obter_conexao_viva(pool)
     conn = _PGConnection(raw_conn)
     try:
         yield conn
@@ -169,11 +203,18 @@ def get_conn():
     except Exception:
         # limpa o estado de transação abortada antes de devolver a conexão
         # pro pool — senão o próximo a pegar essa conexão emperra em
-        # InFailedSqlTransaction logo na primeira query.
-        raw_conn.rollback()
+        # InFailedSqlTransaction logo na primeira query. Se a conexão caiu no
+        # meio, o rollback também falha: ignora, para não esconder o erro
+        # original, e o pool descarta a conexão fechada.
+        if not raw_conn.closed:
+            try:
+                raw_conn.rollback()
+            except psycopg2.Error:
+                pass
         raise
     finally:
-        pool.putconn(raw_conn)
+        _ultimo_uso[id(raw_conn)] = time.monotonic()
+        pool.putconn(raw_conn, close=bool(raw_conn.closed))
 
 
 # ---------------------------------------------------------------------------

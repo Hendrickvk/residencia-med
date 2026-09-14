@@ -1,8 +1,9 @@
 import { Navigate, Outlet } from "react-router-dom";
-import { useMe } from "../lib/auth";
+import { ehNaoAutenticado, useMe } from "../lib/auth";
+import { EstadoVazio } from "./EstadoVazio";
 
 export function RequireAuth() {
-  const { data, isLoading, isError } = useMe();
+  const { data, isLoading, isError, error, refetch, isFetching } = useMe();
 
   if (isLoading) {
     // Skeleton com as dimensões finais do shell (barra superior de 64px +
@@ -19,7 +20,25 @@ export function RequireAuth() {
     );
   }
 
-  if (isError || !data) return <Navigate to="/login" replace />;
+  // Login só quando o servidor disse que não há sessão. Antes, qualquer erro
+  // em /me (ex.: conexão com o banco caída) mandava o aluno para o login.
+  if (isError && ehNaoAutenticado(error)) return <Navigate to="/login" replace />;
 
-  return <Outlet />;
+  // Um refetch em segundo plano que falhou mantém os dados de antes: segue a tela.
+  if (data) return <Outlet />;
+
+  if (isError) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-ground px-4">
+        <div className="w-full max-w-[520px]">
+          <EstadoVazio
+            mensagem="Não foi possível falar com o servidor. Sua conta e suas respostas continuam salvas."
+            cta={{ label: isFetching ? "Tentando…" : "Tentar de novo", onClick: () => void refetch() }}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  return <Navigate to="/login" replace />;
 }

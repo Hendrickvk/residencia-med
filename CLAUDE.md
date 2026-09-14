@@ -70,6 +70,7 @@ npm run lint                               # oxlint
 - `LIKE` is case-sensitive in Postgres (unlike SQLite, which earlier docs incorrectly assumed). Any free-text filter in `db.py` must use `ILIKE`.
 - Postgres doesn't auto-index foreign keys — indexes on `respostas.usuario_id`, `respostas.questao_id`, `questoes.area_id`, `questoes.banca` are created explicitly in `init_db()`.
 - `revisao.proxima_revisao` is a real `TIMESTAMP` (migrated from `TEXT`/date-only), so short "review again in 10 minutes" scheduling works for real — don't regress this back to date-only comparisons.
+- Neon drops connections when its compute suspends for inactivity, and psycopg2 only notices on the next query. `db.get_conn()` therefore pings (`SELECT 1`) any pooled connection idle for more than 30 s and replaces it if dead — without that, the first request after a quiet period failed with "connection already closed". Keep that check if you touch the pool; `tests/test_conexao.py` covers it.
 - `questoes.area_id` and `materiais.area_id` are `ON DELETE CASCADE` to `areas`: deleting an area silently deletes its questions and materials. Always verify an area is empty first.
 - Bulk changes to production data (imports, reclassification, text fixes): write a script that runs everything in one transaction, prints a summary and rolls back unless given an explicit apply flag; save a JSON backup of the touched rows; apply only after the user confirms. Update rows in place (never delete and re-insert questions) — `respostas` and `revisao` reference question ids.
 

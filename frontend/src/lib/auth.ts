@@ -1,12 +1,18 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "./api";
+import { api, ApiError } from "./api";
 import type { Me } from "./types";
+
+// Só 401 significa "sem sessão". Erro 5xx ou de rede é o servidor com
+// problema, e não pode tirar o aluno da conta.
+export function ehNaoAutenticado(erro: unknown) {
+  return erro instanceof ApiError && erro.status === 401;
+}
 
 export function useMe() {
   return useQuery({
     queryKey: ["me"],
     queryFn: () => api.get<Me>("/me"),
-    retry: false,
+    retry: (falhas, erro) => !ehNaoAutenticado(erro) && falhas < 2,
     staleTime: 30_000,
   });
 }
