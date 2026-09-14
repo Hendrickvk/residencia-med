@@ -46,7 +46,6 @@ export interface Especialidade {
   area_id: number;
   nome: string;
   total_questoes: number;
-  total_materiais: number;
 }
 
 export interface RespondidaResumo {
@@ -192,35 +191,11 @@ export interface DesempenhoAreaSimulado {
   pct_acerto: number;
 }
 
-export interface Material {
-  id: number;
-  area_id: number;
-  especialidade_id: number | null;
-  especialidade: string | null;
-  subtopico_id: number | null;
-  subtopico: string | null;
-  tipo: string;
-  titulo: string;
-  link_mediafire: string;
-}
-
 export interface ResultadoBuscaQuestao {
   id: number;
   enunciado: string;
   area: string;
   especialidade: string | null;
-}
-
-export interface ResultadoBuscaMaterial {
-  id: number;
-  titulo: string;
-  tipo: string;
-  link_mediafire: string;
-}
-
-export interface ResultadoBusca {
-  questoes: ResultadoBuscaQuestao[];
-  materiais: ResultadoBuscaMaterial[];
 }
 
 export interface Me {
@@ -233,6 +208,5 @@ export interface Me {
   respondeu_hoje: boolean;
   respondidas_hoje: number;
   total_questoes: number;
-  total_materiais: number;
   meta_revisao_diaria: number;
 }

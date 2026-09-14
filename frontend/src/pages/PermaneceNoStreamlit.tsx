@@ -7,9 +7,9 @@ interface Props {
 
 const STREAMLIT_URL = import.meta.env.VITE_STREAMLIT_URL ?? "http://localhost:8501";
 
-// Decisão registrada em MIGRACAO.md §5 (Fase 7): as 4 telas administrativas
-// (Banco de Questões, Nova Questão, Importar Planilha, Sincronizar
-// MediaFire) continuam no Streamlit — só o administrador as usa, e migrar
+// Decisão registrada em MIGRACAO.md §5 (Fase 7): as telas administrativas
+// (Banco de Questões, Nova Questão, Importar Planilha) continuam no
+// Streamlit — só o administrador as usa, e migrar
 // não compensaria o esforço enquanto a plataforma tiver um único admin.
 // Streamlit não tem rota por URL (a página é escolhida por session_state),
 // então o link abre a raiz do app, não a tela específica.

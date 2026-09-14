@@ -43,21 +43,6 @@ def area_teste():
 
 
 @pytest.fixture()
-def material_teste(area_teste):
-    titulo = f"[pytest {uuid.uuid4().hex[:8]}] Material de teste automatizado"
-    with db.get_conn() as conn:
-        c = conn.cursor()
-        c.execute("""
-            INSERT INTO materiais (area_id, subtopico_id, tipo, titulo, link_mediafire)
-            VALUES (?, NULL, 'Apostila', ?, 'https://www.mediafire.com/pytest')
-        """, (area_teste, titulo))
-        material_id = c.lastrowid
-    yield material_id, titulo
-    with db.get_conn() as conn:
-        conn.execute("DELETE FROM materiais WHERE id = ?", (material_id,))
-
-
-@pytest.fixture()
 def questao_teste(area_teste):
     enunciado = f"[pytest {uuid.uuid4().hex[:8]}] Questão de teste automatizado — não é conteúdo real."
     with db.get_conn() as conn:

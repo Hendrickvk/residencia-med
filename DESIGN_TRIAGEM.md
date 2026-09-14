@@ -169,7 +169,7 @@ rótulo      13px / largura 70% / 700 / CAIXA ALTA / tracking 0.06em, cor --mute
 **Barra superior (64px, `--surface`, borda inferior)** substitui o rail lateral.
 Esquerda: marca. Centro-esquerda: abas Painel, Praticar, Simulado, Revisão (rótulo
 curto; o menu em gaveta mostra "Revisão espaçada"), com contagem numa etiqueta t1
-quando houver revisões vencidas, e Materiais — aba ativa com sublinhado de 2px
+quando houver revisões vencidas — aba ativa com sublinhado de 2px
 `--ink`. Entre 1024 e 1279px a etiqueta de ofensiva mostra só o número. Direita: busca global (atalho
 `/`), etiqueta de ofensiva (t4-soft se já respondeu hoje, t2-soft se não), botão de
 tema e avatar. O menu do avatar tem e-mail, prova alvo, **Acervo** (links do
@@ -300,14 +300,6 @@ Conteúdo das demais telas: largura máxima 1360px, padding 36/40px.
   decide é o servidor, `classificar_eventos`).
 - Fila vazia: estado vazio com a próxima leva ("As próximas 8 vencem na quinta.") e
   "Praticar casos novos".
-
-### Materiais
-- Faixa de sincronização discreta no topo.
-- Duas colunas: lista das cinco grandes áreas (240px) — a área escolhida abre, logo
-  abaixo e recuadas, as especialidades dela que têm material, com a contagem — e
-  tabela densa (ícone por tipo, título com destaque do trecho buscado, especialidade
-  · assunto, tamanho, "Abrir" no hover). Com uma especialidade escolhida, a coluna
-  mostra só o assunto.
 
 ### Login
 - Marca grande com o símbolo, frase "Sua plataforma de estudos para residência

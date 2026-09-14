@@ -5,8 +5,7 @@ import { useDebounced } from "../../lib/useDebounced";
 
 // MIGRACAO.md §5: "a busca global não é opcional: hoje ela é um campo que
 // parece funcional e não busca nada, o que é pior que não existir." ILIKE
-// real em enunciado de questão e título de material, agrupado por tipo —
-// atalho "/" foca o campo (DESIGN_TRIAGEM.md §5).
+// real no enunciado das questões — atalho "/" foca o campo (DESIGN_TRIAGEM.md §5).
 export function BuscaGlobal() {
   const [termo, setTermo] = useState("");
   const [aberto, setAberto] = useState(false);
@@ -31,9 +30,8 @@ export function BuscaGlobal() {
     return () => document.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  const questoes = data?.questoes ?? [];
-  const materiais = data?.materiais ?? [];
-  const temResultados = questoes.length > 0 || materiais.length > 0;
+  const questoes = data ?? [];
+  const temResultados = questoes.length > 0;
   const mostrarPainel = aberto && termo.trim().length >= 2;
 
   return (
@@ -50,7 +48,7 @@ export function BuscaGlobal() {
         onChange={(e) => setTermo(e.target.value)}
         onFocus={() => setAberto(true)}
         placeholder="Buscar"
-        aria-label="Buscar questões e materiais (atalho /)"
+        aria-label="Buscar questões (atalho /)"
         className="h-9 w-44 rounded-btn border border-line bg-surface pl-9 pr-8 text-apoio text-ink outline-none transition duration-hover placeholder:text-faint focus:border-ink xl:w-64"
       />
       {termo ? (
@@ -91,23 +89,6 @@ export function BuscaGlobal() {
                           {[q.area, q.especialidade].filter(Boolean).join(" · ")}
                         </div>
                       </div>
-                    ))}
-                  </div>
-                )}
-                {materiais.length > 0 && (
-                  <div className="p-2">
-                    <div className="rotulo px-2 py-1.5 text-muted">Materiais ({materiais.length})</div>
-                    {materiais.map((m) => (
-                      <a
-                        key={m.id}
-                        href={m.link_mediafire}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="block truncate rounded-btn px-2 py-2 text-corpo text-ink transition duration-hover hover:bg-ground"
-                      >
-                        {m.titulo}
-                        <span className="ml-2 text-apoio text-muted">{m.tipo}</span>
-                      </a>
                     ))}
                   </div>
                 )}

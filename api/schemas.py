@@ -31,7 +31,6 @@ class MeOut(BaseModel):
     respondeu_hoje: bool
     respondidas_hoje: int
     total_questoes: int
-    total_materiais: int
     meta_revisao_diaria: int
 
 

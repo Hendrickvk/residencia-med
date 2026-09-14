@@ -20,7 +20,6 @@ def obter_me(usuario=Depends(usuario_atual)):
         respondeu_hoje=respondeu_hoje,
         respondidas_hoje=db.contar_respondidas_hoje(usuario_id=usuario["id"]),
         total_questoes=db.contar_questoes(),
-        total_materiais=db.contar_materiais(),
         meta_revisao_diaria=usuario["meta_revisao_diaria"],
     )
 

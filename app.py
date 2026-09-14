@@ -5,7 +5,6 @@ import datetime
 
 import db
 import importador_questoes as imp_q
-import mediafire_import as mf
 import auth
 import ui
 
@@ -15,7 +14,7 @@ st.set_page_config(
     layout="wide",
 )
 
-# Materiais/questões são um recurso compartilhado entre todos os usuários —
+# Questões são um recurso compartilhado entre todos os usuários —
 # ações destrutivas ficam restritas a quem está nessa lista.
 ADMIN_EMAILS = {"hendrickvk@gmail.com"}
 
@@ -58,27 +57,27 @@ usuario_id = st.session_state.usuario_id
 # app) porque `st.button(icon=...)` só aceita esse formato ou emoji — Lucide
 # fica reservado para marcação própria (selo, badges, marca).
 PAGINAS_NAV = [
-    ("Acervo", "Materiais", "menu_book", "materiais"),
     ("Acervo", "Banco de questões", "database", "banco"),
     ("Acervo", "Nova questão", "post_add", "nova_questao"),
     ("Acervo", "Importar planilha", "upload_file", "importar"),
-    ("Acervo", "Sincronizar MediaFire", "sync", "sincronizar"),
 ]
 LABEL_POR_KEY = {key: label for _, label, _, key in PAGINAS_NAV}
 
 
 @st.cache_data(ttl=30)
 def _contadores_rail():
-    return db.contar_questoes(), db.contar_materiais()
+    return db.contar_questoes()
 
 
 # Widgets com `key` não podem ter seu session_state sobrescrito depois de já
-# instanciados nesta execução — por isso `ui.empty_state` e o botão
-# "Sincronizar agora" de Materiais gravam numa chave separada (_forcar_pagina),
+# instanciados nesta execução — por isso `ui.empty_state` grava numa chave
+# separada (_forcar_pagina),
 # consumida aqui, antes de qualquer botão de navegação existir.
 if "_forcar_pagina" in st.session_state:
     st.session_state["pagina_atual"] = st.session_state.pop("_forcar_pagina")
-st.session_state.setdefault("pagina_atual", "banco")
+# Chave de uma tela que já não existe (ex.: "materiais", removida) volta ao Banco.
+if st.session_state.get("pagina_atual") not in LABEL_POR_KEY:
+    st.session_state["pagina_atual"] = "banco"
 st.session_state.setdefault("rail_expandida", True)
 
 expandida = st.session_state["rail_expandida"]
@@ -149,9 +148,9 @@ with st.sidebar:
     pagina_atual = st.session_state["pagina_atual"]
 
     if expandida:
-        n_questoes, n_materiais = _contadores_rail()
+        n_questoes = _contadores_rail()
         st.markdown(
-            f'<div class="rail-footer">{n_questoes} questões · {n_materiais} materiais</div>',
+            f'<div class="rail-footer">{n_questoes} questões</div>',
             unsafe_allow_html=True,
         )
 
@@ -395,211 +394,9 @@ def _dialog_editar_questao(q):
 
 
 # ---------------------------------------------------------------------------
-# MATERIAIS DE ESTUDO
-# ---------------------------------------------------------------------------
-if pagina_atual == "materiais":
-    ui.page_title("Materiais")
-
-    ultima = db.ultima_sincronizacao()
-    if ultima:
-        delta = datetime.datetime.now() - datetime.datetime.fromisoformat(ultima)
-        if delta.days >= 1:
-            texto_sync = f"Sincronizado há {delta.days} dia(s)"
-        else:
-            horas = int(delta.total_seconds() // 3600)
-            texto_sync = f"Sincronizado há {horas}h" if horas else "Sincronizado agora há pouco"
-    else:
-        texto_sync = "Nunca sincronizado"
-    col_sync_txt, col_sync_btn = st.columns([4, 1])
-    with col_sync_txt:
-        st.markdown(
-            f'<div class="pill pill-neutral">{ui.icon_svg("clock", size=13)} {texto_sync}</div>',
-            unsafe_allow_html=True,
-        )
-    with col_sync_btn:
-        if st.button("Sincronizar agora", key="ir_sincronizar", use_container_width=True):
-            st.session_state["_forcar_pagina"] = "sincronizar"
-            st.rerun()
-
-    st.markdown("<div style='height:0.8rem;'></div>", unsafe_allow_html=True)
-
-    total_mat_atual = db.contar_materiais()
-    if total_mat_atual and eh_admin:
-        with st.expander("Zona de risco (admin)", icon=":material/warning:"):
-            st.write(
-                f"Isso apaga permanentemente **{total_mat_atual}** material(is) cadastrados, "
-                "para **todos os usuários** da plataforma. Não tem como desfazer."
-            )
-            confirmar_excluir_todos = st.checkbox(
-                f"Sim, quero excluir todos os {total_mat_atual} materiais cadastrados",
-                key="confirmar_excluir_todos_materiais",
-            )
-            if st.button(
-                "Excluir todos os materiais", icon=":material/delete_forever:",
-                disabled=not confirmar_excluir_todos,
-            ):
-                db.excluir_todos_materiais()
-                st.session_state.pop("confirmar_excluir_todos_materiais", None)
-                st.success("Todos os materiais foram excluídos.", icon=":material/check_circle:")
-                st.rerun()
-
-    areas = mapa_areas()
-    if not areas:
-        ui.empty_state(
-            "Cadastre uma área antes de adicionar materiais.",
-            cta_label="Ir para Nova questão", cta_icon=":material/arrow_forward:", cta_pagina="nova_questao",
-        )
-    else:
-        with st.expander("Adicionar novo material", icon=":material/add_circle:"):
-            col_area, col_esp = st.columns(2)
-            area_nome = col_area.selectbox("Área", list(areas.keys()), key="mat_area")
-            area_id = areas[area_nome]
-            esp_opcoes = {"(nenhuma)": None}
-            esp_opcoes.update({e["nome"]: e["id"] for e in db.listar_especialidades(area_id)})
-            esp_nome = col_esp.selectbox("Especialidade", list(esp_opcoes.keys()), key="mat_esp")
-            especialidade_id = esp_opcoes[esp_nome]
-            col_sub, col_tipo = st.columns(2)
-            subtopicos = db.listar_subtopicos(area_id, especialidade_id)
-            sub_opcoes = {"(nenhum)": None}
-            sub_opcoes.update({s["nome"]: s["id"] for s in subtopicos})
-            sub_nome = col_sub.selectbox("Subtópico", list(sub_opcoes.keys()), key="mat_sub")
-            subtopico_id = sub_opcoes[sub_nome]
-
-            tipo = col_tipo.selectbox(
-                "Tipo de material", ["Apostila", "Videoaula", "Vídeo Bônus", "Vídeo Apostila", "Outro"],
-            )
-            col_titulo, col_link = st.columns(2)
-            titulo = col_titulo.text_input("Título do material")
-            link = col_link.text_input("Link do MediaFire")
-
-            if st.button("Salvar material", icon=":material/save:", type="primary"):
-                if titulo.strip() and link.strip():
-                    db.criar_material(area_id, subtopico_id, tipo, titulo, link, especialidade_id=especialidade_id)
-                    st.success("Material adicionado!", icon=":material/check_circle:")
-                    st.rerun()
-                else:
-                    st.error("Preencha título e link.", icon=":material/cancel:")
-
-        col_arvore, col_conteudo = st.columns([1, 3])
-        with col_arvore:
-            st.markdown('<div class="form-section-label">Áreas</div>', unsafe_allow_html=True)
-            with st.container(height=420, border=True):
-                area_sel = st.radio(
-                    "Áreas", ["Todas"] + list(areas.keys()), key="mat_arvore_area", label_visibility="collapsed",
-                )
-            area_id_filtro = areas[area_sel] if area_sel != "Todas" else None
-
-        with col_conteudo:
-            col_tipo_f, col_busca_f = st.columns([1, 2])
-            tipos_disponiveis = db.listar_tipos_materiais()
-            tipo_filtro = col_tipo_f.selectbox("Tipo", ["Todos"] + tipos_disponiveis, key="mat_filtro_tipo")
-            tipo_filtro = None if tipo_filtro == "Todos" else tipo_filtro
-            busca = col_busca_f.text_input(
-                "Buscar por título", key="mat_busca", placeholder="Buscar por título...",
-            )
-
-            assinatura = (area_id_filtro, tipo_filtro, busca)
-            resetar_paginacao_se_filtro_mudou("mat_pagina", assinatura)
-            total = db.contar_materiais_filtrados(area_id_filtro, None, tipo_filtro, busca)
-
-            if total == 0:
-                ui.empty_state("Nenhum material encontrado. Ajuste os filtros ou adicione um novo.")
-            else:
-                POR_PAGINA = 50
-                _, offset = controle_paginacao("mat_pagina", total, POR_PAGINA)
-                materiais = db.listar_materiais_paginado(
-                    area_id_filtro, None, tipo_filtro, busca, limite=POR_PAGINA, offset=offset,
-                )
-                df_mat = pd.DataFrame([dict(m) for m in materiais])
-                df_mat["Especialidade"] = df_mat["especialidade"].fillna("—")
-                df_mat["Assunto"] = df_mat["subtopico"].fillna("—")
-                df_view = df_mat.rename(columns={
-                    "id": "ID", "tipo": "Tipo", "titulo": "Título", "link_mediafire": "Abrir",
-                })
-
-                evento = st.dataframe(
-                    df_view, hide_index=True, row_height=44, on_select="rerun", selection_mode="multi-row",
-                    column_order=["Tipo", "Título", "Especialidade", "Assunto", "Abrir"],
-                    column_config={"Abrir": st.column_config.LinkColumn("Abrir", display_text="Abrir ↗")},
-                    key="mat_tabela",
-                )
-                linhas_sel = evento.selection.rows if evento is not None else []
-                if eh_admin and linhas_sel:
-                    ids_sel = df_view.iloc[linhas_sel]["ID"].tolist()
-                    if st.button(
-                        f"Excluir {len(ids_sel)} selecionado(s)", icon=":material/delete:",
-                        key="mat_excluir_sel",
-                    ):
-                        ui.confirmar_exclusao(
-                            f"Excluir **{len(ids_sel)}** material(is) selecionado(s)? "
-                            "Eles somem do acervo compartilhado pra todos os usuários. "
-                            "Essa ação não pode ser desfeita.",
-                            lambda ids=tuple(int(i) for i in ids_sel): [db.excluir_material(i) for i in ids],
-                        )
-
-# ---------------------------------------------------------------------------
-# SINCRONIZAR MEDIAFIRE
-# ---------------------------------------------------------------------------
-elif pagina_atual == "sincronizar":
-    ui.page_title(
-        "Sincronizar MediaFire",
-        "Cole o link da sua pasta raiz compartilhada. O app varre automaticamente todas as "
-        "subpastas (especialidades → assuntos → arquivos) e cadastra tudo como material de estudo.",
-    )
-
-    with st.expander("Estrutura esperada da pasta", icon=":material/info:"):
-        st.markdown(
-            "Pasta raiz → pastas de especialidade ou grande área (ex: Cardiologia, Cirurgia, "
-            "Obstetrícia) → pastas de assunto → apostilas/vídeos (ou subpastas extras tipo "
-            "'Apostilas'/'Videoaulas' dentro do assunto, que também são lidas).\n\n"
-            "O nome da pasta de primeiro nível é encaixado na classificação fixa grande área > "
-            "especialidade: *Aprenda Nefro - Gasometria* vai para Clínica Médica > Nefrologia. Uma "
-            "pasta cujo nome não corresponde a nenhuma especialidade é pulada e aparece nos avisos — "
-            "renomeie e sincronize de novo.\n\n"
-            "Funciona apenas com pastas compartilhadas publicamente (aquelas com link "
-            "`mediafire.com/folder/...`) e requer conexão com a internet."
-        )
-
-    link_raiz = st.text_input(
-        "Link (ou chave) da pasta raiz do MediaFire",
-        placeholder="https://www.mediafire.com/folder/xxxxxxxxxxxxx/NomeDaPasta",
-    )
-
-    if st.button("Sincronizar agora", type="primary", icon=":material/sync:", disabled=not link_raiz.strip()):
-        status_area = st.empty()
-        log_linhas = []
-
-        def _progresso(msg):
-            log_linhas.append(msg)
-            status_area.text("\n".join(log_linhas[-8:]))
-
-        try:
-            with st.spinner("Varrendo a pasta do MediaFire... isso pode levar alguns minutos."):
-                relatorio = mf.sincronizar_pasta_raiz(link_raiz, on_progress=_progresso)
-        except mf.MediaFireError as e:
-            st.error(f"Erro ao sincronizar: {e}", icon=":material/cancel:")
-        else:
-            status_area.empty()
-            st.success("Sincronização concluída!", icon=":material/check_circle:")
-            ui.faixa_row([
-                {"label": "Pastas de área", "valor": str(relatorio["areas_criadas"])},
-                {"label": "Assuntos", "valor": str(relatorio["subtopicos_criados"])},
-                {"label": "Materiais novos", "valor": str(relatorio["materiais_novos"]), "cor": "var(--correct)"},
-                {"label": "Já existiam", "valor": str(relatorio["materiais_duplicados"])},
-            ])
-            if relatorio["erros"]:
-                with st.expander(f"{len(relatorio['erros'])} aviso(s)/erro(s)", icon=":material/warning:"):
-                    df_erros_mf = pd.DataFrame({"Aviso": relatorio["erros"]})
-                    st.dataframe(df_erros_mf, hide_index=True, row_height=36)
-            st.caption(
-                "Pode rodar a sincronização de novo sempre que adicionar arquivos novos na pasta "
-                "— os que já foram importados não duplicam."
-            )
-
-# ---------------------------------------------------------------------------
 # BANCO DE QUESTÕES
 # ---------------------------------------------------------------------------
-elif pagina_atual == "banco":
+if pagina_atual == "banco":
     ui.page_title("Banco de questões")
 
     areas = mapa_areas()

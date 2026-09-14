@@ -16,8 +16,8 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   `SHA256:c5q+FAcRSupd1hNDvfaGk6Su6oepMnb1cf+8DTQJN6A` (conferir antes de
   aceitar). Esperando esse deploy: HTTPS via DuckDNS, redesign Triagem,
   simulado por prova oficial e `questoes_provas`, taxonomia de especialidades,
-  correção da conexão morta do Neon, revisão espaçada em 3 fases e a limpeza de
-  código morto. Passos: `git pull`,
+  correção da conexão morta do Neon, revisão espaçada em 3 fases, a limpeza de
+  código morto e a remoção dos materiais. Passos: `git pull`,
   rebuild do front, no `.env.production` `COOKIE_SECURE=true` e
   `CORS_ORIGENS=https://conduta.duckdns.org`, copiar o Caddyfile, reload do
   caddy, restart de api e streamlit, testar, só então fechar a 8080 (iptables
@@ -283,6 +283,15 @@ governa as telas admin do Streamlit.
   as colunas de cache em `materiais`, que existem em produção. Não aplicado,
   por ser decisão do usuário: trocar o rail e a barra superior feitos à mão do
   Streamlit por `st.navigation`, o que contraria o escopo do `REDESIGN.md`.
+- **Materiais fora da plataforma, por enquanto.** Decisão do usuário: o foco
+  passou a ser o desempenho e a evolução do aluno (questões, simulados,
+  revisão, pontos fracos). Saíram a aba Materiais do app, as telas Materiais e
+  Sincronizar MediaFire do Streamlit, o `mediafire_import.py`, os routers
+  `materiais` e `sincronizacao`, os materiais da busca global e do `/me`, as
+  funções de materiais do `db.py` e a dependência `requests`. O banco não foi
+  mexido: a tabela `materiais` (1646 linhas) e a coluna `subtopicos.origem`
+  continuam lá, sem código, porque o servidor ainda roda a versão antiga e o
+  recurso pode voltar — o caminho é reverter o commit que os removeu.
 
 ## Armadilhas das telas admin (Streamlit)
 

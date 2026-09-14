@@ -221,10 +221,10 @@ def get_conn():
 # Taxonomia: grande área > especialidade
 # ---------------------------------------------------------------------------
 # As cinco grandes áreas das provas (ENAMED/Revalida) e as especialidades de
-# cada uma. É a fonte única dessa lista: init_db semeia a partir daqui e os
-# importadores (planilha e MediaFire) resolvem nomes livres contra ela em vez
-# de criar áreas novas — era assim que pastas como "Aprenda Nefro" ou
-# "CardioPapers ECG" viravam "áreas" no filtro.
+# cada uma. É a fonte única dessa lista: init_db semeia a partir daqui e o
+# importador de planilha resolve nomes livres contra ela em vez de criar áreas
+# novas — era assim que pastas do MediaFire como "Aprenda Nefro" viravam
+# "áreas" no filtro, quando a plataforma ainda tinha materiais.
 TAXONOMIA = {
     "Clínica Médica": [
         "Cardiologia", "Dermatologia", "Emergências clínicas", "Endocrinologia",
@@ -305,7 +305,7 @@ def normalizar_nome(texto):
 
 
 def classificar_nome_area(nome):
-    """Traduz um nome livre (pasta do MediaFire, coluna de planilha) para
+    """Traduz um nome livre (coluna de planilha, por exemplo) para
     (grande área, especialidade ou None). Devolve None quando o nome não
     corresponde a nada da TAXONOMIA — quem chama decide se isso é erro."""
     texto = normalizar_nome(nome)
@@ -483,22 +483,6 @@ def init_db():
         )
         """)
 
-        # Materiais (MediaFire) — biblioteca compartilhada entre todos os usuários
-        c.execute("""
-        CREATE TABLE IF NOT EXISTS materiais (
-            id SERIAL PRIMARY KEY,
-            area_id INTEGER NOT NULL,
-            subtopico_id INTEGER,
-            tipo TEXT NOT NULL,     -- Apostila / Videoaula / Video Bonus / Video Apostila / Outro
-            titulo TEXT NOT NULL,
-            link_mediafire TEXT NOT NULL,
-            mediafire_key TEXT,     -- quickkey do arquivo no MediaFire (usado p/ evitar duplicar na sincronização)
-            sincronizado_em TEXT,
-            FOREIGN KEY (area_id) REFERENCES areas(id) ON DELETE CASCADE,
-            FOREIGN KEY (subtopico_id) REFERENCES subtopicos(id) ON DELETE SET NULL
-        )
-        """)
-
         # Migração leve: imagem da questão (raio-X, ECG, gráfico, foto clínica
         # etc.) guardada como bytes direto no Postgres — não em disco, porque
         # o Streamlit Community Cloud apaga o filesystem local a cada deploy.
@@ -596,31 +580,6 @@ def init_db():
                 TYPE TIMESTAMP USING proxima_revisao::timestamp
             """)
 
-        # Migração leve: adiciona colunas novas em bancos já existentes
-        c.execute("""
-            SELECT column_name FROM information_schema.columns
-            WHERE table_name = 'materiais'
-        """)
-        colunas_existentes = {row["column_name"] for row in c.fetchall()}
-        if "mediafire_key" not in colunas_existentes:
-            c.execute("ALTER TABLE materiais ADD COLUMN mediafire_key TEXT")
-        if "sincronizado_em" not in colunas_existentes:
-            c.execute("ALTER TABLE materiais ADD COLUMN sincronizado_em TEXT")
-        if "arquivo_local" not in colunas_existentes:
-            # caminho relativo (a partir da raiz do projeto) do arquivo baixado
-            # para cache local; NULL enquanto só existir o link do MediaFire
-            c.execute("ALTER TABLE materiais ADD COLUMN arquivo_local TEXT")
-        if "tamanho_bytes" not in colunas_existentes:
-            c.execute("ALTER TABLE materiais ADD COLUMN tamanho_bytes INTEGER")
-        if "cache_atualizado_em" not in colunas_existentes:
-            c.execute("ALTER TABLE materiais ADD COLUMN cache_atualizado_em TEXT")
-
-        # Evita reimportar o mesmo arquivo do MediaFire duas vezes
-        c.execute("""
-            CREATE UNIQUE INDEX IF NOT EXISTS idx_materiais_mfkey
-            ON materiais(mediafire_key) WHERE mediafire_key IS NOT NULL
-        """)
-
         # Simulados cronometrados — cada simulado pertence a um usuário
         c.execute("""
         CREATE TABLE IF NOT EXISTS simulados (
@@ -678,7 +637,7 @@ def init_db():
         conn.commit()
 
         # Especialidades: segundo nível da taxonomia (grande área > especialidade,
-        # ver TAXONOMIA). Questões, materiais e assuntos (subtopicos) apontam
+        # ver TAXONOMIA). Questões e assuntos (subtopicos) apontam
         # para a especialidade quando ela é conhecida; a área continua sendo a
         # grande área, que é o que o Painel agrega.
         c.execute("""
@@ -690,7 +649,7 @@ def init_db():
             UNIQUE(area_id, nome)
         )
         """)
-        for tabela in ("questoes", "materiais", "subtopicos"):
+        for tabela in ("questoes", "subtopicos"):
             c.execute(
                 "SELECT column_name FROM information_schema.columns WHERE table_name = ?", (tabela,)
             )
@@ -699,13 +658,7 @@ def init_db():
                     f"ALTER TABLE {tabela} ADD COLUMN especialidade_id INTEGER "
                     "REFERENCES especialidades(id) ON DELETE SET NULL"
                 )
-        c.execute("SELECT column_name FROM information_schema.columns WHERE table_name = ?", ("subtopicos",))
-        if "origem" not in {row["column_name"] for row in c.fetchall()}:
-            # Nome original da pasta do MediaFire: é por ele que a sincronização
-            # reencontra o assunto depois de ele ser renomeado/reclassificado.
-            c.execute("ALTER TABLE subtopicos ADD COLUMN origem TEXT")
         c.execute("CREATE INDEX IF NOT EXISTS idx_questoes_especialidade_id ON questoes(especialidade_id)")
-        c.execute("CREATE INDEX IF NOT EXISTS idx_materiais_especialidade_id ON materiais(especialidade_id)")
 
         # Seed da taxonomia: só as grandes áreas e suas especialidades. Antes
         # daqui entravam especialidades soltas como áreas ("Cardiologia",
@@ -731,12 +684,11 @@ def listar_areas():
 
 
 def listar_especialidades(area_id=None):
-    """Especialidades (de uma grande área, ou todas) com quantas questões e
-    materiais cada uma tem — as telas escondem do filtro as que estão vazias."""
+    """Especialidades (de uma grande área, ou todas) com quantas questões
+    cada uma tem — as telas escondem do filtro as que estão vazias."""
     query = """
         SELECT e.id, e.area_id, e.nome,
-               (SELECT COUNT(*) FROM questoes q WHERE q.especialidade_id = e.id) AS total_questoes,
-               (SELECT COUNT(*) FROM materiais m WHERE m.especialidade_id = e.id) AS total_materiais
+               (SELECT COUNT(*) FROM questoes q WHERE q.especialidade_id = e.id) AS total_questoes
         FROM especialidades e
     """
     params = []
@@ -781,29 +733,6 @@ def obter_ou_criar_subtopico(area_id, nome):
             "SELECT id FROM subtopicos WHERE area_id = ? AND nome = ?", (area_id, nome)
         ).fetchone()
         return row["id"]
-
-
-def obter_subtopico_por_origem(area_id, origem):
-    """Assunto criado a partir de uma pasta do MediaFire com esse nome original."""
-    with get_conn() as conn:
-        return conn.execute(
-            "SELECT * FROM subtopicos WHERE area_id = ? AND origem = ?", (area_id, origem)
-        ).fetchone()
-
-
-def criar_subtopico_de_origem(area_id, nome, *, origem, especialidade_id=None):
-    """Assunto vindo de uma pasta do MediaFire: `nome` é o nome legível e
-    `origem` o nome original da pasta. Devolve o id (o existente, se já houver
-    um assunto com esse nome na área)."""
-    with get_conn() as conn:
-        conn.execute(
-            "INSERT INTO subtopicos (area_id, nome, especialidade_id, origem) VALUES (?, ?, ?, ?) "
-            "ON CONFLICT (area_id, nome) DO NOTHING",
-            (area_id, nome, especialidade_id, origem),
-        )
-        return conn.execute(
-            "SELECT id FROM subtopicos WHERE area_id = ? AND nome = ?", (area_id, nome)
-        ).fetchone()["id"]
 
 
 # ---------------------------------------------------------------------------
@@ -968,24 +897,15 @@ def questao_ja_existe(area_id, enunciado):
 
 
 def busca_global(termo, limite=10):
-    """Implementa a busca do topbar (MIGRACAO.md §5): hoje o campo existe
-    na tela mas não consulta nada — 'pior que não existir', segundo o
-    próprio documento de migração. `LIKE` simples em enunciado de questão
-    e título de material, agrupado por tipo."""
-    termo = f"%{termo}%"
+    """Busca do topbar (MIGRACAO.md §5): `ILIKE` no enunciado das questões."""
     with get_conn() as conn:
-        questoes = conn.execute("""
+        return conn.execute("""
             SELECT q.id, q.enunciado, a.nome AS area, e.nome AS especialidade
             FROM questoes q
             JOIN areas a ON a.id = q.area_id
             LEFT JOIN especialidades e ON e.id = q.especialidade_id
             WHERE q.enunciado ILIKE ? ORDER BY q.criada_em DESC LIMIT ?
-        """, (termo, limite)).fetchall()
-        materiais = conn.execute("""
-            SELECT id, titulo, tipo, link_mediafire FROM materiais
-            WHERE titulo ILIKE ? ORDER BY titulo LIMIT ?
-        """, (termo, limite)).fetchall()
-    return {"questoes": questoes, "materiais": materiais}
+        """, (f"%{termo}%", limite)).fetchall()
 
 
 def contar_questoes():
@@ -1226,105 +1146,6 @@ def desempenho_dashboard_combinado(*, usuario_id):
             "por_banca_area": row["por_banca_area"] or [],
             "sem_banca": row["sem_banca"] or 0,
         }
-
-
-# ---------------------------------------------------------------------------
-# Materiais (MediaFire) - CRUD individual
-# ---------------------------------------------------------------------------
-
-def criar_material(area_id, subtopico_id, tipo, titulo, link_mediafire, mediafire_key=None,
-                   especialidade_id=None):
-    """Insere um material. Se `mediafire_key` já existir no banco (mesmo
-    arquivo importado antes), a inserção é ignorada silenciosamente —
-    isso é o que torna a sincronização com o MediaFire segura para
-    rodar várias vezes sem duplicar nada.
-
-    Retorna True se um novo registro foi inserido, False se foi ignorado
-    por já existir (duplicado).
-    """
-    with get_conn() as conn:
-        cur = conn.execute("""
-            INSERT INTO materiais
-                (area_id, especialidade_id, subtopico_id, tipo, titulo, link_mediafire, mediafire_key, sincronizado_em)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT (mediafire_key) WHERE mediafire_key IS NOT NULL DO NOTHING
-        """, (
-            area_id, especialidade_id, subtopico_id, tipo, titulo, link_mediafire, mediafire_key,
-            datetime.datetime.now().isoformat() if mediafire_key else None,
-        ))
-        return cur.rowcount > 0
-
-
-def ultima_sincronizacao():
-    with get_conn() as conn:
-        row = conn.execute(
-            "SELECT MAX(sincronizado_em) AS ult FROM materiais WHERE sincronizado_em IS NOT NULL"
-        ).fetchone()
-        return row["ult"] if row else None
-
-
-def contar_materiais():
-    with get_conn() as conn:
-        return conn.execute("SELECT COUNT(*) AS n FROM materiais").fetchone()["n"]
-
-
-def _clausulas_filtro_materiais(area_id, subtopico_id, tipo, busca, especialidade_id=None, prefixo=""):
-    condicoes = ["1=1"]
-    params = []
-    for coluna, valor in (("area_id", area_id), ("especialidade_id", especialidade_id),
-                          ("subtopico_id", subtopico_id), ("tipo", tipo)):
-        if valor:
-            condicoes.append(f"{prefixo}{coluna} = ?")
-            params.append(valor)
-    if busca:
-        condicoes.append(f"{prefixo}titulo ILIKE ?")
-        params.append(f"%{busca}%")
-    return " AND ".join(condicoes), params
-
-
-def listar_materiais_paginado(area_id=None, subtopico_id=None, tipo=None, busca=None,
-                               limite=50, offset=0, especialidade_id=None):
-    condicao, params = _clausulas_filtro_materiais(
-        area_id, subtopico_id, tipo, busca, especialidade_id, prefixo="m.",
-    )
-    # Agrupa por especialidade e assunto: os arquivos de um mesmo módulo
-    # ficam juntos na página em vez de espalhados pela ordem alfabética.
-    query = f"""
-        SELECT m.*, e.nome AS especialidade, s.nome AS subtopico
-        FROM materiais m
-        LEFT JOIN especialidades e ON e.id = m.especialidade_id
-        LEFT JOIN subtopicos s ON s.id = m.subtopico_id
-        WHERE {condicao} ORDER BY e.nome, s.nome, m.tipo, m.titulo LIMIT ? OFFSET ?
-    """
-    with get_conn() as conn:
-        return conn.execute(query, params + [limite, offset]).fetchall()
-
-
-def contar_materiais_filtrados(area_id=None, subtopico_id=None, tipo=None, busca=None,
-                               especialidade_id=None):
-    condicao, params = _clausulas_filtro_materiais(area_id, subtopico_id, tipo, busca, especialidade_id)
-    query = f"SELECT COUNT(*) AS n FROM materiais WHERE {condicao}"
-    with get_conn() as conn:
-        return conn.execute(query, params).fetchone()["n"]
-
-
-def listar_tipos_materiais():
-    with get_conn() as conn:
-        rows = conn.execute("SELECT DISTINCT tipo FROM materiais ORDER BY tipo").fetchall()
-        return [r["tipo"] for r in rows]
-
-
-def excluir_material(material_id):
-    with get_conn() as conn:
-        conn.execute("DELETE FROM materiais WHERE id = ?", (material_id,))
-
-
-def excluir_todos_materiais():
-    """Apaga TODOS os materiais cadastrados — ação irreversível, usada
-    pela 'zona de risco' da tela de Materiais de Estudo (com confirmação
-    explícita do usuário antes de chamar isso)."""
-    with get_conn() as conn:
-        conn.execute("DELETE FROM materiais")
 
 
 # ---------------------------------------------------------------------------

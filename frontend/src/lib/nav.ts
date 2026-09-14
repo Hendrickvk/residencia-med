@@ -1,12 +1,10 @@
 import {
-  BookOpen,
   Brain,
   Database,
   FilePlus2,
   LayoutDashboard,
   type LucideIcon,
   PencilLine,
-  RefreshCw,
   Timer,
   UploadCloud,
 } from "lucide-react";
@@ -26,7 +24,6 @@ export const NAV: ItemNav[] = [
   { label: "Praticar", path: "/praticar", icon: PencilLine },
   { label: "Simulado", path: "/simulado", icon: Timer },
   { label: "Revisão espaçada", curto: "Revisão", path: "/revisao", icon: Brain },
-  { label: "Materiais", path: "/materiais", icon: BookOpen },
 ];
 
 // Telas administrativas que ficam no Streamlit (MIGRACAO.md §5). Aparecem só
@@ -35,5 +32,4 @@ export const ACERVO: ItemNav[] = [
   { label: "Banco de questões", path: "/banco", icon: Database },
   { label: "Nova questão", path: "/nova-questao", icon: FilePlus2 },
   { label: "Importar planilha", path: "/importar", icon: UploadCloud },
-  { label: "Sincronizar MediaFire", path: "/sincronizar", icon: RefreshCw },
 ];

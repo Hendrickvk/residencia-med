@@ -3,7 +3,6 @@ import { RequireAuth } from "./components/RequireAuth";
 import { AppShell } from "./components/shell/AppShell";
 import { ACERVO } from "./lib/nav";
 import Login from "./pages/Login";
-import Materiais from "./pages/materiais";
 import Painel from "./pages/painel";
 import { PermaneceNoStreamlit } from "./pages/PermaneceNoStreamlit";
 import Praticar from "./pages/praticar";
@@ -22,7 +21,6 @@ export default function App() {
           <Route path="/praticar" element={<Praticar />} />
           <Route path="/revisao" element={<Revisao />} />
           <Route path="/simulado" element={<Simulado />} />
-          <Route path="/materiais" element={<Materiais />} />
           {/* Fase 7 do MIGRACAO.md §5: as telas do Acervo ficam no Streamlit
               e não ganham rota React própria. */}
           {ACERVO.map((item) => (
