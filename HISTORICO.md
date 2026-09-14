@@ -15,11 +15,15 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   `~/.ssh/authorized_keys`. Host key ED25519 esperada:
   `SHA256:c5q+FAcRSupd1hNDvfaGk6Su6oepMnb1cf+8DTQJN6A` (conferir antes de
   aceitar). Esperando esse deploy: HTTPS via DuckDNS, redesign Triagem,
-  simulado por prova oficial e taxonomia de especialidades. Passos: `git pull`,
+  simulado por prova oficial e `questoes_provas`, taxonomia de especialidades,
+  correção da conexão morta do Neon, revisão espaçada em 3 fases e a limpeza de
+  código morto. Passos: `git pull`,
   rebuild do front, no `.env.production` `COOKIE_SECURE=true` e
   `CORS_ORIGENS=https://conduta.duckdns.org`, copiar o Caddyfile, reload do
   caddy, restart de api e streamlit, testar, só então fechar a 8080 (iptables
-  **e** Security List) e atualizar o `DEPLOY.md`.
+  **e** Security List) e atualizar o `DEPLOY.md`, apagando junto o
+  `deploy/Caddyfile.com-dominio.example` (é do domínio pago descartado, e o
+  `DEPLOY.md` ainda o cita).
 - Enquanto o deploy não sai, o servidor roda código antigo sobre o banco já
   migrado: Materiais lá mostra só as 5 grandes áreas, sem especialidades, e a
   Prova oficial lista a Revalida 2025/2 só com as 50 questões próprias (as 43
@@ -83,8 +87,8 @@ mais importante assim que houver acesso SSH.
 - Edição e exclusão de questão/material só para admin, com confirmação.
 
 ### 2026-09-11 — redesign "laudo clínico" (Streamlit)
-Especificado em `REDESIGN.md`, com um handoff detalhado que só existe no git. Hoje só
-governa as 4 telas admin.
+Especificado em `REDESIGN.md` (o handoff detalhado só existe no git). Hoje só
+governa as telas admin do Streamlit.
 
 ### 2026-09-12 — migração para FastAPI + React e publicação
 - Motivo: acabamento visual em Streamlit exigia CSS frágil a cada atualização,
@@ -93,10 +97,8 @@ governa as 4 telas admin.
   função→endpoint do `MIGRACAO.md` foi conferido contra o código real.
 - As 4 telas admin ficam no Streamlit para sempre: um único admin usa, a
   reescrita é cara e não melhora nada para o aluno (`MIGRACAO.md` §4/§5).
-  As telas de aluno antigas ficaram no `app.py` sem uso até 2026-09-14, quando
-  saíram junto com o cache local do MediaFire e os endpoints admin da API que
-  nenhum cliente chamava. A tela Materiais do Streamlit ficou, no grupo Acervo:
-  é nela que o admin cadastra e exclui materiais.
+  As telas de aluno antigas ficaram no `app.py`, sem uso; limpar não
+  compensou o risco na época (saíram em 2026-09-14).
 - Bugs que a migração revelou: o simulado vazava gabarito antes de finalizar
   (hoje os campos saem enquanto `finalizado_em` é nulo); o status da
   sincronização exigia admin e voltou a ser de qualquer usuário logado.
@@ -268,6 +270,19 @@ governa as 4 telas admin.
   extração foram reescritas a partir da página renderizada (a Q51 da USP tinha
   as alternativas deslocadas). Banco de 794 para 986 questões. Backup em
   `backups/importacao_usp2026_unicamp2023_*.json`.
+- **Limpeza de código morto** (auditoria de excesso, `b0d9a2e`, −1.914 linhas):
+  saíram as telas de aluno antigas do `app.py` com os helpers e o CSS só delas;
+  o `mediafire_cache.py` e a coluna Tamanho (nenhum dos 1646 materiais tinha
+  arquivo em cache, a coluna mostrava sempre "—"); os endpoints admin da API
+  que nenhum cliente chamava (escrita de questões, materiais, áreas e
+  sincronização; prova-alvo), com `exigir_admin` e o `python-multipart`;
+  funções sem chamador em `db.py`; e o `HANDOFF_REDESIGN.md`. A tela Materiais
+  do Streamlit ficou, no grupo Acervo, porque é nela que o admin cadastra e
+  exclui materiais, e a página inicial do Streamlit virou Banco de questões.
+  Ficaram de propósito o `GET /questoes/{id}/distribuicao` (o Praticar usa) e
+  as colunas de cache em `materiais`, que existem em produção. Não aplicado,
+  por ser decisão do usuário: trocar o rail e a barra superior feitos à mão do
+  Streamlit por `st.navigation`, o que contraria o escopo do `REDESIGN.md`.
 
 ## Armadilhas das telas admin (Streamlit)
 
