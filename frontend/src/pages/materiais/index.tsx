@@ -21,17 +21,6 @@ function iconePorTipo(tipo: string) {
   return File;
 }
 
-function formatarTamanho(bytes: number | null): string {
-  if (!bytes) return "—";
-  const unidades = ["B", "KB", "MB", "GB"];
-  let valor = bytes;
-  for (const u of unidades) {
-    if (valor < 1024) return u === "B" ? `${valor.toFixed(0)} ${u}` : `${valor.toFixed(1).replace(".", ",")} ${u}`;
-    valor /= 1024;
-  }
-  return `${valor.toFixed(1).replace(".", ",")} TB`;
-}
-
 function formatarSincronizacao(iso: string | null): string {
   if (!iso) return "Nunca sincronizado";
   const deltaMs = Date.now() - new Date(iso).getTime();
@@ -248,7 +237,6 @@ export default function Materiais() {
                       <th className="rotulo hidden px-3 py-2.5 text-muted xl:table-cell">
                         {especialidadeId ? "Assunto" : "Especialidade · assunto"}
                       </th>
-                      <th className="rotulo hidden px-3 py-2.5 text-right text-muted sm:table-cell">Tamanho</th>
                       <th className="w-24 px-3 py-2.5" />
                     </tr>
                   </thead>
@@ -276,9 +264,6 @@ export default function Materiais() {
                             {recorte && <div className="text-apoio text-muted xl:hidden">{recorte}</div>}
                           </td>
                           <td className="hidden px-3 py-2 text-muted xl:table-cell">{recorte ?? "—"}</td>
-                          <td className="hidden px-3 py-2 text-right tabular-nums text-muted sm:table-cell">
-                            {formatarTamanho(m.tamanho_bytes)}
-                          </td>
                           <td className="px-3 py-2 text-right">
                             {/* opacity em vez de display: o link continua alcançável pelo teclado.
                                 Em tela de toque não existe hover, então ele fica sempre visível. */}

@@ -1,8 +1,7 @@
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query
 
 import db
-from api.deps import exigir_admin, usuario_atual
-from api.schemas import MaterialIn
+from api.deps import usuario_atual
 
 router = APIRouter(prefix="/materiais", tags=["materiais"])
 
@@ -24,23 +23,3 @@ def listar(
 @router.get("/tipos")
 def tipos(usuario=Depends(usuario_atual)):
     return db.listar_tipos_materiais()
-
-
-@router.post("", status_code=status.HTTP_201_CREATED)
-def criar(dados: MaterialIn, usuario=Depends(exigir_admin)):
-    db.criar_material(
-        dados.area_id, dados.subtopico_id, dados.tipo, dados.titulo, dados.link,
-        especialidade_id=dados.especialidade_id,
-    )
-    return {"ok": True}
-
-
-@router.delete("/{material_id}", status_code=status.HTTP_204_NO_CONTENT)
-def excluir(material_id: int, usuario=Depends(exigir_admin)):
-    db.excluir_material(material_id)
-
-
-@router.delete("", status_code=status.HTTP_204_NO_CONTENT)
-def excluir_todos(usuario=Depends(exigir_admin)):
-    """Zona de risco: apaga TODOS os materiais do acervo compartilhado."""
-    db.excluir_todos_materiais()

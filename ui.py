@@ -291,19 +291,6 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
     border-color: rgba(255,255,255,.08); margin: 0.4rem 0;
 }}
 
-/* Botão "Praticar agora" (primário, largura total, sempre visível) */
-[data-testid="stSidebar"] .st-key-rail_cta .stButton button {{
-    background: var(--action) !important;
-    border: none !important;
-    color: #FFFFFF !important;
-    font-weight: 500 !important;
-    height: 40px !important;
-    border-radius: 6px !important;
-}}
-[data-testid="stSidebar"] .st-key-rail_cta .stButton button:hover {{
-    background: var(--action-hover) !important;
-}}
-
 /* Itens de navegação — st.button por página, restilizados como linhas de menu */
 [data-testid="stSidebar"] .st-key-nav_area .stButton button {{
     justify-content: flex-start;
@@ -371,8 +358,6 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
     height: 30px; padding: 0 0.65rem; border-radius: 999px;
     font-size: 0.78rem; font-weight: 500; white-space: nowrap;
 }}
-.pill-warn {{ background: var(--warn-soft); color: var(--warn); }}
-.pill-correct {{ background: var(--correct-soft); color: var(--correct); }}
 .pill-neutral {{ background: var(--canvas); color: var(--ink-500); border: 1px solid var(--line); }}
 .st-key-topbar .st-key-theme_toggle button, .st-key-topbar .st-key-avatar_popover button {{
     border-radius: 6px !important;
@@ -496,72 +481,9 @@ div[data-testid="stAlert"]:has([data-testid="stAlertContentWarning"]) {{
    COMPONENTES CUSTOM (marcação própria, ver REDESIGN.md seção 4)
    ===================================================================== */
 
-/* ---- Chip removível (filtros ativos) --------------------------------- */
-.chip-row {{ display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.5rem 0 0.9rem; }}
-.chip {{
-    display: inline-flex; align-items: center; gap: 0.35rem;
-    background: var(--action-soft); color: var(--action);
-    border-radius: 999px; padding: 0.25rem 0.7rem; font-size: 0.78rem; font-weight: 500;
-}}
-
 /* ---- Estado vazio (sem ilustração) ------------------------------------ */
 .empty-state {{ padding: 1.6rem 0; }}
 .empty-state-text {{ font-size: 0.92rem; color: var(--ink-500); margin-bottom: 0.9rem; }}
-
-/* ---- Painel de diagnóstico (Painel / 4.1) ------------------------------ */
-/* As 3 faixas são um st.columns([0.4,0.35,0.25]) real (não HTML puro),
-   porque a faixa 3 precisa de um st.button de verdade embutido — CSS
-   simula os divisores verticais nas bordas das colunas do Streamlit. */
-.st-key-diag_panel {{
-    background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
-    padding: 1.3rem 1.4rem; margin-bottom: 1.5rem;
-}}
-.st-key-diag_panel [data-testid="stHorizontalBlock"] {{ align-items: center; gap: 0; }}
-.st-key-diag_panel [data-testid="stHorizontalBlock"] > div {{ min-width: 0; }}
-.st-key-diag_panel [data-testid="stHorizontalBlock"] > div:not(:last-child) {{
-    border-right: 1px solid var(--line); padding-right: 1.4rem;
-}}
-.st-key-diag_panel [data-testid="stHorizontalBlock"] > div:not(:first-child) {{ padding-left: 1.4rem; }}
-.diag-f3-wrap {{ display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }}
-.diag-display {{
-    font-size: 34px; line-height: 1.15; font-weight: 600; letter-spacing: -0.02em;
-    color: var(--ink-700); font-family: 'IBM Plex Mono', monospace;
-}}
-.diag-frase {{ font-size: 15px; line-height: 1.55; color: var(--ink-700); margin-top: 0.5rem; }}
-.diag-caption {{ font-size: 0.78rem; color: var(--ink-500); margin-bottom: 0.3rem; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; }}
-.diag-sub {{ font-size: 0.85rem; color: var(--ink-500); text-align: center; }}
-
-/* Anel de progresso (meta do dia) via conic-gradient */
-.ring {{
-    --pct: 0;
-    width: 76px; height: 76px; border-radius: 50%;
-    background: conic-gradient(var(--action) calc(var(--pct) * 1%), var(--line) 0);
-    display: flex; align-items: center; justify-content: center;
-}}
-.ring-inner {{
-    width: 60px; height: 60px; border-radius: 50%; background: var(--surface);
-    display: flex; align-items: center; justify-content: center;
-    font-family: 'IBM Plex Mono', monospace; font-weight: 600; font-size: 0.95rem; color: var(--ink-700);
-}}
-
-/* Sparkline (14 dias) */
-.spark-wrap {{ display: flex; align-items: flex-end; gap: 0.6rem; }}
-.spark-value {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.95rem; font-weight: 600; color: var(--ink-700); }}
-
-/* ---- Lista "onde você está errando" (linha-barra) ---------------------- */
-.err-row {{
-    position: relative; display: flex; align-items: center; justify-content: space-between;
-    height: 44px; padding: 0 0.9rem; border-radius: 6px; border: 1px solid transparent;
-    margin-bottom: 0.4rem; overflow: hidden; cursor: pointer;
-}}
-.err-row-fill {{
-    position: absolute; inset: 0; z-index: 0;
-}}
-.err-row-label, .err-row-value {{ position: relative; z-index: 1; font-size: 0.88rem; }}
-.err-row-label {{ color: var(--ink-700); font-weight: 500; }}
-.err-row-value {{ font-family: 'IBM Plex Mono', monospace; color: var(--ink-500); font-size: 0.82rem; white-space: nowrap; }}
-.err-row:hover {{ border-color: var(--action); }}
-.err-amostra {{ font-size: 0.82rem; color: var(--ink-500); }}
 
 /* ---- Selo de autenticidade da questão ---------------------------------- */
 .qs-selo {{
@@ -577,51 +499,6 @@ div[data-testid="stAlert"]:has([data-testid="stAlertContentWarning"]) {{
 .qs-metadados {{ font-size: 0.8rem; color: var(--ink-500); margin-bottom: 0.6rem; }}
 .qs-enunciado {{ font-size: 17px; line-height: 1.65; color: var(--ink-700); max-width: 68ch; margin-bottom: 1rem; }}
 
-/* ---- Alternativas interativas (st.radio restilizado) -------------------- */
-/* Estrutura real do Streamlit: [role="radiogroup"] > label > (span com o
-   <input> nativo dentro) + (div com o texto, via stMarkdownContainer).
-   Não tem um "div da letra" pra estilizar — a letra é gerada via
-   `label::before` (conteúdo por posição, nth-of-type) e o span nativo
-   (círculo) é escondido. O seletor raiz usa `[class*=...]` porque a
-   classe `st-key-<key>` do Streamlit vai no `.stElementContainer` que
-   envolve o widget (não dá pra "abraçar" o radio com uma div própria via
-   st.markdown — cada chamada de st.markdown/st.radio gera elementos
-   IRMÃOS no DOM, uma tag aberta numa chamada nunca envolve a próxima). */
-[class*="st-key-radioalt__"] [role="radiogroup"] {{ gap: 0 !important; }}
-[class*="st-key-radioalt__"] [role="radiogroup"] > label {{
-    display: flex !important; align-items: center !important;
-    min-height: 52px; padding: 0.4rem 0.9rem 0.4rem 0.6rem;
-    border: 1px solid var(--line); border-radius: 6px; margin-bottom: 0.5rem !important;
-    background: var(--surface); transition: background 0.12s ease, border-color 0.12s ease;
-    position: relative; cursor: pointer;
-}}
-[class*="st-key-radioalt__"] [role="radiogroup"] > label:hover {{
-    background: var(--action-soft); border-color: var(--action);
-}}
-[class*="st-key-radioalt__"] [role="radiogroup"] > label:has(input:checked) {{
-    border: 2px solid var(--action);
-}}
-[class*="st-key-radioalt__"] [role="radiogroup"] > label > span:first-child {{
-    display: none;
-}}
-[class*="st-key-radioalt__"] [role="radiogroup"] > label::before {{
-    width: 28px; height: 28px; min-width: 28px; border-radius: 6px; border: 1px solid var(--line);
-    display: flex; align-items: center; justify-content: center; margin-right: 0.75rem;
-    font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem; font-weight: 600; color: var(--ink-500);
-    background: var(--canvas); flex-shrink: 0;
-}}
-[class*="st-key-radioalt__"] [role="radiogroup"] > label:has(input:checked)::before {{
-    background: var(--action); border-color: var(--action); color: #fff;
-}}
-[class*="st-key-radioalt__"] [role="radiogroup"] > label:nth-of-type(1)::before {{ content: "A"; }}
-[class*="st-key-radioalt__"] [role="radiogroup"] > label:nth-of-type(2)::before {{ content: "B"; }}
-[class*="st-key-radioalt__"] [role="radiogroup"] > label:nth-of-type(3)::before {{ content: "C"; }}
-[class*="st-key-radioalt__"] [role="radiogroup"] > label:nth-of-type(4)::before {{ content: "D"; }}
-[class*="st-key-radioalt__"] [role="radiogroup"] > label:nth-of-type(5)::before {{ content: "E"; }}
-[class*="st-key-radioalt__"] [role="radiogroup"] > label [data-testid="stMarkdownContainer"] p {{
-    font-size: 15px; color: var(--ink-700);
-}}
-
 /* ---- Alternativas de resultado (estático, pós-confirmação) --------------- */
 .alt-linha {{
     display: flex; align-items: center; gap: 0.75rem; min-height: 52px;
@@ -629,7 +506,6 @@ div[data-testid="stAlert"]:has([data-testid="stAlertContentWarning"]) {{
     margin-bottom: 0.5rem; position: relative; overflow: hidden;
 }}
 .alt-linha.correta {{ background: var(--correct-soft); border-color: var(--correct); }}
-.alt-linha.errada {{ background: var(--wrong-soft); border-color: var(--wrong); }}
 .alt-letra {{
     width: 28px; height: 28px; min-width: 28px; border-radius: 6px; border: 1px solid var(--line);
     display: flex; align-items: center; justify-content: center; z-index: 1;
@@ -637,12 +513,7 @@ div[data-testid="stAlert"]:has([data-testid="stAlertContentWarning"]) {{
     background: var(--surface);
 }}
 .alt-linha.correta .alt-letra {{ background: var(--correct); border-color: var(--correct); color: #fff; }}
-.alt-linha.errada .alt-letra {{ background: var(--wrong); border-color: var(--wrong); color: #fff; }}
 .alt-texto {{ font-size: 15px; color: var(--ink-700); z-index: 1; flex: 1; }}
-.alt-sufixo {{ font-size: 0.78rem; color: var(--ink-500); z-index: 1; white-space: nowrap; }}
-.alt-peer-bar {{
-    position: absolute; left: 0; bottom: 0; height: 3px; background: var(--ink-300); opacity: 0.5; z-index: 0;
-}}
 
 /* ---- Badge de faixa (usado em vários lugares para número em destaque) --- */
 .faixa-row {{ display: flex; flex-direction: column; gap: 0.4rem; }}
@@ -659,19 +530,6 @@ div[data-testid="stAlert"]:has([data-testid="stAlertContentWarning"]) {{
 
 /* ---- Coluna única de formulário (Nova Questão, REDESIGN.md §4.6) --------- */
 .st-key-form_col {{ max-width: 640px; }}
-
-/* ---- Cronômetro em destaque (Simulado) ------------------------------------ */
-.timer-hero {{
-    display: inline-flex; align-items: center; gap: 0.5rem;
-    font-family: 'IBM Plex Mono', monospace; font-size: 1.4rem; font-weight: 600;
-    padding: 0.4rem 0.9rem; border-radius: 8px; border: 1px solid var(--line);
-}}
-
-/* ---- Grade de navegação do simulado ---------------------------------------- */
-.st-key-sim_grid .stButton button {{
-    min-width: 36px !important; height: 36px !important; padding: 0 !important;
-    font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem;
-}}
 
 /* ---- Rótulo de seção em formulário --------------------------------------- */
 .form-section-label {{
@@ -728,34 +586,6 @@ def empty_state(
             st.rerun()
 
 
-def chips(itens: list[str]):
-    if not itens:
-        return
-    partes = ['<div class="chip-row">']
-    for texto in itens:
-        partes.append(f'<span class="chip">{texto}</span>')
-    partes.append("</div>")
-    st.markdown("".join(partes), unsafe_allow_html=True)
-
-
-def cor_semantica_pct(pct: float) -> str:
-    """Cor semântica pra uma % de acerto (REDESIGN.md §4.1: <40 crítico,
-    40-69 atenção, >=70 bom)."""
-    if pct < 40:
-        return "var(--wrong)"
-    if pct < 70:
-        return "var(--warn)"
-    return "var(--correct)"
-
-
-def _cor_semantica_fundo(pct: float) -> str:
-    if pct < 40:
-        return "var(--wrong-soft)"
-    if pct < 70:
-        return "var(--warn-soft)"
-    return "var(--correct-soft)"
-
-
 def faixa_row(itens: list[dict]):
     """Lista de resultados em linha fina com barra lateral colorida —
     `itens`: [{"label": str, "valor": str, "cor": "var(--x)"}]."""
@@ -770,91 +600,6 @@ def faixa_row(itens: list[dict]):
         )
     partes.append("</div>")
     st.markdown("".join(partes), unsafe_allow_html=True)
-
-
-def lista_erro_barra(linhas: list[dict], *, key_prefix: str):
-    """"Onde você está errando" (REDESIGN.md §4.1) — cada linha é a própria
-    barra (fundo preenchido proporcionalmente ao % de acerto), com botão
-    "Praticar N desta área" que aparece rente à linha. `linhas`:
-    [{"area_id":, "nome":, "pct":, "acertos":, "total":}]. Devolve o
-    area_id clicado (para abrir a sessão de prática já filtrada), ou None.
-    """
-    clicado = None
-    for item in linhas:
-        pct = item["pct"]
-        cor_fundo = _cor_semantica_fundo(pct)
-        col_row, col_btn = st.columns([5, 1.3])
-        with col_row:
-            st.markdown(
-                f"""
-                <div class="err-row">
-                    <div class="err-row-fill" style="background:{cor_fundo}; width:{max(pct, 3)}%;"></div>
-                    <span class="err-row-label">{item['nome']}</span>
-                    <span class="err-row-value">{pct}% · {int(item['acertos'])}/{int(item['total'])}</span>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-        with col_btn:
-            if st.button(
-                f"Praticar 10", key=f"{key_prefix}_{item['area_id']}",
-                use_container_width=True,
-            ):
-                clicado = item["area_id"]
-    return clicado
-
-
-def sparkline_svg(valores: list[float], altura: int = 48, largura: int = 220) -> str:
-    """Minigráfico de linha sem eixos/grade, com o último ponto marcado e
-    rotulado — usado no Painel (últimos 14 dias de % de acerto)."""
-    if not valores or len(valores) < 2:
-        return ""
-    vmin, vmax = min(valores), max(valores)
-    span = (vmax - vmin) or 1
-    n = len(valores)
-    pontos = []
-    for i, v in enumerate(valores):
-        x = (i / (n - 1)) * (largura - 8) + 4
-        y = altura - 4 - ((v - vmin) / span) * (altura - 8)
-        pontos.append((x, y))
-    path = "M " + " L ".join(f"{x:.1f},{y:.1f}" for x, y in pontos)
-    ux, uy = pontos[-1]
-    return f"""
-    <svg width="{largura}" height="{altura}" viewBox="0 0 {largura} {altura}" style="overflow:visible;">
-        <path d="{path}" fill="none" stroke="var(--action)" stroke-width="2"
-              stroke-linecap="round" stroke-linejoin="round" />
-        <circle cx="{ux:.1f}" cy="{uy:.1f}" r="3.5" fill="var(--action)" />
-    </svg>
-    """
-
-
-def anel_progresso(pct: float, rotulo: str) -> str:
-    pct = max(0, min(100, pct))
-    return f"""
-    <div class="ring" style="--pct:{pct};">
-        <div class="ring-inner">{rotulo}</div>
-    </div>
-    """
-
-
-def grafico_barras_horizontais(df, categoria_col: str, valor_col: str, *, cor: str = "#1F4FD8", sufixo: str = "%"):
-    """Barras horizontais com rótulo de valor na ponta (REDESIGN.md §6) —
-    substitui `st.bar_chart` (que não permite orientação horizontal nem
-    tema customizado). Requer `altair` (dependência do próprio Streamlit)."""
-    import altair as alt
-
-    base = alt.Chart(df).encode(
-        y=alt.Y(f"{categoria_col}:N", sort="-x", title=None,
-                axis=alt.Axis(labelColor="#46586E", labelFontSize=12, domain=False, ticks=False)),
-        x=alt.X(f"{valor_col}:Q", title=None,
-                axis=alt.Axis(grid=True, gridColor="#E1E6EC", gridOpacity=0.5, labels=False, domain=False, ticks=False)),
-    )
-    barras = base.mark_bar(color=cor, cornerRadiusEnd=3, height=16)
-    rotulos = base.mark_text(align="left", dx=5, color="#1B2D42", fontSize=12).encode(
-        text=alt.Text(f"{valor_col}:Q", format=".1f"),
-    )
-    chart = (barras + rotulos).properties(height=max(28 * len(df), 80)).configure_view(strokeWidth=0)
-    st.altair_chart(chart, use_container_width=True)
 
 
 def form_section_label(texto: str):
@@ -917,41 +662,14 @@ def _alternativas_dict(q):
     return alternativas
 
 
-def render_alternativas_interativas(q, *, key: str, index_pre_selecionado: int | None = None):
-    """Alternativas como linhas clicáveis (st.radio restilizado via CSS —
-    ver `[class*="st-key-radioalt__"]` acima). Devolve a letra escolhida ou
-    None. O prefixo fixo `radioalt__` no key é o que a CSS usa pra achar
-    esse widget especificamente (Streamlit aplica a classe `st-key-<key>`
-    no container do próprio widget)."""
-    alternativas = _alternativas_dict(q)
-    opcoes = list(alternativas.keys())
-    return st.radio(
-        "Alternativas", options=opcoes, index=index_pre_selecionado,
-        format_func=lambda k: alternativas[k], key=f"radioalt__{key}", label_visibility="collapsed",
-    )
-
-
-def render_alternativas_resultado(q, *, resposta_selecionada: str | None = None, distribuicao: dict | None = None):
-    """Alternativas estáticas pós-confirmação: a correta em verde, a
-    escolhida errada em vermelho, as demais neutras. `distribuicao`
-    (opcional): {"A": 42.0, ...} — desenha a barra fina de % dos demais
-    usuários dentro de cada linha."""
-    alternativas = _alternativas_dict(q)
-    correta_letra = q["resposta_correta"]
+def render_alternativas_resultado(q):
+    """Alternativas estáticas, com a correta em verde (Banco de questões)."""
     partes = []
-    for letra, texto in alternativas.items():
-        classe = ""
-        sufixo = ""
-        if letra == correta_letra:
-            classe = "correta"
-        elif resposta_selecionada and letra == resposta_selecionada:
-            classe = "errada"
-            sufixo = '<span class="alt-sufixo">sua resposta</span>'
-        pct_barra = (distribuicao or {}).get(letra, 0)
-        barra_html = f'<div class="alt-peer-bar" style="width:{pct_barra}%;"></div>' if pct_barra else ""
+    for letra, texto in _alternativas_dict(q).items():
+        classe = "correta" if letra == q["resposta_correta"] else ""
         partes.append(
-            f'<div class="alt-linha {classe}">{barra_html}'
+            f'<div class="alt-linha {classe}">'
             f'<div class="alt-letra">{letra}</div>'
-            f'<div class="alt-texto">{texto}</div>{sufixo}</div>'
+            f'<div class="alt-texto">{texto}</div></div>'
         )
     st.markdown("".join(partes), unsafe_allow_html=True)

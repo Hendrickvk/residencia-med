@@ -1,6 +1,6 @@
 # Migração: Streamlit → FastAPI + React
 
-> Para o agente que vai executar: leia este arquivo, depois `REDESIGN.md` (os tokens e o comportamento de cada tela continuam valendo integralmente) e `HANDOFF_REDESIGN.md` (o que já existe e por quê). Antes de escrever código, leia `db.py`, `repeticao_espacada.py` e `app.py` inteiros e confirme o contrato da seção 2 contra o que está de fato no código — este documento foi escrito sem acesso aos arquivos.
+> Para o agente que vai executar: leia este arquivo, depois `REDESIGN.md` (os tokens e o comportamento de cada tela continuam valendo integralmente). Antes de escrever código, leia `db.py`, `repeticao_espacada.py` e `app.py` inteiros e confirme o contrato da seção 2 contra o que está de fato no código — este documento foi escrito sem acesso aos arquivos.
 
 ## 0. Objetivo e critério de sucesso
 

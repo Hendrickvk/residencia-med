@@ -1,6 +1,6 @@
 import os
 
-from fastapi import Depends, HTTPException, Request, status
+from fastapi import HTTPException, Request, status
 
 import db
 from api.security import COOKIE_NOME, decodificar_token
@@ -20,12 +20,6 @@ def usuario_atual(request: Request):
     usuario = db.obter_usuario(usuario_id)
     if usuario is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Sessão inválida ou expirada.")
-    return usuario
-
-
-def exigir_admin(usuario=Depends(usuario_atual)):
-    if usuario["email"] not in ADMIN_EMAILS:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Ação restrita a administradores.")
     return usuario
 
 

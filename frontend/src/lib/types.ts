@@ -49,13 +49,6 @@ export interface Especialidade {
   total_materiais: number;
 }
 
-export interface Subtopico {
-  id: number;
-  area_id: number;
-  especialidade_id: number | null;
-  nome: string;
-}
-
 export interface RespondidaResumo {
   id: number;
   correta: boolean;
@@ -209,7 +202,6 @@ export interface Material {
   tipo: string;
   titulo: string;
   link_mediafire: string;
-  tamanho_bytes: number | null;
 }
 
 export interface ResultadoBuscaQuestao {

@@ -37,7 +37,3 @@ export const ACERVO: ItemNav[] = [
   { label: "Importar planilha", path: "/importar", icon: UploadCloud },
   { label: "Sincronizar MediaFire", path: "/sincronizar", icon: RefreshCw },
 ];
-
-export const LABEL_POR_PATH: Record<string, string> = Object.fromEntries(
-  [...NAV, ...ACERVO].map((item) => [item.path, item.label]),
-);

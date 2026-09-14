@@ -730,21 +730,6 @@ def listar_areas():
         return conn.execute("SELECT * FROM areas ORDER BY nome").fetchall()
 
 
-def criar_area(nome):
-    with get_conn() as conn:
-        conn.execute("INSERT INTO areas (nome) VALUES (?) ON CONFLICT (nome) DO NOTHING", (nome,))
-
-
-def obter_ou_criar_area(nome):
-    """Retorna o id da área, criando-a se ainda não existir. Usado pelos
-    importadores em massa (planilha e MediaFire)."""
-    nome = nome.strip()
-    with get_conn() as conn:
-        conn.execute("INSERT INTO areas (nome) VALUES (?) ON CONFLICT (nome) DO NOTHING", (nome,))
-        row = conn.execute("SELECT id FROM areas WHERE nome = ?", (nome,)).fetchone()
-        return row["id"]
-
-
 def listar_especialidades(area_id=None):
     """Especialidades (de uma grande área, ou todas) com quantas questões e
     materiais cada uma tem — as telas escondem do filtro as que estão vazias."""
@@ -934,23 +919,6 @@ def obter_questoes_por_ids(ids, *, usuario_id):
         rows = conn.execute(query, [usuario_id] + ids).fetchall()
     por_id = {r["id"]: r for r in rows}
     return [por_id[i] for i in ids if i in por_id]
-
-
-def listar_questoes(area_id=None, subtopico_id=None):
-    """Mantido para compatibilidade (usado na fila de 'Responder Questões',
-    que só guarda os ids, então carregar tudo é barato). Para telas que
-    RENDERIZAM cada questão na página, use listar_questoes_paginado."""
-    query = "SELECT * FROM questoes WHERE 1=1"
-    params = []
-    if area_id:
-        query += " AND area_id = ?"
-        params.append(area_id)
-    if subtopico_id:
-        query += " AND subtopico_id = ?"
-        params.append(subtopico_id)
-    query += " ORDER BY criada_em DESC"
-    with get_conn() as conn:
-        return conn.execute(query, params).fetchall()
 
 
 def _clausulas_filtro_questoes(area_id, subtopico_id, busca, especialidade_id=None, prefixo=""):
@@ -1185,27 +1153,6 @@ def listar_questoes_marcadas(*, usuario_id):
         """, (usuario_id,)).fetchall()
 
 
-def desempenho_por_subtopico(area_id=None, *, usuario_id):
-    query = """
-        SELECT a.nome AS area, s.nome AS subtopico,
-               COUNT(r.id) AS total,
-               SUM(r.correta) AS acertos,
-               ROUND(100.0 * SUM(r.correta) / COUNT(r.id), 1) AS pct_acerto
-        FROM respostas r
-        JOIN questoes q ON q.id = r.questao_id
-        JOIN areas a ON a.id = q.area_id
-        LEFT JOIN subtopicos s ON s.id = q.subtopico_id
-        WHERE r.usuario_id = ?
-    """
-    params = [usuario_id]
-    if area_id:
-        query += " AND q.area_id = ?"
-        params.append(area_id)
-    query += " GROUP BY a.nome, s.nome ORDER BY pct_acerto ASC"
-    with get_conn() as conn:
-        return conn.execute(query, params).fetchall()
-
-
 def evolucao_diaria(*, usuario_id):
     """Total de respostas e % de acerto por dia (para gráfico de evolução)."""
     with get_conn() as conn:
@@ -1281,160 +1228,6 @@ def desempenho_dashboard_combinado(*, usuario_id):
         }
 
 
-def questoes_mais_erradas(limite=15, *, usuario_id):
-    with get_conn() as conn:
-        return conn.execute("""
-            SELECT q.id, q.enunciado, a.nome AS area,
-                   COUNT(r.id) AS total_respostas,
-                   SUM(CASE WHEN r.correta = 0 THEN 1 ELSE 0 END) AS erros,
-                   ROUND(100.0 * SUM(CASE WHEN r.correta = 0 THEN 1 ELSE 0 END) / COUNT(r.id), 1) AS pct_erro
-            FROM respostas r
-            JOIN questoes q ON q.id = r.questao_id
-            JOIN areas a ON a.id = q.area_id
-            WHERE r.usuario_id = ?
-            GROUP BY q.id, a.nome
-            HAVING COUNT(r.id) >= 1
-            ORDER BY pct_erro DESC, total_respostas DESC
-            LIMIT ?
-        """, (usuario_id, limite)).fetchall()
-
-
-# ---------------------------------------------------------------------------
-# Importação em massa
-# ---------------------------------------------------------------------------
-
-def criar_questoes_em_lote(itens):
-    """
-    itens: lista de dicts com chaves:
-      area, subtopico (opcional), enunciado, alternativas (dict),
-      resposta_correta, explicacao (opcional), banca (opcional), ano (opcional)
-
-    `area` pode ser grande área ou especialidade (resolvida pela TAXONOMIA);
-    um nome não reconhecido é erro da linha, nunca uma área nova. Cria
-    subtópicos que ainda não existirem. Retorna (inseridos, erros), onde erros
-    é uma lista de (indice, mensagem) para linhas que falharam (as demais
-    linhas continuam sendo importadas normalmente).
-    """
-    area_cache = {}
-    sub_cache = {}
-    inseridos = 0
-    erros = []
-    with get_conn() as conn:
-        c = conn.cursor()
-        for idx, item in enumerate(itens):
-            try:
-                area_id, especialidade_id = _resolver_area_em_lote(c, item, area_cache)
-
-                subtopico_nome = str(item.get("subtopico") or "").strip() or None
-                subtopico_id = None
-                if subtopico_nome:
-                    chave = (area_id, subtopico_nome)
-                    if chave not in sub_cache:
-                        row = c.execute(
-                            "SELECT id FROM subtopicos WHERE area_id = ? AND nome = ?",
-                            (area_id, subtopico_nome),
-                        ).fetchone()
-                        if row:
-                            sub_cache[chave] = row["id"]
-                        else:
-                            c.execute(
-                                "INSERT INTO subtopicos (area_id, nome) VALUES (?, ?)",
-                                (area_id, subtopico_nome),
-                            )
-                            sub_cache[chave] = c.lastrowid
-                    subtopico_id = sub_cache[chave]
-
-                if not item.get("enunciado"):
-                    raise ValueError("enunciado vazio")
-                if not item.get("alternativas") or len(item["alternativas"]) < 2:
-                    raise ValueError("menos de 2 alternativas")
-                if item.get("resposta_correta") not in item["alternativas"]:
-                    raise ValueError("resposta_correta não corresponde a nenhuma alternativa")
-
-                c.execute("""
-                    INSERT INTO questoes
-                        (area_id, especialidade_id, subtopico_id, enunciado, alternativas, resposta_correta,
-                         explicacao, banca, ano, criada_em)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, (
-                    area_id, especialidade_id, subtopico_id, item["enunciado"],
-                    json.dumps(item["alternativas"], ensure_ascii=False),
-                    item["resposta_correta"], item.get("explicacao", ""),
-                    item.get("banca", ""), item.get("ano"),
-                    datetime.datetime.now().isoformat(),
-                ))
-                inseridos += 1
-            except Exception as e:
-                erros.append((idx, str(e)))
-        conn.commit()
-    return inseridos, erros
-
-
-def _resolver_area_em_lote(c, item, cache):
-    """(area_id, especialidade_id) da coluna `area` (+ `especialidade`, se
-    houver) de uma linha de importação em lote."""
-    area_nome = str(item.get("area") or "").strip()
-    if not area_nome:
-        raise ValueError("área vazia")
-    esp_nome = str(item.get("especialidade") or "").strip() or None
-    chave = (area_nome, esp_nome)
-    if chave not in cache:
-        classe = classificar_area_especialidade(area_nome, esp_nome)
-        if classe is None:
-            raise ValueError(f"área '{area_nome}' não corresponde a nenhuma grande área ou especialidade")
-        cache[chave] = _ids_taxonomia(c, *classe)
-    return cache[chave]
-
-
-def criar_materiais_em_lote(itens):
-    """
-    itens: lista de dicts {area, especialidade (opcional), subtopico (opcional), tipo, titulo, link}
-    `area` segue a TAXONOMIA (ver criar_questoes_em_lote). Retorna (inseridos, erros).
-    """
-    area_cache = {}
-    sub_cache = {}
-    inseridos = 0
-    erros = []
-    with get_conn() as conn:
-        c = conn.cursor()
-        for idx, item in enumerate(itens):
-            try:
-                if not item.get("titulo"):
-                    raise ValueError("título vazio")
-                if not item.get("link"):
-                    raise ValueError("link vazio")
-                area_id, especialidade_id = _resolver_area_em_lote(c, item, area_cache)
-
-                subtopico_nome = str(item.get("subtopico") or "").strip() or None
-                subtopico_id = None
-                if subtopico_nome:
-                    chave = (area_id, subtopico_nome)
-                    if chave not in sub_cache:
-                        row = c.execute(
-                            "SELECT id FROM subtopicos WHERE area_id = ? AND nome = ?",
-                            (area_id, subtopico_nome),
-                        ).fetchone()
-                        if row:
-                            sub_cache[chave] = row["id"]
-                        else:
-                            c.execute(
-                                "INSERT INTO subtopicos (area_id, nome) VALUES (?, ?)",
-                                (area_id, subtopico_nome),
-                            )
-                            sub_cache[chave] = c.lastrowid
-                    subtopico_id = sub_cache[chave]
-
-                c.execute("""
-                    INSERT INTO materiais (area_id, especialidade_id, subtopico_id, tipo, titulo, link_mediafire)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                """, (area_id, especialidade_id, subtopico_id, item.get("tipo") or "Outro", item["titulo"], item["link"]))
-                inseridos += 1
-            except Exception as e:
-                erros.append((idx, str(e)))
-        conn.commit()
-    return inseridos, erros
-
-
 # ---------------------------------------------------------------------------
 # Materiais (MediaFire) - CRUD individual
 # ---------------------------------------------------------------------------
@@ -1489,22 +1282,6 @@ def _clausulas_filtro_materiais(area_id, subtopico_id, tipo, busca, especialidad
     return " AND ".join(condicoes), params
 
 
-def listar_materiais(area_id=None, subtopico_id=None):
-    """Mantido para compatibilidade; para telas com muitos itens, prefira
-    listar_materiais_paginado (evita carregar milhares de linhas de uma vez)."""
-    query = "SELECT * FROM materiais WHERE 1=1"
-    params = []
-    if area_id:
-        query += " AND area_id = ?"
-        params.append(area_id)
-    if subtopico_id:
-        query += " AND subtopico_id = ?"
-        params.append(subtopico_id)
-    query += " ORDER BY tipo, titulo"
-    with get_conn() as conn:
-        return conn.execute(query, params).fetchall()
-
-
 def listar_materiais_paginado(area_id=None, subtopico_id=None, tipo=None, busca=None,
                                limite=50, offset=0, especialidade_id=None):
     condicao, params = _clausulas_filtro_materiais(
@@ -1548,44 +1325,6 @@ def excluir_todos_materiais():
     explícita do usuário antes de chamar isso)."""
     with get_conn() as conn:
         conn.execute("DELETE FROM materiais")
-
-
-# ---------------------------------------------------------------------------
-# Cache local dos arquivos do MediaFire
-# ---------------------------------------------------------------------------
-
-def obter_material(material_id):
-    with get_conn() as conn:
-        return conn.execute(
-            "SELECT * FROM materiais WHERE id = ?", (material_id,)
-        ).fetchone()
-
-
-def registrar_cache_material(material_id, arquivo_local, tamanho_bytes):
-    with get_conn() as conn:
-        conn.execute("""
-            UPDATE materiais
-            SET arquivo_local = ?, tamanho_bytes = ?, cache_atualizado_em = ?
-            WHERE id = ?
-        """, (arquivo_local, tamanho_bytes, datetime.datetime.now().isoformat(), material_id))
-
-
-def limpar_cache_material(material_id):
-    with get_conn() as conn:
-        conn.execute("""
-            UPDATE materiais
-            SET arquivo_local = NULL, tamanho_bytes = NULL, cache_atualizado_em = NULL
-            WHERE id = ?
-        """, (material_id,))
-
-
-def estatisticas_cache():
-    with get_conn() as conn:
-        row = conn.execute("""
-            SELECT COUNT(*) AS n, COALESCE(SUM(tamanho_bytes), 0) AS bytes_total
-            FROM materiais WHERE arquivo_local IS NOT NULL
-        """).fetchone()
-        return row["n"], row["bytes_total"]
 
 
 # ---------------------------------------------------------------------------
@@ -1764,8 +1503,8 @@ def obter_simulado(simulado_id, *, usuario_id):
 def listar_itens_simulado(simulado_id, *, usuario_id):
     """Inclui o estado `marcada` (tabela `questoes_marcadas`, a mesma do
     Praticar) — é o que sustenta o terceiro estado da grade de navegação do
-    Simulado (respondida/marcada/em branco), dívida registrada no
-    HANDOFF_REDESIGN.md e resolvida na Fase 5 do MIGRACAO.md.
+    Simulado (respondida/marcada/em branco), dívida resolvida na Fase 5 do
+    MIGRACAO.md.
 
     No simulado por edição, `numero_prova` é o do caderno daquela edição: a
     mesma questão pode ter outro número em outra prova oficial."""

@@ -31,17 +31,17 @@ def test_cada_avaliacao_vira_um_evento_com_estado_antes_e_depois(usuario_teste, 
     assert segundo["repeticoes_antes"] == 1 and segundo["intervalo_depois"] == 6
     assert segundo["facilidade_antes"] == primeiro["facilidade_depois"]
     assert segundo["correta"] is None  # sem alternativa: autoavaliação
-    assert sr.obter_estado(questao_teste, usuario_id=usuario_teste)["proxima_revisao"] == segundo["proxima_revisao"]
+    assert sr.estados_revisao([questao_teste], usuario_id=usuario_teste).get(questao_teste)["proxima_revisao"] == segundo["proxima_revisao"]
 
 
 def test_prazo_previsto_e_o_prazo_de_fato_agendado(usuario_teste, questao_teste):
     """Os botões da Revisão prometiam prazos fixos que o SM-2 não seguia."""
     for nota in [5, 3, 4, 1, 5, 5, 4]:
-        estado = sr.obter_estado(questao_teste, usuario_id=usuario_teste)
+        estado = sr.estados_revisao([questao_teste], usuario_id=usuario_teste).get(questao_teste)
         previsto = sr.prever_prazos(estado)[nota]
         antes = datetime.datetime.now()
         sr.registrar_revisao(questao_teste, nota, usuario_id=usuario_teste)
-        agendado = sr.obter_estado(questao_teste, usuario_id=usuario_teste)["proxima_revisao"] - antes
+        agendado = sr.estados_revisao([questao_teste], usuario_id=usuario_teste).get(questao_teste)["proxima_revisao"] - antes
         if "minutos" in previsto:
             assert abs(agendado.total_seconds() / 60 - previsto["minutos"]) < 1
         else:
@@ -52,7 +52,7 @@ def test_prazos_de_questao_nova_e_depois_de_dois_acertos(usuario_teste, questao_
     assert sr.prever_prazos(None) == {1: {"minutos": 10}, 3: {"dias": 1}, 4: {"dias": 1}, 5: {"dias": 1}}
     sr.registrar_revisao(questao_teste, 5, usuario_id=usuario_teste)
     sr.registrar_revisao(questao_teste, 5, usuario_id=usuario_teste)
-    estado = sr.obter_estado(questao_teste, usuario_id=usuario_teste)
+    estado = sr.estados_revisao([questao_teste], usuario_id=usuario_teste).get(questao_teste)
     prazos = sr.prever_prazos(estado)
     assert prazos[1] == {"minutos": 10}
     assert prazos[4] == {"dias": round(6 * estado["facilidade"])}

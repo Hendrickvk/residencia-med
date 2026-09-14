@@ -1,4 +1,3 @@
-from datetime import date
 from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator
@@ -40,51 +39,12 @@ class TemaIn(BaseModel):
     tema: str = Field(pattern="^(light|dark)$")
 
 
-class ProvaAlvoIn(BaseModel):
-    data: Optional[date] = None
-
-
 class MetaRevisaoIn(BaseModel):
     # Casos por dia na tela de Revisão (repeticao_espacada.plano_revisao).
     meta: int = Field(ge=5, le=200)
 
 
-# --- Áreas / subtópicos ---------------------------------------------------
-
-class AreaIn(BaseModel):
-    nome: str = Field(min_length=1)
-
-
-class SubtopicoIn(BaseModel):
-    nome: str = Field(min_length=1)
-
-
-# --- Questões -------------------------------------------------------------
-
-class QuestaoIn(BaseModel):
-    area_id: int
-    especialidade_id: Optional[int] = None
-    subtopico_id: Optional[int] = None
-    enunciado: str = Field(min_length=1)
-    alternativas: dict[str, str]
-    resposta_correta: str
-    explicacao: str = ""
-    banca: str = ""
-    ano: Optional[int] = None
-
-
 # --- Praticar / respostas ---------------------------------------------------
-
-class FiltrosSessaoIn(BaseModel):
-    area_id: Optional[int] = None
-    especialidade_id: Optional[int] = None
-    subtopico_id: Optional[int] = None
-    banca: Optional[str] = None
-    ano: Optional[int] = None
-    apenas_erros: bool = False
-    excluir_respondidas: bool = False
-    quantidade: int = Field(default=20, ge=1, le=200)
-
 
 class RespostaIn(BaseModel):
     questao_id: int
@@ -99,21 +59,6 @@ class MarcarRevisaoIn(BaseModel):
     # erro (repeticao_espacada.avaliar_revisao), não a nota enviada.
     alternativa: Optional[str] = Field(default=None, pattern="^[A-E]$")
     tempo_ms: Optional[int] = Field(default=None, ge=0)
-
-
-# --- Materiais --------------------------------------------------------------
-
-class MaterialIn(BaseModel):
-    area_id: int
-    especialidade_id: Optional[int] = None
-    subtopico_id: Optional[int] = None
-    tipo: str = "Outro"
-    titulo: str = Field(min_length=1)
-    link: str = Field(min_length=1)
-
-
-class SincronizacaoIn(BaseModel):
-    link_raiz: str = Field(min_length=1)
 
 
 # --- Simulados ----------------------------------------------------------

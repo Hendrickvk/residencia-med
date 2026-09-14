@@ -1,11 +1,9 @@
 import streamlit as st
 import pandas as pd
 import json
-import random
 import datetime
 
 import db
-import repeticao_espacada as sr
 import importador_questoes as imp_q
 import mediafire_import as mf
 import auth
@@ -20,8 +18,6 @@ st.set_page_config(
 # Materiais/questões são um recurso compartilhado entre todos os usuários —
 # ações destrutivas ficam restritas a quem está nessa lista.
 ADMIN_EMAILS = {"hendrickvk@gmail.com"}
-
-_NOME_DIA_SEMANA = ["segunda", "terça", "quarta", "quinta", "sexta", "sábado", "domingo"]
 
 
 # db.init_db() cria tabelas/índices/seed — precisa rodar uma vez, não a cada
@@ -53,7 +49,7 @@ eh_admin = st.session_state.get("usuario_email") in ADMIN_EMAILS
 usuario_id = st.session_state.usuario_id
 
 # ---------------------------------------------------------------------------
-# Navegação — grupos "Estudo"/"Acervo" (REDESIGN.md §3). Rótulo (exibido) e
+# Navegação — grupo "Acervo" (REDESIGN.md §3). Rótulo (exibido) e
 # page_key (usado no roteamento abaixo) são desacoplados de propósito: um
 # rename futuro do rótulo do menu não precisa tocar em nenhum `if pagina_atual
 # == "..."`, só na tabela abaixo — lição da rodada anterior de redesign, onde
@@ -62,11 +58,7 @@ usuario_id = st.session_state.usuario_id
 # app) porque `st.button(icon=...)` só aceita esse formato ou emoji — Lucide
 # fica reservado para marcação própria (selo, badges, marca).
 PAGINAS_NAV = [
-    ("Estudo", "Painel", "dashboard", "painel"),
-    ("Estudo", "Praticar", "edit_note", "praticar"),
-    ("Estudo", "Simulado", "timer", "simulado"),
-    ("Estudo", "Revisão espaçada", "psychology", "revisao"),
-    ("Estudo", "Materiais", "menu_book", "materiais"),
+    ("Acervo", "Materiais", "menu_book", "materiais"),
     ("Acervo", "Banco de questões", "database", "banco"),
     ("Acervo", "Nova questão", "post_add", "nova_questao"),
     ("Acervo", "Importar planilha", "upload_file", "importar"),
@@ -80,18 +72,13 @@ def _contadores_rail():
     return db.contar_questoes(), db.contar_materiais()
 
 
-@st.cache_data(ttl=60)
-def _ofensiva_cache(uid):
-    return db.calcular_ofensiva(usuario_id=uid)
-
-
 # Widgets com `key` não podem ter seu session_state sobrescrito depois de já
-# instanciados nesta execução — por isso `ui.empty_state` e os cliques na
-# lista de erro do Painel gravam numa chave separada (_forcar_pagina),
+# instanciados nesta execução — por isso `ui.empty_state` e o botão
+# "Sincronizar agora" de Materiais gravam numa chave separada (_forcar_pagina),
 # consumida aqui, antes de qualquer botão de navegação existir.
 if "_forcar_pagina" in st.session_state:
     st.session_state["pagina_atual"] = st.session_state.pop("_forcar_pagina")
-st.session_state.setdefault("pagina_atual", "painel")
+st.session_state.setdefault("pagina_atual", "banco")
 st.session_state.setdefault("rail_expandida", True)
 
 expandida = st.session_state["rail_expandida"]
@@ -108,7 +95,6 @@ else:
         [data-testid="stSidebar"] { min-width: 64px !important; width: 64px !important; }
         [data-testid="stSidebarUserContent"] { padding-left: .3rem !important; padding-right: .3rem !important; }
         [data-testid="stSidebar"] .rail-group-label, [data-testid="stSidebar"] .rail-footer { display: none; }
-        [data-testid="stSidebar"] .st-key-rail_cta .stButton button,
         [data-testid="stSidebar"] .st-key-nav_area .stButton button {
             width: 40px !important; padding-left: 0 !important; justify-content: center !important;
         }
@@ -133,15 +119,6 @@ with st.sidebar:
                              help="Recolher menu" if expandida else "Expandir menu"):
                     st.session_state["rail_expandida"] = not expandida
                     st.rerun()
-
-    with st.container(key="rail_cta"):
-        if st.button(
-            "Praticar agora" if expandida else "", icon=":material/arrow_forward:",
-            key="cta_praticar", type="primary", use_container_width=True,
-            help=None if expandida else "Praticar agora",
-        ):
-            st.session_state["pagina_atual"] = "praticar"
-            st.rerun()
 
     st.markdown("---")
 
@@ -182,23 +159,13 @@ with st.sidebar:
 # Barra superior — contexto, busca, ofensiva, contagem regressiva, tema, avatar
 # ---------------------------------------------------------------------------
 with st.container(key="topbar"):
-    col_titulo, col_busca, col_streak, col_prova, col_tema, col_avatar = st.columns(
-        [2, 3, 1.1, 1.7, 0.5, 0.5]
-    )
+    col_titulo, col_busca, col_prova, col_tema, col_avatar = st.columns([2, 3, 1.7, 0.5, 0.5])
     with col_titulo:
         st.markdown(f'<div class="topbar-title">{LABEL_POR_KEY[pagina_atual]}</div>', unsafe_allow_html=True)
     with col_busca:
         st.text_input(
             "busca", placeholder="Buscar no Banco de Questões...",
             label_visibility="collapsed", key="busca_global",
-        )
-    with col_streak:
-        streak, respondeu_hoje = _ofensiva_cache(usuario_id)
-        cor_pill = "pill-correct" if respondeu_hoje else "pill-warn"
-        st.markdown(
-            f'<div class="pill {cor_pill}">{ui.icon_svg("flame", size=13)} '
-            f'{streak} dia{"s" if streak != 1 else ""}</div>',
-            unsafe_allow_html=True,
         )
     with col_prova:
         data_alvo = st.session_state.get("data_prova_alvo")
@@ -252,30 +219,6 @@ def mapa_areas():
     return {a["nome"]: a["id"] for a in db.listar_areas()}
 
 
-@st.cache_data(ttl=60)
-def _listar_bancas_cache():
-    return db.listar_bancas()
-
-
-@st.cache_data(ttl=300)
-def _listar_anos_cache():
-    return db.listar_anos()
-
-
-# TTL curto: o Painel muda a cada resposta, mas não precisa refletir isso em
-# tempo real — cachear elimina os vários round-trips sequenciais ao Postgres
-# que rodariam a cada clique em QUALQUER lugar do app (Streamlit reroda o
-# script inteiro a cada interação).
-@st.cache_data(ttl=15)
-def _dash_combinado(uid):
-    return db.desempenho_dashboard_combinado(usuario_id=uid)
-
-
-@st.cache_data(ttl=15)
-def _dash_evolucao_diaria(uid):
-    return db.evolucao_diaria(usuario_id=uid)
-
-
 def controle_paginacao(chave, total, por_pagina=50):
     """Widget de paginação reutilizável. Guarda a página atual em
     st.session_state[chave] e devolve (pagina_atual, offset)."""
@@ -310,17 +253,6 @@ def resetar_paginacao_se_filtro_mudou(chave, assinatura_filtro):
     if st.session_state.get(chave_assinatura) != assinatura_filtro:
         st.session_state[chave_assinatura] = assinatura_filtro
         st.session_state[chave] = 0
-
-
-def _formatar_tamanho(tamanho_bytes):
-    if not tamanho_bytes:
-        return "—"
-    tamanho_bytes = float(tamanho_bytes)
-    for unidade in ["B", "KB", "MB", "GB"]:
-        if tamanho_bytes < 1024:
-            return f"{tamanho_bytes:.0f} {unidade}" if unidade == "B" else f"{tamanho_bytes:.1f} {unidade}"
-        tamanho_bytes /= 1024
-    return f"{tamanho_bytes:.1f} TB"
 
 
 def _form_questao(q, *, key_prefix):
@@ -462,676 +394,10 @@ def _dialog_editar_questao(q):
         st.rerun()
 
 
-@st.dialog("Finalizar simulado")
-def _dialog_finalizar_simulado(simulado_id_dlg, em_branco):
-    if em_branco:
-        st.write(f"**{em_branco}** questão(ões) ficarão em branco. Essa ação não pode ser desfeita.")
-    else:
-        st.write("Todas as questões foram respondidas. Confirmar o encerramento?")
-    col1, col2 = st.columns(2)
-    if col1.button("Cancelar", use_container_width=True):
-        st.rerun()
-    if col2.button("Finalizar", type="primary", use_container_width=True):
-        db.finalizar_simulado(simulado_id_dlg, usuario_id=usuario_id)
-        consolidar_simulado_no_historico(simulado_id_dlg, usuario_id)
-        st.rerun()
-
-
-def consolidar_simulado_no_historico(simulado_id, uid):
-    """Joga as respostas do simulado nos mesmos caminhos usados por
-    'Praticar' (db.registrar_resposta + sr.registrar_revisao), para que o
-    Painel e a fila de repetição espaçada considerem o simulado
-    automaticamente. Chamar uma única vez, ao finalizar."""
-    for item in db.listar_itens_simulado(simulado_id, usuario_id=uid):
-        if item["resposta_dada"] is None:
-            continue
-        correta = bool(item["correta"])
-        db.registrar_resposta(item["id"], item["resposta_dada"], correta, usuario_id=uid)
-        sr.registrar_revisao(item["id"], 5 if correta else 1, usuario_id=uid)
-
-
-def _render_resumo_pratica(uid):
-    respondidas = st.session_state.get("prat_respondidas", [])
-    inicio = datetime.datetime.fromisoformat(st.session_state["prat_inicio"])
-    duracao_seg = (datetime.datetime.now() - inicio).total_seconds()
-    n = len(respondidas)
-    acertos = sum(1 for r in respondidas if r["correta"])
-    erros_ids = [r["id"] for r in respondidas if not r["correta"]]
-    tempo_medio = duracao_seg / n if n else 0
-
-    ui.page_title("Resumo da sessão")
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Acertos", f"{acertos}/{n}" if n else "0/0")
-    col2.metric("% de acerto", f"{round(100 * acertos / n, 1)}%" if n else "—")
-    col3.metric("Tempo médio por questão", f"{int(tempo_medio)}s" if n else "—")
-
-    if respondidas:
-        df_r = pd.DataFrame(respondidas)
-        df_r["subtopico"] = df_r["subtopico"].fillna("(sem assunto)")
-        resumo_sub = df_r.groupby("subtopico").agg(
-            total=("correta", "count"), acertos=("correta", "sum"),
-        ).reset_index()
-        resumo_sub["pct_acerto"] = round(100 * resumo_sub["acertos"] / resumo_sub["total"], 1)
-        st.markdown('<div class="form-section-label">Desempenho por assunto</div>', unsafe_allow_html=True)
-        ui.faixa_row([
-            {
-                "label": r["subtopico"],
-                "valor": f"{r['pct_acerto']}% ({int(r['acertos'])}/{int(r['total'])})",
-                "cor": ui.cor_semantica_pct(r["pct_acerto"]),
-            }
-            for _, r in resumo_sub.iterrows()
-        ])
-
-    st.markdown("<div style='height:1rem;'></div>", unsafe_allow_html=True)
-    col_erros, col_nova = st.columns(2)
-    with col_erros:
-        if erros_ids and st.button(
-            f"Adicionar os {len(erros_ids)} erros à revisão espaçada",
-            icon=":material/psychology:", key="add_erros_revisao", use_container_width=True,
-        ):
-            for eid in erros_ids:
-                sr.registrar_revisao(eid, 1, usuario_id=uid)
-            st.toast("Erros adicionados à revisão espaçada.", icon=":material/check_circle:")
-    with col_nova:
-        if st.button("Nova sessão", type="primary", icon=":material/refresh:", key="prat_nova_sessao", use_container_width=True):
-            for chave in ("prat_fila", "prat_idx", "prat_respondidas", "prat_inicio", "prat_aguardando"):
-                st.session_state.pop(chave, None)
-            st.rerun()
-
-
-# ---------------------------------------------------------------------------
-# PAINEL
-# ---------------------------------------------------------------------------
-if pagina_atual == "painel":
-    dash = _dash_combinado(usuario_id)
-    desemp_area = dash["por_area"]
-
-    if not desemp_area:
-        ui.empty_state(
-            "Ainda não há respostas registradas para montar seu diagnóstico.",
-            cta_label="Ir para Praticar", cta_icon=":material/arrow_forward:", cta_pagina="praticar",
-        )
-    else:
-        df_area = pd.DataFrame([dict(r) for r in desemp_area])
-        total_resp = int(df_area["total"].sum())
-        total_acertos = int(df_area["acertos"].sum())
-        pct_geral = round(100 * total_acertos / total_resp, 1) if total_resp else 0
-        pct_fmt = f"{pct_geral:.1f}".replace(".", ",")
-
-        if total_resp < 50:
-            frase = (
-                f"Volume ainda baixo para conclusões. Responda "
-                f"{50 - total_resp} questões para o diagnóstico ficar confiável."
-            )
-        else:
-            pior = df_area.sort_values("pct_acerto").iloc[0]
-            frase = f"{total_acertos} acertos em {total_resp} questões. {pior['area']} é a sua maior lacuna."
-
-        evol = _dash_evolucao_diaria(usuario_id)
-        ultimos14 = evol[-14:] if evol else []
-
-        feitas_hoje = db.contar_respondidas_hoje(usuario_id=usuario_id)
-        META_DIARIA = 20
-        pct_meta = round(100 * min(feitas_hoje, META_DIARIA) / META_DIARIA)
-
-        with st.container(key="diag_panel"):
-            col1, col2, col3 = st.columns([0.40, 0.35, 0.25])
-            with col1:
-                st.markdown(
-                    f'<div class="diag-display">{pct_fmt}%</div><div class="diag-frase">{frase}</div>',
-                    unsafe_allow_html=True,
-                )
-            with col2:
-                st.markdown('<div class="diag-caption">Últimos 14 dias</div>', unsafe_allow_html=True)
-                if len(ultimos14) >= 3:
-                    valores = [r["pct_acerto"] for r in ultimos14]
-                    ultimo_pct = f"{valores[-1]:.1f}".replace(".", ",")
-                    st.markdown(
-                        f'<div class="spark-wrap">{ui.sparkline_svg(valores)}'
-                        f'<span class="spark-value">{ultimo_pct}%</span></div>',
-                        unsafe_allow_html=True,
-                    )
-                else:
-                    st.markdown(
-                        '<div class="diag-sub">Histórico começa a aparecer no terceiro dia de estudo.</div>',
-                        unsafe_allow_html=True,
-                    )
-            with col3:
-                st.markdown(
-                    f'<div class="diag-f3-wrap">{ui.anel_progresso(pct_meta, f"{feitas_hoje}/{META_DIARIA}")}'
-                    f'<div class="diag-sub">Meta do dia</div></div>',
-                    unsafe_allow_html=True,
-                )
-                if st.button("Continuar de onde parei", key="diag_continuar", use_container_width=True):
-                    st.session_state["_forcar_pagina"] = "praticar"
-                    st.rerun()
-
-        st.markdown(
-            '<div style="font-weight:600;color:var(--ink-700);font-size:15px;margin-bottom:0.6rem;">'
-            'Onde você está errando</div>',
-            unsafe_allow_html=True,
-        )
-        suficientes = df_area[df_area["total"] >= 5].sort_values("pct_acerto")
-        insuficientes = df_area[df_area["total"] < 5]
-
-        linhas = [
-            {
-                "area_id": int(r["area_id"]), "nome": r["area"], "pct": r["pct_acerto"],
-                "acertos": r["acertos"], "total": r["total"],
-            }
-            for _, r in suficientes.iterrows()
-        ]
-        if linhas:
-            area_clicada = ui.lista_erro_barra(linhas, key_prefix="err")
-            if area_clicada:
-                st.session_state["pratica_area_forcada"] = area_clicada
-                st.session_state["_forcar_pagina"] = "praticar"
-                st.rerun()
-        else:
-            ui.empty_state("Nenhuma área com volume suficiente ainda.")
-
-        if len(insuficientes):
-            with st.expander(f"Amostra insuficiente ({len(insuficientes)})", icon=":material/info:"):
-                st.caption("Menos de 5 questões respondidas — percentual ainda não é confiável.")
-                for _, r in insuficientes.iterrows():
-                    st.markdown(
-                        f'<div class="err-amostra">{r["area"]} — {r["pct_acerto"]}% '
-                        f'({int(r["acertos"])}/{int(r["total"])})</div>',
-                        unsafe_allow_html=True,
-                    )
-
-        st.markdown("<div style='height:1.4rem;'></div>", unsafe_allow_html=True)
-        st.markdown(
-            '<div style="font-weight:600;color:var(--ink-700);font-size:15px;margin-bottom:0.6rem;">'
-            'Revisões de hoje</div>',
-            unsafe_allow_html=True,
-        )
-        total_fila = sr.contar_fila_revisao(usuario_id=usuario_id)
-        if not total_fila:
-            ui.empty_state("Nenhuma revisão vencida hoje.")
-        else:
-            with st.container(border=True):
-                st.write(f"{total_fila} questõe(s) esperando revisão.")
-                if st.button(
-                    f"Revisar {total_fila} itens", key="ir_revisar",
-                    icon=":material/arrow_forward:", type="primary",
-                ):
-                    st.session_state["_forcar_pagina"] = "revisao"
-                    st.rerun()
-
-# ---------------------------------------------------------------------------
-# PRATICAR
-# ---------------------------------------------------------------------------
-elif pagina_atual == "praticar":
-    sessao_ativa = bool(st.session_state.get("prat_fila"))
-
-    if not sessao_ativa:
-        ui.page_title("Praticar")
-        areas = mapa_areas()
-        if not areas:
-            ui.empty_state(
-                "Cadastre uma área antes de responder questões.",
-                cta_label="Ir para Nova questão", cta_icon=":material/arrow_forward:", cta_pagina="nova_questao",
-            )
-        else:
-            nomes_area = ["Todas"] + list(areas.keys())
-            area_forcada_id = st.session_state.pop("pratica_area_forcada", None)
-            index_area_default = 0
-            if area_forcada_id:
-                nome_forcado = next((n for n, i in areas.items() if i == area_forcada_id), None)
-                if nome_forcado:
-                    index_area_default = nomes_area.index(nome_forcado)
-
-            col1, col2 = st.columns(2)
-            area_nome = col1.selectbox("Área (opcional)", nomes_area, index=index_area_default, key="prat_cfg_area")
-            area_id = areas[area_nome] if area_nome != "Todas" else None
-
-            sub_opcoes = {"Todos": None}
-            if area_id:
-                sub_opcoes.update({s["nome"]: s["id"] for s in db.listar_subtopicos(area_id)})
-            sub_nome = col2.selectbox("Assunto (opcional)", list(sub_opcoes.keys()), key="prat_cfg_sub")
-            subtopico_id = sub_opcoes[sub_nome]
-
-            col3, col4 = st.columns(2)
-            bancas_disp = _listar_bancas_cache()
-            banca = None
-            with col3:
-                if bancas_disp:
-                    banca_sel = st.selectbox("Banca (opcional)", ["Todas"] + bancas_disp, key="prat_cfg_banca")
-                    banca = None if banca_sel == "Todas" else banca_sel
-                else:
-                    st.selectbox("Banca (opcional)", ["Todas"], key="prat_cfg_banca_vazio", disabled=True)
-            anos_disp = _listar_anos_cache()
-            ano = None
-            with col4:
-                if anos_disp:
-                    ano_sel = st.selectbox("Ano (opcional)", ["Todos"] + anos_disp, key="prat_cfg_ano")
-                    ano = None if ano_sel == "Todos" else ano_sel
-                else:
-                    st.selectbox("Ano (opcional)", ["Todos"], key="prat_cfg_ano_vazio", disabled=True)
-
-            col5, col6 = st.columns(2)
-            quantidade = col5.selectbox("Quantidade de questões", [10, 20, 30, 50], key="prat_cfg_qtd")
-            with col6:
-                apenas_erros = st.checkbox("Apenas questões que errei", key="prat_cfg_erros")
-                excluir_respondidas = st.checkbox("Excluir questões já respondidas", key="prat_cfg_excl")
-
-            filtros_ativos = []
-            if area_nome != "Todas":
-                filtros_ativos.append(area_nome)
-            if sub_nome != "Todos":
-                filtros_ativos.append(sub_nome)
-            if banca:
-                filtros_ativos.append(banca)
-            if ano:
-                filtros_ativos.append(str(ano))
-            if apenas_erros:
-                filtros_ativos.append("Apenas erros")
-            if excluir_respondidas:
-                filtros_ativos.append("Excluir respondidas")
-            ui.chips(filtros_ativos)
-
-            if st.button(
-                f"Iniciar sessão de {quantidade} questões", type="primary",
-                icon=":material/play_arrow:", key="prat_iniciar",
-            ):
-                ids = db.ids_questoes_filtro_pratica(
-                    usuario_id=usuario_id, area_id=area_id, subtopico_id=subtopico_id,
-                    banca=banca, ano=ano, apenas_erros=apenas_erros,
-                    excluir_respondidas=excluir_respondidas,
-                )
-                random.shuffle(ids)
-                ids = ids[:quantidade]
-                if not ids:
-                    st.error("Nenhuma questão encontrada para esses filtros.", icon=":material/cancel:")
-                else:
-                    st.session_state["prat_fila"] = ids
-                    st.session_state["prat_idx"] = 0
-                    st.session_state["prat_respondidas"] = []
-                    st.session_state["prat_inicio"] = datetime.datetime.now().isoformat()
-                    st.session_state.pop("prat_aguardando", None)
-                    st.rerun()
-    else:
-        fila = st.session_state["prat_fila"]
-        idx = st.session_state["prat_idx"]
-
-        if idx >= len(fila):
-            _render_resumo_pratica(usuario_id)
-        else:
-            q = db.obter_questao(fila[idx])
-            aguardando = st.session_state.get("prat_aguardando")
-
-            col_prog, col_flag, col_fim = st.columns([5, 0.6, 0.6])
-            with col_prog:
-                st.progress(idx / len(fila))
-                st.caption(f"{idx + 1} de {len(fila)}")
-            with col_flag:
-                marcada = db.questao_esta_marcada(usuario_id, q["id"])
-                if st.button(
-                    "", icon=":material/flag:", key=f"marcar_{q['id']}_{idx}",
-                    type="primary" if marcada else "secondary",
-                    help="Desmarcar" if marcada else "Marcar para revisão",
-                    use_container_width=True,
-                ):
-                    if marcada:
-                        db.desmarcar_questao(usuario_id, q["id"])
-                    else:
-                        db.marcar_questao(usuario_id, q["id"])
-                    st.rerun()
-            with col_fim:
-                if st.button(
-                    "", icon=":material/stop_circle:", key="encerrar_sessao",
-                    help="Encerrar sessão", use_container_width=True,
-                ):
-                    st.session_state["prat_idx"] = len(fila)
-                    st.session_state.pop("prat_aguardando", None)
-                    st.rerun()
-
-            ui.render_cabecalho_questao(q)
-
-            if aguardando is None:
-                escolha = ui.render_alternativas_interativas(q, key=f"prat_resp_{q['id']}_{idx}")
-                if st.button(
-                    "Confirmar resposta", type="primary", icon=":material/check:",
-                    disabled=escolha is None, key=f"prat_conf_{q['id']}_{idx}",
-                ):
-                    correta = escolha == q["resposta_correta"]
-                    st.session_state["prat_aguardando"] = {"resposta": escolha, "correta": correta}
-                    st.rerun()
-            else:
-                escolha = aguardando["resposta"]
-                correta = aguardando["correta"]
-                distribuicao = db.distribuicao_respostas_questao(q["id"], excluir_usuario_id=usuario_id)
-                ui.render_alternativas_resultado(q, resposta_selecionada=escolha, distribuicao=distribuicao)
-
-                if q["explicacao"]:
-                    with st.expander("Comentário", expanded=True, icon=":material/lightbulb:"):
-                        st.write(q["explicacao"])
-
-                def _concluir_pratica(qualidade, confianca=None):
-                    db.registrar_resposta(q["id"], escolha, correta, usuario_id=usuario_id, confianca=confianca)
-                    sr.registrar_revisao(q["id"], qualidade, usuario_id=usuario_id)
-                    st.session_state["prat_respondidas"].append({
-                        "id": q["id"], "correta": correta,
-                        "subtopico": q["subtopico"] if "subtopico" in q.keys() else None,
-                    })
-                    st.session_state.pop("prat_aguardando", None)
-                    st.session_state["prat_idx"] += 1
-                    st.rerun()
-
-                if correta:
-                    st.success("Correto!", icon=":material/check_circle:")
-                    st.markdown('<div class="form-section-label">Como você chegou nessa resposta?</div>', unsafe_allow_html=True)
-                    col_seg, col_chute = st.columns(2)
-                    with col_seg:
-                        if st.button("Acertei com segurança", key=f"seg_{q['id']}_{idx}", type="primary", use_container_width=True):
-                            _concluir_pratica(5, confianca="seguro")
-                    with col_chute:
-                        if st.button("Acertei no chute", key=f"chute_{q['id']}_{idx}", use_container_width=True):
-                            _concluir_pratica(3, confianca="chute")
-                else:
-                    st.error(f"Errado. A resposta correta é {q['resposta_correta']}.", icon=":material/cancel:")
-                    if st.button("Continuar", key=f"cont_{q['id']}_{idx}", type="primary", icon=":material/arrow_forward:"):
-                        _concluir_pratica(1)
-
-# ---------------------------------------------------------------------------
-# SIMULADO
-# ---------------------------------------------------------------------------
-elif pagina_atual == "simulado":
-    simulado_id = st.session_state.get("simulado_id")
-
-    if simulado_id is None:
-        ui.page_title(
-            "Simulado",
-            "Monte uma prova no formato das provas de residência: número de questões, "
-            "tempo limite e sem correção até o final.",
-        )
-        areas = mapa_areas()
-        col1, col2 = st.columns(2)
-        with col1:
-            area_nome = st.selectbox("Área (opcional)", ["Todas"] + list(areas.keys()), key="sim_area")
-            area_id = areas[area_nome] if area_nome != "Todas" else None
-        with col2:
-            bancas = _listar_bancas_cache()
-            if bancas:
-                banca = st.selectbox("Banca (opcional)", ["Todas"] + bancas, key="sim_banca")
-                banca = None if banca == "Todas" else banca
-            else:
-                banca = None
-
-        col3, col4 = st.columns(2)
-        with col3:
-            preset = st.selectbox("Número de questões", [10, 20, 30, 50, "Personalizado"], key="sim_preset")
-            if preset == "Personalizado":
-                num_questoes = st.number_input(
-                    "Quantas questões?", min_value=1, max_value=200, value=15, step=1, key="sim_num_custom",
-                )
-            else:
-                num_questoes = preset
-        with col4:
-            if st.session_state.get("sim_num_questoes_anterior") != num_questoes:
-                st.session_state["sim_num_questoes_anterior"] = num_questoes
-                st.session_state["sim_tempo"] = max(5, round(num_questoes * 1.5))
-            tempo_limite_min = st.number_input(
-                "Tempo limite (minutos)", min_value=1, max_value=600, step=1, key="sim_tempo",
-            )
-
-        disponiveis = db.contar_questoes_disponiveis(area_id, banca)
-        if disponiveis < num_questoes:
-            st.warning(
-                f"Só há {disponiveis} questão(ões) disponível(is) para esse filtro "
-                f"(pediu {num_questoes}). Ajuste os filtros ou a quantidade.",
-                icon=":material/warning:",
-            )
-
-        if st.button(
-            "Iniciar simulado", type="primary", icon=":material/play_arrow:",
-            disabled=disponiveis == 0 or disponiveis < num_questoes,
-        ):
-            questoes = db.questoes_aleatorias(area_id, banca, limite=num_questoes)
-            ids = [q["id"] for q in questoes]
-            novo_id = db.criar_simulado(
-                area_id, banca, len(ids), int(tempo_limite_min), ids, usuario_id=usuario_id,
-            )
-            st.session_state.simulado_id = novo_id
-            st.session_state.simulado_questoes = ids
-            st.session_state.simulado_idx = 0
-            st.rerun()
-
-        with st.expander("Histórico de simulados", icon=":material/history:"):
-            historico = db.listar_simulados(10, usuario_id=usuario_id)
-            if not historico:
-                st.caption("Nenhum simulado concluído ainda.")
-            else:
-                df_hist = pd.DataFrame([dict(h) for h in historico])
-                df_hist["area"] = df_hist["area"].fillna("Todas")
-                st.dataframe(
-                    df_hist[["finalizado_em", "area", "banca", "num_questoes", "acertos", "pct_acerto"]],
-                    hide_index=True, row_height=40,
-                )
-
-    else:
-        simulado = db.obter_simulado(simulado_id, usuario_id=usuario_id)
-        if simulado is None:
-            for chave in ("simulado_id", "simulado_questoes", "simulado_idx"):
-                st.session_state.pop(chave, None)
-            st.warning("Simulado não encontrado.")
-            st.rerun()
-
-        if simulado["finalizado_em"] is not None:
-            acertos = simulado["acertos"] or 0
-            total = simulado["num_questoes"]
-            pct = round(100 * acertos / total, 1) if total else 0
-
-            ui.page_title("Resultado do simulado")
-            ui.faixa_row([
-                {"label": "Acertos", "valor": f"{acertos}/{total}"},
-                {"label": "% de acerto", "valor": f"{pct}%", "cor": ui.cor_semantica_pct(pct)},
-                {"label": "Respondidas", "valor": str(simulado["total_respondidas"] or 0)},
-            ])
-
-            desemp = db.desempenho_simulado(simulado_id, usuario_id=usuario_id)
-            if desemp:
-                st.markdown('<div class="form-section-label">Desempenho por área (neste simulado)</div>', unsafe_allow_html=True)
-                df_desemp = pd.DataFrame([dict(r) for r in desemp])
-                ui.grafico_barras_horizontais(df_desemp, "area", "pct_acerto")
-
-            st.markdown('<div class="form-section-label">Revisão completa</div>', unsafe_allow_html=True)
-            itens = db.listar_itens_simulado(simulado_id, usuario_id=usuario_id)
-            for item in itens:
-                if item["resposta_dada"] is None:
-                    marcador, icone_item = "não respondida", "radio_button_unchecked"
-                elif item["correta"]:
-                    marcador, icone_item = "correta", "check_circle"
-                else:
-                    marcador, icone_item = "errada", "cancel"
-                with st.expander(
-                    f"[{item['ordem'] + 1}] {marcador} — {item['enunciado'][:80]}...",
-                    icon=f":material/{icone_item}:",
-                ):
-                    ui.render_cabecalho_questao(item)
-                    ui.render_alternativas_resultado(item, resposta_selecionada=item["resposta_dada"])
-                    if item["explicacao"]:
-                        st.info(item["explicacao"], icon=":material/lightbulb:")
-
-            if st.button("Novo simulado", type="primary", icon=":material/add:"):
-                for chave in ["simulado_id", "simulado_questoes", "simulado_idx"]:
-                    st.session_state.pop(chave, None)
-                st.rerun()
-
-        else:
-            iniciado_em = datetime.datetime.fromisoformat(simulado["iniciado_em"])
-            limite_seg = simulado["tempo_limite_min"] * 60
-            decorrido_seg = (datetime.datetime.now() - iniciado_em).total_seconds()
-            restante_seg = limite_seg - decorrido_seg
-
-            if restante_seg <= 0:
-                db.finalizar_simulado(simulado_id, usuario_id=usuario_id)
-                consolidar_simulado_no_historico(simulado_id, usuario_id)
-                st.warning("Tempo esgotado! Confira seu resultado abaixo.", icon=":material/schedule:")
-                st.rerun()
-            else:
-                ids = st.session_state.get("simulado_questoes") or [
-                    i["id"] for i in db.listar_itens_simulado(simulado_id, usuario_id=usuario_id)
-                ]
-                idx = st.session_state.get("simulado_idx", 0)
-                idx = max(0, min(idx, len(ids) - 1))
-
-                itens = db.listar_itens_simulado(simulado_id, usuario_id=usuario_id)
-                respostas_dadas = {i["id"]: i["resposta_dada"] for i in itens}
-
-                minutos, segundos = divmod(int(restante_seg), 60)
-                if restante_seg < 60:
-                    cor_tempo = "var(--wrong)"
-                elif restante_seg < 600:
-                    cor_tempo = "var(--warn)"
-                else:
-                    cor_tempo = "var(--ink-700)"
-
-                col1, col2 = st.columns([1, 3])
-                with col1:
-                    st.markdown(
-                        f'<div class="timer-hero" style="color:{cor_tempo}; border-color:{cor_tempo};">'
-                        f'{ui.icon_svg("clock", size=18)} {minutos:02d}:{segundos:02d}</div>',
-                        unsafe_allow_html=True,
-                    )
-                with col2:
-                    st.progress((idx + 1) / len(ids))
-                    st.caption(f"Questão {idx + 1} de {len(ids)}")
-
-                q = db.obter_questao(ids[idx])
-                alternativas_atuais = json.loads(q["alternativas"]) if isinstance(q["alternativas"], str) else q["alternativas"]
-                opcoes = list(alternativas_atuais.keys())
-                resposta_atual = respostas_dadas.get(q["id"])
-
-                ui.render_cabecalho_questao(q)
-                resposta = ui.render_alternativas_interativas(
-                    q, key=f"sim_resp_{simulado_id}_{q['id']}",
-                    index_pre_selecionado=opcoes.index(resposta_atual) if resposta_atual in opcoes else None,
-                )
-                if resposta is not None and resposta != resposta_atual:
-                    db.registrar_resposta_simulado(simulado_id, q["id"], resposta, usuario_id=usuario_id)
-                    respostas_dadas[q["id"]] = resposta
-
-                col_a, col_b, col_c = st.columns([1, 1, 1])
-                with col_a:
-                    if st.button("Anterior", icon=":material/arrow_back:", disabled=idx <= 0, use_container_width=True):
-                        st.session_state.simulado_idx = idx - 1
-                        st.rerun()
-                with col_c:
-                    if st.button("Próxima", icon=":material/arrow_forward:", disabled=idx >= len(ids) - 1, use_container_width=True):
-                        st.session_state.simulado_idx = idx + 1
-                        st.rerun()
-
-                st.markdown('<div class="form-section-label">Ir para questão</div>', unsafe_allow_html=True)
-                with st.container(key="sim_grid"):
-                    n_colunas = 10
-                    for inicio in range(0, len(ids), n_colunas):
-                        cols_grid = st.columns(n_colunas)
-                        for offset, col_g in enumerate(cols_grid):
-                            i = inicio + offset
-                            if i >= len(ids):
-                                continue
-                            respondida_i = respostas_dadas.get(ids[i]) is not None
-                            with col_g:
-                                if st.button(
-                                    str(i + 1), key=f"simnav_{simulado_id}_{i}",
-                                    type="primary" if (i == idx or respondida_i) else "secondary",
-                                    help="respondida" if respondida_i else "em branco",
-                                ):
-                                    st.session_state.simulado_idx = i
-                                    st.rerun()
-
-                st.markdown("---")
-                em_branco = sum(1 for qid in ids if respostas_dadas.get(qid) is None)
-                if st.button("Finalizar simulado", icon=":material/flag:", type="primary"):
-                    _dialog_finalizar_simulado(simulado_id, em_branco)
-
-# ---------------------------------------------------------------------------
-# REVISÃO ESPAÇADA
-# ---------------------------------------------------------------------------
-elif pagina_atual == "revisao":
-    ui.page_title(
-        "Revisão espaçada",
-        "Questões que você errou voltam mais rápido; as que domina voltam com intervalos cada vez maiores.",
-    )
-
-    if "rev_fila_ids" not in st.session_state:
-        # Mesma regra da API (vencidas + marcadas), definida em repeticao_espacada.
-        st.session_state["rev_fila_ids"] = [q["id"] for q in sr.fila_revisao(usuario_id=usuario_id)]
-        st.session_state["rev_idx"] = 0
-        st.session_state["rev_revelado"] = False
-
-    if st.button("Recomeçar fila", icon=":material/restart_alt:", key="rev_recomecar"):
-        st.session_state.pop("rev_fila_ids", None)
-        st.session_state["rev_idx"] = 0
-        st.session_state["rev_revelado"] = False
-        st.rerun()
-
-    fila_ids = st.session_state["rev_fila_ids"]
-    idx_rev = st.session_state["rev_idx"]
-    restantes = max(len(fila_ids) - idx_rev, 0)
-    st.caption(f"{restantes} ite{'m' if restantes == 1 else 'ns'} restante{'s' if restantes != 1 else ''}")
-
-    if not fila_ids or idx_rev >= len(fila_ids):
-        prox = sr.proxima_leva_revisao(usuario_id=usuario_id)
-        if prox:
-            dia_prox = datetime.date.fromisoformat(prox["dia"])
-            nome_dia = _NOME_DIA_SEMANA[dia_prox.weekday()]
-            texto_vazio = (
-                f"Nenhuma revisão vencida hoje. As próximas {prox['total']} vencem {nome_dia}."
-            )
-        else:
-            texto_vazio = "Nenhuma revisão vencida hoje."
-        ui.empty_state(
-            texto_vazio, cta_label="Praticar questões novas",
-            cta_icon=":material/arrow_forward:", cta_pagina="praticar",
-        )
-    else:
-        q = db.obter_questao(fila_ids[idx_rev])
-        _, col_card, _ = st.columns([1, 3, 1])
-        with col_card:
-            with st.container(border=True):
-                ui.render_cabecalho_questao(q)
-
-                if not st.session_state["rev_revelado"]:
-                    if st.button(
-                        "Mostrar resposta", type="primary", icon=":material/visibility:",
-                        use_container_width=True, key=f"rev_mostrar_{q['id']}_{idx_rev}",
-                    ):
-                        st.session_state["rev_revelado"] = True
-                        st.rerun()
-                else:
-                    ui.render_alternativas_resultado(q)
-                    if q["explicacao"]:
-                        with st.expander("Comentário", expanded=True, icon=":material/lightbulb:"):
-                            st.write(q["explicacao"])
-
-                    st.markdown('<div class="form-section-label">Quão fácil foi lembrar?</div>', unsafe_allow_html=True)
-                    opcoes_intervalo = [
-                        ("Errei — 10 min", 1), ("Difícil — 1 dia", 3),
-                        ("Bom — 4 dias", 4), ("Fácil — 10 dias", 5),
-                    ]
-                    cols_intervalo = st.columns(4)
-                    for col_i, (label, qualidade) in zip(cols_intervalo, opcoes_intervalo):
-                        with col_i:
-                            if st.button(label, key=f"rev_{qualidade}_{q['id']}_{idx_rev}", use_container_width=True):
-                                sr.registrar_revisao(q["id"], qualidade, usuario_id=usuario_id)
-                                if qualidade == 1:
-                                    # "Errei" volta a aparecer daqui a pouco NESTA sessão (o SM-2
-                                    # por trás só agenda em dias inteiros — ver nota no wrap-up).
-                                    nova_pos = min(idx_rev + 4, len(fila_ids))
-                                    fila_ids.insert(nova_pos, q["id"])
-                                elif db.questao_esta_marcada(usuario_id, q["id"]):
-                                    db.desmarcar_questao(usuario_id, q["id"])
-                                st.session_state["rev_idx"] += 1
-                                st.session_state["rev_revelado"] = False
-                                st.rerun()
-
 # ---------------------------------------------------------------------------
 # MATERIAIS DE ESTUDO
 # ---------------------------------------------------------------------------
-elif pagina_atual == "materiais":
+if pagina_atual == "materiais":
     ui.page_title("Materiais")
 
     ultima = db.ultima_sincronizacao()
@@ -1245,7 +511,6 @@ elif pagina_atual == "materiais":
                     area_id_filtro, None, tipo_filtro, busca, limite=POR_PAGINA, offset=offset,
                 )
                 df_mat = pd.DataFrame([dict(m) for m in materiais])
-                df_mat["Tamanho"] = df_mat["tamanho_bytes"].apply(_formatar_tamanho)
                 df_mat["Especialidade"] = df_mat["especialidade"].fillna("—")
                 df_mat["Assunto"] = df_mat["subtopico"].fillna("—")
                 df_view = df_mat.rename(columns={
@@ -1254,7 +519,7 @@ elif pagina_atual == "materiais":
 
                 evento = st.dataframe(
                     df_view, hide_index=True, row_height=44, on_select="rerun", selection_mode="multi-row",
-                    column_order=["Tipo", "Título", "Especialidade", "Assunto", "Tamanho", "Abrir"],
+                    column_order=["Tipo", "Título", "Especialidade", "Assunto", "Abrir"],
                     column_config={"Abrir": st.column_config.LinkColumn("Abrir", display_text="Abrir ↗")},
                     key="mat_tabela",
                 )

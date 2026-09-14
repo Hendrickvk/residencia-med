@@ -83,7 +83,7 @@ mais importante assim que houver acesso SSH.
 - Edição e exclusão de questão/material só para admin, com confirmação.
 
 ### 2026-09-11 — redesign "laudo clínico" (Streamlit)
-Especificado em `REDESIGN.md`, detalhado em `HANDOFF_REDESIGN.md`. Hoje só
+Especificado em `REDESIGN.md`, com um handoff detalhado que só existe no git. Hoje só
 governa as 4 telas admin.
 
 ### 2026-09-12 — migração para FastAPI + React e publicação
@@ -93,8 +93,10 @@ governa as 4 telas admin.
   função→endpoint do `MIGRACAO.md` foi conferido contra o código real.
 - As 4 telas admin ficam no Streamlit para sempre: um único admin usa, a
   reescrita é cara e não melhora nada para o aluno (`MIGRACAO.md` §4/§5).
-  As telas de aluno antigas continuam no `app.py`, sem uso; limpar não
-  compensou o risco.
+  As telas de aluno antigas ficaram no `app.py` sem uso até 2026-09-14, quando
+  saíram junto com o cache local do MediaFire e os endpoints admin da API que
+  nenhum cliente chamava. A tela Materiais do Streamlit ficou, no grupo Acervo:
+  é nela que o admin cadastra e exclui materiais.
 - Bugs que a migração revelou: o simulado vazava gabarito antes de finalizar
   (hoje os campos saem enquanto `finalizado_em` é nulo); o status da
   sincronização exigia admin e voltou a ser de qualquer usuário logado.

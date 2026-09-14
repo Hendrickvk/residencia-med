@@ -15,7 +15,7 @@ def test_primeira_revisao_boa_agenda_para_amanha(usuario_teste, questao_teste):
     antes = datetime.datetime.now()
     sr.registrar_revisao(questao_teste, 5, usuario_id=usuario_teste)
     depois = datetime.datetime.now()
-    estado = sr.obter_estado(questao_teste, usuario_id=usuario_teste)
+    estado = sr.estados_revisao([questao_teste], usuario_id=usuario_teste).get(questao_teste)
     assert estado["repeticoes"] == 1
     assert estado["intervalo_dias"] == 1
     assert antes + datetime.timedelta(days=1) <= estado["proxima_revisao"] <= depois + datetime.timedelta(days=1)
@@ -24,7 +24,7 @@ def test_primeira_revisao_boa_agenda_para_amanha(usuario_teste, questao_teste):
 def test_segunda_revisao_boa_pula_para_seis_dias(usuario_teste, questao_teste):
     sr.registrar_revisao(questao_teste, 5, usuario_id=usuario_teste)
     sr.registrar_revisao(questao_teste, 5, usuario_id=usuario_teste)
-    estado = sr.obter_estado(questao_teste, usuario_id=usuario_teste)
+    estado = sr.estados_revisao([questao_teste], usuario_id=usuario_teste).get(questao_teste)
     assert estado["repeticoes"] == 2
     assert estado["intervalo_dias"] == 6
 
@@ -32,9 +32,9 @@ def test_segunda_revisao_boa_pula_para_seis_dias(usuario_teste, questao_teste):
 def test_terceira_revisao_boa_multiplica_intervalo_pela_facilidade(usuario_teste, questao_teste):
     sr.registrar_revisao(questao_teste, 5, usuario_id=usuario_teste)
     sr.registrar_revisao(questao_teste, 5, usuario_id=usuario_teste)
-    estado_antes = sr.obter_estado(questao_teste, usuario_id=usuario_teste)
+    estado_antes = sr.estados_revisao([questao_teste], usuario_id=usuario_teste).get(questao_teste)
     sr.registrar_revisao(questao_teste, 5, usuario_id=usuario_teste)
-    estado = sr.obter_estado(questao_teste, usuario_id=usuario_teste)
+    estado = sr.estados_revisao([questao_teste], usuario_id=usuario_teste).get(questao_teste)
     assert estado["repeticoes"] == 3
     assert estado["intervalo_dias"] == round(6 * estado_antes["facilidade"])
 
@@ -43,7 +43,7 @@ def test_erro_reinicia_o_ciclo_mesmo_apos_progresso(usuario_teste, questao_teste
     sr.registrar_revisao(questao_teste, 5, usuario_id=usuario_teste)
     sr.registrar_revisao(questao_teste, 5, usuario_id=usuario_teste)
     sr.registrar_revisao(questao_teste, 1, usuario_id=usuario_teste)
-    estado = sr.obter_estado(questao_teste, usuario_id=usuario_teste)
+    estado = sr.estados_revisao([questao_teste], usuario_id=usuario_teste).get(questao_teste)
     assert estado["repeticoes"] == 0
     assert estado["intervalo_dias"] == 1
 
@@ -51,7 +51,7 @@ def test_erro_reinicia_o_ciclo_mesmo_apos_progresso(usuario_teste, questao_teste
 def test_facilidade_nunca_cai_abaixo_do_piso(usuario_teste, questao_teste):
     for _ in range(10):
         sr.registrar_revisao(questao_teste, 0, usuario_id=usuario_teste)
-    estado = sr.obter_estado(questao_teste, usuario_id=usuario_teste)
+    estado = sr.estados_revisao([questao_teste], usuario_id=usuario_teste).get(questao_teste)
     assert estado["facilidade"] >= 1.3
 
 
@@ -111,12 +111,12 @@ def test_fila_revisao_nao_duplica_questao_pendente_e_marcada(usuario_teste, ques
 
 
 def test_erro_agenda_de_verdade_em_10_minutos_nao_no_dia_seguinte(usuario_teste, questao_teste):
-    """Regressão da dívida do HANDOFF_REDESIGN.md: antes da migração pra
+    """Regressão da dívida do redesign em Streamlit: antes da migração pra
     TIMESTAMP, 'Errei — 10 min' persistia como amanhã no banco (só
     'voltava logo' via hack no session_state do Streamlit)."""
     antes = datetime.datetime.now()
     sr.registrar_revisao(questao_teste, 1, usuario_id=usuario_teste)
-    estado = sr.obter_estado(questao_teste, usuario_id=usuario_teste)
+    estado = sr.estados_revisao([questao_teste], usuario_id=usuario_teste).get(questao_teste)
     delta = estado["proxima_revisao"] - antes
     assert datetime.timedelta(minutes=9) < delta < datetime.timedelta(minutes=11)
     assert estado["proxima_revisao"] < antes + datetime.timedelta(hours=1)

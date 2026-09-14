@@ -58,14 +58,6 @@ def _agora():
     return datetime.datetime.now()
 
 
-def obter_estado(questao_id, *, usuario_id):
-    with get_conn() as conn:
-        row = conn.execute(
-            "SELECT * FROM revisao WHERE questao_id = ? AND usuario_id = ?", (questao_id, usuario_id)
-        ).fetchone()
-        return row
-
-
 def estados_revisao(questao_ids, *, usuario_id):
     """Estado do SM-2 de várias questões numa consulta só: {questao_id: linha}."""
     ids = list(questao_ids)
@@ -101,8 +93,8 @@ def calcular_proximo_estado(estado, qualidade: int, agora):
         # valendo 1 (é só o que o próximo acerto vai usar como base — ver
         # ramo `repeticoes == 0` abaixo), mas o AGENDAMENTO real é em 10
         # minutos, não amanhã — antes da migração pra timestamp, essa
-        # distinção não existia porque a coluna só guardava data (ver
-        # HANDOFF_REDESIGN.md, dívida registrada na Fase 5 do MIGRACAO.md).
+        # distinção não existia porque a coluna só guardava data (dívida
+        # registrada na Fase 5 do MIGRACAO.md).
         repeticoes = 0
         intervalo = 1
         proxima = agora + datetime.timedelta(minutes=MINUTOS_APOS_ERRO)

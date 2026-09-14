@@ -8,11 +8,6 @@ from api.serialize import questao_publica
 router = APIRouter(prefix="/revisao", tags=["revisao"])
 
 
-def _prazos_json(prazos):
-    # Chaves de dict em JSON são texto: {"1": {"minutos": 10}, "4": {"dias": 6}}.
-    return {str(nota): prazo for nota, prazo in prazos.items()}
-
-
 @router.get("/leva")
 def obter_leva(
     extra: int = Query(default=0, ge=0, le=200, description="Casos além da meta de hoje ('Revisar mais 10')."),
@@ -27,10 +22,10 @@ def obter_leva(
     proxima = sr.proxima_leva_revisao(usuario_id=uid)
     return {
         "fila": [
-            {**questao_publica(q), "prazos": _prazos_json(sr.prever_prazos(estados.get(q["id"])))}
+            {**questao_publica(q), "prazos": sr.prever_prazos(estados.get(q["id"]))}
             for q in fila
         ],
-        "proxima_leva": {"dia": proxima["dia"], "total": proxima["total"]} if proxima else None,
+        "proxima_leva": proxima,
         "hoje": {
             "meta": plano["meta"],
             "feitas_hoje": plano["feitas_hoje"],
@@ -54,7 +49,7 @@ def avaliar(questao_id: int, dados: MarcarRevisaoIn, usuario=Depends(usuario_atu
         "correta": resultado["correta"],
         "qualidade": resultado["qualidade"],
         "proxima_revisao": resultado["proxima_revisao"],
-        "prazos": _prazos_json(resultado["prazos"]),
+        "prazos": resultado["prazos"],
         "recuperado": resultado["recuperado"],
         "consolidou": resultado["consolidou"],
     }

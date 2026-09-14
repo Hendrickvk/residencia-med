@@ -1,6 +1,6 @@
 """
 Testes da Fase 5 do MIGRACAO.md: gabarito não pode vazar num simulado em
-andamento, e o estado "marcada" (dívida do HANDOFF_REDESIGN.md) precisa
+andamento, e o estado "marcada" (dívida do redesign em Streamlit) precisa
 estar disponível pra sustentar o terceiro estado da grade de navegação.
 Também cobre o simulado por edição oficial (ordem do caderno, tempo no
 ritmo oficial) e a retomada de simulado em andamento.

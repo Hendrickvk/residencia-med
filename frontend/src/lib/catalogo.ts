@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "./api";
-import type { Area, Especialidade, Subtopico } from "./types";
+import type { Area, Especialidade } from "./types";
 
 export function useAreas() {
   return useQuery({ queryKey: ["areas"], queryFn: () => api.get<Area[]>("/areas"), staleTime: 60_000 });
@@ -10,15 +10,6 @@ export function useEspecialidades(areaId: number | undefined) {
   return useQuery({
     queryKey: ["especialidades", areaId],
     queryFn: () => api.get<Especialidade[]>(`/areas/${areaId}/especialidades`),
-    enabled: areaId !== undefined,
-    staleTime: 60_000,
-  });
-}
-
-export function useSubtopicos(areaId: number | undefined) {
-  return useQuery({
-    queryKey: ["subtopicos", areaId],
-    queryFn: () => api.get<Subtopico[]>(`/areas/${areaId}/subtopicos`),
     enabled: areaId !== undefined,
     staleTime: 60_000,
   });

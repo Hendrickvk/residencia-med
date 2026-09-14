@@ -49,7 +49,7 @@ npm run lint                               # oxlint
 ### `api/` (FastAPI)
 - `main.py` — app + lifespan hook (calls `db.init_db()`) + CORS via `CORS_ORIGENS` env var.
 - `security.py` — auth is JWT in an **httpOnly cookie**, not bearer+refresh. `COOKIE_SECURE` is env-controlled and defaults to `false` (must be `true` once served over real HTTPS — see Deployment below).
-- `deps.py` — `usuario_atual`, `exigir_admin`, `eh_admin` (checks `ADMIN_EMAILS` env var, comma-separated).
+- `deps.py` — `usuario_atual`, `eh_admin` (checks `ADMIN_EMAILS` env var, comma-separated).
 - `schemas.py` — Pydantic models. `CredenciaisIn.email` is plain `str` + a custom validator, not `EmailStr`, because `email-validator` rejects `.local`/reserved TLDs used by test fixtures.
 - `serialize.py` — `questao_publica()` must wrap every question row returned by any endpoint: strips `imagem`/`imagem_mime` (Postgres BYTEA, not JSON-serializable) into a `tem_imagem` bool, and parses the `alternativas` column (stored as a TEXT/JSON string) into an object.
 - `routers/` — one file per resource. **Central architectural decision**: `GET /praticar/sessao` returns the *entire* question batch for a session with gabarito+explicação already embedded (via `serialize`), not one question at a time. This is what makes instant client-side feedback possible without a round-trip per answer — don't "optimize" this into a paginated/lazy endpoint.

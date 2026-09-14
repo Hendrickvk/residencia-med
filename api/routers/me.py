@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 
 import db
 from api.deps import eh_admin, usuario_atual
-from api.schemas import MeOut, MetaRevisaoIn, ProvaAlvoIn, TemaIn
+from api.schemas import MeOut, MetaRevisaoIn, TemaIn
 
 router = APIRouter(prefix="/me", tags=["me"])
 
@@ -29,13 +29,6 @@ def obter_me(usuario=Depends(usuario_atual)):
 def atualizar_tema(dados: TemaIn, usuario=Depends(usuario_atual)):
     db.atualizar_tema_usuario(usuario["id"], dados.tema)
     return {"tema": dados.tema}
-
-
-@router.patch("/prova-alvo")
-def atualizar_prova_alvo(dados: ProvaAlvoIn, usuario=Depends(usuario_atual)):
-    data_iso = dados.data.isoformat() if dados.data else None
-    db.definir_prova_alvo(usuario["id"], data_iso)
-    return {"prova_alvo": data_iso}
 
 
 @router.patch("/meta-revisao")
