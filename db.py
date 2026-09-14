@@ -378,6 +378,9 @@ TEMAS = {
         "Anemias e doenças hematológicas na infância", "Doenças renais e do trato urinário",
         "Cardiopatias congênitas e febre reumática", "Convulsões e distúrbios neurológicos",
         "Neoplasias na infância", "Saúde do adolescente", "Intoxicações e urgências pediátricas",
+        "Diabetes e distúrbios endócrinos na infância", "Vasculites e doenças reumáticas na infância",
+        "Desenvolvimento, comportamento e aprendizagem", "Síndromes genéticas e malformações",
+        "Constipação, refluxo e outras doenças digestivas",
     ],
     "Puericultura": [
         "Crescimento e desenvolvimento", "Aleitamento materno e alimentação", "Imunização",
