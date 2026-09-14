@@ -35,6 +35,24 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
 - Se o shape ARM `VM.Standard.A1.Flex` (1 OCPU/6 GB, Always Free) aparecer em
   São Paulo e 1 GB apertar, recriar a instância nele.
 - Tema escuro do Triagem só existe por tokens, sem protótipo próprio.
+- **Temas por especialidade, em fases.** Decisão do usuário (2026-09-14): um
+  nível abaixo da especialidade, para o aluno saber exatamente o que a questão
+  cobra (ex.: Psiquiatria > Transtornos de ansiedade). Usa a tabela
+  `subtopicos`, que já existe e não tem nenhuma questão ligada. Fonte: Portaria
+  Inep nº 540/2020, art. 7º (conteúdos por área do Revalida); a Matriz Comum de
+  2025 (Portaria 478) só define áreas, competências e cenários, sem lista de
+  doenças. Fases:
+  1. Lista `db.TEMAS`, 187 temas (feita e aprovada).
+  2. Temas no banco (feita): `init_db` grava os temas em `subtopicos`;
+     `db.listar_temas` esconde os 44 assuntos antigos do MediaFire pelo campo
+     `origem` (nenhum nome colide); a planilha e o formulário do Streamlit só
+     aceitam temas existentes, e "Adicionar assunto" saiu. **Próxima: fase 3.**
+  3. Classificar as 986 questões lendo o conteúdo, uma grande área por vez,
+     com simulação, backup e amostra revisada pelo usuário.
+  4. Filtro de tema no Praticar e tema no cabeçalho do caso (o cabeçalho já
+     mostra `subtopico`).
+  5. Estatística por tema só quando houver respostas suficientes (hoje ~30 por
+     aluno; o Painel exige 5 por grupo).
 
 ### Próximos passos sugeridos (enquanto o deploy espera)
 Levantados em 2026-09-14, em ordem de valor. O deploy continua sendo o item

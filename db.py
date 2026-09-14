@@ -246,6 +246,173 @@ TAXONOMIA = {
 
 _CM, _CIR, _GO, _PED, _MPS = TAXONOMIA
 
+# Terceiro nível: temas de cada especialidade, para o aluno saber exatamente o
+# que a questão cobra. Agrupados a partir dos conteúdos por área da matriz do
+# Revalida (Portaria Inep nº 540/2020, art. 7º) — a Matriz Comum de 2025
+# (Portaria Inep nº 478/2025) só define áreas, competências e cenários, de onde
+# vieram "Rede de atenção psicossocial" e "Medicina baseada em evidências".
+# Viram linhas de `subtopicos`, que é UNIQUE(area_id, nome): um nome não pode se
+# repetir dentro da mesma grande área.
+TEMAS = {
+    # Clínica Médica
+    "Cardiologia": [
+        "Síndrome coronariana aguda e doença isquêmica", "Insuficiência cardíaca e miocardiopatias",
+        "Hipertensão arterial e emergências hipertensivas", "Arritmias",
+        "Febre reumática, valvopatias e endocardite", "Doenças do pericárdio",
+        "Prevenção cardiovascular e dislipidemias",
+    ],
+    "Dermatologia": [
+        "Hanseníase", "Infecções e infestações de pele", "Dermatoses alérgicas e farmacodermias",
+        "Câncer de pele e dermatoses ocupacionais",
+    ],
+    "Emergências clínicas": [
+        "Parada cardiorrespiratória e reanimação", "Choque e sepse",
+        "Insuficiência respiratória aguda e ventilação mecânica", "Edema agudo de pulmão",
+        "Distúrbios hidroeletrolíticos e ácido-base", "Intoxicações exógenas",
+    ],
+    "Endocrinologia": [
+        "Diabetes mellitus", "Doenças da tireoide e paratireoides", "Doenças da hipófise e das adrenais",
+        "Obesidade",
+    ],
+    "Gastroenterologia": [
+        "Doença do refluxo e doenças do esôfago", "Dispepsia, gastrite e doença péptica",
+        "Doenças inflamatórias intestinais e diarreias", "Hemorragia digestiva", "Pancreatites",
+    ],
+    "Geriatria": ["Envelhecimento e avaliação geriátrica", "Grandes síndromes geriátricas", "Demências"],
+    "Hematologia": [
+        "Anemias carenciais e hemolíticas", "Leucemias, linfomas e mieloma",
+        "Hemostasia, coagulação e trombofilias", "Hemoterapia e transfusão",
+    ],
+    "Hepatologia": ["Hepatites", "Cirrose e hipertensão portal", "Tumores e outras doenças do fígado"],
+    "Infectologia": [
+        "HIV/aids e infecções oportunistas", "Tuberculose", "Arboviroses", "Meningites e meningoencefalites",
+        "Doenças parasitárias endêmicas", "Leptospirose, tétano e raiva", "Influenza e COVID-19",
+        "Antimicrobianos e infecção hospitalar",
+    ],
+    "Nefrologia": [
+        "Lesão renal aguda", "Doença renal crônica e diálise", "Glomerulopatias", "Infecção urinária e litíase",
+    ],
+    "Neurologia": [
+        "Doença cerebrovascular", "Epilepsias e síncope", "Cefaleias",
+        "Distúrbios do movimento e doenças desmielinizantes", "Neuropatias periféricas e doenças neuromusculares",
+        "Coma, estados confusionais e morte encefálica",
+    ],
+    "Oncologia e cuidados paliativos": [
+        "Prevenção e rastreamento do câncer", "Princípios do tratamento oncológico",
+        "Cuidados paliativos e terminalidade",
+    ],
+    "Pneumologia": [
+        "Asma e DPOC", "Pneumonias", "Câncer de pulmão e nódulo pulmonar", "Derrame pleural",
+        "Doenças intersticiais e ocupacionais",
+    ],
+    "Psiquiatria": [
+        "Depressão e transtorno bipolar", "Transtornos de ansiedade", "Esquizofrenia e outras psicoses",
+        "Uso de álcool e outras drogas", "Emergências psiquiátricas e suicídio",
+        "Transtornos alimentares, somatoformes e de personalidade", "Rede de atenção psicossocial",
+    ],
+    "Reumatologia": [
+        "Artrite reumatoide e osteoartrite", "Lúpus e outras doenças do colágeno",
+        "Espondiloartrites, gota e artrites infecciosas", "Osteoporose",
+        "Síndromes dolorosas da coluna e de partes moles",
+    ],
+    # Cirurgia
+    "Cirurgia geral": [
+        "Abdome agudo", "Doenças das vias biliares", "Hérnias e parede abdominal",
+        "Neoplasias do aparelho digestivo", "Pré e pós-operatório e complicações cirúrgicas",
+        "Cirurgia ambulatorial e feridas", "Cirurgia de cabeça e pescoço", "Cirurgia torácica",
+    ],
+    "Cirurgia pediátrica": [
+        "Abdome agudo na criança", "Malformações congênitas cirúrgicas", "Hérnias e afecções inguinoescrotais",
+    ],
+    "Cirurgia vascular": [
+        "Doença arterial obstrutiva e aneurismas", "Insuficiência venosa e úlceras de membros inferiores",
+        "Trombose venosa profunda e tromboembolismo",
+    ],
+    "Coloproctologia": ["Doenças anorretais benignas", "Câncer colorretal", "Doença diverticular e ostomias"],
+    "Oftalmologia": [
+        "Olho vermelho e infecções oculares", "Retinopatias", "Glaucoma e catarata", "Ametropias e estrabismo",
+    ],
+    "Ortopedia": [
+        "Fraturas e luxações", "Infecções osteoarticulares", "Ortopedia pediátrica", "Tumores ósseos",
+        "Lesões por esforço repetitivo",
+    ],
+    "Otorrinolaringologia": [
+        "Otites e infecções das vias aéreas superiores", "Perda auditiva", "Rinites, obstrução nasal e disfonias",
+    ],
+    "Trauma": [
+        "Atendimento inicial ao politraumatizado", "Traumatismo cranioencefálico e raquimedular",
+        "Trauma torácico", "Trauma abdominal", "Queimaduras", "Trauma na criança, na gestante e no idoso",
+    ],
+    "Urologia": [
+        "Doenças da próstata", "Tumores de rim, bexiga, testículo e pênis", "Trauma e urgências urológicas",
+        "Disfunção erétil, infertilidade e bexiga neurogênica",
+    ],
+    # Ginecologia e Obstetrícia
+    "Ginecologia": [
+        "Distúrbios menstruais e sangramento uterino anormal", "Amenorreia, anovulação e hiperandrogenismo",
+        "Contracepção e planejamento familiar", "Infecções genitais e IST", "Rastreamento e câncer do colo do útero",
+        "Endometriose, dor pélvica e massas anexiais", "Cânceres de endométrio, ovário e vulva", "Climatério",
+        "Infertilidade", "Violência sexual e contra a mulher",
+    ],
+    "Mastologia": [
+        "Doenças benignas da mama", "Rastreamento do câncer de mama", "Diagnóstico e tratamento do câncer de mama",
+    ],
+    "Obstetrícia": [
+        "Pré-natal e risco gestacional", "Abortamento e gravidez ectópica",
+        "Placenta prévia e descolamento prematuro", "Síndromes hipertensivas da gestação",
+        "Diabetes e outras doenças clínicas na gestação", "Infecções na gestação",
+        "Assistência ao parto e partograma", "Prematuridade e rotura prematura de membranas",
+        "Vitalidade fetal e isoimunização", "Puerpério, hemorragia pós-parto e lactação",
+    ],
+    # Pediatria
+    "Infectologia pediátrica": [
+        "Doenças exantemáticas", "Meningites e infecções graves na criança", "Tuberculose e parasitoses na infância",
+    ],
+    "Neonatologia": [
+        "Reanimação e cuidados ao recém-nascido", "Prematuridade e baixo peso", "Icterícia neonatal",
+        "Distúrbios respiratórios do recém-nascido", "Infecções congênitas e neonatais",
+        "Triagem neonatal e erros inatos do metabolismo",
+    ],
+    "Pediatria clínica": [
+        "Doenças respiratórias e asma", "Diarreia e desidratação", "Distúrbios nutricionais",
+        "Anemias e doenças hematológicas na infância", "Doenças renais e do trato urinário",
+        "Cardiopatias congênitas e febre reumática", "Convulsões e distúrbios neurológicos",
+        "Neoplasias na infância", "Saúde do adolescente", "Intoxicações e urgências pediátricas",
+    ],
+    "Puericultura": [
+        "Crescimento e desenvolvimento", "Aleitamento materno e alimentação", "Imunização",
+        "Prevenção de acidentes e maus-tratos",
+    ],
+    # Medicina Preventiva e Social
+    "Atenção primária e saúde da família": [
+        "Princípios da APS e Estratégia Saúde da Família", "Territorialização e diagnóstico da comunidade",
+        "Visita domiciliar e abordagem familiar", "Condições crônicas na atenção primária",
+        "Promoção da saúde e níveis de prevenção",
+    ],
+    "Epidemiologia": [
+        "Indicadores de saúde e medidas de frequência", "Desenhos de estudo e medidas de associação",
+        "Testes diagnósticos", "Transição demográfica e epidemiológica", "Sistemas de informação em saúde",
+        "Medicina baseada em evidências",
+    ],
+    "Ética e medicina legal": [
+        "Código de ética médica e sigilo", "Documentos médicos e declaração de óbito",
+        "Bioética, terminalidade e transplantes", "Tanatologia e traumatologia forense",
+        "Direitos do paciente e comunicação de más notícias",
+    ],
+    "Políticas de saúde e SUS": [
+        "Princípios e diretrizes do SUS", "Legislação e pactos do SUS", "Gestão, financiamento e controle social",
+        "Redes de atenção, referência e contrarreferência", "Saúde suplementar e políticas específicas",
+    ],
+    "Saúde do trabalhador": [
+        "Doenças relacionadas ao trabalho", "Acidente de trabalho e direitos do trabalhador",
+        "Vigilância em saúde do trabalhador",
+    ],
+    "Vigilância em saúde": [
+        "Vigilância epidemiológica e notificação compulsória", "Surtos, epidemias e investigação",
+        "Vigilância sanitária e farmacovigilância", "Vigilância ambiental",
+    ],
+}
+
 # Padrões procurados no nome normalizado (minúsculo, sem acento), do mais
 # específico para o mais geral: "cirurgia vascular" precisa vencer "cirurg",
 # e "ginecologia e obstetricia" precisa vencer "gineco". Especialidade None =
@@ -660,7 +827,7 @@ def init_db():
                 )
         c.execute("CREATE INDEX IF NOT EXISTS idx_questoes_especialidade_id ON questoes(especialidade_id)")
 
-        # Seed da taxonomia: só as grandes áreas e suas especialidades. Antes
+        # Seed da taxonomia: grandes áreas, especialidades e temas. Antes
         # daqui entravam especialidades soltas como áreas ("Cardiologia",
         # "Cirurgia Geral"...), o que misturava dois níveis no mesmo filtro.
         for area_nome, especialidades in TAXONOMIA.items():
@@ -671,11 +838,23 @@ def init_db():
                     "INSERT INTO especialidades (area_id, nome) VALUES (?, ?) ON CONFLICT (area_id, nome) DO NOTHING",
                     (area_id, esp),
                 )
+        # Os 187 temas numa consulta só: init_db roda a cada início da API e do
+        # Streamlit, e uma ida ao Neon por tema somaria segundos.
+        temas = [(area, esp, tema) for area, esps in TAXONOMIA.items() for esp in esps for tema in TEMAS[esp]]
+        c.execute(f"""
+            INSERT INTO subtopicos (area_id, especialidade_id, nome)
+            SELECT e.area_id, e.id, t.tema
+            FROM (VALUES {", ".join(["(?, ?, ?)"] * len(temas))}) AS t(area, especialidade, tema)
+            JOIN areas a ON a.nome = t.area
+            JOIN especialidades e ON e.area_id = a.id AND e.nome = t.especialidade
+            WHERE true
+            ON CONFLICT (area_id, nome) DO NOTHING
+        """, [valor for linha in temas for valor in linha])
         conn.commit()
 
 
 # ---------------------------------------------------------------------------
-# Áreas e subtópicos
+# Áreas, especialidades e temas
 # ---------------------------------------------------------------------------
 
 def listar_areas():
@@ -702,8 +881,11 @@ def listar_especialidades(area_id=None):
     return sorted(rows, key=lambda r: normalizar_nome(r["nome"]))
 
 
-def listar_subtopicos(area_id, especialidade_id=None):
-    query = "SELECT * FROM subtopicos WHERE area_id = ?"
+def listar_temas(area_id, especialidade_id=None):
+    """Temas (linhas de `subtopicos` semeadas de TEMAS) da grande área, ou só
+    da especialidade. Os assuntos antigos da sincronização do MediaFire, que
+    têm `origem`, ficam de fora."""
+    query = "SELECT * FROM subtopicos WHERE area_id = ? AND origem IS NULL"
     params = [area_id]
     if especialidade_id:
         query += " AND especialidade_id = ?"
@@ -712,27 +894,12 @@ def listar_subtopicos(area_id, especialidade_id=None):
         return conn.execute(query + " ORDER BY nome", params).fetchall()
 
 
-def criar_subtopico(area_id, nome, especialidade_id=None):
-    with get_conn() as conn:
-        conn.execute(
-            "INSERT INTO subtopicos (area_id, nome, especialidade_id) VALUES (?, ?, ?) "
-            "ON CONFLICT (area_id, nome) DO NOTHING",
-            (area_id, nome, especialidade_id),
-        )
-
-
-def obter_ou_criar_subtopico(area_id, nome):
-    """Retorna o id do subtópico dentro da área, criando-o se necessário."""
-    nome = nome.strip()
-    with get_conn() as conn:
-        conn.execute(
-            "INSERT INTO subtopicos (area_id, nome) VALUES (?, ?) ON CONFLICT (area_id, nome) DO NOTHING",
-            (area_id, nome),
-        )
-        row = conn.execute(
-            "SELECT id FROM subtopicos WHERE area_id = ? AND nome = ?", (area_id, nome)
-        ).fetchone()
-        return row["id"]
+def obter_tema(area_id, nome):
+    """Tema da grande área com esse nome, ignorando caixa e acento
+    ("transtornos de ansiedade" acha "Transtornos de ansiedade"). None se não
+    existir: temas são fixos, um nome importado nunca vira tema novo."""
+    alvo = normalizar_nome(nome)
+    return next((t for t in listar_temas(area_id) if normalizar_nome(t["nome"]) == alvo), None)
 
 
 # ---------------------------------------------------------------------------

@@ -286,13 +286,14 @@ def _form_questao(q, *, key_prefix):
     )
     especialidade_id_f = esp_opcoes_f[esp_nome_f]
 
-    subtopicos_f = db.listar_subtopicos(area_id_f)
+    # Temas são fixos (db.TEMAS) e dependem da especialidade escolhida.
+    subtopicos_f = db.listar_temas(area_id_f, especialidade_id_f)
     sub_opcoes_f = {"(nenhum)": None}
     sub_opcoes_f.update({s["nome"]: s["id"] for s in subtopicos_f})
     nomes_sub = list(sub_opcoes_f.keys())
     sub_atual_nome = next((n for n, i in sub_opcoes_f.items() if i == q["subtopico_id"]), "(nenhum)") if q else "(nenhum)"
     sub_nome_f = col_sub.selectbox(
-        "Subtópico", nomes_sub,
+        "Tema", nomes_sub,
         index=nomes_sub.index(sub_atual_nome) if sub_atual_nome in nomes_sub else 0,
         key=f"{key_prefix}_sub",
     )
@@ -467,27 +468,9 @@ if pagina_atual == "banco":
 # ---------------------------------------------------------------------------
 elif pagina_atual == "nova_questao":
     ui.page_title("Nova questão")
-
-    with st.expander("Adicionar assunto", icon=":material/add_circle:"):
-        # Grandes áreas e especialidades vêm de db.TAXONOMIA e não se criam
-        # pela tela: uma área digitada à mão era como nomes soltos acabavam
-        # misturados às grandes áreas no filtro.
-        st.caption(
-            "Grandes áreas e especialidades são fixas. Assunto é o nível abaixo delas "
-            "(ex: Clínica Médica > Cardiologia > Arritmias)."
-        )
-        areas = mapa_areas()
-        if areas:
-            col1, col2 = st.columns(2)
-            area_sub = col1.selectbox("Área", list(areas.keys()), key="area_sub_add")
-            esp_opcoes_add = {"(nenhuma)": None}
-            esp_opcoes_add.update({e["nome"]: e["id"] for e in db.listar_especialidades(areas[area_sub])})
-            esp_sub = col2.selectbox("Especialidade", list(esp_opcoes_add.keys()), key="esp_sub_add")
-            novo_sub = st.text_input("Novo assunto (ex: Arritmias)")
-            if st.button("Adicionar assunto", icon=":material/add:") and novo_sub:
-                db.criar_subtopico(areas[area_sub], novo_sub, especialidade_id=esp_opcoes_add[esp_sub])
-                st.success(f"Assunto '{novo_sub}' adicionado.", icon=":material/check_circle:")
-                st.rerun()
+    # Grande área, especialidade e tema são fixos (db.TAXONOMIA e db.TEMAS) e
+    # não se criam pela tela: nomes digitados à mão eram como "áreas" soltas
+    # acabavam misturadas às grandes áreas no filtro.
 
     with st.container(key="form_col"):
         with st.container(border=True):
@@ -513,7 +496,7 @@ elif pagina_atual == "importar":
         st.markdown("""
         - **area** *(obrigatório — grande área, ex: Clínica Médica, ou já a especialidade, ex: Cardiologia)*
         - **especialidade** *(opcional — ex: Cardiologia)*
-        - **subtopico** *(opcional)*
+        - **tema** *(opcional — um dos temas fixos da especialidade, ex: Arritmias)*
         - **enunciado** *(obrigatório)*
         - **alternativa_a, alternativa_b, alternativa_c, alternativa_d** *(obrigatórias)*
         - **alternativa_e** *(opcional)*
@@ -525,7 +508,7 @@ elif pagina_atual == "importar":
         Variações como "Área", "Assunto", "Gabarito" também são reconhecidas
         automaticamente. A área precisa corresponder a uma grande área ou
         especialidade existente — um nome desconhecido vira erro da linha, não
-        uma área nova. Questões com enunciado idêntico já cadastrado na mesma
+        uma área nova. O tema segue a mesma regra. Questões com enunciado idêntico já cadastrado na mesma
         área são ignoradas (não duplicam).
         """)
 

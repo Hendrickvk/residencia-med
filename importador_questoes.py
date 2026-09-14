@@ -3,13 +3,14 @@ Importação em massa de questões a partir de uma planilha (.xlsx ou .csv).
 
 Formato esperado (nomes de coluna flexíveis — veja `COLUNAS_ACEITAS`):
 
-area | especialidade | subtopico | enunciado | alternativa_a | alternativa_b
+area | especialidade | tema | enunciado | alternativa_a | alternativa_b
 | alternativa_c | alternativa_d | alternativa_e | resposta_correta | explicacao | banca | ano
 
 - `area` é obrigatória e segue a taxonomia fixa (`db.TAXONOMIA`): pode ser a
   grande área ("Clínica Médica") ou já a especialidade ("Cardiologia"). Um
   nome que não corresponde a nada vira erro da linha — nunca uma área nova.
-- `especialidade` e `subtopico` são opcionais.
+- `especialidade` e `tema` são opcionais. O tema segue a mesma regra: precisa
+  ser um dos temas fixos da área (`db.TEMAS`), senão a linha vira erro.
 - `alternativa_e` é opcional (questões com 4 ou 5 alternativas).
 - `resposta_correta` deve ser a letra (A, B, C, D ou E).
 """
@@ -25,6 +26,7 @@ COLUNAS_ACEITAS = {
     "area": "area",
     "área": "area",
     "especialidade": "especialidade",
+    "tema": "subtopico",
     "subtopico": "subtopico",
     "subtópico": "subtopico",
     "assunto": "subtopico",
@@ -147,7 +149,14 @@ def importar(df: pd.DataFrame):
             )
             continue
         area_id, especialidade_id = ids
-        subtopico_id = db.obter_ou_criar_subtopico(area_id, subtopico_nome) if subtopico_nome else None
+        subtopico_id = None
+        if subtopico_nome:
+            tema = db.obter_tema(area_id, subtopico_nome)
+            if tema is None:
+                relatorio["erros"].append((linha_num, f"Tema '{subtopico_nome}' não é um dos temas da área"))
+                continue
+            subtopico_id = tema["id"]
+            especialidade_id = especialidade_id or tema["especialidade_id"]
 
         if db.questao_ja_existe(area_id, enunciado):
             relatorio["duplicadas"] += 1
@@ -168,7 +177,7 @@ def gerar_template_bytes() -> bytes:
     df = pd.DataFrame([{
         "area": "Clínica Médica",
         "especialidade": "Cardiologia",
-        "subtopico": "Arritmias",
+        "tema": "Arritmias",
         "enunciado": "Paciente com fibrilação atrial de início há 6 horas, hemodinamicamente "
                       "instável. Qual a conduta imediata?",
         "alternativa_a": "Cardioversão elétrica imediata",

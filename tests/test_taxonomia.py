@@ -35,6 +35,43 @@ def test_especialidade_de_outra_area_e_ignorada():
     assert db.classificar_area_especialidade("Pediatria", "Neonatologia") == ("Pediatria", "Neonatologia")
 
 
+def test_temas_cobrem_toda_especialidade_sem_repetir_na_area():
+    especialidades = {esp for lista in db.TAXONOMIA.values() for esp in lista}
+    assert set(db.TEMAS) == especialidades
+    for area, lista in db.TAXONOMIA.items():
+        nomes = [tema for esp in lista for tema in db.TEMAS[esp]]
+        # subtopicos é UNIQUE(area_id, nome): dois temas iguais na mesma grande área colidiriam.
+        assert len(nomes) == len(set(nomes)), area
+
+
+@pytest.fixture(scope="module")
+def temas_semeados():
+    db.init_db()
+
+
+def test_init_db_semeia_os_temas_ligados_a_especialidade(temas_semeados):
+    with db.get_conn() as conn:
+        linhas = conn.execute("""
+            SELECT a.nome AS area, e.nome AS especialidade, s.nome AS tema
+            FROM subtopicos s
+            JOIN areas a ON a.id = s.area_id
+            JOIN especialidades e ON e.id = s.especialidade_id
+            WHERE s.origem IS NULL
+        """).fetchall()
+    semeados = {(l["area"], l["especialidade"], l["tema"]) for l in linhas}
+    esperados = {(a, e, t) for a, esps in db.TAXONOMIA.items() for e in esps for t in db.TEMAS[e]}
+    assert esperados <= semeados
+
+
+def test_obter_tema_ignora_caixa_e_acento_e_nao_inventa_tema(temas_semeados):
+    area_id = next(a["id"] for a in db.listar_areas() if a["nome"] == "Clínica Médica")
+    tema = db.obter_tema(area_id, "  TRANSTORNOS DE ANSIEDADE ")
+    assert tema["nome"] == "Transtornos de ansiedade"
+    assert db.obter_tema(area_id, "Assunto inventado") is None
+    # Temas de outra grande área não valem nesta.
+    assert db.obter_tema(area_id, "Climatério") is None
+
+
 @pytest.fixture()
 def especialidades_teste(area_teste):
     ids = []
