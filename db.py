@@ -342,6 +342,7 @@ TEMAS = {
     "Trauma": [
         "Atendimento inicial ao politraumatizado", "Traumatismo cranioencefálico e raquimedular",
         "Trauma torácico", "Trauma abdominal", "Queimaduras", "Trauma na criança, na gestante e no idoso",
+        "Trauma de pelve, extremidades e partes moles",
     ],
     "Urologia": [
         "Doenças da próstata", "Tumores de rim, bexiga, testículo e pênis", "Trauma e urgências urológicas",
