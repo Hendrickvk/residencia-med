@@ -42,7 +42,8 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   Inep nº 540/2020, art. 7º (conteúdos por área do Revalida); a Matriz Comum de
   2025 (Portaria 478) só define áreas, competências e cenários, sem lista de
   doenças. Fases:
-  1. Lista `db.TEMAS`, 187 temas (feita e aprovada).
+  1. Lista `db.TEMAS`, 188 temas (feita e aprovada; "Prolapso genital e
+     incontinência urinária" entrou depois, na classificação de Ginecologia).
   2. Temas no banco (feita): `init_db` grava os temas em `subtopicos`;
      `db.listar_temas` esconde os 44 assuntos antigos do MediaFire pelo campo
      `origem` (nenhum nome colide); a planilha e o formulário do Streamlit só
@@ -51,8 +52,8 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
      com simulação, backup e amostra revisada pelo usuário. Ferramenta:
      `scripts/classificar_temas.py <json>` (simula; `--aplicar` grava e salva
      backup); os JSONs de classificação ficam em `backups/temas_*.json`.
-     Feito: Obstetrícia (96, em 2026-09-14). **Próximo: Ginecologia**, depois
-     Mastologia e as outras grandes áreas.
+     Feito (2026-09-14): Obstetrícia (96) e Ginecologia (92). **Próximo:
+     Mastologia**, depois as outras grandes áreas.
   4. Filtro de tema no Praticar e tema no cabeçalho do caso (o cabeçalho já
      mostra `subtopico`).
   5. Estatística por tema só quando houver respostas suficientes (hoje ~30 por

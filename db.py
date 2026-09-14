@@ -352,7 +352,7 @@ TEMAS = {
         "Distúrbios menstruais e sangramento uterino anormal", "Amenorreia, anovulação e hiperandrogenismo",
         "Contracepção e planejamento familiar", "Infecções genitais e IST", "Rastreamento e câncer do colo do útero",
         "Endometriose, dor pélvica e massas anexiais", "Cânceres de endométrio, ovário e vulva", "Climatério",
-        "Infertilidade", "Violência sexual e contra a mulher",
+        "Infertilidade", "Violência sexual e contra a mulher", "Prolapso genital e incontinência urinária",
     ],
     "Mastologia": [
         "Doenças benignas da mama", "Rastreamento do câncer de mama", "Diagnóstico e tratamento do câncer de mama",
@@ -838,7 +838,7 @@ def init_db():
                     "INSERT INTO especialidades (area_id, nome) VALUES (?, ?) ON CONFLICT (area_id, nome) DO NOTHING",
                     (area_id, esp),
                 )
-        # Os 187 temas numa consulta só: init_db roda a cada início da API e do
+        # Todos os temas numa consulta só: init_db roda a cada início da API e do
         # Streamlit, e uma ida ao Neon por tema somaria segundos.
         temas = [(area, esp, tema) for area, esps in TAXONOMIA.items() for esp in esps for tema in TEMAS[esp]]
         c.execute(f"""
