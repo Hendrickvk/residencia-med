@@ -367,6 +367,7 @@ TEMAS = {
     # Pediatria
     "Infectologia pediátrica": [
         "Doenças exantemáticas", "Meningites e infecções graves na criança", "Tuberculose e parasitoses na infância",
+        "Infecções respiratórias agudas na criança", "Infecções gastrointestinais e urinárias na criança",
     ],
     "Neonatologia": [
         "Reanimação e cuidados ao recém-nascido", "Prematuridade e baixo peso", "Icterícia neonatal",
