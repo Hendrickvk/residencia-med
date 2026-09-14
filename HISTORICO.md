@@ -47,8 +47,12 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
      `db.listar_temas` esconde os 44 assuntos antigos do MediaFire pelo campo
      `origem` (nenhum nome colide); a planilha e o formulário do Streamlit só
      aceitam temas existentes, e "Adicionar assunto" saiu. **Próxima: fase 3.**
-  3. Classificar as 986 questões lendo o conteúdo, uma grande área por vez,
-     com simulação, backup e amostra revisada pelo usuário.
+  3. Classificar as 986 questões lendo o conteúdo, uma especialidade por vez,
+     com simulação, backup e amostra revisada pelo usuário. Ferramenta:
+     `scripts/classificar_temas.py <json>` (simula; `--aplicar` grava e salva
+     backup); os JSONs de classificação ficam em `backups/temas_*.json`.
+     Feito: Obstetrícia (96, em 2026-09-14). **Próximo: Ginecologia**, depois
+     Mastologia e as outras grandes áreas.
   4. Filtro de tema no Praticar e tema no cabeçalho do caso (o cabeçalho já
      mostra `subtopico`).
   5. Estatística por tema só quando houver respostas suficientes (hoje ~30 por
