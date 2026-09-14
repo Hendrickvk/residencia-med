@@ -331,10 +331,11 @@ TEMAS = {
     "Coloproctologia": ["Doenças anorretais benignas", "Câncer colorretal", "Doença diverticular e ostomias"],
     "Oftalmologia": [
         "Olho vermelho e infecções oculares", "Retinopatias", "Glaucoma e catarata", "Ametropias e estrabismo",
+        "Trauma ocular e queimaduras químicas",
     ],
     "Ortopedia": [
         "Fraturas e luxações", "Infecções osteoarticulares", "Ortopedia pediátrica", "Tumores ósseos",
-        "Lesões por esforço repetitivo",
+        "Lesões por esforço repetitivo", "Doenças da coluna vertebral",
     ],
     "Otorrinolaringologia": [
         "Otites e infecções das vias aéreas superiores", "Perda auditiva", "Rinites, obstrução nasal e disfonias",
