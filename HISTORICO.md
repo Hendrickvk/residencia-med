@@ -122,6 +122,83 @@ governa as 4 telas admin.
   antigas vazias foram apagadas. A id 304 tinha a explicação de outra questão;
   foi achada comparando o vocabulário da explicação com o do enunciado, e foi
   o único caso.
+- **Movimento na interface:** o usuário achou a plataforma "dura" (clique e a
+  tela troca seca). Caiu a regra "nada anima sozinho ao carregar" do
+  `DESIGN_TRIAGEM.md`; entrou um vocabulário curto (§3): telas sobem ao
+  entrar, casos deslizam, menus e diálogos entram e saem, o Painel monta em
+  cascata. Sem biblioteca de animação: keyframes do Tailwind e dois ganchos
+  (`usePresenca`, `useContagem`). Materiais passou a manter a tabela anterior
+  esmaecida ao filtrar (`keepPreviousData`) em vez de piscar o esqueleto.
+- **Leitura do caso:** o usuário achou enunciado e discussão cansativos. Três
+  ajustes, cada um medido com o texto real: (1) um limite em ch no parágrafo
+  deixava um vão à direita das alternativas; saiu, e a coluna das sessões foi de
+  840 para 680px (linha de 85/98 caracteres para ~63/68). (2) Ainda cansava:
+  numa página de comparação com o mesmo caso, o usuário escolheu entre Archivo
+  atual, Archivo aberta, Literata e Atkinson Hyperlegible a **Archivo aberta**
+  (largura 108% do eixo variável, mais entrelinha), que mantém a identidade.
+  (3) Discussão em parágrafos: nenhuma das 645 explicações tem quebra de linha
+  (média de 746 caracteres), então a quebra é feita na exibição
+  (`lib/paragrafos.ts`), sem mexer no banco. A regra foi testada nas 645 antes
+  de entrar: 10 continuam em um parágrafo (uma frase enorme só), as demais em 2
+  a 5, parágrafo mediano de 206 caracteres.
+- **Fila da Revisão sem questões nunca respondidas:** a aba mostrava 34 e a
+  tela "624 restantes". A contagem era só das vencidas, mas a fila (regra da
+  primeira versão, de quando o banco era pequeno) somava todas as questões do
+  banco sem registro de revisão — como responder no Praticar/Simulado já agenda
+  a revisão, eram as 591 que o aluno nunca respondeu. Agora a fila é vencidas +
+  marcadas, e aba, Painel e tela contam a mesma coisa
+  (`repeticao_espacada.contar_fila_revisao`). Questões novas ficam no Praticar.
+- **Revisão que mede (fase 1 de 3):** o usuário quis dar foco à repetição
+  espaçada e ligá-la à evolução do aluno. Diagnóstico: `revisao` só guardava o
+  estado atual (sem histórico), a Revisão era autoavaliação sem responder, e os
+  botões prometiam prazos fixos que o SM-2 não seguia. Decisões do usuário:
+  começar só pela fase 1, e o aluno volta a responder as alternativas. Entrou:
+  `revisao_eventos` (uma linha por avaliação, de qualquer origem), SM-2 como
+  função pura (`calcular_proximo_estado`) usada tanto para gravar quanto para
+  prever o prazo de cada botão, gabarito decidindo a nota de erro, atalhos 1–3
+  e resumo da sessão. Fases seguintes, feitas depois: (2) carga sob controle —
+  meta diária priorizando atrasadas/difíceis, estimativa de tempo pelo tempo
+  real do aluno, previsão de 7 dias no Painel, espalhar agendamentos; (3)
+  evolução — retenção por semana e especialidade, estágios dos casos
+  (aprendendo/consolidando/consolidado ≥ 21 dias), "recuperados", resumo semanal.
+- **Carga sob controle (fase 2 de 3):** meta diária de revisão por aluno (padrão
+  20, 10/20/30/50 no Painel) — a tela oferece só o que cabe no que falta dela, em
+  ordem de prioridade (reaprendendo, marcadas, mais atrasadas em relação ao
+  intervalo, menor facilidade); o resto espera, e "Revisar mais 10" é opt-in. A
+  aba e o Painel contam os casos de hoje dentro da meta. Duração estimada pela
+  mediana do tempo real do aluno, só com tempos plausíveis (15 s a 15 min) e ao
+  menos 10 medidas; senão, 90 s. Sem esse filtro a primeira versão estimou 20
+  casos em 2 min: das 35 respostas com tempo no banco, 29 tinham menos de 15 s.
+  Os testes dessa estimativa acharam um bug antigo do SM-2: sem teto, o
+  intervalo multiplica sem fim e ~26 acertos seguidos estouram `datetime`
+  (OverflowError). Teto de 36.500 dias, o padrão do Anki — não muda nenhum prazo
+  real. Um teto ligado à data da prova seria decisão de produto, não tomada. Previsão de 7 dias no
+  Painel simulando o que sobra de um dia para o outro. Ficou de fora, de
+  propósito, a variação aleatória dos intervalos: quebraria a garantia da fase 1
+  (prazo do botão = prazo agendado), e a meta já absorve os picos.
+- **Evolução da memória (fase 3 de 3):** seção no Painel e frase no resumo da
+  Revisão, com todas as definições numa função só
+  (`repeticao_espacada.classificar_eventos`). Teste de memória = caso que voltou
+  depois de pelo menos 1 dia sem ser visto, de qualquer origem; o tempo sem ver
+  sai do estado antes do evento (acerto agendou `intervalo_antes` dias, erro 10
+  min, mais `atraso_dias`), porque o evento não guarda quando foi a avaliação
+  anterior. Recuperado = primeiro teste lembrado depois de um erro (repetições 0
+  antes também conta, o que pega erros de antes do histórico). Consolidado =
+  intervalo ≥ 21 dias, o corte "mature" do Anki (4º acerto seguido). Estágios
+  saem do estado atual de `revisao`; retenção, recuperados e consolidados, do
+  histórico. Semanas são blocos de 7 dias terminando hoje, não semanas do
+  calendário, para o bloco atual ser o mesmo período da frase "últimos 7 dias".
+  Retenção só vem de `revisao_eventos`, sem misturar `respostas`: em 2026-09-14 o
+  histórico estava vazio (começou na fase 1) e `respostas` tinha 1 resposta
+  repetida com 1 dia de distância na conta real, então não valia duas fontes.
+  Até o aluno revisar, a seção mostra os estágios e estados vazios que explicam
+  quando cada número aparece. A conta demo ganhou histórico de revisão com
+  `scripts/seed_demo_revisao.py` (idempotente, uma transação, simula sem
+  `--aplicar`; `--refazer` salva em `backups/` e gera de novo): as 400 respostas
+  passam pelo SM-2 real e há 55 sessões de Revisão sintéticas, sem mexer em
+  `respostas`. A primeira versão (meta 20, 3 dias pulados em 10) acumulou fila e
+  a previsão da demo ficou toda acima da meta; refeita com meta 30 gravada na
+  demo, 9 de 10 dias e "Revisar mais 10" quando sobra um lote.
 
 ## Armadilhas das telas admin (Streamlit)
 

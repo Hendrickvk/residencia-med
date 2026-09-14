@@ -1,7 +1,7 @@
 import { ArrowRight, X } from "lucide-react";
 import { useState } from "react";
 import { useAreas, useAnos, useBancas, useEspecialidades } from "../../lib/catalogo";
-import { BOTAO_PRIMARIO, CAMPO } from "../../lib/estilos";
+import { BOTAO_PRIMARIO, CAMPO, PRESSAO } from "../../lib/estilos";
 import type { FiltrosPratica } from "../../lib/types";
 
 interface Props {
@@ -26,16 +26,17 @@ function Interruptor({
       role="switch"
       aria-checked={ligado}
       onClick={() => onMudar(!ligado)}
-      className="flex items-center gap-3 text-left text-corpo text-ink"
+      className="group flex items-center gap-3 text-left text-corpo text-ink"
     >
       <span
-        className={`relative h-5 w-9 shrink-0 rounded-pill transition-colors duration-hover ease-brand ${
+        className={`relative h-5 w-9 shrink-0 rounded-pill transition-colors duration-toggle ease-brand ${
           ligado ? "bg-ink" : "bg-line"
         }`}
       >
+        {/* O pino alarga um pouco enquanto pressionado, como um interruptor físico. */}
         <span
-          className={`absolute top-0.5 h-4 w-4 rounded-pill bg-surface shadow-[0_1px_2px_rgba(0,0,0,0.3)] transition-transform duration-hover ease-brand ${
-            ligado ? "translate-x-[18px]" : "translate-x-0.5"
+          className={`absolute top-0.5 h-4 w-4 rounded-pill bg-surface shadow-[0_1px_2px_rgba(0,0,0,0.3)] transition-[transform,width] duration-desliza ease-suave group-active:w-5 ${
+            ligado ? "translate-x-[18px] group-active:translate-x-[14px]" : "translate-x-0.5"
           }`}
         />
       </span>
@@ -79,7 +80,7 @@ export default function Configurador({ onIniciar, areaInicial }: Props) {
   if (excluirRespondidas) chips.push({ label: "Sem casos já respondidos", onRemover: () => setExcluirRespondidas(false) });
 
   return (
-    <div className="mx-auto flex max-w-[840px] flex-col gap-6">
+    <div className="mx-auto flex max-w-[680px] flex-col gap-6">
       <div className="flex flex-col gap-2">
         <span className="rotulo text-muted">Nova sessão</span>
         <h1 className="text-titulo">Praticar</h1>
@@ -171,7 +172,7 @@ export default function Configurador({ onIniciar, areaInicial }: Props) {
                 type="button"
                 aria-pressed={quantidade === q}
                 onClick={() => setQuantidade(q)}
-                className={`h-10 min-w-[56px] rounded-btn border px-4 text-[15px] font-semibold tabular-nums transition duration-hover ease-brand ${
+                className={`h-10 min-w-[56px] rounded-btn border px-4 text-[15px] font-semibold tabular-nums transition duration-hover ease-brand ${PRESSAO} ${
                   quantidade === q ? "border-ink bg-ink text-onink" : "border-line bg-surface text-ink-2 hover:border-muted"
                 }`}
               >
@@ -198,10 +199,10 @@ export default function Configurador({ onIniciar, areaInicial }: Props) {
                 type="button"
                 onClick={chip.onRemover}
                 aria-label={`Remover filtro ${chip.label}`}
-                className="flex items-center gap-1.5 rounded-etq border border-line bg-ground px-2.5 py-1 text-apoio font-medium text-ink-2 transition duration-hover hover:border-muted hover:text-ink"
+                className={`group flex animate-surgir items-center gap-1.5 rounded-etq border border-line bg-ground px-2.5 py-1 text-apoio font-medium text-ink-2 transition duration-hover hover:border-muted hover:text-ink ${PRESSAO}`}
               >
                 {chip.label}
-                <X size={13} strokeWidth={2} />
+                <X size={13} strokeWidth={2} className="transition-transform duration-toggle ease-suave group-hover:rotate-90" />
               </button>
             ))}
           </div>
@@ -221,10 +222,10 @@ export default function Configurador({ onIniciar, areaInicial }: Props) {
                 quantidade,
               })
             }
-            className={BOTAO_PRIMARIO}
+            className={`group ${BOTAO_PRIMARIO}`}
           >
             Iniciar sessão de {quantidade} casos
-            <ArrowRight size={18} strokeWidth={2} />
+            <ArrowRight size={18} strokeWidth={2} className="transition-transform duration-toggle ease-suave group-hover:translate-x-0.5" />
           </button>
         </div>
       </div>

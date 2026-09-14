@@ -18,7 +18,10 @@ def _consolidar_no_historico(simulado_id, usuario_id):
             continue
         correta = bool(item["correta"])
         db.registrar_resposta(item["id"], item["resposta_dada"], correta, usuario_id=usuario_id)
-        sr.registrar_revisao(item["id"], 5 if correta else 1, usuario_id=usuario_id)
+        sr.registrar_revisao(
+            item["id"], 5 if correta else 1, usuario_id=usuario_id, origem="simulado",
+            correta=correta, alternativa=item["resposta_dada"],
+        )
 
 
 @router.get("")

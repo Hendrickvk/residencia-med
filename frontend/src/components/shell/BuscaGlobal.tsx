@@ -74,7 +74,7 @@ export function BuscaGlobal() {
       {mostrarPainel && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setAberto(false)} />
-          <div className="absolute right-0 top-11 z-50 max-h-96 w-[26rem] overflow-y-auto overflow-x-hidden rounded-card border border-line bg-surface">
+          <div className="absolute right-0 top-11 z-50 max-h-96 w-[26rem] origin-top-right animate-surgir overflow-y-auto overflow-x-hidden rounded-card border border-line bg-surface">
             {isFetching && !data ? (
               <div className="p-4 text-apoio text-muted">Buscando…</div>
             ) : !temResultados ? (

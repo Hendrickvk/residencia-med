@@ -1,80 +1,201 @@
-import { RotateCcw } from "lucide-react";
-import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { BadgeCheck, RefreshCw, RotateCcw } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { EstadoVazio } from "../../components/EstadoVazio";
+import { Kbd } from "../../components/Kbd";
+import { TextoDiscussao } from "../../components/TextoDiscussao";
 import { API_URL } from "../../lib/api";
-import { BOTAO_PRIMARIO, BOTAO_SECUNDARIO } from "../../lib/estilos";
+import { BOTAO_PRIMARIO, PRESSAO } from "../../lib/estilos";
 import { BarraFoco } from "../../lib/foco";
+import { rolarParaTopo } from "../../lib/movimento";
+import { estimarDuracao, formatarPrazo } from "../../lib/prazo";
 import { avaliarRevisao, useLevaRevisao } from "../../lib/revisao";
-import type { Questao } from "../../lib/types";
-import { AlternativaLinha } from "../praticar/AlternativaLinha";
+import type { QuestaoRevisao } from "../../lib/types";
+import { AlternativaLinha, type EstadoAlternativa } from "../praticar/AlternativaLinha";
+import { useCronometro } from "../praticar/useCronometro";
+import ResumoRevisao, { type AvaliacaoSessao } from "./ResumoRevisao";
 
 // Índice de JS Date.getDay() (0=domingo), diferente do weekday() do Python
 // que o app.py original usava (0=segunda) — cuidado se algum dia comparar.
 const NOME_DIA_SEMANA = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
 
-// DESIGN_TRIAGEM.md §6: cada intervalo leva a cor do nível equivalente.
-const OPCOES_INTERVALO = [
-  { label: "Errei", prazo: "10 min", qualidade: 1, cor: "bg-t1" },
-  { label: "Difícil", prazo: "1 dia", qualidade: 3, cor: "bg-t2" },
-  { label: "Bom", prazo: "4 dias", qualidade: 4, cor: "bg-t4" },
-  { label: "Fácil", prazo: "10 dias", qualidade: 5, cor: "bg-t5" },
-];
+const LETRAS = ["A", "B", "C", "D", "E"];
+
+// Lote de "Revisar mais" depois da meta cumprida: pequeno, e só se o aluno pedir.
+const LOTE_EXTRA = 10;
+
+// DESIGN_TRIAGEM.md §6: depois de acertar, o aluno diz como foi lembrar. O
+// prazo de cada botão vem do servidor (repeticao_espacada.prever_prazos) —
+// nunca escrito fixo aqui.
+const NOTAS_ACERTO = [
+  { nota: 3, chave: "3", label: "Com esforço", tecla: "1", cor: "bg-t2" },
+  { nota: 4, chave: "4", label: "Lembrei", tecla: "2", cor: "bg-t4" },
+  { nota: 5, chave: "5", label: "Fácil", tecla: "3", cor: "bg-t5" },
+] as const;
 
 export default function Revisao() {
-  const { data, isLoading, refetch } = useLevaRevisao();
+  // 0 = só o que cabe na meta de hoje; LOTE_EXTRA depois de "Revisar mais".
+  const [extra, setExtra] = useState(0);
+  const { data, isLoading, refetch } = useLevaRevisao(extra);
   const navigate = useNavigate();
-  // Cópia local só depois que o aluno muda a ordem ("Errei" reinsere o caso
+  const queryClient = useQueryClient();
+  // Cópia local só depois que o aluno muda a ordem (erro reinsere o caso
   // mais adiante); até lá a fila exibida é a do servidor.
-  const [filaSessao, setFilaSessao] = useState<Questao[] | null>(null);
+  const [filaSessao, setFilaSessao] = useState<QuestaoRevisao[] | null>(null);
   const [idx, setIdx] = useState(0);
-  const [revelado, setRevelado] = useState(false);
+  const [selecionada, setSelecionada] = useState<string | null>(null);
+  const [confirmado, setConfirmado] = useState(false);
   const [enviando, setEnviando] = useState(false);
+  // O primeiro caso só esmaece; os seguintes deslizam, como no Praticar.
+  const [avancou, setAvancou] = useState(false);
+  const [avaliacoes, setAvaliacoes] = useState<AvaliacaoSessao[]>([]);
+  const { tempoDecorridoMs } = useCronometro(idx);
+
+  const fila = filaSessao ?? data?.fila ?? [];
+  const restantes = Math.max(fila.length - idx, 0);
+  const q = fila[idx];
+  const acertou = q ? selecionada === q.resposta_correta : false;
+
+  // A contagem da aba e do Painel vem do servidor: atualiza ao sair da Revisão.
+  useEffect(() => {
+    return () => {
+      void queryClient.invalidateQueries({ queryKey: ["painel"] });
+    };
+  }, [queryClient]);
+
+  function limparCaso() {
+    setSelecionada(null);
+    setConfirmado(false);
+  }
+
+  function reiniciarSessao() {
+    setIdx(0);
+    limparCaso();
+    setFilaSessao(null);
+    setAvaliacoes([]);
+    setAvancou(true);
+    rolarParaTopo();
+    void queryClient.invalidateQueries({ queryKey: ["painel"] });
+  }
 
   function recomecar() {
-    setIdx(0);
-    setRevelado(false);
-    setFilaSessao(null);
-    refetch();
+    reiniciarSessao();
+    void refetch();
   }
+
+  function revisarMais() {
+    reiniciarSessao();
+    // Mudar `extra` já busca a fila nova; se já era o lote extra, busca de novo.
+    if (extra === LOTE_EXTRA) void refetch();
+    else setExtra(LOTE_EXTRA);
+  }
+
+  async function avaliar(nota: number) {
+    if (!q || !selecionada || !confirmado || enviando) return;
+    const certa = selecionada === q.resposta_correta;
+    const qualidade = certa ? nota : 1;
+    setEnviando(true);
+    // Tempo do caso inteiro (ler, responder, ler a discussão), como no Praticar:
+    // é o que alimenta a estimativa de duração da revisão.
+    const tempoMs = tempoDecorridoMs();
+    // Mesma política de antes: se a gravação falhar, a sessão segue.
+    const resultado = await avaliarRevisao(q.id, { qualidade, alternativa: selecionada, tempo_ms: tempoMs }).catch(
+      () => null,
+    );
+    setEnviando(false);
+    setAvaliacoes((anteriores) => [
+      ...anteriores,
+      {
+        id: q.id,
+        correta: certa,
+        qualidade,
+        primeira: !anteriores.some((a) => a.id === q.id),
+        recuperado: resultado?.recuperado ?? false,
+        consolidou: resultado?.consolidou ?? false,
+      },
+    ]);
+    if (!certa) {
+      // O servidor já agenda de verdade para 10 minutos, mas a fila que o
+      // cliente buscou não saberia disso sozinha: sem reinserir, o caso sumia
+      // da sessão. Volta com os prazos recalculados a partir do erro.
+      const copia = [...fila];
+      copia.splice(Math.min(idx + 4, copia.length), 0, resultado ? { ...q, prazos: resultado.prazos } : q);
+      setFilaSessao(copia);
+    }
+    setIdx((i) => i + 1);
+    limparCaso();
+    setAvancou(true);
+    rolarParaTopo();
+  }
+
+  // A–E seleciona, Enter confirma. Depois de confirmar: acertou, 1/2/3 dão a
+  // nota; errou, Enter ou → vai para o próximo (a nota é do gabarito).
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const alvo = e.target as HTMLElement | null;
+      if (alvo && ["INPUT", "TEXTAREA", "SELECT"].includes(alvo.tagName)) return;
+      if (!q) return;
+
+      const letra = e.key.length === 1 ? e.key.toUpperCase() : "";
+      if (!confirmado) {
+        if (LETRAS.includes(letra) && letra in q.alternativas) setSelecionada(letra);
+        else if (e.key === "Enter" && selecionada) {
+          e.preventDefault();
+          setConfirmado(true);
+        }
+        return;
+      }
+      if (acertou) {
+        const opcao = NOTAS_ACERTO.find((o) => o.tecla === e.key);
+        if (opcao) {
+          e.preventDefault();
+          void avaliar(opcao.nota);
+        }
+      } else if (e.key === "Enter" || e.key === "ArrowRight") {
+        e.preventDefault();
+        void avaliar(1);
+      }
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q, confirmado, selecionada, acertou, enviando]);
 
   if (isLoading) {
     return (
-      <div className="mx-auto flex max-w-[840px] flex-col gap-5">
+      <div className="mx-auto flex max-w-[680px] flex-col gap-5">
         <div className="h-[72px] w-32 animate-pulse rounded-card bg-line-soft" />
         <div className="h-[360px] animate-pulse rounded-caso bg-line-soft" />
       </div>
     );
   }
 
-  const fila = filaSessao ?? data?.fila ?? [];
-  const restantes = Math.max(fila.length - idx, 0);
-  const q = fila[idx];
-
-  async function avaliar(qualidade: number) {
-    if (!q) return;
-    setEnviando(true);
-    try {
-      await avaliarRevisao(q.id, qualidade);
-    } finally {
-      setEnviando(false);
-      if (qualidade === 1) {
-        // "Errei" volta a aparecer daqui a pouco NESTA sessão: o backend já
-        // agenda de verdade pra 10 minutos (repeticao_espacada.py), mas a
-        // fila que o cliente já buscou não saberia disso sozinha — sem
-        // isso, o item some da sessão de hoje inteira.
-        const copia = [...fila];
-        copia.splice(Math.min(idx + 4, copia.length), 0, q);
-        setFilaSessao(copia);
-      }
-      setIdx((i) => i + 1);
-      setRevelado(false);
-    }
-  }
-
   if (!q) {
+    if (avaliacoes.length > 0) {
+      return (
+        <div className="animate-entrar">
+          <ResumoRevisao avaliacoes={avaliacoes} onRecomecar={recomecar} onRevisarMais={revisarMais} />
+        </div>
+      );
+    }
+    const hoje = data?.hoje;
+    // Meta cumprida com casos esperando: nada de alerta, e mais só se pedir.
+    if (hoje && hoje.excedente > 0) {
+      return (
+        <div className="mx-auto max-w-[680px] animate-entrar">
+          <EstadoVazio
+            mensagem={`Meta de hoje cumprida: ${hoje.feitas_hoje} caso${hoje.feitas_hoje !== 1 ? "s" : ""} revisado${
+              hoje.feitas_hoje !== 1 ? "s" : ""
+            }. Outros ${hoje.excedente} já venceram e podem esperar até amanhã.`}
+            cta={{ label: `Revisar mais ${Math.min(LOTE_EXTRA, hoje.excedente)}`, onClick: revisarMais }}
+          />
+        </div>
+      );
+    }
     return (
-      <div className="mx-auto max-w-[840px]">
+      <div className="mx-auto max-w-[680px] animate-entrar">
         <EstadoVazio
           mensagem={
             data?.proxima_leva
@@ -90,6 +211,7 @@ export default function Revisao() {
   }
 
   const recorte = [q.area, q.especialidade, q.subtopico].filter(Boolean).join(" · ");
+  const prova = [q.banca, q.ano].filter(Boolean).join(" ");
 
   return (
     <>
@@ -97,13 +219,23 @@ export default function Revisao() {
         <span className="hidden text-[14.5px] text-ink-2 xl:block">Revisão espaçada</span>
         <span className="ml-auto shrink-0 text-[14px] font-semibold tabular-nums">
           {restantes} restante{restantes !== 1 ? "s" : ""}
+          {data && (
+            <span className="hidden font-normal text-muted sm:inline">
+              {" "}
+              · {estimarDuracao(restantes, data.hoje.segundos_por_caso)}
+            </span>
+          )}
         </span>
         <button
           type="button"
           onClick={recomecar}
-          className="flex h-9 shrink-0 items-center gap-1.5 rounded-btn border border-line px-3 text-[14px] font-medium text-ink-2 transition duration-hover hover:border-muted hover:text-ink"
+          className={`group flex h-9 shrink-0 items-center gap-1.5 rounded-btn border border-line px-3 text-[14px] font-medium text-ink-2 transition duration-hover hover:border-muted hover:text-ink ${PRESSAO}`}
         >
-          <RotateCcw size={15} strokeWidth={2} />
+          <RotateCcw
+            size={15}
+            strokeWidth={2}
+            className="transition-transform duration-desliza ease-suave group-hover:-rotate-[120deg]"
+          />
           Recomeçar fila
         </button>
         {/* Cada avaliação já foi gravada ao clicar: sair não perde nada. */}
@@ -117,65 +249,130 @@ export default function Revisao() {
         </button>
       </BarraFoco>
 
-      <div className="mx-auto flex max-w-[840px] flex-col gap-5">
-        <div className="flex items-end justify-between gap-6">
-          <div className="flex flex-col gap-1">
-            <span className="rotulo text-muted">Caso</span>
-            <span className="num-lg">{String(idx + 1).padStart(2, "0")}</span>
+      <div className="mx-auto max-w-[680px]">
+        <div key={idx} className={`flex flex-col gap-5 ${avancou ? "animate-entrar-frente" : "animate-desvanecer"}`}>
+          <div className="flex items-end justify-between gap-6">
+            <div className="flex flex-col gap-1">
+              <span className="rotulo text-muted">Caso</span>
+              <span className="num-lg">{String(idx + 1).padStart(2, "0")}</span>
+            </div>
+            <div className="flex min-w-0 flex-col items-end gap-1.5 text-right">
+              {recorte && <span className="text-[15px] font-semibold">{recorte}</span>}
+              {prova && (
+                <span className="flex items-center gap-1.5 text-apoio text-muted">
+                  <BadgeCheck size={16} strokeWidth={2} className="text-t4" />
+                  Prova oficial · {prova}
+                </span>
+              )}
+            </div>
           </div>
-          {recorte && <span className="text-right text-[15px] font-semibold">{recorte}</span>}
-        </div>
 
-        <div className="flex flex-col gap-6 rounded-caso border border-line bg-surface p-6 md:px-11 md:py-9">
-          <p className="max-w-[68ch] text-enunciado text-ink">{q.enunciado}</p>
-          {q.tem_imagem && (
-            <img src={`${API_URL}/questoes/${q.id}/imagem`} alt="Imagem do caso" className="max-w-full rounded-card border border-line" />
-          )}
+          <div className="flex flex-col gap-6 rounded-caso border border-line bg-surface p-6 md:px-11 md:py-9">
+            <p className="leitura-enunciado text-ink">{q.enunciado}</p>
+            {q.tem_imagem && (
+              <img src={`${API_URL}/questoes/${q.id}/imagem`} alt="Imagem do caso" className="max-w-full rounded-card border border-line" />
+            )}
 
-          {!revelado ? (
-            <button type="button" onClick={() => setRevelado(true)} className={`${BOTAO_PRIMARIO} w-full`}>
-              Mostrar resposta
-            </button>
-          ) : (
-            <>
-              <div className="flex flex-col gap-2">
-                {Object.entries(q.alternativas).map(([letra, texto]) => (
+            <div className="flex flex-col gap-2">
+              {LETRAS.filter((letra) => letra in q.alternativas).map((letra) => {
+                let estado: EstadoAlternativa = "normal";
+                if (!confirmado) estado = letra === selecionada ? "selecionada" : "normal";
+                else if (letra === q.resposta_correta) estado = "correta";
+                else if (letra === selecionada) estado = "errada";
+                else estado = "neutra";
+                return (
                   <AlternativaLinha
                     key={letra}
                     letra={letra}
-                    texto={texto}
-                    estado={letra === q.resposta_correta ? "correta" : "neutra"}
-                    disabled
+                    texto={q.alternativas[letra]}
+                    estado={estado}
+                    // null: mostra as etiquetas de conduta, sem coluna de percentual.
+                    percentual={confirmado ? null : undefined}
+                    disabled={confirmado}
+                    onClick={() => setSelecionada(letra)}
                   />
-                ))}
-              </div>
+                );
+              })}
+            </div>
 
-              {q.explicacao && (
-                <div className="flex flex-col gap-3 border-t border-line-soft pt-6">
-                  <span className="rotulo text-muted">Discussão do caso</span>
-                  <p className="max-w-[66ch] text-[16.5px] leading-[1.7] text-ink-2">{q.explicacao}</p>
+            {!confirmado ? (
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="hidden items-center gap-4 text-apoio text-muted sm:flex">
+                  <span className="flex items-center gap-1.5">
+                    <Kbd>A–E</Kbd>selecionar
+                  </span>
                 </div>
-              )}
+                <button
+                  type="button"
+                  onClick={() => setConfirmado(true)}
+                  disabled={!selecionada}
+                  className={`${BOTAO_PRIMARIO} ml-auto pr-2.5`}
+                >
+                  Confirmar resposta
+                  <Kbd sobreTinta>Enter</Kbd>
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="flex animate-entrar flex-col gap-3 border-t border-line-soft pt-6">
+                  <span className="rotulo text-muted">Discussão do caso</span>
+                  <span className="text-subtitulo">Resposta correta: {q.resposta_correta}</span>
+                  {q.explicacao && <TextoDiscussao texto={q.explicacao} />}
+                </div>
 
-              <div className="flex flex-col gap-3 border-t border-line-soft pt-6">
-                <span className="text-apoio text-muted">Quão fácil foi lembrar?</span>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                  {OPCOES_INTERVALO.map((op) => (
+                {acertou ? (
+                  <div
+                    className="flex animate-entrar flex-col gap-3 border-t border-line-soft pt-6"
+                    style={{ animationDelay: "90ms" }}
+                  >
+                    <span className="text-apoio text-muted">Você acertou. Como foi lembrar?</span>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                      {NOTAS_ACERTO.map((op) => (
+                        <button
+                          key={op.nota}
+                          type="button"
+                          disabled={enviando}
+                          onClick={() => void avaliar(op.nota)}
+                          className="group flex flex-col items-start gap-1 rounded-btn border border-line bg-surface px-3.5 py-2.5 text-left transition duration-hover ease-brand hover:border-muted active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100"
+                        >
+                          <span className="flex w-full items-center justify-between gap-2">
+                            <span className="flex items-center gap-2 text-[15px] font-medium text-ink">
+                              <span
+                                className={`h-2.5 w-2.5 shrink-0 rounded-[2px] transition-transform duration-toggle ease-suave group-hover:scale-125 ${op.cor}`}
+                                aria-hidden="true"
+                              />
+                              {op.label}
+                            </span>
+                            <Kbd>{op.tecla}</Kbd>
+                          </span>
+                          <span className="text-apoio tabular-nums text-muted">volta em {formatarPrazo(q.prazos[op.chave])}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    className="flex animate-entrar flex-wrap items-center justify-between gap-3"
+                    style={{ animationDelay: "90ms" }}
+                  >
+                    <span className="flex items-center gap-2 text-apoio text-ink-2">
+                      <RefreshCw size={16} strokeWidth={2} />
+                      Volta na sua revisão em {formatarPrazo(q.prazos["1"])}
+                    </span>
                     <button
-                      key={op.qualidade}
                       type="button"
                       disabled={enviando}
-                      onClick={() => avaliar(op.qualidade)}
-                      className={BOTAO_SECUNDARIO}
+                      onClick={() => void avaliar(1)}
+                      className={`${BOTAO_PRIMARIO} pr-2.5`}
                     >
-                      <span className={`h-2.5 w-2.5 shrink-0 rounded-[2px] ${op.cor}`} aria-hidden="true" />
-                      {op.label} — {op.prazo}
+                      Próximo caso
+                      <Kbd sobreTinta>Enter</Kbd>
                     </button>
-                  ))}
-                </div>
-              </div>
-            </>
-          )}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </div>
       </div>
     </>

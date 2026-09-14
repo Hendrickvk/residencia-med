@@ -78,6 +78,30 @@ def questao_teste(area_teste):
 
 
 @pytest.fixture()
+def quatro_questoes(area_teste):
+    ids = []
+    with db.get_conn() as conn:
+        c = conn.cursor()
+        for i in range(4):
+            c.execute("""
+                INSERT INTO questoes
+                    (area_id, subtopico_id, enunciado, alternativas, resposta_correta,
+                     explicacao, banca, ano, criada_em)
+                VALUES (?, NULL, ?, ?, 'A', 'comentário de teste', 'PYTEST', 2024, ?)
+            """, (
+                area_teste,
+                f"[pytest {uuid.uuid4().hex[:8]}] Questão {i} de teste automatizado — não é conteúdo real.",
+                json.dumps({"A": "certa", "B": "errada"}, ensure_ascii=False),
+                datetime.datetime.now().isoformat(),
+            ))
+            ids.append(c.lastrowid)
+    yield ids
+    with db.get_conn() as conn:
+        for questao_id in ids:
+            conn.execute("DELETE FROM questoes WHERE id = ?", (questao_id,))
+
+
+@pytest.fixture()
 def edicao_teste(area_teste):
     """Três questões de uma edição fictícia, inseridas fora da ordem do
     caderno. Devolve (banca, edicao, números inseridos)."""

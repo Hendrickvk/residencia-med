@@ -8,6 +8,7 @@ import { useMe } from "../../lib/auth";
 import { useAreas, useEspecialidades } from "../../lib/catalogo";
 import { CAMPO } from "../../lib/estilos";
 import { useMateriais, useStatusSincronizacao, useTiposMateriais } from "../../lib/materiais";
+import { atraso, rolarParaTopo } from "../../lib/movimento";
 import type { Material } from "../../lib/types";
 import { useDebounced } from "../../lib/useDebounced";
 
@@ -69,7 +70,7 @@ export default function Materiais() {
   const { data: especialidades } = useEspecialidades(areaId);
   const { data: tipos } = useTiposMateriais();
   const { data: status } = useStatusSincronizacao();
-  const { data, isLoading } = useMateriais({
+  const { data, isLoading, isPlaceholderData } = useMateriais({
     area_id: areaId,
     especialidade_id: especialidadeId,
     tipo,
@@ -82,6 +83,12 @@ export default function Materiais() {
   const total = data?.total ?? 0;
   const totalPaginas = Math.max(1, Math.ceil(total / POR_PAGINA));
 
+  // Chave das linhas exibidas: só muda quando o resultado da consulta nova
+  // chega (não enquanto a anterior segura a tela), e aí as linhas esmaecem de volta.
+  const chaveConsulta = JSON.stringify([areaId, especialidadeId, tipo, buscaDebounced, pagina]);
+  const [chaveLinhas, setChaveLinhas] = useState(chaveConsulta);
+  if (data && !isPlaceholderData && chaveLinhas !== chaveConsulta) setChaveLinhas(chaveConsulta);
+
   function mudarArea(valor: number | undefined) {
     setAreaId(valor);
     setEspecialidadeId(undefined);
@@ -91,6 +98,11 @@ export default function Materiais() {
   function mudarEspecialidade(valor: number) {
     setEspecialidadeId(valor);
     setPagina(0);
+  }
+
+  function mudarPagina(valor: number) {
+    setPagina(valor);
+    rolarParaTopo();
   }
 
   // "aberta" = área escolhida, mas o filtro ativo é uma especialidade dela.
@@ -105,7 +117,7 @@ export default function Materiais() {
     }`;
 
   const classeEspecialidade = (ativa: boolean) =>
-    `flex w-full shrink-0 items-center justify-between gap-2 rounded-btn py-1.5 pl-6 pr-3 text-left text-apoio transition duration-hover ${
+    `flex w-full shrink-0 animate-entrar items-center justify-between gap-2 rounded-btn py-1.5 pl-6 pr-3 text-left text-apoio transition duration-hover ${
       ativa ? "bg-ink font-semibold text-onink" : "text-ink-2 hover:bg-ground hover:text-ink"
     }`;
 
@@ -159,16 +171,18 @@ export default function Materiais() {
                   >
                     {a.nome}
                   </button>
+                  {/* Especialidades descem em cascata quando a área abre. */}
                   {aberta &&
                     especialidades
                       ?.filter((e) => e.total_materiais > 0)
-                      .map((e) => (
+                      .map((e, i) => (
                         <button
                           key={e.id}
                           type="button"
                           onClick={() => mudarEspecialidade(e.id)}
                           aria-pressed={especialidadeId === e.id}
                           className={classeEspecialidade(especialidadeId === e.id)}
+                          style={atraso(i, 25, 250)}
                         >
                           <span className="truncate">{e.nome}</span>
                           <span className="shrink-0 tabular-nums opacity-70">{e.total_materiais}</span>
@@ -217,9 +231,14 @@ export default function Materiais() {
           {isLoading ? (
             <div className="h-64 animate-pulse rounded-card bg-line-soft" />
           ) : total === 0 ? (
-            <EstadoVazio mensagem="Nenhum material encontrado. Ajuste a área, o tipo ou a busca." />
+            <div className="animate-desvanecer">
+              <EstadoVazio mensagem="Nenhum material encontrado. Ajuste a área, o tipo ou a busca." />
+            </div>
           ) : (
-            <>
+            <div
+              className={`flex flex-col gap-3 transition-opacity duration-toggle ease-brand ${isPlaceholderData ? "opacity-50" : ""}`}
+              aria-busy={isPlaceholderData}
+            >
               <div className="overflow-x-auto rounded-card border border-line bg-surface">
                 <table className="w-full text-left text-corpo">
                   <thead>
@@ -233,14 +252,22 @@ export default function Materiais() {
                       <th className="w-24 px-3 py-2.5" />
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody key={chaveLinhas} className="animate-desvanecer">
                     {itens.map((m) => {
                       const Icone = iconePorTipo(m.tipo);
                       const recorte = recorteMaterial(m);
                       return (
-                        <tr key={m.id} className="group h-11 border-b border-line-soft last:border-0 hover:bg-ground">
+                        <tr
+                          key={m.id}
+                          className="group h-11 border-b border-line-soft transition-colors duration-hover last:border-0 hover:bg-ground"
+                        >
                           <td className="px-4">
-                            <Icone size={16} strokeWidth={2} className="text-muted" aria-label={m.tipo} />
+                            <Icone
+                              size={16}
+                              strokeWidth={2}
+                              className="text-muted transition-colors duration-hover group-hover:text-ink"
+                              aria-label={m.tipo}
+                            />
                           </td>
                           {/* overflow-wrap: nomes de arquivo sem espaço empurravam a tabela para fora do contêiner. */}
                           <td className="px-3 py-2 text-ink [overflow-wrap:anywhere]">
@@ -259,7 +286,7 @@ export default function Materiais() {
                               href={m.link_mediafire}
                               target="_blank"
                               rel="noreferrer"
-                              className="inline-flex items-center gap-1 rounded-btn border border-line bg-surface px-2.5 py-1 text-apoio font-semibold text-ink opacity-0 transition duration-hover hover:border-muted focus-visible:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100"
+                              className="inline-flex translate-x-1 items-center gap-1 rounded-btn border border-line bg-surface px-2.5 py-1 text-apoio font-semibold text-ink opacity-0 transition duration-toggle ease-suave hover:border-muted focus-visible:translate-x-0 focus-visible:opacity-100 active:scale-[0.96] group-hover:translate-x-0 group-hover:opacity-100 [@media(hover:none)]:translate-x-0 [@media(hover:none)]:opacity-100"
                             >
                               Abrir
                               <ExternalLink size={13} strokeWidth={2} />
@@ -271,8 +298,8 @@ export default function Materiais() {
                   </tbody>
                 </table>
               </div>
-              <Paginacao pagina={pagina} totalPaginas={totalPaginas} total={total} onMudar={setPagina} />
-            </>
+              <Paginacao pagina={pagina} totalPaginas={totalPaginas} total={total} onMudar={mudarPagina} />
+            </div>
           )}
         </div>
       </div>

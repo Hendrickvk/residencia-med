@@ -3,10 +3,12 @@ import { BadgeCheck, Clock, Flag, RefreshCw } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { EstadoVazio } from "../../components/EstadoVazio";
 import { Kbd } from "../../components/Kbd";
+import { TextoDiscussao } from "../../components/TextoDiscussao";
 import { API_URL, api } from "../../lib/api";
-import { BOTAO_PRIMARIO, BOTAO_SECUNDARIO } from "../../lib/estilos";
+import { BOTAO_PRIMARIO, BOTAO_SECUNDARIO, PRESSAO } from "../../lib/estilos";
 import { BarraFoco } from "../../lib/foco";
 import { formatarMMSS } from "../../lib/format";
+import { rolarParaTopo } from "../../lib/movimento";
 import { enfileirarResposta } from "../../lib/respostasQueue";
 import type { FiltrosPratica, Questao, ResumoSessao } from "../../lib/types";
 import { AlternativaLinha, type EstadoAlternativa } from "./AlternativaLinha";
@@ -47,6 +49,8 @@ export default function Sessao({ filtros, nonce, onFinalizar, onVoltar }: Props)
   const [marcadas, setMarcadas] = useState<Set<number>>(() => new Set());
   // Acerto/erro de cada caso já concluído, para o progresso na barra de foco.
   const [resultados, setResultados] = useState<boolean[]>([]);
+  // O primeiro caso só esmaece (chega depois do esqueleto); os seguintes deslizam.
+  const [avancou, setAvancou] = useState(false);
   const respondidasRef = useRef<ResumoSessao["respondidas"]>([]);
   const inicioSessaoRef = useRef(Date.now());
   const { decorridoMs, tempoDecorridoMs } = useCronometro(idx);
@@ -79,6 +83,8 @@ export default function Sessao({ filtros, nonce, onFinalizar, onVoltar }: Props)
       setSelecionada(null);
       setConfirmado(false);
       setDistribuicao(null);
+      setAvancou(true);
+      rolarParaTopo();
     }
   }
 
@@ -167,7 +173,7 @@ export default function Sessao({ filtros, nonce, onFinalizar, onVoltar }: Props)
         <BarraFoco>
           <span className="text-[14.5px] text-ink-2">Sessão de prática</span>
         </BarraFoco>
-        <div className="mx-auto flex max-w-[840px] flex-col gap-5">
+        <div className="mx-auto flex max-w-[680px] flex-col gap-5">
           <div className="h-[72px] w-32 animate-pulse rounded-card bg-line-soft" />
           <div className="h-[520px] animate-pulse rounded-caso bg-line-soft" />
         </div>
@@ -177,7 +183,7 @@ export default function Sessao({ filtros, nonce, onFinalizar, onVoltar }: Props)
 
   if (isError || fila.length === 0) {
     return (
-      <div className="mx-auto max-w-[840px]">
+      <div className="mx-auto max-w-[680px] animate-entrar">
         <EstadoVazio
           mensagem="Nenhum caso encontrado para esses filtros. Amplie o recorte e tente de novo."
           cta={{ label: "Ajustar filtros", onClick: onVoltar }}
@@ -201,6 +207,15 @@ export default function Sessao({ filtros, nonce, onFinalizar, onVoltar }: Props)
   const distribuicaoVazia = distribuicao !== null && Object.keys(distribuicao).length === 0;
   const pctEscolha =
     selecionada && distribuicao && !distribuicaoVazia ? (distribuicao[selecionada] ?? 0) : undefined;
+  const fraseDistribuicao = distribuicaoVazia
+    ? "Ninguém mais respondeu este caso ainda."
+    : pctEscolha === undefined
+      ? null
+      : pctEscolha === 0
+        ? `Nenhum outro aluno marcou ${selecionada}.`
+        : correta
+          ? `Você acertou, como ${Math.round(pctEscolha)}% dos outros alunos`
+          : `Você marcou ${selecionada}, como ${Math.round(pctEscolha)}% dos outros alunos`;
 
   return (
     <>
@@ -214,7 +229,9 @@ export default function Sessao({ filtros, nonce, onFinalizar, onVoltar }: Props)
               let cor = "bg-line";
               if (i < resultados.length) cor = resultados[i] ? "bg-t4" : "bg-t1";
               else if (i === idx) cor = confirmado ? (correta ? "bg-t4" : "bg-t1") : "bg-ink";
-              return <span key={q.id} className={`h-2 flex-1 rounded-[2px] ${cor}`} />;
+              return (
+                <span key={q.id} className={`h-2 flex-1 rounded-[2px] transition-colors duration-desliza ease-brand ${cor}`} />
+              );
             })}
           </div>
           <span className="shrink-0 text-[14px] font-semibold tabular-nums">
@@ -231,11 +248,13 @@ export default function Sessao({ filtros, nonce, onFinalizar, onVoltar }: Props)
             onClick={alternarMarcacao}
             aria-pressed={marcadaAtual}
             title={marcadaAtual ? "Desmarcar caso (M)" : "Marcar para revisão (M)"}
-            className={`flex h-9 items-center gap-1.5 rounded-btn border px-3 text-[14px] font-medium transition duration-hover ${
+            className={`flex h-9 items-center gap-1.5 rounded-btn border px-3 text-[14px] font-medium transition duration-hover ${PRESSAO} ${
               marcadaAtual ? "border-t3 bg-t3-soft text-ink" : "border-line text-ink-2 hover:border-muted"
             }`}
           >
-            <Flag size={16} strokeWidth={2} />
+            <span key={marcadaAtual ? "marcado" : "livre"} className={`flex ${marcadaAtual ? "animate-marcar" : ""}`}>
+              <Flag size={16} strokeWidth={2} />
+            </span>
             <span className="hidden sm:inline">{marcadaAtual ? "Marcado" : "Marcar"}</span>
           </button>
           <button
@@ -248,122 +267,126 @@ export default function Sessao({ filtros, nonce, onFinalizar, onVoltar }: Props)
         </div>
       </BarraFoco>
 
-      <div className="mx-auto flex max-w-[840px] flex-col gap-5">
-        <div className="flex items-end justify-between gap-6">
-          <div className="flex flex-col gap-1">
-            <span className="rotulo text-muted">Caso</span>
-            <span className="num-lg">{String(idx + 1).padStart(2, "0")}</span>
-          </div>
-          <div className="flex min-w-0 flex-col items-end gap-1.5 text-right">
-            {recorteCaso && <span className="text-[15px] font-semibold">{recorteCaso}</span>}
-            {prova && (
-              <span className="flex items-center gap-1.5 text-apoio text-muted">
-                <BadgeCheck size={16} strokeWidth={2} className="text-t4" />
-                Prova oficial · {prova}
-              </span>
-            )}
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-6 rounded-caso border border-line bg-surface p-6 md:px-11 md:py-9">
-          <p className="max-w-[68ch] text-enunciado text-ink">{questaoAtual.enunciado}</p>
-          {questaoAtual.tem_imagem && (
-            <img
-              src={`${API_URL}/questoes/${questaoAtual.id}/imagem`}
-              alt="Imagem do caso"
-              className="max-w-full rounded-card border border-line"
-            />
-          )}
-
-          <div className="flex flex-col gap-2">
-            {LETRAS.filter((letra) => letra in questaoAtual.alternativas).map((letra) => {
-              let estado: EstadoAlternativa = "normal";
-              if (!confirmado) estado = letra === selecionada ? "selecionada" : "normal";
-              else if (letra === questaoAtual.resposta_correta) estado = "correta";
-              else if (letra === selecionada) estado = "errada";
-              else estado = "neutra";
-
-              return (
-                <AlternativaLinha
-                  key={letra}
-                  letra={letra}
-                  texto={questaoAtual.alternativas[letra]}
-                  estado={estado}
-                  percentual={
-                    confirmado ? (distribuicao && !distribuicaoVazia ? (distribuicao[letra] ?? 0) : null) : undefined
-                  }
-                  disabled={confirmado}
-                  onClick={() => setSelecionada(letra)}
-                />
-              );
-            })}
-          </div>
-
-          {!confirmado ? (
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div className="hidden items-center gap-4 text-apoio text-muted sm:flex">
-                <span className="flex items-center gap-1.5">
-                  <Kbd>A–E</Kbd>selecionar
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <Kbd>M</Kbd>marcar
-                </span>
-              </div>
-              <button type="button" onClick={confirmar} disabled={!selecionada} className={`${BOTAO_PRIMARIO} ml-auto pr-2.5`}>
-                Confirmar resposta
-                <Kbd sobreTinta>Enter</Kbd>
-              </button>
+      <div className="mx-auto max-w-[680px]">
+        {/* A chave por caso remonta cabeçalho e cartão: o caso novo entra
+            deslizando no sentido do avanço (DESIGN_TRIAGEM.md §3). */}
+        <div key={idx} className={`flex flex-col gap-5 ${avancou ? "animate-entrar-frente" : "animate-desvanecer"}`}>
+          <div className="flex items-end justify-between gap-6">
+            <div className="flex flex-col gap-1">
+              <span className="rotulo text-muted">Caso</span>
+              <span className="num-lg">{String(idx + 1).padStart(2, "0")}</span>
             </div>
-          ) : (
-            <>
-              <div className="flex flex-col gap-3 border-t border-line-soft pt-6">
-                <span className="rotulo text-muted">Discussão do caso</span>
-                <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                  <span className="text-subtitulo">Resposta correta: {questaoAtual.resposta_correta}</span>
-                  {/* Altura reservada: a frase só entra quando a distribuição chega. */}
-                  <span className="min-h-[1.45em] text-apoio text-muted">
-                    {distribuicaoVazia
-                      ? "Ninguém mais respondeu este caso ainda."
-                      : pctEscolha === undefined
-                        ? null
-                        : pctEscolha === 0
-                          ? `Nenhum outro aluno marcou ${selecionada}.`
-                          : correta
-                            ? `Você acertou, como ${Math.round(pctEscolha)}% dos outros alunos`
-                            : `Você marcou ${selecionada}, como ${Math.round(pctEscolha)}% dos outros alunos`}
+            <div className="flex min-w-0 flex-col items-end gap-1.5 text-right">
+              {recorteCaso && <span className="text-[15px] font-semibold">{recorteCaso}</span>}
+              {prova && (
+                <span className="flex items-center gap-1.5 text-apoio text-muted">
+                  <BadgeCheck size={16} strokeWidth={2} className="text-t4" />
+                  Prova oficial · {prova}
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-6 rounded-caso border border-line bg-surface p-6 md:px-11 md:py-9">
+            {/* Sem limite em ch: o texto vai até a borda das alternativas, e é a coluna
+                de 680px que mantém a linha curta (DESIGN_TRIAGEM.md §5). */}
+            <p className="leitura-enunciado text-ink">{questaoAtual.enunciado}</p>
+            {questaoAtual.tem_imagem && (
+              <img
+                src={`${API_URL}/questoes/${questaoAtual.id}/imagem`}
+                alt="Imagem do caso"
+                className="max-w-full rounded-card border border-line"
+              />
+            )}
+
+            <div className="flex flex-col gap-2">
+              {LETRAS.filter((letra) => letra in questaoAtual.alternativas).map((letra) => {
+                let estado: EstadoAlternativa = "normal";
+                if (!confirmado) estado = letra === selecionada ? "selecionada" : "normal";
+                else if (letra === questaoAtual.resposta_correta) estado = "correta";
+                else if (letra === selecionada) estado = "errada";
+                else estado = "neutra";
+
+                return (
+                  <AlternativaLinha
+                    key={letra}
+                    letra={letra}
+                    texto={questaoAtual.alternativas[letra]}
+                    estado={estado}
+                    percentual={
+                      confirmado ? (distribuicao && !distribuicaoVazia ? (distribuicao[letra] ?? 0) : null) : undefined
+                    }
+                    disabled={confirmado}
+                    onClick={() => setSelecionada(letra)}
+                  />
+                );
+              })}
+            </div>
+
+            {!confirmado ? (
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="hidden items-center gap-4 text-apoio text-muted sm:flex">
+                  <span className="flex items-center gap-1.5">
+                    <Kbd>A–E</Kbd>selecionar
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <Kbd>M</Kbd>marcar
                   </span>
                 </div>
-                {questaoAtual.explicacao && (
-                  <p className="max-w-[66ch] text-[16.5px] leading-[1.7] text-ink-2">{questaoAtual.explicacao}</p>
-                )}
+                <button type="button" onClick={confirmar} disabled={!selecionada} className={`${BOTAO_PRIMARIO} ml-auto pr-2.5`}>
+                  Confirmar resposta
+                  <Kbd sobreTinta>Enter</Kbd>
+                </button>
               </div>
+            ) : (
+              <>
+                <div className="flex animate-entrar flex-col gap-3 border-t border-line-soft pt-6">
+                  <span className="rotulo text-muted">Discussão do caso</span>
+                  <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                    <span className="text-subtitulo">Resposta correta: {questaoAtual.resposta_correta}</span>
+                    {/* Altura reservada: a frase só entra quando a distribuição chega. */}
+                    <span className="min-h-[1.45em] text-apoio text-muted">
+                      {fraseDistribuicao && <span className="animate-desvanecer">{fraseDistribuicao}</span>}
+                    </span>
+                  </div>
+                  {questaoAtual.explicacao && (
+                    <TextoDiscussao texto={questaoAtual.explicacao} />
+                  )}
+                </div>
 
-              {correta ? (
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <span className="text-apoio text-muted">Como você chegou nessa resposta?</span>
-                  <div className="flex flex-wrap gap-2">
-                    <button type="button" onClick={() => concluir("chute", true)} className={BOTAO_SECUNDARIO}>
-                      Acertei no chute
-                    </button>
-                    <button type="button" onClick={() => concluir("seguro", true)} className={BOTAO_PRIMARIO}>
-                      Acertei com segurança
+                {correta ? (
+                  <div
+                    className="flex animate-entrar flex-wrap items-center justify-between gap-3"
+                    style={{ animationDelay: "90ms" }}
+                  >
+                    <span className="text-apoio text-muted">Como você chegou nessa resposta?</span>
+                    <div className="flex flex-wrap gap-2">
+                      <button type="button" onClick={() => concluir("chute", true)} className={BOTAO_SECUNDARIO}>
+                        Acertei no chute
+                      </button>
+                      <button type="button" onClick={() => concluir("seguro", true)} className={BOTAO_PRIMARIO}>
+                        Acertei com segurança
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    className="flex animate-entrar flex-wrap items-center justify-between gap-3"
+                    style={{ animationDelay: "90ms" }}
+                  >
+                    <span className="flex items-center gap-2 text-apoio text-ink-2">
+                      <RefreshCw size={16} strokeWidth={2} />
+                      Volta na sua revisão em 10 min
+                    </span>
+                    <button type="button" onClick={() => concluir(undefined, false)} className={`${BOTAO_PRIMARIO} pr-2.5`}>
+                      Próximo caso
+                      <Kbd sobreTinta>Enter</Kbd>
                     </button>
                   </div>
-                </div>
-              ) : (
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <span className="flex items-center gap-2 text-apoio text-ink-2">
-                    <RefreshCw size={16} strokeWidth={2} />
-                    Volta na sua revisão em 10 min
-                  </span>
-                  <button type="button" onClick={() => concluir(undefined, false)} className={`${BOTAO_PRIMARIO} pr-2.5`}>
-                    Próximo caso
-                    <Kbd sobreTinta>Enter</Kbd>
-                  </button>
-                </div>
-              )}
-            </>
-          )}
+                )}
+              </>
+            )}
+          </div>
         </div>
       </div>
     </>

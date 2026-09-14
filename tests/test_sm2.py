@@ -68,9 +68,32 @@ def test_avaliar_revisao_mantem_marcada_quando_e_erro(usuario_teste, questao_tes
     assert db.questao_esta_marcada(usuario_teste, questao_teste)
 
 
-def test_fila_revisao_inclui_questao_nunca_revisada(usuario_teste, questao_teste):
+def test_fila_revisao_nao_inclui_questao_nunca_respondida(usuario_teste, questao_teste):
+    """A fila juntava o banco inteiro ainda não visto (aba mostrava 34, a tela
+    "624 restantes"). Questão sem registro de revisão é do Praticar."""
     fila = sr.fila_revisao(usuario_id=usuario_teste)
-    assert any(q["id"] == questao_teste for q in fila)
+    assert questao_teste not in [q["id"] for q in fila]
+    assert sr.contar_fila_revisao(usuario_id=usuario_teste) == len(fila)
+
+
+def test_fila_revisao_inclui_questao_marcada_mesmo_sem_resposta(usuario_teste, questao_teste):
+    db.marcar_questao(usuario_teste, questao_teste)
+    fila = sr.fila_revisao(usuario_id=usuario_teste)
+    assert questao_teste in [q["id"] for q in fila]
+    assert sr.contar_fila_revisao(usuario_id=usuario_teste) == len(fila)
+
+
+def test_fila_revisao_inclui_vencida_e_contagem_bate(usuario_teste, questao_teste):
+    sr.registrar_revisao(questao_teste, 1, usuario_id=usuario_teste)
+    assert sr.contar_fila_revisao(usuario_id=usuario_teste) == 0  # agendada para daqui a 10 min
+    with db.get_conn() as conn:
+        conn.execute(
+            "UPDATE revisao SET proxima_revisao = ? WHERE usuario_id = ? AND questao_id = ?",
+            (datetime.datetime.now() - datetime.timedelta(minutes=1), usuario_teste, questao_teste),
+        )
+    fila = sr.fila_revisao(usuario_id=usuario_teste)
+    assert [q["id"] for q in fila] == [questao_teste]
+    assert sr.contar_fila_revisao(usuario_id=usuario_teste) == 1
 
 
 def test_fila_revisao_nao_duplica_questao_pendente_e_marcada(usuario_teste, questao_teste):
@@ -84,6 +107,7 @@ def test_fila_revisao_nao_duplica_questao_pendente_e_marcada(usuario_teste, ques
     fila = sr.fila_revisao(usuario_id=usuario_teste)
     ids = [q["id"] for q in fila]
     assert ids.count(questao_teste) == 1
+    assert sr.contar_fila_revisao(usuario_id=usuario_teste) == 1
 
 
 def test_erro_agenda_de_verdade_em_10_minutos_nao_no_dia_seguinte(usuario_teste, questao_teste):

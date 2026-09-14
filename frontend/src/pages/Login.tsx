@@ -36,14 +36,20 @@ export default function Login() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-ground px-4 py-10">
-      <div className="flex w-full max-w-[400px] flex-col gap-8">
+      <div className="flex w-full max-w-[400px] animate-entrar flex-col gap-8">
         <div className="flex flex-col items-center gap-3 text-center">
           <Marca grande />
           <p className="text-corpo text-ink-2">Sua plataforma de estudos para residência médica</p>
         </div>
 
         <div className="flex flex-col gap-5 rounded-caso border border-line bg-surface p-6 md:p-7">
-          <div role="tablist" aria-label="Acesso" className="grid grid-cols-2 gap-1 rounded-btn bg-ground p-1">
+          {/* Fundo da aba ativa desliza entre as duas colunas (iguais). */}
+          <div role="tablist" aria-label="Acesso" className="relative grid grid-cols-2 gap-1 rounded-btn bg-ground p-1">
+            <span
+              aria-hidden="true"
+              className="absolute inset-y-1 left-1 w-[calc(50%-6px)] rounded-col border border-line bg-surface transition-transform duration-desliza ease-suave"
+              style={{ transform: aba === "criar" ? "translateX(calc(100% + 4px))" : "none" }}
+            />
             {(["entrar", "criar"] as const).map((valor) => (
               <button
                 key={valor}
@@ -54,8 +60,8 @@ export default function Login() {
                   setAba(valor);
                   setErro(null);
                 }}
-                className={`h-9 rounded-col text-[14px] transition duration-hover ${
-                  aba === valor ? "border border-line bg-surface font-semibold text-ink" : "text-muted hover:text-ink"
+                className={`relative h-9 rounded-col text-[14px] font-semibold transition-colors duration-toggle ${
+                  aba === valor ? "text-ink" : "text-muted hover:text-ink"
                 }`}
               >
                 {valor === "entrar" ? "Entrar" : "Criar conta"}
@@ -90,7 +96,7 @@ export default function Login() {
               />
             </label>
             {aba === "criar" && (
-              <label htmlFor="login-confirmar" className="flex flex-col gap-1.5">
+              <label htmlFor="login-confirmar" className="flex animate-entrar flex-col gap-1.5">
                 <span className="rotulo text-muted">Confirmar senha</span>
                 <input
                   id="login-confirmar"
@@ -106,7 +112,7 @@ export default function Login() {
             )}
 
             {erro && (
-              <p role="alert" className="text-apoio font-medium text-t1">
+              <p role="alert" className="animate-entrar text-apoio font-medium text-t1">
                 {erro}
               </p>
             )}

@@ -90,6 +90,35 @@ export interface PainelData {
   evolucao_14_dias: DiaEvolucao[];
   respondidas_hoje: number;
   revisoes_hoje: number;
+  revisao: RevisaoHoje & { hoje: number; proximos_dias: PrevisaoDia[] };
+  memoria: EvolucaoMemoria;
+}
+
+// Acompanhamento da memória (repeticao_espacada.evolucao_memoria). "Teste" é um
+// caso que voltou depois de pelo menos 1 dia sem ser visto; retenção = lembrou/testes.
+export interface EvolucaoMemoria {
+  estagios: { aprendendo: number; consolidando: number; consolidado: number };
+  // Blocos de 7 dias terminando hoje, do mais antigo para o atual.
+  semanas: { inicio: string; testes: number; lembrou: number }[];
+  // Da menor retenção para a maior, nas mesmas semanas.
+  especialidades: { area: string; especialidade: string | null; testes: number; lembrou: number }[];
+  ultimos_7_dias: { testes: number; lembrou: number; recuperados: number; consolidados: number; dias_com_revisao: number };
+}
+
+// Carga do dia sob a meta diária (repeticao_espacada.plano_revisao / resumo_revisao_hoje).
+export interface RevisaoHoje {
+  meta: number;
+  feitas_hoje: number;
+  excedente: number; // venceram, mas passam da meta: esperam, por prioridade
+  segundos_por_caso: number; // mediana do próprio aluno, para estimar a duração
+}
+
+// Um dia da previsão de carga (repeticao_espacada.previsao_revisoes).
+export interface PrevisaoDia {
+  dia: string;
+  vencem: number;
+  dentro_meta: number;
+  acima_meta: number;
 }
 
 export interface ProximaLeva {
@@ -97,9 +126,29 @@ export interface ProximaLeva {
   total: number;
 }
 
+// Prazo que uma nota agenda (repeticao_espacada.prever_prazos): minutos só no erro.
+export type PrazoRevisao = { minutos: number } | { dias: number };
+export type PrazosRevisao = Record<"1" | "3" | "4" | "5", PrazoRevisao>;
+
+export interface QuestaoRevisao extends Questao {
+  prazos: PrazosRevisao;
+}
+
 export interface LevaRevisao {
-  fila: Questao[];
+  fila: QuestaoRevisao[];
   proxima_leva: ProximaLeva | null;
+  hoje: RevisaoHoje;
+}
+
+export interface AvaliacaoRevisao {
+  ok: boolean;
+  correta: boolean | null;
+  qualidade: number;
+  proxima_revisao: string;
+  // Previstos a partir do novo estado: o caso errado reaparece na sessão com eles.
+  prazos: PrazosRevisao;
+  recuperado: boolean; // tinha errado e lembrou depois de pelo menos 1 dia
+  consolidou: boolean; // o intervalo passou a 21 dias ou mais
 }
 
 export interface Simulado {
@@ -193,4 +242,5 @@ export interface Me {
   respondidas_hoje: number;
   total_questoes: number;
   total_materiais: number;
+  meta_revisao_diaria: number;
 }

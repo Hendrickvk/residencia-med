@@ -3,6 +3,7 @@ import { EstadoVazio } from "../../components/EstadoVazio";
 import { useMe } from "../../lib/auth";
 import { usePainel } from "../../lib/painel";
 import { Cabecalho } from "./Cabecalho";
+import { EvolucaoMemoria } from "./EvolucaoMemoria";
 import { EvolucaoTriagem } from "./EvolucaoTriagem";
 import { FilaRevisao } from "./FilaRevisao";
 import { QuadroTriagem } from "./QuadroTriagem";
@@ -22,6 +23,7 @@ export default function Painel() {
           ))}
         </div>
         <div className="h-[240px] animate-pulse rounded-card bg-line-soft" />
+        <div className="h-[280px] animate-pulse rounded-card bg-line-soft" />
       </div>
     );
   }
@@ -48,9 +50,16 @@ export default function Painel() {
         onAbrir={(areaId) => navigate("/praticar", { state: { areaId } })}
         onPraticar={(areaId) => navigate("/praticar", { state: { areaId, iniciarImediato: true, quantidade: 10 } })}
       />
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
-        <FilaRevisao quantidade={data.revisoes_hoje} onRevisar={() => navigate("/revisao")} />
+      {/* Entra depois do quadro, que chega em cascata. */}
+      <div
+        className="grid animate-entrar grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]"
+        style={{ animationDelay: "260ms" }}
+      >
+        <FilaRevisao revisao={data.revisao} onRevisar={() => navigate("/revisao")} />
         <EvolucaoTriagem evolucao={data.evolucao_14_dias} />
+      </div>
+      <div className="animate-entrar" style={{ animationDelay: "340ms" }}>
+        <EvolucaoMemoria memoria={data.memoria} />
       </div>
     </div>
   );

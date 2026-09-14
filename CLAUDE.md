@@ -27,7 +27,7 @@ pytest tests/test_sm2.py                   # single file
 pytest tests/test_sm2.py::test_nome        # single test
 ```
 If `uvicorn --reload` keeps serving old routes after edits (has happened on this Windows machine), stop both uvicorn processes and start it again. `streamlit run` never picks up `db.py`/`ui.py` changes on refresh — restart it.
-**There is no separate test database** — tests run directly against the production Neon Postgres (same `DATABASE_URL`/secrets as prod). Fixtures in `tests/conftest.py` create uuid-suffixed data (`pytest_<uuid>@teste.local`, `__pytest_area_<uuid>`) and clean up via `ON DELETE CASCADE` in teardown. Any new fixture must follow this pattern — never write a fixture without teardown, and never reuse real user data. Production also holds two non-real accounts: `demo@residenciamed.com` (fake history from `scripts/seed_demo_user.py`, idempotent) and `qa.claude@residenciamed.local` for browser QA.
+**There is no separate test database** — tests run directly against the production Neon Postgres (same `DATABASE_URL`/secrets as prod). Fixtures in `tests/conftest.py` create uuid-suffixed data (`pytest_<uuid>@teste.local`, `__pytest_area_<uuid>`) and clean up via `ON DELETE CASCADE` in teardown. Any new fixture must follow this pattern — never write a fixture without teardown, and never reuse real user data. Production also holds two non-real accounts: `demo@residenciamed.com` (fake history from `scripts/seed_demo_user.py`, plus spaced-repetition history from `scripts/seed_demo_revisao.py`; both idempotent) and `qa.claude@residenciamed.local` for browser QA.
 
 ### Streamlit (admin screens)
 ```bash

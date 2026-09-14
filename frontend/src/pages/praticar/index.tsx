@@ -23,7 +23,7 @@ export default function Praticar() {
   const location = useLocation();
   const estadoNav = (location.state as EstadoNavegacao | null) ?? null;
 
-  const [fase, setFase] = useState<Fase>(() => {
+  const [fase, setFaseBruta] = useState<Fase>(() => {
     if (estadoNav?.iniciarImediato) {
       return {
         tipo: "sessao",
@@ -38,13 +38,25 @@ export default function Praticar() {
     }
     return { tipo: "config" };
   });
+  // A primeira fase já entra com a animação da troca de tela (AppShell); só
+  // as trocas seguintes animam aqui, para não somar dois movimentos.
+  const [trocouFase, setTrocouFase] = useState(false);
+
+  function setFase(nova: Fase) {
+    setFaseBruta(nova);
+    setTrocouFase(true);
+  }
+
+  const entrada = trocouFase ? "animate-entrar" : "";
 
   if (fase.tipo === "config") {
     return (
-      <Configurador
-        areaInicial={estadoNav?.areaId}
-        onIniciar={(filtros) => setFase({ tipo: "sessao", filtros, nonce: Date.now() })}
-      />
+      <div key="config" className={entrada}>
+        <Configurador
+          areaInicial={estadoNav?.areaId}
+          onIniciar={(filtros) => setFase({ tipo: "sessao", filtros, nonce: Date.now() })}
+        />
+      </div>
     );
   }
 
@@ -59,5 +71,9 @@ export default function Praticar() {
     );
   }
 
-  return <Resumo resumo={fase.resumo} onNovaSessao={() => setFase({ tipo: "config" })} />;
+  return (
+    <div key="resumo" className={entrada}>
+      <Resumo resumo={fase.resumo} onNovaSessao={() => setFase({ tipo: "config" })} />
+    </div>
+  );
 }

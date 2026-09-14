@@ -1,3 +1,4 @@
+import { NumeroAnimado } from "../../components/NumeroAnimado";
 import { formatarPctBR } from "../../lib/format";
 import { MINIMO_AMOSTRA } from "../../lib/triagem";
 import type { AreaDesempenho, PainelData } from "../../lib/types";
@@ -63,7 +64,12 @@ export function Cabecalho({ totais, porArea, respondidasHoje, provaAlvo }: Props
       </div>
       <div className="flex shrink-0 flex-col gap-1.5 md:items-end">
         <span className="rotulo text-muted">Aproveitamento geral</span>
-        <span className="num-xl max-md:text-[64px]">{formatarPctBR(totais.pct_acerto_geral)}%</span>
+        <NumeroAnimado
+          className="num-xl self-start max-md:text-[64px] md:self-auto"
+          valor={totais.pct_acerto_geral}
+          formatar={(v) => `${formatarPctBR(v)}%`}
+          chave="painel-aproveitamento"
+        />
       </div>
     </div>
   );

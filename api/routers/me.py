@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 
 import db
 from api.deps import eh_admin, usuario_atual
-from api.schemas import MeOut, ProvaAlvoIn, TemaIn
+from api.schemas import MeOut, MetaRevisaoIn, ProvaAlvoIn, TemaIn
 
 router = APIRouter(prefix="/me", tags=["me"])
 
@@ -21,6 +21,7 @@ def obter_me(usuario=Depends(usuario_atual)):
         respondidas_hoje=db.contar_respondidas_hoje(usuario_id=usuario["id"]),
         total_questoes=db.contar_questoes(),
         total_materiais=db.contar_materiais(),
+        meta_revisao_diaria=usuario["meta_revisao_diaria"],
     )
 
 
@@ -35,3 +36,9 @@ def atualizar_prova_alvo(dados: ProvaAlvoIn, usuario=Depends(usuario_atual)):
     data_iso = dados.data.isoformat() if dados.data else None
     db.definir_prova_alvo(usuario["id"], data_iso)
     return {"prova_alvo": data_iso}
+
+
+@router.patch("/meta-revisao")
+def atualizar_meta_revisao(dados: MetaRevisaoIn, usuario=Depends(usuario_atual)):
+    db.atualizar_meta_revisao(usuario["id"], dados.meta)
+    return {"meta_revisao_diaria": dados.meta}

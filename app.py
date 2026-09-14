@@ -646,14 +646,14 @@ if pagina_atual == "painel":
             'Revisões de hoje</div>',
             unsafe_allow_html=True,
         )
-        pendentes_hoje = sr.questoes_para_revisar_hoje(usuario_id=usuario_id)
-        if not pendentes_hoje:
+        total_fila = sr.contar_fila_revisao(usuario_id=usuario_id)
+        if not total_fila:
             ui.empty_state("Nenhuma revisão vencida hoje.")
         else:
             with st.container(border=True):
-                st.write(f"{len(pendentes_hoje)} questõe(s) esperando revisão.")
+                st.write(f"{total_fila} questõe(s) esperando revisão.")
                 if st.button(
-                    f"Revisar {len(pendentes_hoje)} itens", key="ir_revisar",
+                    f"Revisar {total_fila} itens", key="ir_revisar",
                     icon=":material/arrow_forward:", type="primary",
                 ):
                     st.session_state["_forcar_pagina"] = "revisao"
@@ -1057,14 +1057,8 @@ elif pagina_atual == "revisao":
     )
 
     if "rev_fila_ids" not in st.session_state:
-        pendentes = sr.questoes_para_revisar_hoje(usuario_id=usuario_id)
-        novas = sr.questoes_nunca_revisadas(usuario_id=usuario_id)
-        marcadas = db.listar_questoes_marcadas(usuario_id=usuario_id)
-        ids_ja_incluidos = {q["id"] for q in list(pendentes) + list(novas)}
-        marcadas_extra = [q["id"] for q in marcadas if q["id"] not in ids_ja_incluidos]
-        st.session_state["rev_fila_ids"] = (
-            [q["id"] for q in pendentes] + [q["id"] for q in novas] + marcadas_extra
-        )
+        # Mesma regra da API (vencidas + marcadas), definida em repeticao_espacada.
+        st.session_state["rev_fila_ids"] = [q["id"] for q in sr.fila_revisao(usuario_id=usuario_id)]
         st.session_state["rev_idx"] = 0
         st.session_state["rev_revelado"] = False
 

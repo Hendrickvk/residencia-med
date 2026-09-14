@@ -2,8 +2,9 @@ import { AlertTriangle, ArrowRight } from "lucide-react";
 import { useState } from "react";
 import { Dialog } from "../../components/Dialog";
 import { useAreas, useBancas } from "../../lib/catalogo";
-import { BOTAO_PRIMARIO, BOTAO_SECUNDARIO, CAMPO } from "../../lib/estilos";
+import { BOTAO_PRIMARIO, BOTAO_SECUNDARIO, CAMPO, PRESSAO } from "../../lib/estilos";
 import { formatarDuracaoMin, formatarPctBR } from "../../lib/format";
+import { atraso } from "../../lib/movimento";
 import {
   criarSimulado,
   criarSimuladoOficial,
@@ -23,6 +24,11 @@ interface Props {
 type Modo = "oficial" | "montar";
 
 const PRESETS = [10, 20, 30, 50] as const;
+
+const MODOS = [
+  ["oficial", "Prova oficial"],
+  ["montar", "Montar simulado"],
+] as const;
 
 function EtiquetaPct({ pct }: { pct: number }) {
   const nivel = nivelTriagem(pct);
@@ -46,9 +52,11 @@ export default function Configurador({ onIniciado }: Props) {
   const { data: edicoes } = useEdicoesOficiais();
   const { data: emAndamento } = useSimuladoEmAndamento();
   const [modo, setModo] = useState<Modo>("oficial");
+  // Só a troca de aba anima o conteúdo; na chegada à tela quem anima é o AppShell.
+  const [trocouModo, setTrocouModo] = useState(false);
 
   return (
-    <div className="mx-auto flex max-w-[840px] flex-col gap-6">
+    <div className="mx-auto flex max-w-[680px] flex-col gap-6">
       <div className="flex flex-col gap-2">
         <span className="rotulo text-muted">Nova prova</span>
         <h1 className="text-titulo">Simulado</h1>
@@ -60,21 +68,31 @@ export default function Configurador({ onIniciado }: Props) {
 
       {emAndamento && <ProvaEmAndamento simulado={emAndamento} onContinuar={() => onIniciado(emAndamento.id)} />}
 
-      <div role="tablist" aria-label="Tipo de simulado" className="flex gap-1 self-start rounded-btn border border-line bg-surface p-1">
-        {(
-          [
-            ["oficial", "Prova oficial"],
-            ["montar", "Montar simulado"],
-          ] as const
-        ).map(([m, rotulo]) => (
+      {/* Colunas iguais para o fundo da aba ativa deslizar exatamente uma
+          coluna (100% da própria largura + o gap de 4px). */}
+      <div
+        role="tablist"
+        aria-label="Tipo de simulado"
+        className="relative grid grid-cols-2 gap-1 self-start rounded-btn border border-line bg-surface p-1"
+      >
+        <span
+          aria-hidden="true"
+          className="absolute inset-y-1 left-1 w-[calc(50%-6px)] rounded-col bg-ink transition-transform duration-desliza ease-suave"
+          style={{ transform: modo === "montar" ? "translateX(calc(100% + 4px))" : "none" }}
+        />
+        {MODOS.map(([m, rotulo]) => (
           <button
             key={m}
             type="button"
             role="tab"
             aria-selected={modo === m}
-            onClick={() => setModo(m)}
-            className={`h-9 rounded-col px-4 text-[14.5px] font-semibold transition duration-hover ${
-              modo === m ? "bg-ink text-onink" : "text-ink-2 hover:text-ink"
+            onClick={() => {
+              if (m === modo) return;
+              setModo(m);
+              setTrocouModo(true);
+            }}
+            className={`relative h-9 whitespace-nowrap rounded-col px-4 text-[14.5px] font-semibold transition-colors duration-toggle ${
+              modo === m ? "text-onink" : "text-ink-2 hover:text-ink"
             }`}
           >
             {rotulo}
@@ -82,14 +100,16 @@ export default function Configurador({ onIniciado }: Props) {
         ))}
       </div>
 
-      {modo === "oficial" ? (
-        <ProvasOficiais edicoes={edicoes} historico={historico} onIniciado={onIniciado} />
-      ) : (
-        <MontarSimulado onIniciado={onIniciado} />
-      )}
+      <div key={modo} className={trocouModo ? "animate-entrar" : ""}>
+        {modo === "oficial" ? (
+          <ProvasOficiais edicoes={edicoes} historico={historico} onIniciado={onIniciado} />
+        ) : (
+          <MontarSimulado onIniciado={onIniciado} />
+        )}
+      </div>
 
       {historico && historico.length > 0 && (
-        <div className="flex flex-col gap-3">
+        <div className="flex animate-desvanecer flex-col gap-3">
           <h2 className="text-bloco">Simulados anteriores</h2>
           <div className="rounded-caso border border-line bg-surface">
             {historico.map((h) => (
@@ -129,7 +149,7 @@ function ProvaEmAndamento({ simulado, onContinuar }: { simulado: SimuladoEmAndam
     simulado.edicao && simulado.banca ? nomeEdicao(simulado.banca, simulado.edicao) : `Simulado de ${simulado.num_questoes} questões`;
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-4 rounded-caso border border-ink bg-surface px-6 py-5">
+    <div className="flex animate-entrar flex-wrap items-center justify-between gap-4 rounded-caso border border-ink bg-surface px-6 py-5">
       <div className="flex min-w-0 flex-col gap-1">
         <span className="rotulo text-muted">Prova em andamento</span>
         <span className="text-bloco font-semibold">{nome}</span>
@@ -137,9 +157,9 @@ function ProvaEmAndamento({ simulado, onContinuar }: { simulado: SimuladoEmAndam
           {simulado.respondidas} de {simulado.num_questoes} respondidas · faltam {formatarDuracaoMin(restanteMin)}
         </span>
       </div>
-      <button type="button" onClick={onContinuar} className={BOTAO_PRIMARIO}>
+      <button type="button" onClick={onContinuar} className={`group ${BOTAO_PRIMARIO}`}>
         Continuar prova
-        <ArrowRight size={18} strokeWidth={2} />
+        <ArrowRight size={18} strokeWidth={2} className="transition-transform duration-toggle ease-suave group-hover:translate-x-0.5" />
       </button>
     </div>
   );
@@ -205,12 +225,13 @@ function ProvasOficiais({
         pelo INEP ficam de fora.
       </p>
       <div className="rounded-caso border border-line bg-surface">
-        {edicoes.map((e) => {
+        {edicoes.map((e, i) => {
           const ultima = historico?.find((h) => h.banca === e.banca && h.edicao === e.edicao);
           return (
             <div
               key={`${e.banca}-${e.edicao}`}
-              className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b border-line-soft px-5 py-4 last:border-0 sm:grid-cols-[minmax(0,1fr)_auto_auto]"
+              className="grid animate-desvanecer grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b border-line-soft px-5 py-4 transition-colors duration-hover last:border-0 hover:bg-ground sm:grid-cols-[minmax(0,1fr)_auto_auto]"
+              style={atraso(i, 30)}
             >
               <div className="min-w-0">
                 <div className="text-[16px] font-semibold">{nomeEdicao(e.banca, e.edicao)}</div>
@@ -250,7 +271,7 @@ function ProvasOficiais({
           </p>
         )}
         {erro && (
-          <div className="mt-4 flex items-start gap-2.5 rounded-card bg-t2-soft px-4 py-3 text-apoio text-ink">
+          <div className="mt-4 flex animate-entrar items-start gap-2.5 rounded-card bg-t2-soft px-4 py-3 text-apoio text-ink">
             <AlertTriangle size={16} strokeWidth={2} className="mt-0.5 shrink-0" />
             <span>{erro}</span>
           </div>
@@ -350,7 +371,7 @@ function MontarSimulado({ onIniciado }: { onIniciado: (id: number) => void }) {
               type="button"
               aria-pressed={preset === p}
               onClick={() => setPreset(p)}
-              className={`h-10 min-w-[56px] rounded-btn border px-4 text-[15px] font-semibold tabular-nums transition duration-hover ease-brand ${
+              className={`h-10 min-w-[56px] rounded-btn border px-4 text-[15px] font-semibold tabular-nums transition duration-hover ease-brand ${PRESSAO} ${
                 preset === p ? "border-ink bg-ink text-onink" : "border-line bg-surface text-ink-2 hover:border-muted"
               }`}
             >
@@ -366,7 +387,7 @@ function MontarSimulado({ onIniciado }: { onIniciado: (id: number) => void }) {
               value={numCustom}
               aria-label="Quantas questões"
               onChange={(e) => setNumCustom(Number(e.target.value))}
-              className={`${CAMPO} !w-24 tabular-nums`}
+              className={`${CAMPO} !w-24 animate-surgir tabular-nums`}
             />
           )}
         </div>
@@ -392,7 +413,7 @@ function MontarSimulado({ onIniciado }: { onIniciado: (id: number) => void }) {
       </div>
 
       {(semQuestoesSuficientes || erro) && (
-        <div className="flex items-start gap-2.5 rounded-card bg-t2-soft px-4 py-3 text-apoio text-ink">
+        <div className="flex animate-entrar items-start gap-2.5 rounded-card bg-t2-soft px-4 py-3 text-apoio text-ink">
           <AlertTriangle size={16} strokeWidth={2} className="mt-0.5 shrink-0" />
           <span>
             {erro ??
@@ -406,10 +427,14 @@ function MontarSimulado({ onIniciado }: { onIniciado: (id: number) => void }) {
           type="button"
           onClick={iniciar}
           disabled={criando || disponiveis === 0 || semQuestoesSuficientes}
-          className={BOTAO_PRIMARIO}
+          className={`group ${BOTAO_PRIMARIO}`}
         >
           Iniciar simulado de {numQuestoes} questões
-          <ArrowRight size={18} strokeWidth={2} />
+          <ArrowRight
+            size={18}
+            strokeWidth={2}
+            className="transition-transform duration-toggle ease-suave group-enabled:group-hover:translate-x-0.5"
+          />
         </button>
       </div>
     </div>

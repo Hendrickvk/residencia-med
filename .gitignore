@@ -7,3 +7,5 @@ data/
 deploy/.env.production
 node_modules/
 frontend/dist/
+# JSON das linhas apagadas/alteradas por scripts de dados em produção
+/backups/

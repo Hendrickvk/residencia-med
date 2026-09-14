@@ -14,21 +14,38 @@ function listaNatural(itens: string[]): string {
   return itens.join(", ");
 }
 
+// Cascata do quadro (DESIGN_TRIAGEM.md §3): colunas da mais grave para a mais
+// leve, cartões de cima para baixo dentro de cada coluna.
+function atrasoCartao(coluna: number, linha: number): number {
+  return coluna * 50 + linha * 45;
+}
+
 function CartaoArea({
   area,
   nivel,
   destaque,
+  atrasoMs,
   onAbrir,
   onPraticar,
 }: {
   area: AreaDesempenho;
   nivel: NivelTriagem;
   destaque: boolean;
+  atrasoMs: number;
   onAbrir: (areaId: number) => void;
   onPraticar: (areaId: number) => void;
 }) {
+  const fracao = (
+    <span className="text-[13px] tabular-nums text-muted">
+      {area.acertos}/{area.total}
+    </span>
+  );
+
   return (
-    <div className="group relative flex flex-col gap-1.5 rounded-card border border-line bg-surface p-3.5 transition duration-hover ease-brand hover:border-muted">
+    <div
+      className="group relative flex animate-entrar flex-col gap-1.5 rounded-card border border-line bg-surface p-3.5 transition-colors duration-hover ease-brand hover:border-muted"
+      style={{ animationDelay: `${atrasoMs}ms` }}
+    >
       {/* Botão que cobre o cartão inteiro: evita botão dentro de botão com o "Praticar 10". */}
       <button
         type="button"
@@ -39,33 +56,45 @@ function CartaoArea({
       <span className="text-[15px] font-semibold leading-snug">{area.area}</span>
       <div className="flex items-baseline justify-between gap-2">
         <span className="num-md">{formatarPctBR(area.pct_acerto)}%</span>
-        <span className={`text-[13px] tabular-nums text-muted ${destaque ? "" : "group-focus-within:hidden group-hover:hidden"}`}>
-          {area.acertos}/{area.total}
-        </span>
-        {!destaque && (
-          // Troca a fração pelo atalho no hover, na mesma linha: o cartão não
-          // cresce e a coluna não pula.
-          <button
-            type="button"
-            onClick={() => onPraticar(area.area_id)}
-            className="relative z-10 hidden items-center gap-1 text-[13px] font-semibold text-ink underline-offset-2 hover:underline group-focus-within:flex group-hover:flex"
-          >
-            Praticar 10
-            <ArrowRight size={14} strokeWidth={2} />
-          </button>
+        {destaque ? (
+          fracao
+        ) : (
+          // Fração e atalho empilhados na mesma célula: no hover um sobe e some
+          // enquanto o outro sobe e aparece. O cartão não cresce e a coluna não pula.
+          <span className="grid justify-items-end">
+            <span className="transition duration-toggle ease-brand [grid-area:1/1] group-focus-within:-translate-y-1 group-focus-within:opacity-0 group-hover:-translate-y-1 group-hover:opacity-0">
+              {fracao}
+            </span>
+            <button
+              type="button"
+              onClick={() => onPraticar(area.area_id)}
+              className="pointer-events-none relative z-10 flex translate-y-1 items-center gap-1 whitespace-nowrap text-[13px] font-semibold text-ink opacity-0 underline-offset-2 transition duration-toggle ease-brand [grid-area:1/1] hover:underline group-focus-within:pointer-events-auto group-focus-within:translate-y-0 group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100"
+            >
+              Praticar 10
+              <ArrowRight size={14} strokeWidth={2} />
+            </button>
+          </span>
         )}
       </div>
       <div className="h-1 overflow-hidden rounded-[2px] bg-line-soft">
-        <div className={`h-1 ${CLASSES_NIVEL[nivel].cheio}`} style={{ width: `${area.pct_acerto}%` }} />
+        {/* Enche da esquerda ao entrar; se o valor muda depois, a largura desliza. */}
+        <div
+          className={`h-1 origin-left animate-crescer transition-[width] duration-cresce ease-suave ${CLASSES_NIVEL[nivel].cheio}`}
+          style={{ width: `${area.pct_acerto}%`, animationDelay: `${atrasoMs + 120}ms` }}
+        />
       </div>
       {destaque && (
         <button
           type="button"
           onClick={() => onPraticar(area.area_id)}
-          className="relative z-10 mt-2 flex h-9 items-center justify-center gap-1.5 rounded-btn bg-ink text-[14px] font-semibold text-onink transition duration-hover hover:opacity-90"
+          className="group/praticar relative z-10 mt-2 flex h-9 items-center justify-center gap-1.5 rounded-btn bg-ink text-[14px] font-semibold text-onink transition duration-hover hover:opacity-90 active:scale-[0.97]"
         >
           Praticar 10
-          <ArrowRight size={15} strokeWidth={2} />
+          <ArrowRight
+            size={15}
+            strokeWidth={2}
+            className="transition-transform duration-toggle ease-suave group-hover/praticar:translate-x-0.5"
+          />
         </button>
       )}
     </div>
@@ -87,26 +116,31 @@ export function QuadroTriagem({ areas, onAbrir, onPraticar }: Props) {
   return (
     <section aria-label="Quadro de triagem" className="flex flex-col gap-3">
       <div className="grid grid-cols-1 items-start gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        {colunas.map((col) => (
+        {colunas.map((col, c) => (
           <div key={col.nivel} className="flex flex-col gap-2.5">
             <div
-              className={`flex h-10 items-center justify-between rounded-col px-3 ${CLASSES_NIVEL[col.nivel].cheio} ${CLASSES_NIVEL[col.nivel].texto}`}
+              className={`flex h-10 animate-entrar items-center justify-between rounded-col px-3 ${CLASSES_NIVEL[col.nivel].cheio} ${CLASSES_NIVEL[col.nivel].texto}`}
+              style={{ animationDelay: `${atrasoCartao(c, 0)}ms` }}
             >
               <span className="rotulo text-[14px]">{col.nome}</span>
               <span className="text-[15px] font-bold tabular-nums">{col.areas.length}</span>
             </div>
             {col.areas.length === 0 ? (
               // Só na tela larga (5 colunas lado a lado); empilhado, o cabeçalho com 0 já basta.
-              <div className="hidden rounded-card border border-dashed border-line px-3.5 py-4 text-apoio text-muted xl:block">
+              <div
+                className="hidden animate-entrar rounded-card border border-dashed border-line px-3.5 py-4 text-apoio text-muted xl:block"
+                style={{ animationDelay: `${atrasoCartao(c, 1)}ms` }}
+              >
                 {col.nivel === 5 ? "Nenhuma área acima de 85% ainda." : "Nenhuma área nesta faixa."}
               </div>
             ) : (
-              col.areas.map((a) => (
+              col.areas.map((a, linha) => (
                 <CartaoArea
                   key={a.area_id}
                   area={a}
                   nivel={col.nivel}
                   destaque={a.area_id === idDestaque}
+                  atrasoMs={atrasoCartao(c, linha + 1)}
                   onAbrir={onAbrir}
                   onPraticar={onPraticar}
                 />

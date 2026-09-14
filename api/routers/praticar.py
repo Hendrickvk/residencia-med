@@ -58,5 +58,8 @@ def registrar_resposta(dados: RespostaIn, usuario=Depends(usuario_atual)):
         dados.questao_id, dados.alternativa, correta,
         usuario_id=usuario["id"], confianca=dados.confianca, tempo_ms=dados.tempo_ms,
     )
-    sr.registrar_revisao(dados.questao_id, qualidade, usuario_id=usuario["id"])
+    sr.registrar_revisao(
+        dados.questao_id, qualidade, usuario_id=usuario["id"], origem="pratica",
+        correta=correta, alternativa=dados.alternativa, tempo_ms=dados.tempo_ms,
+    )
     return {"correta": correta, "resposta_correta": q["resposta_correta"]}

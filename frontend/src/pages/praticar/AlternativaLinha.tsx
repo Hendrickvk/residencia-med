@@ -30,19 +30,27 @@ const quadrado: Record<EstadoAlternativa, string> = {
   neutra: "bg-ground text-faint",
 };
 
+// Estados em que a letra "carimba": remontar o quadrado (chave) replay a
+// animação a cada escolha e na revelação de certa/errada.
+const CARIMBA = new Set<EstadoAlternativa>(["selecionada", "correta", "errada"]);
+
 export function AlternativaLinha({ letra, texto, estado, percentual, onClick, disabled }: Props) {
+  const carimba = CARIMBA.has(estado);
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
       aria-pressed={estado === "selecionada"}
-      className={`grid w-full grid-cols-[32px_minmax(0,1fr)_auto] items-center gap-3.5 rounded-card text-left text-corpo transition-[background-color,border-color] duration-toggle ease-brand ${caixa[estado]} ${
-        disabled ? "cursor-default" : "cursor-pointer"
+      className={`grid w-full grid-cols-[32px_minmax(0,1fr)_auto] items-center gap-3.5 rounded-card text-left text-corpo transition-[background-color,border-color,color,transform] duration-toggle ease-brand ${caixa[estado]} ${
+        disabled ? "cursor-default" : "cursor-pointer active:scale-[0.99]"
       }`}
     >
       <span
-        className={`flex h-8 w-8 items-center justify-center rounded-col text-[15px] font-extrabold transition-colors duration-toggle ease-brand ${quadrado[estado]}`}
+        key={carimba ? estado : "base"}
+        className={`flex h-8 w-8 items-center justify-center rounded-col text-[15px] font-extrabold transition-colors duration-toggle ease-brand ${quadrado[estado]} ${
+          carimba ? "animate-marcar" : ""
+        }`}
       >
         {letra}
       </span>
@@ -50,13 +58,17 @@ export function AlternativaLinha({ letra, texto, estado, percentual, onClick, di
       {percentual !== undefined ? (
         <span className="flex items-center gap-2.5">
           {estado === "correta" && (
-            <span className="rotulo whitespace-nowrap rounded-etq bg-t4 px-2 py-1 text-[12px] text-t4-on">Conduta correta</span>
+            <span className="rotulo animate-surgir whitespace-nowrap rounded-etq bg-t4 px-2 py-1 text-[12px] text-t4-on">
+              Conduta correta
+            </span>
           )}
           {estado === "errada" && (
-            <span className="rotulo whitespace-nowrap rounded-etq bg-t1 px-2 py-1 text-[12px] text-t1-on">Sua conduta</span>
+            <span className="rotulo animate-surgir whitespace-nowrap rounded-etq bg-t1 px-2 py-1 text-[12px] text-t1-on">
+              Sua conduta
+            </span>
           )}
           <span className="w-9 text-right text-apoio font-semibold tabular-nums text-muted">
-            {percentual === null ? "" : `${Math.round(percentual)}%`}
+            {percentual !== null && <span className="animate-desvanecer">{Math.round(percentual)}%</span>}
           </span>
         </span>
       ) : (

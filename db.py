@@ -439,6 +439,35 @@ def init_db():
         )
         """)
 
+        # Histórico do SM-2: uma linha por avaliação (Praticar, Simulado ou
+        # Revisão), só de acréscimo. `revisao` guarda apenas o estado atual e
+        # cada avaliação sobrescreve a anterior — sem este log não há como
+        # acompanhar a retenção do aluno ao longo do tempo. Gravado por
+        # `repeticao_espacada.registrar_revisao`, na mesma transação.
+        c.execute("""
+        CREATE TABLE IF NOT EXISTS revisao_eventos (
+            id SERIAL PRIMARY KEY,
+            usuario_id INTEGER NOT NULL,
+            questao_id INTEGER NOT NULL,
+            origem TEXT,                  -- pratica / simulado / revisao (NULL: telas antigas do Streamlit)
+            qualidade INTEGER NOT NULL,   -- nota 0–5 aplicada no SM-2
+            correta INTEGER,              -- 0/1 quando houve resposta; NULL em autoavaliação
+            alternativa TEXT,
+            tempo_ms INTEGER,
+            facilidade_antes REAL,        -- *_antes NULL na primeira avaliação da questão
+            intervalo_antes INTEGER,
+            repeticoes_antes INTEGER,
+            atraso_dias REAL,             -- quanto já tinha vencido; negativo = revisada antes do prazo
+            facilidade_depois REAL NOT NULL,
+            intervalo_depois INTEGER NOT NULL,
+            repeticoes_depois INTEGER NOT NULL,
+            proxima_revisao TIMESTAMP NOT NULL,
+            registrado_em TIMESTAMP NOT NULL,
+            FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+            FOREIGN KEY (questao_id) REFERENCES questoes(id) ON DELETE CASCADE
+        )
+        """)
+
         # Questões marcadas manualmente pelo aluno durante uma sessão de
         # prática ("Marcar para revisão") — sinal independente do SM-2
         # (que já agenda revisão automática pra erros): aqui é o aluno
@@ -503,6 +532,10 @@ def init_db():
             c.execute("ALTER TABLE usuarios ADD COLUMN tema TEXT NOT NULL DEFAULT 'light'")
         if "data_prova_alvo" not in colunas_usuarios:
             c.execute("ALTER TABLE usuarios ADD COLUMN data_prova_alvo TEXT")
+        # Meta diária da Revisão (repeticao_espacada.plano_revisao): quantos
+        # casos a tela de Revisão oferece por dia; o resto espera, por prioridade.
+        if "meta_revisao_diaria" not in colunas_usuarios:
+            c.execute("ALTER TABLE usuarios ADD COLUMN meta_revisao_diaria INTEGER NOT NULL DEFAULT 20")
 
         # Migração leve: calibração de confiança ("acertei com segurança" /
         # "acertei no chute"), usada para ajustar a qualidade informada ao
@@ -612,6 +645,10 @@ def init_db():
         c.execute("CREATE INDEX IF NOT EXISTS idx_respostas_questao_id ON respostas(questao_id)")
         c.execute("CREATE INDEX IF NOT EXISTS idx_questoes_area_id ON questoes(area_id)")
         c.execute("CREATE INDEX IF NOT EXISTS idx_questoes_banca ON questoes(banca)")
+        # Acompanhamento de retenção: sempre por aluno, em janelas de tempo.
+        c.execute(
+            "CREATE INDEX IF NOT EXISTS idx_revisao_eventos_usuario_data ON revisao_eventos(usuario_id, registrado_em)"
+        )
 
         conn.commit()
 
@@ -1073,6 +1110,11 @@ def definir_prova_alvo(usuario_id, data_iso: str | None):
 def atualizar_tema_usuario(usuario_id, tema: str):
     with get_conn() as conn:
         conn.execute("UPDATE usuarios SET tema = ? WHERE id = ?", (tema, usuario_id))
+
+
+def atualizar_meta_revisao(usuario_id, meta: int):
+    with get_conn() as conn:
+        conn.execute("UPDATE usuarios SET meta_revisao_diaria = ? WHERE id = ?", (meta, usuario_id))
 
 
 def marcar_questao(usuario_id, questao_id):

@@ -93,7 +93,8 @@ h1          44px / 1.04 / 800 / tracking -0.03em                  título do Pai
 h2          24px / 1.2  / 800 / tracking -0.02em                  "Resposta correta: B"
 h3          17px / 1.3  / 700                                     títulos de bloco
 corpo       15.5px / 1.55 / 400
-enunciado   18px / 1.7  / 400, largura máxima 68ch
+enunciado   17.5px / 1.75 / 400 / largura 108% / tracking 0.005em   .leitura-enunciado
+discussão   16.5px / 1.75 / 400 / largura 108% / tracking 0.005em   .leitura-discussao, cor --ink-2, em parágrafos
 apoio       13.5px / 1.45 / 400, cor --muted
 rótulo      13px / largura 70% / 700 / CAIXA ALTA / tracking 0.06em, cor --muted
 ```
@@ -112,8 +113,28 @@ rótulo      13px / largura 70% / 700 / CAIXA ALTA / tracking 0.06em, cor --mute
 - Espaçamento em múltiplos de 4px; entre blocos do Painel, 28px.
 - Ícones Lucide com traço 2px (combina com o peso da Archivo), 16px em linha, 18px
   em botão de ícone.
-- Transições: 120ms hover, 180ms revelação de resposta, `cubic-bezier(0.2, 0, 0.2, 1)`.
-  Nada anima sozinho ao carregar. `prefers-reduced-motion` zera tudo.
+- **Movimento** (tokens em `tailwind.config.js`, ganchos em `src/lib/movimento.ts`).
+  A plataforma não pode "cortar" de uma tela para outra; cada troca tem um
+  movimento curto, sem quique e sem nada que atrase o aluno.
+  - Curvas: `brand` `cubic-bezier(0.2, 0, 0.2, 1)` para troca de estado; `suave`
+    `cubic-bezier(0.16, 1, 0.3, 1)` para o que entra, desliza ou cresce.
+  - Durações: 120ms hover · 180ms revelação/troca de cor · 320ms deslizamentos
+    (sublinhado da aba, gaveta, fundo de aba segmentada) · 700–1100ms só para
+    barras enchendo, números contando e a linha do gráfico.
+  - Tela nova sobe 8px enquanto aparece (`animate-entrar`, no AppShell por
+    caminho e nas trocas de fase de Praticar/Simulado). Caso ou questão nova
+    desliza no sentido da navegação (`animate-entrar-frente`/`-tras`) e a página
+    volta ao topo.
+  - Menus, busca e diálogos crescem de 97% e saem encolhendo (`usePresenca`
+    mantém montado durante a saída). Botões cedem ao clique (`active:scale`).
+  - Painel é o único momento com coreografia: quadro em cascata (coluna mais
+    grave primeiro), barras enchendo, aproveitamento e fila contando do valor
+    anterior ao atual (só reanima se mudou) e a linha de 14 dias se desenhando.
+  - Revelação da resposta: letra escolhida "carimba", etiquetas de conduta e
+    discussão entram em sequência.
+  - Nada se desloca durante uma animação: números contam sobre a largura final
+    reservada, percentuais entram em coluna já reservada.
+  - `prefers-reduced-motion` zera durações e atrasos; contagens pulam direto ao valor.
 
 ## 4. Componentes
 
@@ -159,7 +180,12 @@ marca; abaixo de 640px a busca some da barra.
 
 **Modo foco** (sessão de Praticar, Simulado em andamento, Revisão com fila): a barra
 superior troca as abas por "Sessão de prática · {área}", progresso, cronômetro,
-Marcar e Encerrar. O conteúdo fica numa coluna de 840px centralizada. Toda sessão
+Marcar e Encerrar. O conteúdo fica numa coluna de 680px centralizada; é essa
+largura, e não um limite no parágrafo, que mantém a linha curta com o texto indo
+até a borda das alternativas. Medido com o texto real: ~63 caracteres por linha no
+enunciado e ~68 na discussão (com 840px eram 85 e 98, cansativo de ler; um limite
+em ch no parágrafo deixava um vão à direita das alternativas). Configurador e
+resumo usam a mesma coluna, para nada mudar de largura entre as fases. Toda sessão
 tem uma saída na própria barra (Encerrar, Finalizar ou Sair), e a marca à esquerda
 é sempre um link para o Painel, inclusive no modo foco.
 
@@ -179,11 +205,27 @@ Conteúdo das demais telas: largura máxima 1360px, padding 36/40px.
    área acima de 85% ainda."). O primeiro cartão da coluna mais grave já mostra o
    botão "Praticar 10". Abaixo, legenda das faixas e a linha "Amostra insuficiente".
    Em telas estreitas, as colunas viram grupos empilhados.
-3. **Rodapé** em duas colunas: "Fila de revisão" (número em display, "questões
-   aguardando reavaliação hoje", botão "Revisar agora") e "Acerto nos últimos 14
+3. **Rodapé** em duas colunas: "Fila de revisão" (casos de hoje dentro da meta diária em
+   display, com a duração estimada pelo tempo real do aluno e quantos podem esperar;
+   seletor "Meta diária" 10/20/30/50; "Próximos 7 dias" em barras — parte dentro da
+   meta em `--ink`, o que passa dela em t2 (atenção), linha tracejada na meta, legenda
+   só quando algum dia passa; botão "Revisar agora") e "Acerto nos últimos 14
    dias" (linha em `--ink` sobre as faixas de nível em transparência, último ponto
    marcado e rotulado; menos de 3 dias: "Histórico começa a aparecer no terceiro dia
    de estudo.").
+4. **Evolução da memória** (`repeticao_espacada.evolucao_memoria`), largura total. Só
+   conta como teste de memória o caso que voltou depois de pelo menos 1 dia sem ser
+   visto (refazer 10 min depois do erro não conta). Frase da semana: "Nos últimos 7
+   dias, {n} casos voltaram e você lembrou de {x} ({%})" com etiqueta de nível e,
+   em apoio, a semana anterior, recuperados (errou e lembrou dias depois),
+   consolidados e dias com revisão. Abaixo, três blocos: **Estágios dos casos**
+   (barra empilhada aprendendo / consolidando / consolidado em `--faint` / `--muted`
+   / `--ink` — não são níveis, então nada de t1–t5 — com legenda e contagem);
+   **Retenção por semana** (8 blocos de 7 dias terminando hoje, escala 0–100%,
+   o atual em `--ink` e os anteriores em `--muted`; semana com menos de 5 testes só
+   marca o chão; nenhuma com amostra: caixa tracejada na altura do gráfico); **Onde
+   você mais esquece** (até 4 especialidades com 5+ testes, da menor retenção, barra
+   na cor do nível). O mesmo limite de amostra do quadro vale para todo percentual.
 
 ### Praticar
 - **Configurador**: título "Praticar"; campos área, especialidade (só as que têm
@@ -199,7 +241,10 @@ Conteúdo das demais telas: largura máxima 1360px, padding 36/40px.
   bloco "Discussão do caso" com "Resposta correta: {letra}", "Você marcou {letra},
   como {x}% dos outros alunos" (só quando a distribuição chegar; o espaço fica
   reservado; sem respostas de outros alunos: "Ninguém mais respondeu este caso
-  ainda." e nenhum percentual nas alternativas) e a explicação. Acertou: "Acertei com segurança" (primário) e "Acertei
+  ainda." e nenhum percentual nas alternativas) e a explicação em parágrafos (`src/lib/paragrafos.ts`: as explicações do banco
+  são um bloco único, então a quebra é na exibição — um parágrafo para a resposta
+  certa, um por alternativa discutida, alternativas curtas juntas, blocos longos
+  divididos por frase; quebras escritas no texto têm prioridade). Acertou: "Acertei com segurança" (primário) e "Acertei
   no chute" (secundário). Errou: "Volta na sua revisão em 10 min" (é verdade: o SM-2
   agenda qualidade abaixo de 3 para 10 minutos, `repeticao_espacada.py`) e "Próximo
   caso" com `Enter`.
@@ -226,12 +271,33 @@ Conteúdo das demais telas: largura máxima 1360px, padding 36/40px.
   simulado.
 
 ### Revisão espaçada
+- A fila é o que o SM-2 já venceu mais as questões marcadas pelo aluno
+  (`repeticao_espacada.fila_revisao`). Casos nunca respondidos não entram: não há
+  o que revisar, e eles são do Praticar. A contagem da aba, do Painel e o
+  "restantes" da barra saem dessa mesma fila e precisam sempre bater.
+- Meta diária (padrão 20, `usuarios.meta_revisao_diaria`, `plano_revisao`): a tela
+  oferece só os casos que cabem no que falta da meta, em ordem de prioridade —
+  reaprendendo (errou), marcadas, depois as mais atrasadas em relação ao próprio
+  intervalo e as de menor facilidade. Só avaliações na Revisão consomem a meta. O
+  que passa dela espera sem alerta: meta cumprida mostra "Meta de hoje cumprida" e
+  "Revisar mais 10". A barra mostra os restantes com a duração estimada.
 - Um caso por vez, contagem restante na barra superior, "Recomeçar fila" e "Sair"
   (volta ao Painel; cada avaliação já foi gravada).
-- "Mostrar resposta" revela a alternativa correta e a discussão.
-- Os quatro intervalos usam a escala: "Errei — 10 min" (t1), "Difícil — 1 dia"
-  (t2), "Bom — 4 dias" (t4), "Fácil — 10 dias" (t5). São botões secundários com um
-  quadrado de 10px da cor do nível antes do rótulo; nada de borda lateral colorida.
+- O aluno responde de novo, como no Praticar (A–E, Enter), e vê a correção e a
+  discussão. Quem decide se foi erro é o gabarito: resposta errada agenda sozinha
+  ("Volta na sua revisão em 10 min" + "Próximo caso", Enter). Resposta certa pede
+  "Como foi lembrar?": "Com esforço" (t2), "Lembrei" (t4), "Fácil" (t5), teclas
+  1–3, cada botão com o prazo que vai de fato agendar ("volta em 6 dias"), vindo de
+  `repeticao_espacada.prever_prazos` — nunca um prazo fixo escrito no front (os
+  antigos "Bom — 4 dias"/"Fácil — 10 dias" não batiam com o SM-2). Quadrado de 10px
+  da cor do nível antes do rótulo; nada de borda lateral colorida.
+- Toda avaliação (Praticar, Simulado, Revisão) grava uma linha em
+  `revisao_eventos`: nota, acerto, alternativa, estado antes/depois, atraso e
+  tempo. É a base da estimativa de duração e da Evolução da memória no Painel.
+- Fim da fila com casos avaliados: resumo "Lembrou {x} de {n} casos.", com a
+  retenção de primeira (etiqueta de nível), quantos voltam em 10 min e a próxima
+  leva; se houve, uma frase com os recuperados e consolidados da sessão (quem
+  decide é o servidor, `classificar_eventos`).
 - Fila vazia: estado vazio com a próxima leva ("As próximas 8 vencem na quinta.") e
   "Praticar casos novos".
 

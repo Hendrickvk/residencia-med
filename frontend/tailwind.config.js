@@ -4,6 +4,11 @@
 // (DESIGN_TRIAGEM.md §2) — gera `bg-t1`, `bg-t1-soft`, `text-t1-on` etc.
 const nivel = (n) => ({ DEFAULT: `var(--t${n})`, soft: `var(--t${n}-soft)`, on: `var(--t${n}-on)` });
 
+// Curvas de movimento (DESIGN_TRIAGEM.md §3). `brand` para trocas de estado;
+// `suave` (desacelera longo) para o que entra, desliza ou cresce.
+const BRAND = "cubic-bezier(0.2, 0, 0.2, 1)";
+const SUAVE = "cubic-bezier(0.16, 1, 0.3, 1)";
+
 export default {
   darkMode: "class",
   content: ["./index.html", "./src/**/*.{ts,tsx}"],
@@ -33,7 +38,6 @@ export default {
         bloco: ["17px", { lineHeight: "1.3", fontWeight: "700" }],
         corpo: ["15.5px", { lineHeight: "1.55", fontWeight: "400" }],
         apoio: ["13.5px", { lineHeight: "1.45", fontWeight: "400" }],
-        enunciado: ["18px", { lineHeight: "1.7", fontWeight: "400" }],
       },
       borderRadius: {
         etq: "3px",
@@ -46,9 +50,66 @@ export default {
       transitionDuration: {
         hover: "120ms",
         toggle: "180ms",
+        desliza: "320ms",
+        cresce: "700ms",
       },
       transitionTimingFunction: {
-        brand: "cubic-bezier(0.2, 0, 0.2, 1)",
+        brand: BRAND,
+        suave: SUAVE,
+      },
+      keyframes: {
+        // Tela ou bloco que chega: sobe 8px enquanto aparece.
+        entrar: {
+          from: { opacity: "0", transform: "translateY(8px)" },
+          to: { opacity: "1", transform: "none" },
+        },
+        // Troca de caso/questão: desliza no sentido da navegação.
+        "entrar-frente": {
+          from: { opacity: "0", transform: "translateX(20px)" },
+          to: { opacity: "1", transform: "none" },
+        },
+        "entrar-tras": {
+          from: { opacity: "0", transform: "translateX(-20px)" },
+          to: { opacity: "1", transform: "none" },
+        },
+        desvanecer: { from: { opacity: "0" }, to: { opacity: "1" } },
+        "desvanecer-saida": { from: { opacity: "1" }, to: { opacity: "0" } },
+        // Menus e diálogos: crescem de 97% a partir da origem.
+        surgir: {
+          from: { opacity: "0", transform: "scale(0.97) translateY(-4px)" },
+          to: { opacity: "1", transform: "none" },
+        },
+        sumir: {
+          from: { opacity: "1", transform: "none" },
+          to: { opacity: "0", transform: "scale(0.97) translateY(-4px)" },
+        },
+        // Barra de aproveitamento enchendo a partir da esquerda.
+        crescer: { from: { transform: "scaleX(0)" }, to: { transform: "scaleX(1)" } },
+        // Letra da alternativa escolhida.
+        marcar: {
+          "0%": { transform: "scale(0.8)" },
+          "60%": { transform: "scale(1.08)" },
+          "100%": { transform: "scale(1)" },
+        },
+        girar: {
+          from: { opacity: "0", transform: "rotate(-90deg) scale(0.6)" },
+          to: { opacity: "1", transform: "none" },
+        },
+      },
+      // `backwards` aplica o quadro inicial durante o atraso (escalonamento) e
+      // não deixa transform preso no elemento depois — um transform residual
+      // viraria bloco de contenção para os `fixed` de dentro (diálogos).
+      animation: {
+        entrar: `entrar 360ms ${SUAVE} backwards`,
+        "entrar-frente": `entrar-frente 340ms ${SUAVE} backwards`,
+        "entrar-tras": `entrar-tras 340ms ${SUAVE} backwards`,
+        desvanecer: `desvanecer 220ms ${BRAND} backwards`,
+        "desvanecer-saida": `desvanecer-saida 160ms ${BRAND} forwards`,
+        surgir: `surgir 200ms ${SUAVE} backwards`,
+        sumir: `sumir 140ms ${BRAND} forwards`,
+        crescer: `crescer 800ms ${SUAVE} backwards`,
+        marcar: `marcar 260ms ${SUAVE}`,
+        girar: `girar 320ms ${SUAVE}`,
       },
     },
   },

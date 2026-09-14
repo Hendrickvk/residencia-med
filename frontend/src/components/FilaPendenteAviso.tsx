@@ -24,9 +24,9 @@ export function FilaPendenteAviso() {
   return (
     <div
       role="status"
-      className="fixed bottom-4 right-4 z-50 flex items-center gap-2.5 rounded-card border border-line bg-surface px-4 py-3 text-apoio text-ink-2"
+      className="fixed bottom-4 right-4 z-50 flex animate-entrar items-center gap-2.5 rounded-card border border-line bg-surface px-4 py-3 text-apoio text-ink-2"
     >
-      <span className="h-2 w-2 rounded-pill bg-t2" aria-hidden="true" />
+      <span className="h-2 w-2 animate-pulse rounded-pill bg-t2" aria-hidden="true" />
       {pendentes} resposta{pendentes !== 1 && "s"} aguardando envio…
     </div>
   );

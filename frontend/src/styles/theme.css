@@ -85,7 +85,45 @@
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
       animation-duration: 0.001ms !important;
+      animation-delay: 0ms !important;
       transition-duration: 0.001ms !important;
+    }
+  }
+
+  /* Troca de tema: esmaece a tela inteira em vez de piscar (AppShell). */
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 280ms;
+    animation-timing-function: cubic-bezier(0.2, 0, 0.2, 1);
+  }
+}
+
+@layer utilities {
+  /* Linha do gráfico se desenhando. O elemento precisa de pathLength="1" e
+     stroke-dasharray="1 2" (o traço seguinte fica longe da área visível). */
+  .animate-tracar {
+    animation: tracar 1100ms cubic-bezier(0.16, 1, 0.3, 1) 120ms backwards;
+  }
+  @keyframes tracar {
+    from {
+      stroke-dashoffset: 1;
+    }
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+  /* Barra vertical enchendo de baixo para cima (previsão de 7 dias). Fica aqui
+     e não no tailwind.config: o Vite em dev não relê o config sem reiniciar. */
+  .animate-crescer-y {
+    transform-origin: bottom;
+    animation: crescer-y 700ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  }
+  @keyframes crescer-y {
+    from {
+      transform: scaleY(0);
+    }
+    to {
+      transform: scaleY(1);
     }
   }
 }
@@ -126,6 +164,24 @@
     font-stretch: 110%;
     letter-spacing: -0.03em;
     font-variant-numeric: tabular-nums;
+  }
+  /* Texto de leitura longa: enunciado e discussão do caso. A Archivo na largura
+     108% do eixo variável, com um pouco de espaço entre letras e mais entrelinha
+     — a largura padrão (estreita) cansava em blocos longos. Escolhida numa
+     comparação lado a lado com Literata e Atkinson Hyperlegible (DESIGN_TRIAGEM.md §3). */
+  .leitura-enunciado {
+    font-size: 17.5px;
+    line-height: 1.75;
+    font-weight: 400;
+    font-stretch: 108%;
+    letter-spacing: 0.005em;
+  }
+  .leitura-discussao {
+    font-size: 16.5px;
+    line-height: 1.75;
+    font-weight: 400;
+    font-stretch: 108%;
+    letter-spacing: 0.005em;
   }
   .marca-texto {
     font-size: 21px;

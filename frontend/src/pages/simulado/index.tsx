@@ -6,29 +6,46 @@ import Resultado from "./Resultado";
 export default function Simulado() {
   const [simuladoId, setSimuladoId] = useState<number | null>(null);
   const [finalizado, setFinalizado] = useState(false);
+  // Como no Praticar: a primeira fase entra com a troca de tela do AppShell.
+  const [trocouFase, setTrocouFase] = useState(false);
+  const entrada = trocouFase ? "animate-entrar" : "";
 
   if (simuladoId === null) {
     return (
-      <Configurador
-        onIniciado={(id) => {
-          setSimuladoId(id);
-          setFinalizado(false);
+      <div key="config" className={entrada}>
+        <Configurador
+          onIniciado={(id) => {
+            setSimuladoId(id);
+            setFinalizado(false);
+            setTrocouFase(true);
+          }}
+        />
+      </div>
+    );
+  }
+
+  if (!finalizado) {
+    return (
+      <EmAndamento
+        simuladoId={simuladoId}
+        onFinalizado={() => {
+          setFinalizado(true);
+          setTrocouFase(true);
         }}
       />
     );
   }
 
-  if (!finalizado) {
-    return <EmAndamento simuladoId={simuladoId} onFinalizado={() => setFinalizado(true)} />;
-  }
-
   return (
-    <Resultado
-      simuladoId={simuladoId}
-      onNovoSimulado={() => {
-        setSimuladoId(null);
-        setFinalizado(false);
-      }}
-    />
+    <div key="resultado" className={entrada}>
+      <Resultado
+        simuladoId={simuladoId}
+        onNovoSimulado={() => {
+          setSimuladoId(null);
+          setFinalizado(false);
+          setTrocouFase(true);
+        }}
+      />
+    </div>
   );
 }

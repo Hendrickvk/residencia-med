@@ -87,13 +87,32 @@ export function EvolucaoTriagem({ evolucao }: { evolucao: DiaEvolucao[] }) {
             {l}%
           </text>
         ))}
-        <polyline points={linha} fill="none" strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" className="stroke-ink" />
+        {/* A linha se desenha da esquerda para a direita; o último ponto e o
+            rótulo aparecem quando ela chega (DESIGN_TRIAGEM.md §3). */}
+        <polyline
+          points={linha}
+          fill="none"
+          strokeWidth={2.5}
+          strokeLinejoin="round"
+          strokeLinecap="round"
+          pathLength={1}
+          strokeDasharray="1 2"
+          className="animate-tracar stroke-ink"
+        />
         {pontos.map((p) => (
           <circle key={p.dia.dia} cx={p.x} cy={p.y} r={9} fill="transparent">
             <title>{`${rotuloDia(p.dia.dia, false)}: ${formatarPctBR(p.dia.pct_acerto, 0)}% (${p.dia.acertos} de ${p.dia.total})`}</title>
           </circle>
         ))}
-        <circle cx={ultimo.x} cy={ultimo.y} r={5.5} strokeWidth={2} pointerEvents="none" className="fill-ink stroke-surface" />
+        <circle
+          cx={ultimo.x}
+          cy={ultimo.y}
+          r={5.5}
+          strokeWidth={2}
+          pointerEvents="none"
+          className="animate-desvanecer fill-ink stroke-surface"
+          style={{ animationDelay: "900ms" }}
+        />
         {/* Contorno na cor da superfície: o rótulo continua legível quando cai sobre a linha. */}
         <text
           x={ultimo.x - 10}
@@ -103,8 +122,8 @@ export function EvolucaoTriagem({ evolucao }: { evolucao: DiaEvolucao[] }) {
           fontWeight={700}
           strokeWidth={4}
           strokeLinejoin="round"
-          style={{ paintOrder: "stroke" }}
-          className="fill-ink stroke-surface"
+          style={{ paintOrder: "stroke", animationDelay: "950ms" }}
+          className="animate-desvanecer fill-ink stroke-surface"
         >
           {formatarPctBR(ultimo.dia.pct_acerto, 0)}%
         </text>

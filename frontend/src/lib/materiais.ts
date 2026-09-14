@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { api } from "./api";
 import type { Material } from "./types";
 
@@ -14,6 +14,9 @@ export function useMateriais(filtros: {
   return useQuery({
     queryKey: ["materiais", filtros],
     queryFn: () => api.get<{ total: number; itens: Material[] }>("/materiais", filtros),
+    // Ao trocar filtro ou página a tabela anterior continua na tela (esmaecida)
+    // até a nova chegar, em vez de piscar o esqueleto a cada clique.
+    placeholderData: keepPreviousData,
   });
 }
 

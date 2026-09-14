@@ -33,6 +33,7 @@ class MeOut(BaseModel):
     respondidas_hoje: int
     total_questoes: int
     total_materiais: int
+    meta_revisao_diaria: int
 
 
 class TemaIn(BaseModel):
@@ -41,6 +42,11 @@ class TemaIn(BaseModel):
 
 class ProvaAlvoIn(BaseModel):
     data: Optional[date] = None
+
+
+class MetaRevisaoIn(BaseModel):
+    # Casos por dia na tela de Revisão (repeticao_espacada.plano_revisao).
+    meta: int = Field(ge=5, le=200)
 
 
 # --- Áreas / subtópicos ---------------------------------------------------
@@ -89,6 +95,10 @@ class RespostaIn(BaseModel):
 
 class MarcarRevisaoIn(BaseModel):
     qualidade: int = Field(ge=0, le=5)
+    # A Revisão responde de novo: com a alternativa, o gabarito decide se foi
+    # erro (repeticao_espacada.avaliar_revisao), não a nota enviada.
+    alternativa: Optional[str] = Field(default=None, pattern="^[A-E]$")
+    tempo_ms: Optional[int] = Field(default=None, ge=0)
 
 
 # --- Materiais --------------------------------------------------------------
