@@ -79,6 +79,27 @@ def test_simulado_oficial_segue_ordem_do_caderno_sem_vazar_gabarito(usuario_test
     assert all("resposta_correta" not in i for i in itens)
 
 
+def test_questao_de_duas_provas_entra_nas_duas_com_o_numero_de_cada_caderno(usuario_teste, edicao_teste):
+    banca, edicao, _ = edicao_teste
+    outra_banca, outra_edicao = "PYTEST-OUTRA", f"{edicao}-b"
+    questao_id = db.ids_questoes_da_edicao(banca, edicao)[0]  # a de número 5 no caderno original
+    with db.get_conn() as conn:
+        conn.execute(
+            "INSERT INTO questoes_provas (questao_id, banca, edicao, numero_prova) VALUES (?, ?, ?, 77)",
+            (questao_id, outra_banca, outra_edicao),
+        )
+    usuario = _usuario(usuario_teste)
+
+    outra = criar_oficial_endpoint(SimuladoOficialIn(banca=outra_banca, edicao=outra_edicao), usuario=usuario)
+    assert [(i["id"], i["numero_prova"]) for i in itens_endpoint(outra["id"], usuario=usuario)] == [(questao_id, 77)]
+
+    original = criar_oficial_endpoint(SimuladoOficialIn(banca=banca, edicao=edicao), usuario=usuario)
+    assert itens_endpoint(original["id"], usuario=usuario)[0]["numero_prova"] == 5
+
+    assert db.contar_questoes_disponiveis(None, outra_banca) == 1
+    assert db.ids_questoes_filtro_pratica(usuario_id=usuario_teste, banca=outra_banca) == [questao_id]
+
+
 def test_em_andamento_ignora_finalizado_e_tempo_esgotado(usuario_teste, questao_teste):
     usuario = _usuario(usuario_teste)
     assert em_andamento_endpoint(usuario=usuario) is None

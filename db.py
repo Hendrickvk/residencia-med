@@ -520,6 +520,31 @@ def init_db():
         if "numero_prova" not in colunas_questoes:
             c.execute("ALTER TABLE questoes ADD COLUMN numero_prova INTEGER")
 
+        # Uma questão pode estar em mais de um caderno oficial: o Revalida
+        # 2025/2 e o ENAMED 2025 aplicaram as mesmas questões 1–50. Esta
+        # tabela é a fonte do simulado por edição; `questoes.edicao` e
+        # `questoes.numero_prova` guardam só o caderno principal, porque o
+        # servidor com código anterior ainda lê essas colunas.
+        c.execute("SELECT to_regclass('questoes_provas') AS tabela")
+        vinculos_novos = c.fetchone()["tabela"] is None
+        c.execute("""
+        CREATE TABLE IF NOT EXISTS questoes_provas (
+            questao_id INTEGER NOT NULL,
+            banca TEXT NOT NULL,
+            edicao TEXT NOT NULL,
+            numero_prova INTEGER NOT NULL,
+            PRIMARY KEY (banca, edicao, numero_prova),
+            UNIQUE (questao_id, banca, edicao),
+            FOREIGN KEY (questao_id) REFERENCES questoes(id) ON DELETE CASCADE
+        )
+        """)
+        if vinculos_novos:
+            c.execute("""
+                INSERT INTO questoes_provas (questao_id, banca, edicao, numero_prova)
+                SELECT id, banca, edicao, numero_prova FROM questoes
+                WHERE banca IS NOT NULL AND edicao IS NOT NULL AND numero_prova IS NOT NULL
+            """)
+
         # Migração leve: preferência de tema (claro/escuro) e data da prova
         # alvo, usadas pelo redesign visual (alternador de tema no topo,
         # contagem regressiva na barra superior).
@@ -857,8 +882,12 @@ def ids_questoes_filtro_pratica(*, usuario_id, area_id=None, subtopico_id=None,
         condicoes.append("q.subtopico_id = ?")
         params.append(subtopico_id)
     if banca:
-        condicoes.append("q.banca = ?")
-        params.append(banca)
+        # Questão aplicada em mais de uma prova oficial vale para todas as bancas.
+        condicoes.append(
+            "(q.banca = ? OR EXISTS (SELECT 1 FROM questoes_provas qp "
+            "WHERE qp.questao_id = q.id AND qp.banca = ?))"
+        )
+        params.extend([banca, banca])
     if ano:
         condicoes.append("q.ano = ?")
         params.append(ano)
@@ -1580,8 +1609,11 @@ def _clausulas_filtro_simulado(area_id, banca):
         condicoes.append("area_id = ?")
         params.append(area_id)
     if banca:
-        condicoes.append("banca = ?")
-        params.append(banca)
+        condicoes.append(
+            "(banca = ? OR EXISTS (SELECT 1 FROM questoes_provas qp "
+            "WHERE qp.questao_id = questoes.id AND qp.banca = ?))"
+        )
+        params.extend([banca, banca])
     return " AND ".join(condicoes), params
 
 
@@ -1607,16 +1639,16 @@ MINUTOS_POR_QUESTAO_PROVA_OFICIAL = 3
 
 
 def listar_edicoes_oficiais():
-    """Edições com caderno oficial identificado (`questoes.edicao`), mais
+    """Edições com caderno oficial identificado (`questoes_provas`), mais
     recentes primeiro, com o total de questões e o tempo de prova no ritmo
     oficial."""
     with get_conn() as conn:
         rows = conn.execute("""
-            SELECT banca, edicao, MIN(ano) AS ano, COUNT(*) AS total
-            FROM questoes
-            WHERE edicao IS NOT NULL AND banca IS NOT NULL
-            GROUP BY banca, edicao
-            ORDER BY edicao DESC, banca
+            SELECT qp.banca, qp.edicao, MIN(q.ano) AS ano, COUNT(*) AS total
+            FROM questoes_provas qp
+            JOIN questoes q ON q.id = qp.questao_id
+            GROUP BY qp.banca, qp.edicao
+            ORDER BY qp.edicao DESC, qp.banca
         """).fetchall()
     return [{**r, "tempo_limite_min": r["total"] * MINUTOS_POR_QUESTAO_PROVA_OFICIAL} for r in rows]
 
@@ -1625,11 +1657,11 @@ def ids_questoes_da_edicao(banca, edicao):
     """Ids das questões de uma edição, na ordem do caderno oficial."""
     with get_conn() as conn:
         rows = conn.execute("""
-            SELECT id FROM questoes
+            SELECT questao_id FROM questoes_provas
             WHERE banca = ? AND edicao = ?
-            ORDER BY numero_prova, id
+            ORDER BY numero_prova
         """, (banca, edicao)).fetchall()
-    return [r["id"] for r in rows]
+    return [r["questao_id"] for r in rows]
 
 
 def simulado_em_andamento(*, usuario_id):
@@ -1733,20 +1765,31 @@ def listar_itens_simulado(simulado_id, *, usuario_id):
     """Inclui o estado `marcada` (tabela `questoes_marcadas`, a mesma do
     Praticar) — é o que sustenta o terceiro estado da grade de navegação do
     Simulado (respondida/marcada/em branco), dívida registrada no
-    HANDOFF_REDESIGN.md e resolvida na Fase 5 do MIGRACAO.md."""
+    HANDOFF_REDESIGN.md e resolvida na Fase 5 do MIGRACAO.md.
+
+    No simulado por edição, `numero_prova` é o do caderno daquela edição: a
+    mesma questão pode ter outro número em outra prova oficial."""
     with get_conn() as conn:
-        return conn.execute("""
+        rows = conn.execute("""
             SELECT si.id AS item_id, si.ordem, si.resposta_dada, si.correta,
-                   q.*, a.nome AS area, e.nome AS especialidade, (m.usuario_id IS NOT NULL) AS marcada
+                   q.*, a.nome AS area, e.nome AS especialidade, (m.usuario_id IS NOT NULL) AS marcada,
+                   qp.numero_prova AS numero_prova_edicao
             FROM simulado_itens si
             JOIN questoes q ON q.id = si.questao_id
             JOIN areas a ON a.id = q.area_id
             LEFT JOIN especialidades e ON e.id = q.especialidade_id
             JOIN simulados s ON s.id = si.simulado_id
+            LEFT JOIN questoes_provas qp
+                   ON qp.questao_id = q.id AND qp.banca = s.banca AND qp.edicao = s.edicao
             LEFT JOIN questoes_marcadas m ON m.questao_id = q.id AND m.usuario_id = ?
             WHERE si.simulado_id = ? AND s.usuario_id = ?
             ORDER BY si.ordem
         """, (usuario_id, simulado_id, usuario_id)).fetchall()
+    for row in rows:
+        numero_edicao = row.pop("numero_prova_edicao")
+        if numero_edicao is not None:
+            row["numero_prova"] = numero_edicao
+    return rows
 
 
 def desempenho_simulado(simulado_id, *, usuario_id):

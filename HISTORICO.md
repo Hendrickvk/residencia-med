@@ -21,7 +21,9 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   caddy, restart de api e streamlit, testar, só então fechar a 8080 (iptables
   **e** Security List) e atualizar o `DEPLOY.md`.
 - Enquanto o deploy não sai, o servidor roda código antigo sobre o banco já
-  migrado: Materiais lá mostra só as 5 grandes áreas, sem especialidades.
+  migrado: Materiais lá mostra só as 5 grandes áreas, sem especialidades, e a
+  Prova oficial lista a Revalida 2025/2 só com as 50 questões próprias (as 43
+  comuns com o ENAMED 2025 só entram pela `questoes_provas`).
 - Questões oficiais ainda fora do banco: Revalida 2020, 2021 e 2022-1 (PDFs
   fora do padrão de nome do INEP, não localizados) e provas de USP, UNIFESP,
   ENARE e hospitais.
@@ -199,6 +201,22 @@ governa as 4 telas admin.
   `respostas`. A primeira versão (meta 20, 3 dias pulados em 10) acumulou fila e
   a previsão da demo ficou toda acima da meta; refeita com meta 30 gravada na
   demo, 9 de 10 dias e "Revisar mais 10" quando sobra um lote.
+
+### 2026-09-14
+- **Revalida 2025/2 e 2026/1:** +149 questões (de 645 para 794). O padrão de
+  nome anotado para os PDFs do INEP estava errado (é `2025_1_…`, com
+  sublinhado), e a partir da 2025/2 os arquivos viraram `{ed}_caderno_1…`; as
+  abas por ano da página do INEP trazem os links no próprio HTML. A nota de
+  gabarito do INEP confirmou que o Revalida 2025/2 e o ENAMED 2025 aplicaram as
+  mesmas questões 1–50, e 43 delas já estavam no banco como ENAMED. Decisão do
+  usuário: não duplicar. A tabela `questoes_provas` liga uma questão a mais de
+  um caderno, e simulado oficial, lista de edições e filtro de banca leem dela;
+  as colunas `questoes.edicao`/`numero_prova` ficaram com o caderno principal
+  porque o servidor ainda roda código que lê só elas. A 2025/2 ficou com 93
+  questões (50 novas; 7 anuladas) e a 2026/1 com 99 (nenhuma anulada; a Q5
+  ficou fora por depender de foto de livro de terceiros). 6 imagens novas,
+  tabelas reescritas em prosa, explicações escritas do zero e conferidas contra
+  a letra oficial. Backup em `backups/importacao_revalida_2025-2_2026-1_*.json`.
 
 ## Armadilhas das telas admin (Streamlit)
 

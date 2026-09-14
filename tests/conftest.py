@@ -123,6 +123,10 @@ def edicao_teste(area_teste):
                 banca, edicao, numero, datetime.datetime.now().isoformat(),
             ))
             ids.append(c.lastrowid)
+            c.execute(
+                "INSERT INTO questoes_provas (questao_id, banca, edicao, numero_prova) VALUES (?, ?, ?, ?)",
+                (ids[-1], banca, edicao, numero),
+            )
     yield banca, edicao, numeros
     with db.get_conn() as conn:
         for questao_id in ids:
