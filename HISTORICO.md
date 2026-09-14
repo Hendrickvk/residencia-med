@@ -25,8 +25,9 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   Prova oficial lista a Revalida 2025/2 só com as 50 questões próprias (as 43
   comuns com o ENAMED 2025 só entram pela `questoes_provas`).
 - Questões oficiais ainda fora do banco: Revalida 2020, 2021 e 2022-1 (PDFs
-  fora do padrão de nome do INEP, não localizados) e provas de USP, UNIFESP,
-  ENARE e hospitais.
+  fora do padrão de nome do INEP, não localizados); edições anteriores da USP
+  (a FUVEST só mantém a atual); UNICAMP de 2024 em diante (respostas curtas);
+  UNIFESP e Santa Casa (caderno não público); ENARE e hospitais.
 - Se o shape ARM `VM.Standard.A1.Flex` (1 OCPU/6 GB, Always Free) aparecer em
   São Paulo e 1 GB apertar, recriar a instância nele.
 - Tema escuro do Triagem só existe por tokens, sem protótipo próprio.
@@ -217,6 +218,19 @@ governa as 4 telas admin.
   ficou fora por depender de foto de livro de terceiros). 6 imagens novas,
   tabelas reescritas em prosa, explicações escritas do zero e conferidas contra
   a letra oficial. Backup em `backups/importacao_revalida_2025-2_2026-1_*.json`.
+- **Provas das faculdades de SP:** das pedidas, só duas cabem no banco. A
+  FUVEST publica apenas a edição atual da USP (2026); os cadernos AD1 a AD3 são
+  as mesmas 120 questões em ordens diferentes, e entrou o AD1 com 113 questões
+  (fora as 2 anuladas, as 3 com duas respostas aceitas e as 2 cuja imagem o
+  próprio caderno removeu pelo ECA). Da UNICAMP entrou 2023 (versão W, 79
+  questões): de 2024 em diante o acesso direto é de respostas curtas, sem
+  alternativas. A UNIFESP não publica o caderno e a Santa Casa só mostra com
+  login de candidato, então ficaram de fora. Decisão do usuário: questões com
+  alternativas em imagem entram com a figura rotulada (A) a (D) e o texto
+  "Imagem A" a "Imagem D". Bancas "USP" e "UNICAMP". Tabelas perdidas na
+  extração foram reescritas a partir da página renderizada (a Q51 da USP tinha
+  as alternativas deslocadas). Banco de 794 para 986 questões. Backup em
+  `backups/importacao_usp2026_unicamp2023_*.json`.
 
 ## Armadilhas das telas admin (Streamlit)
 
