@@ -77,3 +77,9 @@ class SimuladoOficialIn(BaseModel):
 class RespostaSimuladoIn(BaseModel):
     questao_id: int
     alternativa: str
+
+
+class TempoSimuladoIn(BaseModel):
+    questao_id: int
+    # Uma passagem pela questão: no máximo o simulado mais longo (600 min).
+    tempo_ms: int = Field(ge=0, le=600 * 60_000)

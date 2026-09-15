@@ -37,7 +37,7 @@ function CartaoArea({
 }) {
   const fracao = (
     <span className="text-[13px] tabular-nums text-muted">
-      {area.acertos}/{area.total}
+      {area.acertos.toLocaleString("pt-BR")}/{area.total}
     </span>
   );
 
@@ -158,6 +158,8 @@ export function QuadroTriagem({ areas, onAbrir, onPraticar }: Props) {
             {n.faixa}
           </span>
         ))}
+        {/* db._PRIMEIRAS_TENTATIVAS: é o que explica um "14,5 acertos". */}
+        <span>Acerto no chute vale meio</span>
         {insuficientes.length > 0 && (
           <span className="xl:ml-auto">
             Amostra insuficiente: {listaNatural(insuficientes.map((a) => a.area))}

@@ -218,6 +218,7 @@ export interface ItemSimulado extends Omit<Questao, "resposta_correta" | "explic
   ordem: number;
   resposta_dada: string | null;
   correta: number | null; // 0/1/null — coluna INTEGER, não convertida pra bool
+  tempo_ms: number | null; // tempo de tela somado das passagens; null se nunca vista ou simulado antigo
   resposta_correta?: string; // só vem preenchido depois de finalizado
   explicacao?: string | null;
   edicao: string | null;

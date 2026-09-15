@@ -1,13 +1,20 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, ArrowRight, BadgeCheck, Flag } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Dialog } from "../../components/Dialog";
 import { API_URL, api } from "../../lib/api";
 import { BOTAO_PRIMARIO, BOTAO_SECUNDARIO, PRESSAO } from "../../lib/estilos";
 import { BarraFoco } from "../../lib/foco";
 import { formatarTempoRestante } from "../../lib/format";
 import { rolarParaTopo } from "../../lib/movimento";
-import { finalizarSimulado, nomeEdicao, responderSimulado, useItensSimulado, useSimulado } from "../../lib/simulados";
+import {
+  finalizarSimulado,
+  nomeEdicao,
+  responderSimulado,
+  somarTempoSimulado,
+  useItensSimulado,
+  useSimulado,
+} from "../../lib/simulados";
 import type { ItemSimulado, Simulado } from "../../lib/types";
 import { AlternativaLinha } from "../praticar/AlternativaLinha";
 import { useCronometroRegressivo } from "./useCronometroRegressivo";
@@ -15,6 +22,16 @@ import { useCronometroRegressivo } from "./useCronometroRegressivo";
 interface Props {
   simuladoId: number;
   onFinalizado: () => void;
+}
+
+// Manda o tempo de tela da questão desde `entrouEm` (db.somar_tempo_simulado) e
+// recomeça a contagem. Com a aba escondida, a contagem para até ela voltar.
+function enviarTempo(simuladoId: number, questaoId: number, entrouEm: { current: number | null }) {
+  const agora = Date.now();
+  const inicio = entrouEm.current;
+  entrouEm.current = document.hidden ? null : agora;
+  if (inicio === null) return Promise.resolve();
+  return somarTempoSimulado(simuladoId, questaoId, agora - inicio).catch(() => {});
 }
 
 export default function EmAndamento({ simuladoId, onFinalizado }: Props) {
@@ -64,12 +81,17 @@ function Conteudo({
   );
   const [dialogoAberto, setDialogoAberto] = useState(false);
   const [finalizando, setFinalizando] = useState(false);
+  // Desde quando a questão atual está na tela; null antes de montar e com a aba escondida.
+  const entrouEm = useRef<number | null>(null);
   const queryClient = useQueryClient();
 
   async function finalizarAgora() {
     if (finalizando) return;
     setFinalizando(true);
     try {
+      // O tempo da última questão chega antes de o simulado fechar para ele.
+      await enviarTempo(simuladoId, itens[idx].id, entrouEm);
+      entrouEm.current = null;
       await finalizarSimulado(simuladoId);
       // Sem isso, o Resultado monta com o cache de ANTES de responder
       // qualquer coisa (mesma queryKey, staleTime padrão) e mostra "não
@@ -93,6 +115,22 @@ function Conteudo({
   const respostaAtual = respostasLocais[itemAtual.id] ?? null;
   const marcadaAtual = marcadasLocais.has(itemAtual.id);
   const emBranco = itens.length - Object.keys(respostasLocais).length;
+
+  // Sair da questão (para outra ou para fora da prova) e esconder a aba mandam o
+  // tempo dela; a aba voltando recomeça a contagem.
+  const questaoId = itemAtual.id;
+  useEffect(() => {
+    if (entrouEm.current === null && !document.hidden) entrouEm.current = Date.now();
+    function aoMudarVisibilidade() {
+      if (document.hidden) enviarTempo(simuladoId, questaoId, entrouEm);
+      else entrouEm.current = Date.now();
+    }
+    document.addEventListener("visibilitychange", aoMudarVisibilidade);
+    return () => {
+      document.removeEventListener("visibilitychange", aoMudarVisibilidade);
+      enviarTempo(simuladoId, questaoId, entrouEm);
+    };
+  }, [simuladoId, questaoId]);
 
   function irPara(destino: number) {
     const i = Math.min(itens.length - 1, Math.max(0, destino));

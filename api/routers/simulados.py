@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 import db
 import repeticao_espacada as sr
 from api.deps import usuario_atual
-from api.schemas import RespostaSimuladoIn, SimuladoIn, SimuladoOficialIn
+from api.schemas import RespostaSimuladoIn, SimuladoIn, SimuladoOficialIn, TempoSimuladoIn
 from api.serialize import questao_publica
 
 router = APIRouter(prefix="/simulados", tags=["simulados"])
@@ -17,10 +17,12 @@ def _consolidar_no_historico(simulado_id, usuario_id):
         if item["resposta_dada"] is None:
             continue
         correta = bool(item["correta"])
-        db.registrar_resposta(item["id"], item["resposta_dada"], correta, usuario_id=usuario_id)
+        db.registrar_resposta(
+            item["id"], item["resposta_dada"], correta, usuario_id=usuario_id, tempo_ms=item["tempo_ms"],
+        )
         sr.registrar_revisao(
             item["id"], 5 if correta else 1, usuario_id=usuario_id, origem="simulado",
-            correta=correta, alternativa=item["resposta_dada"],
+            correta=correta, alternativa=item["resposta_dada"], tempo_ms=item["tempo_ms"],
         )
 
 
@@ -109,6 +111,13 @@ def responder(simulado_id: int, dados: RespostaSimuladoIn, usuario=Depends(usuar
         db.registrar_resposta_simulado(simulado_id, dados.questao_id, dados.alternativa, usuario_id=usuario["id"])
     except PermissionError as e:
         raise HTTPException(status.HTTP_403_FORBIDDEN, str(e))
+    return {"ok": True}
+
+
+@router.post("/{simulado_id}/tempo")
+def somar_tempo(simulado_id: int, dados: TempoSimuladoIn, usuario=Depends(usuario_atual)):
+    """Tempo de uma passagem pela questão, mandado pela tela ao sair dela."""
+    db.somar_tempo_simulado(simulado_id, dados.questao_id, dados.tempo_ms, usuario_id=usuario["id"])
     return {"ok": True}
 
 

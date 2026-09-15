@@ -803,6 +803,10 @@ def init_db():
         if "edicao" not in {row["column_name"] for row in c.fetchall()}:
             c.execute("ALTER TABLE simulados ADD COLUMN edicao TEXT")
 
+        # Tempo de tela de cada questão do simulado, somado a cada passagem por ela
+        # (somar_tempo_simulado).
+        c.execute("ALTER TABLE simulado_itens ADD COLUMN IF NOT EXISTS tempo_ms INTEGER")
+
         # Postgres não indexa colunas de FK automaticamente (só o lado
         # referenciado/PK ganha índice). Sem isso, toda query do Dashboard
         # (JOIN respostas->questoes->areas filtrando por usuario_id/banca)
@@ -1267,9 +1271,12 @@ def listar_questoes_marcadas(*, usuario_id):
 
 # Primeira resposta do aluno a cada questão: a base do domínio no Painel. A mesma
 # questão respondida de novo mede se ele lembra dela, não se domina o assunto, e
-# isso quem acompanha é a Revisão (repeticao_espacada.evolucao_memoria).
+# isso quem acompanha é a Revisão (repeticao_espacada.evolucao_memoria). `pontos`
+# é o que a resposta vale no domínio: o acerto marcado como chute vale meio, porque
+# o aluno não sabia (na Revisão, ele já volta mais cedo, com qualidade 3).
 _PRIMEIRAS_TENTATIVAS = """
-    SELECT DISTINCT ON (questao_id) id, questao_id, correta, respondida_em
+    SELECT DISTINCT ON (questao_id) id, questao_id, respondida_em,
+           CASE WHEN correta = 1 AND confianca = 'chute' THEN 0.5 ELSE correta END AS pontos
     FROM respostas WHERE usuario_id = ?
     ORDER BY questao_id, id
 """
@@ -1281,8 +1288,8 @@ def evolucao_diaria(*, usuario_id):
         return conn.execute(f"""
             SELECT substr(respondida_em, 1, 10) AS dia,
                    COUNT(*) AS total,
-                   SUM(correta) AS acertos,
-                   ROUND(100.0 * SUM(correta) / COUNT(*), 1) AS pct_acerto
+                   SUM(pontos) AS acertos,
+                   ROUND(100.0 * SUM(pontos) / COUNT(*), 1) AS pct_acerto
             FROM ({_PRIMEIRAS_TENTATIVAS}) r
             GROUP BY dia
             ORDER BY dia ASC
@@ -1297,7 +1304,7 @@ def desempenho_dashboard_combinado(*, usuario_id):
     de 4 sequenciais (era o gargalo que sobrava depois do cache: toda
     vez que o cache expira, o Dashboard pagava 4x a latência de rede até
     o Neon, uma atrás da outra). Contam só a primeira resposta a cada
-    questão (_PRIMEIRAS_TENTATIVAS)."""
+    questão, com o chute valendo meio (_PRIMEIRAS_TENTATIVAS)."""
     with get_conn() as conn:
         row = conn.execute(f"""
             WITH r AS ({_PRIMEIRAS_TENTATIVAS})
@@ -1305,8 +1312,8 @@ def desempenho_dashboard_combinado(*, usuario_id):
               (SELECT jsonb_agg(t) FROM (
                   SELECT a.id AS area_id, a.nome AS area,
                          COUNT(r.id) AS total,
-                         SUM(r.correta) AS acertos,
-                         ROUND(100.0 * SUM(r.correta) / COUNT(r.id), 1) AS pct_acerto
+                         SUM(r.pontos) AS acertos,
+                         ROUND(100.0 * SUM(r.pontos) / COUNT(r.id), 1) AS pct_acerto
                   FROM r
                   JOIN questoes q ON q.id = r.questao_id
                   JOIN areas a ON a.id = q.area_id
@@ -1316,8 +1323,8 @@ def desempenho_dashboard_combinado(*, usuario_id):
               (SELECT jsonb_agg(t) FROM (
                   SELECT q.banca AS banca,
                          COUNT(r.id) AS total,
-                         SUM(r.correta) AS acertos,
-                         ROUND(100.0 * SUM(r.correta) / COUNT(r.id), 1) AS pct_acerto
+                         SUM(r.pontos) AS acertos,
+                         ROUND(100.0 * SUM(r.pontos) / COUNT(r.id), 1) AS pct_acerto
                   FROM r
                   JOIN questoes q ON q.id = r.questao_id
                   WHERE q.banca IS NOT NULL AND TRIM(q.banca) != ''
@@ -1327,8 +1334,8 @@ def desempenho_dashboard_combinado(*, usuario_id):
               (SELECT jsonb_agg(t) FROM (
                   SELECT q.banca AS banca, a.nome AS area,
                          COUNT(r.id) AS total,
-                         SUM(r.correta) AS acertos,
-                         ROUND(100.0 * SUM(r.correta) / COUNT(r.id), 1) AS pct_acerto
+                         SUM(r.pontos) AS acertos,
+                         ROUND(100.0 * SUM(r.pontos) / COUNT(r.id), 1) AS pct_acerto
                   FROM r
                   JOIN questoes q ON q.id = r.questao_id
                   JOIN areas a ON a.id = q.area_id
@@ -1373,7 +1380,8 @@ def priorizar_temas(tentativas, temas, questoes_provas, limite=3):
     """Os `limite` temas com mais pontos a ganhar: fração da prova que o tema
     ocupa × o que falta de domínio estimado. Pura, para testar sem banco.
 
-    tentativas: primeiras respostas (area_id, especialidade_id, subtopico_id, correta).
+    tentativas: primeiras respostas (area_id, especialidade_id, subtopico_id e
+        pontos: 1 no acerto, 0,5 no acerto no chute, 0 no erro).
     temas: temas que caem nos cadernos, com subtopico_id, especialidade_id,
         area_id e questoes_provas; os demais campos seguem para o resultado.
     questoes_provas: total de questões de caderno, a base da fração.
@@ -1384,9 +1392,9 @@ def priorizar_temas(tentativas, temas, questoes_provas, limite=3):
     for t in tentativas:
         for chave in (("area", t["area_id"]), ("especialidade", t["especialidade_id"]), ("tema", t["subtopico_id"])):
             grupo = contagem.setdefault(chave, [0, 0])
-            grupo[0] += int(t["correta"])
+            grupo[0] += float(t["pontos"])
             grupo[1] += 1
-    geral = sum(int(t["correta"]) for t in tentativas) / len(tentativas)
+    geral = sum(float(t["pontos"]) for t in tentativas) / len(tentativas)
 
     candidatos = []
     for tema in temas:
@@ -1414,7 +1422,7 @@ def prioridades_estudo(*, usuario_id, limite=3):
     bancas = ", ".join(["?"] * len(BANCAS_INEP))
     with get_conn() as conn:
         tentativas = conn.execute(f"""
-            SELECT q.area_id, q.especialidade_id, q.subtopico_id, r.correta
+            SELECT q.area_id, q.especialidade_id, q.subtopico_id, r.pontos
             FROM ({_PRIMEIRAS_TENTATIVAS}) r JOIN questoes q ON q.id = r.questao_id
         """, (usuario_id,)).fetchall()
         if not tentativas:
@@ -1446,7 +1454,7 @@ def desempenho_por_tipo(*, usuario_id):
     TIPOS_PERGUNTA, incluindo os tipos ainda sem resposta (total 0)."""
     with get_conn() as conn:
         linhas = conn.execute(f"""
-            SELECT q.tipo_pergunta AS tipo, COUNT(*) AS total, SUM(r.correta) AS acertos
+            SELECT q.tipo_pergunta AS tipo, COUNT(*) AS total, SUM(r.pontos) AS acertos
             FROM ({_PRIMEIRAS_TENTATIVAS}) r JOIN questoes q ON q.id = r.questao_id
             WHERE q.tipo_pergunta IS NOT NULL
             GROUP BY q.tipo_pergunta
@@ -1600,6 +1608,19 @@ def registrar_resposta_simulado(simulado_id, questao_id, resposta_dada, *, usuar
         """, (resposta_dada, correta, simulado_id, questao_id))
 
 
+def somar_tempo_simulado(simulado_id, questao_id, tempo_ms, *, usuario_id):
+    """Soma ao item o tempo de mais uma passagem do aluno pela questão, que a
+    tela manda ao sair dela. Só vale no simulado do próprio aluno e enquanto ele
+    não termina: o resultado não muda depois."""
+    with get_conn() as conn:
+        conn.execute("""
+            UPDATE simulado_itens si SET tempo_ms = COALESCE(si.tempo_ms, 0) + ?
+            FROM simulados s
+            WHERE s.id = si.simulado_id AND si.simulado_id = ? AND si.questao_id = ?
+              AND s.usuario_id = ? AND s.finalizado_em IS NULL
+        """, (tempo_ms, simulado_id, questao_id, usuario_id))
+
+
 def finalizar_simulado(simulado_id, *, usuario_id):
     """Agrega os resultados e marca o simulado como finalizado. Deve ser
     chamada uma única vez, no momento em que o simulado termina (por
@@ -1642,7 +1663,7 @@ def listar_itens_simulado(simulado_id, *, usuario_id):
     mesma questão pode ter outro número em outra prova oficial."""
     with get_conn() as conn:
         rows = conn.execute("""
-            SELECT si.id AS item_id, si.ordem, si.resposta_dada, si.correta,
+            SELECT si.id AS item_id, si.ordem, si.resposta_dada, si.correta, si.tempo_ms,
                    q.*, a.nome AS area, e.nome AS especialidade, (m.usuario_id IS NOT NULL) AS marcada,
                    qp.numero_prova AS numero_prova_edicao
             FROM simulado_itens si

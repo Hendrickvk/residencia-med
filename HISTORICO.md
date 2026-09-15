@@ -144,7 +144,21 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
      fraco quando o melhor e o pior diferem 15 pontos ou mais; no Praticar, o
      tipo virou filtro. Limite conhecido: o formulário e o importador do
      Streamlit não preenchem o tipo, e questão sem tipo fica fora do filtro e
-     da seção. **Próxima: item 5.**
+     da seção.
+  3. Item 5 (feita, 2026-09-15). No domínio, o acerto marcado como chute vale
+     meio (`pontos` em `db._PRIMEIRAS_TENTATIVAS`), em todo o Painel; os
+     acertos podem ter vírgula, e a legenda do quadro explica. Meio, e não zero:
+     o chute costuma ser entre duas alternativas, e o SM-2 já o trata como
+     acerto difícil (qualidade 3). O Simulado grava o tempo de tela de cada
+     questão (`simulado_itens.tempo_ms`, `POST /simulados/{id}/tempo`): a tela
+     soma as passagens e manda ao sair da questão, ao finalizar e quando a aba
+     some, sem contar a aba escondida; finalizado, não muda mais. O resultado
+     mostra o tempo médio por questão respondida contra o ritmo do simulado (3
+     min na prova oficial), em quantas passou dele e o tempo de cada uma na
+     revisão completa. O tempo segue para `respostas` e `revisao_eventos`, como
+     no Praticar. Limites conhecidos: simulado antigo não tem tempo; no
+     Simulado não há como marcar chute, então lá todo acerto conta inteiro.
+     **Próxima: item 6.**
 
 ### Próximos passos sugeridos (enquanto o deploy espera)
 Levantados em 2026-09-14, em ordem de valor. O deploy continua sendo o item

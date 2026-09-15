@@ -101,7 +101,7 @@ export function EvolucaoTriagem({ evolucao }: { evolucao: DiaEvolucao[] }) {
         />
         {pontos.map((p) => (
           <circle key={p.dia.dia} cx={p.x} cy={p.y} r={9} fill="transparent">
-            <title>{`${rotuloDia(p.dia.dia, false)}: ${formatarPctBR(p.dia.pct_acerto, 0)}% (${p.dia.acertos} de ${p.dia.total})`}</title>
+            <title>{`${rotuloDia(p.dia.dia, false)}: ${formatarPctBR(p.dia.pct_acerto, 0)}% (${p.dia.acertos.toLocaleString("pt-BR")} de ${p.dia.total})`}</title>
           </circle>
         ))}
         <circle

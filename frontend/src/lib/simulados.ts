@@ -85,6 +85,12 @@ export function responderSimulado(simuladoId: number, questaoId: number, alterna
   return api.post(`/simulados/${simuladoId}/respostas`, { questao_id: questaoId, alternativa });
 }
 
+// Tempo de uma passagem pela questão (db.somar_tempo_simulado). `keepalive`: a
+// passagem também sai quando a aba some, e o pedido precisa sobreviver a ela fechar.
+export function somarTempoSimulado(simuladoId: number, questaoId: number, tempoMs: number) {
+  return api.post(`/simulados/${simuladoId}/tempo`, { questao_id: questaoId, tempo_ms: tempoMs }, { keepalive: true });
+}
+
 export function finalizarSimulado(simuladoId: number) {
   return api.post(`/simulados/${simuladoId}/finalizar`);
 }

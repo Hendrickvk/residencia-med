@@ -5,7 +5,7 @@ import { TemaDoCaso } from "../../components/TemaDoCaso";
 import { TextoDiscussao } from "../../components/TextoDiscussao";
 import { API_URL } from "../../lib/api";
 import { BOTAO_PRIMARIO } from "../../lib/estilos";
-import { formatarPctBR } from "../../lib/format";
+import { formatarMMSS, formatarPctBR } from "../../lib/format";
 import { atraso } from "../../lib/movimento";
 import { nomeEdicao, useDesempenhoSimulado, useItensSimulado, useSimulado } from "../../lib/simulados";
 import { CLASSES_NIVEL, NIVEIS, nivelTriagem } from "../../lib/triagem";
@@ -39,6 +39,13 @@ export default function Resultado({ simuladoId, onNovoSimulado }: Props) {
   const nivel = nivelTriagem(pct);
   const areas = [...(desempenho ?? [])].sort((a, b) => a.pct_acerto - b.pct_acerto);
   const nomeProva = simulado.edicao && simulado.banca ? nomeEdicao(simulado.banca, simulado.edicao) : null;
+  // Tempo de tela (db.somar_tempo_simulado); simulado de antes da medição não tem.
+  const tempoTotalMs = itens.reduce((soma, i) => soma + (i.tempo_ms ?? 0), 0);
+  const comTempo = tempoTotalMs > 0 && respondidas > 0;
+  const mediaMs = comTempo ? tempoTotalMs / respondidas : 0;
+  // Ritmo que o tempo do simulado dá a cada questão: 3 min na prova oficial.
+  const ritmoMs = (simulado.tempo_limite_min * 60_000) / total;
+  const acimaDoRitmo = itens.filter((i) => (i.tempo_ms ?? 0) > ritmoMs).length;
 
   function alternar(itemId: number) {
     setAbertos((prev) => {
@@ -78,6 +85,15 @@ export default function Resultado({ simuladoId, onNovoSimulado }: Props) {
           <span className="num-lg">{Math.max(total - respondidas, 0)}</span>
         </div>
       </div>
+
+      {comTempo && (
+        <p className="text-corpo text-ink-2">
+          Tempo médio de <strong className="font-semibold text-ink">{formatarMMSS(mediaMs)}</strong> por questão
+          respondida, {mediaMs > ritmoMs ? "acima" : "dentro"} do ritmo de {formatarMMSS(ritmoMs)}{" "}
+          {nomeProva ? "da prova" : "do simulado"}.
+          {acimaDoRitmo > 0 && ` Em ${acimaDoRitmo} ${acimaDoRitmo === 1 ? "questão" : "questões"}, você passou desse tempo.`}
+        </p>
+      )}
 
       {areas.length > 0 && (
         <div className="flex flex-col gap-3">
@@ -128,9 +144,9 @@ export default function Resultado({ simuladoId, onNovoSimulado }: Props) {
                   type="button"
                   onClick={() => alternar(item.item_id)}
                   aria-expanded={aberto}
-                  className={`grid w-full grid-cols-[92px_auto_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 text-left transition-colors duration-hover hover:bg-ground ${
-                    aberto ? "rounded-t-card" : "rounded-card"
-                  }`}
+                  className={`grid w-full items-center gap-3 px-4 py-3 text-left transition-colors duration-hover hover:bg-ground ${
+                    comTempo ? "grid-cols-[92px_auto_minmax(0,1fr)_auto_auto]" : "grid-cols-[92px_auto_minmax(0,1fr)_auto]"
+                  } ${aberto ? "rounded-t-card" : "rounded-card"}`}
                 >
                   {naoRespondida ? (
                     <span className="rotulo rounded-etq border border-line px-2 py-1 text-center text-[12px] text-muted">Em branco</span>
@@ -141,6 +157,15 @@ export default function Resultado({ simuladoId, onNovoSimulado }: Props) {
                   )}
                   <span className="text-[14px] font-semibold tabular-nums">Questão {numero}</span>
                   <span className="truncate text-corpo text-ink-2">{item.enunciado}</span>
+                  {comTempo && (
+                    // Negrito em --ink onde passou do ritmo: é onde a prova custou mais tempo.
+                    <span
+                      className={`text-apoio tabular-nums ${(item.tempo_ms ?? 0) > ritmoMs ? "font-semibold text-ink" : "text-muted"}`}
+                    >
+                      <span className="sr-only">Tempo na questão: </span>
+                      {formatarMMSS(item.tempo_ms ?? 0)}
+                    </span>
+                  )}
                   <ChevronDown
                     size={16}
                     strokeWidth={2}

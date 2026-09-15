@@ -206,8 +206,11 @@ Conteúdo das demais telas: largura máxima 1360px, padding 36/40px.
 2. **Quadro de triagem**: 5 colunas, uma por nível, com cabeçalho e cartões de área
    ordenados do pior para o melhor. Coluna vazia mostra estado vazio curto ("Nenhuma
    área acima de 85% ainda."). O primeiro cartão da coluna mais grave já mostra o
-   botão "Praticar 10". Abaixo, legenda das faixas e a linha "Amostra insuficiente".
-   Em telas estreitas, as colunas viram grupos empilhados.
+   botão "Praticar 10". Abaixo, legenda das faixas, a nota "Acerto no chute vale
+   meio" e a linha "Amostra insuficiente". Em telas estreitas, as colunas viram
+   grupos empilhados. Todo o Painel conta só a primeira resposta a cada questão, e
+   nela o acerto marcado como chute vale 0,5 (`db._PRIMEIRAS_TENTATIVAS`): os
+   acertos podem ter vírgula ("14,5 acertos").
 3. **Onde você ganha mais pontos** (`db.prioridades_estudo`), largura total: os 3
    temas com mais pontos a ganhar, pela fração dos cadernos do INEP (Revalida e
    ENAMED) que o tema ocupa × o que falta de domínio. Com poucas respostas, o
@@ -266,7 +269,7 @@ Conteúdo das demais telas: largura máxima 1360px, padding 36/40px.
   são um bloco único, então a quebra é na exibição — um parágrafo para a resposta
   certa, um por alternativa discutida, alternativas curtas juntas, blocos longos
   divididos por frase; quebras escritas no texto têm prioridade). Acertou: "Acertei com segurança" (primário) e "Acertei
-  no chute" (secundário). Errou: "Volta na sua revisão em 10 min" (é verdade: o SM-2
+  no chute" (secundário; vale meio acerto no Painel). Errou: "Volta na sua revisão em 10 min" (é verdade: o SM-2
   agenda qualidade abaixo de 3 para 10 minutos, `repeticao_espacada.py`) e "Próximo
   caso" com `Enter`.
 - **Resumo**: acertos em display, etiqueta de nível do aproveitamento da sessão,
@@ -289,8 +292,15 @@ Conteúdo das demais telas: largura máxima 1360px, padding 36/40px.
 - Grade de navegação com três estados: respondida (fundo `--ink`), marcada (canto
   t3), em branco (só borda). Questão atual com anel `--focus`.
 - Diálogo de finalização informa quantas ficaram em branco.
-- Resultado: aproveitamento com etiqueta de nível e quadro de triagem por área do
-  simulado.
+- Tempo de tela por questão (`simulado_itens.tempo_ms`): cada passagem pela questão
+  vai para o servidor ao sair dela, ao finalizar e quando a aba some; aba escondida
+  não conta.
+- Resultado: aproveitamento com etiqueta de nível; "Tempo médio de {mm:ss} por
+  questão respondida, dentro (ou acima) do ritmo de {mm:ss} da prova", em que o
+  ritmo é o tempo do simulado dividido pelas questões (3 min na prova oficial), e em
+  quantas questões passou dele; quadro de triagem por área do simulado; na revisão
+  completa, o tempo de cada questão, em `--ink` e negrito quando passou do ritmo.
+  Simulado de antes da medição não mostra tempo.
 
 ### Revisão espaçada
 - A fila é o que o SM-2 já venceu mais as questões marcadas pelo aluno

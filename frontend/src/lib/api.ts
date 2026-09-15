@@ -37,8 +37,8 @@ function comQuery(path: string, params?: Record<string, unknown>): string {
 
 export const api = {
   get: <T>(path: string, params?: Record<string, unknown>) => request<T>(comQuery(path, params)),
-  post: <T>(path: string, data?: unknown) =>
-    request<T>(path, { method: "POST", body: data !== undefined ? JSON.stringify(data) : undefined }),
+  post: <T>(path: string, data?: unknown, init?: RequestInit) =>
+    request<T>(path, { method: "POST", body: data !== undefined ? JSON.stringify(data) : undefined, ...init }),
   patch: <T>(path: string, data?: unknown) =>
     request<T>(path, { method: "PATCH", body: JSON.stringify(data) }),
   delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),

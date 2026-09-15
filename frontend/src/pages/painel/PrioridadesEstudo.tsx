@@ -45,8 +45,8 @@ export function PrioridadesEstudo({ prioridades, onPraticar }: Props) {
                   {p.respondidas === 0
                     ? "Você ainda não praticou este tema"
                     : suficiente
-                      ? `${formatarPctBR(pct, 0)}% de acerto · ${p.acertos} de ${p.respondidas}`
-                      : `Acertou ${p.acertos} de ${p.respondidas} · pouca evidência`}
+                      ? `${formatarPctBR(pct, 0)}% de acerto · ${p.acertos.toLocaleString("pt-BR")} de ${p.respondidas}`
+                      : `Acertou ${p.acertos.toLocaleString("pt-BR")} de ${p.respondidas} · pouca evidência`}
                 </span>
                 {suficiente && (
                   <div className="h-1 overflow-hidden rounded-[2px] bg-line-soft">

@@ -1,5 +1,6 @@
 """
-Domínio no Painel (só a primeira resposta a cada questão), prioridades de
+Domínio no Painel (só a primeira resposta a cada questão, com o chute valendo
+meio), prioridades de
 estudo (`db.priorizar_temas`: peso do tema nos cadernos do INEP × o que falta
 de domínio estimado) e desempenho por tipo de pergunta.
 """
@@ -7,8 +8,8 @@ de domínio estimado) e desempenho por tipo de pergunta.
 import db
 
 
-def _tentativa(correta, tema, area=1, especialidade=10):
-    return {"area_id": area, "especialidade_id": especialidade, "subtopico_id": tema, "correta": correta}
+def _tentativa(pontos, tema, area=1, especialidade=10):
+    return {"area_id": area, "especialidade_id": especialidade, "subtopico_id": tema, "pontos": pontos}
 
 
 def _tema(tema, questoes_provas, area=1, especialidade=10):
@@ -52,6 +53,19 @@ def test_painel_conta_so_a_primeira_resposta(usuario_teste, area_teste, questao_
     assert (area["area_id"], area["total"], area["acertos"]) == (area_teste, 1, 0)
     [dia] = db.evolucao_diaria(usuario_id=usuario_teste)
     assert (dia["total"], dia["acertos"]) == (1, 0)
+
+
+def test_acerto_no_chute_vale_meio(usuario_teste, questao_teste):
+    with db.get_conn() as conn:
+        conn.execute("UPDATE questoes SET tipo_pergunta = 'Conduta' WHERE id = ?", (questao_teste,))
+    db.registrar_resposta(questao_teste, "A", True, usuario_id=usuario_teste, confianca="chute")
+
+    [area] = db.desempenho_dashboard_combinado(usuario_id=usuario_teste)["por_area"]
+    assert (area["total"], area["acertos"], area["pct_acerto"]) == (1, 0.5, 50)
+    [dia] = db.evolucao_diaria(usuario_id=usuario_teste)
+    assert (dia["total"], dia["acertos"]) == (1, 0.5)
+    conduta = next(t for t in db.desempenho_por_tipo(usuario_id=usuario_teste) if t["tipo"] == "Conduta")
+    assert (conduta["total"], conduta["acertos"]) == (1, 0.5)
 
 
 def test_prioridades_estudo_usam_os_cadernos_do_inep(usuario_teste, questao_teste):

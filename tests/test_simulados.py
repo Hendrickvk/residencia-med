@@ -3,7 +3,7 @@ Testes da Fase 5 do MIGRACAO.md: gabarito não pode vazar num simulado em
 andamento, e o estado "marcada" (dívida do redesign em Streamlit) precisa
 estar disponível pra sustentar o terceiro estado da grade de navegação.
 Também cobre o simulado por edição oficial (ordem do caderno, tempo no
-ritmo oficial) e a retomada de simulado em andamento.
+ritmo oficial), a retomada de simulado em andamento e o tempo por questão.
 
 Chama as funções dos routers diretamente (sem TestClient/HTTP) passando
 `usuario=` explícito — os fixtures de usuário não têm senha em texto plano
@@ -20,7 +20,8 @@ from api.routers.simulados import edicoes as edicoes_endpoint
 from api.routers.simulados import em_andamento as em_andamento_endpoint
 from api.routers.simulados import finalizar as finalizar_endpoint
 from api.routers.simulados import itens as itens_endpoint
-from api.schemas import SimuladoOficialIn
+from api.routers.simulados import somar_tempo as tempo_endpoint
+from api.schemas import SimuladoOficialIn, TempoSimuladoIn
 
 
 def _usuario(usuario_id):
@@ -119,3 +120,22 @@ def test_em_andamento_ignora_finalizado_e_tempo_esgotado(usuario_teste, questao_
     outro_id = db.criar_simulado(None, None, 1, 10, [questao_teste], usuario_id=usuario_teste)
     finalizar_endpoint(outro_id, usuario=usuario)
     assert em_andamento_endpoint(usuario=usuario) is None
+
+
+def test_tempo_por_questao_soma_as_passagens_ate_finalizar(usuario_teste, questao_teste):
+    usuario = _usuario(usuario_teste)
+    simulado_id = db.criar_simulado(None, None, 1, 10, [questao_teste], usuario_id=usuario_teste)
+    for ms in (40_000, 25_000):
+        tempo_endpoint(simulado_id, TempoSimuladoIn(questao_id=questao_teste, tempo_ms=ms), usuario=usuario)
+    db.somar_tempo_simulado(simulado_id, questao_teste, 99_000, usuario_id=-1)  # não é o dono
+    db.registrar_resposta_simulado(simulado_id, questao_teste, "A", usuario_id=usuario_teste)
+    finalizar_endpoint(simulado_id, usuario=usuario)
+    db.somar_tempo_simulado(simulado_id, questao_teste, 99_000, usuario_id=usuario_teste)  # já finalizado
+
+    assert itens_endpoint(simulado_id, usuario=usuario)[0]["tempo_ms"] == 65_000
+    # O tempo segue para o histórico de respostas, como no Praticar.
+    with db.get_conn() as conn:
+        resposta = conn.execute(
+            "SELECT tempo_ms FROM respostas WHERE usuario_id = ? AND questao_id = ?", (usuario_teste, questao_teste)
+        ).fetchone()
+    assert resposta["tempo_ms"] == 65_000

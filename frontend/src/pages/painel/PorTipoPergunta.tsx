@@ -51,7 +51,7 @@ export function PorTipoPergunta({ tipos, onPraticar }: Props) {
                   <span className="text-apoio tabular-nums">
                     {suficiente && <span className="font-semibold text-ink">{formatarPctBR(pct(t), 0)}% </span>}
                     <span className="text-muted">
-                      {t.acertos}/{t.total}
+                      {t.acertos.toLocaleString("pt-BR")}/{t.total}
                     </span>
                   </span>
                 </span>
