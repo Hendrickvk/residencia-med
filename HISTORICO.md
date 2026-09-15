@@ -11,13 +11,23 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   Oracle ficou em outro computador, e a Oracle não deixa baixar nem trocar a
   chave de uma instância existente. No notebook atual existe
   `~/.ssh/conduta-oracle` (alias `residencia-med` no `~/.ssh/config`), ainda
-  não autorizada: a partir do outro PC, anexar a `.pub` em
-  `~/.ssh/authorized_keys`. Host key ED25519 esperada:
-  `SHA256:c5q+FAcRSupd1hNDvfaGk6Su6oepMnb1cf+8DTQJN6A` (conferir antes de
-  aceitar). Esperando esse deploy: HTTPS via DuckDNS, redesign Triagem,
-  simulado por prova oficial e `questoes_provas`, taxonomia de especialidades,
-  correção da conexão morta do Neon, revisão espaçada em 3 fases, a limpeza de
-  código morto e a remoção dos materiais. Passos: `git pull`,
+  não autorizada: a partir do outro PC, anexar o conteúdo de
+  `~/.ssh/conduta-oracle.pub` deste notebook ao `~/.ssh/authorized_keys` do
+  servidor; a alternativa é trazer para cá a chave original da instância
+  (`ssh-key-2026-09-12.key`). Estado conferido em 2026-09-15: a host key
+  ED25519 que o servidor apresenta é a esperada
+  (`SHA256:c5q+FAcRSupd1hNDvfaGk6Su6oepMnb1cf+8DTQJN6A`) e já está no
+  `known_hosts` deste PC, então a primeira conexão não vai perguntar nada;
+  `ssh residencia-med` chega até a autenticação e volta
+  `Permission denied (publickey)`, ou seja, falta só a autorização no servidor.
+  A permissão da chave privada foi restringida ao usuário pela ACL do Windows
+  (`icacls … /inheritance:r /grant:r`); o `ls` do Git Bash continua mostrando
+  `-rw-r--r--`, que ali não reflete a ACL. Esperando esse deploy: HTTPS via
+  DuckDNS, redesign Triagem, simulado por prova oficial e `questoes_provas`,
+  taxonomia de especialidades, correção da conexão morta do Neon, revisão
+  espaçada em 3 fases, a limpeza de código morto, a remoção dos materiais, os
+  temas e o tipo de pergunta das questões e os 7 itens do acompanhamento do
+  desempenho. Passos: `git pull`,
   rebuild do front, no `.env.production` `COOKIE_SECURE=true` e
   `CORS_ORIGENS=https://conduta.duckdns.org`, copiar o Caddyfile, reload do
   caddy, restart de api e streamlit, testar, só então fechar a 8080 (iptables
