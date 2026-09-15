@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { EstadoVazio } from "../../components/EstadoVazio";
 import { Kbd } from "../../components/Kbd";
+import { TemaDoCaso } from "../../components/TemaDoCaso";
 import { TextoDiscussao } from "../../components/TextoDiscussao";
 import { API_URL } from "../../lib/api";
 import { BOTAO_PRIMARIO, PRESSAO } from "../../lib/estilos";
@@ -210,7 +211,8 @@ export default function Revisao() {
     );
   }
 
-  const recorte = [q.area, q.especialidade, q.subtopico].filter(Boolean).join(" · ");
+  // Sem o tema, que só entra na discussão (TemaDoCaso).
+  const recorte = [q.area, q.especialidade].filter(Boolean).join(" · ");
   const prova = [q.banca, q.ano].filter(Boolean).join(" ");
 
   return (
@@ -317,6 +319,7 @@ export default function Revisao() {
                 <div className="flex animate-entrar flex-col gap-3 border-t border-line-soft pt-6">
                   <span className="rotulo text-muted">Discussão do caso</span>
                   <span className="text-subtitulo">Resposta correta: {q.resposta_correta}</span>
+                  <TemaDoCaso tema={q.subtopico} />
                   {q.explicacao && <TextoDiscussao texto={q.explicacao} />}
                 </div>
 

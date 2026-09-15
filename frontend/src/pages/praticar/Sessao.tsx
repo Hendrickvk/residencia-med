@@ -3,6 +3,7 @@ import { BadgeCheck, Clock, Flag, RefreshCw } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { EstadoVazio } from "../../components/EstadoVazio";
 import { Kbd } from "../../components/Kbd";
+import { TemaDoCaso } from "../../components/TemaDoCaso";
 import { TextoDiscussao } from "../../components/TextoDiscussao";
 import { API_URL, api } from "../../lib/api";
 import { BOTAO_PRIMARIO, BOTAO_SECUNDARIO, PRESSAO } from "../../lib/estilos";
@@ -193,14 +194,15 @@ export default function Sessao({ filtros, nonce, onFinalizar, onVoltar }: Props)
   }
 
   const marcadaAtual = marcadas.has(questaoAtual.id);
-  const recorteSessao = filtros.especialidade_id
-    ? fila[0]?.especialidade
-    : filtros.area_id
-      ? fila[0]?.area
-      : null;
-  const recorteCaso = [questaoAtual.area, questaoAtual.especialidade, questaoAtual.subtopico]
-    .filter(Boolean)
-    .join(" · ");
+  const recorteSessao = filtros.subtopico_id
+    ? fila[0]?.subtopico
+    : filtros.especialidade_id
+      ? fila[0]?.especialidade
+      : filtros.area_id
+        ? fila[0]?.area
+        : null;
+  // Sem o tema, que só entra na discussão (TemaDoCaso).
+  const recorteCaso = [questaoAtual.area, questaoAtual.especialidade].filter(Boolean).join(" · ");
   const prova = [questaoAtual.banca, questaoAtual.ano].filter(Boolean).join(" ");
   // `{}` = ninguém além do próprio aluno respondeu ainda (db.distribuicao_respostas_questao
   // exclui o usuário atual). Sem esse caso, todas as alternativas apareciam com 0%.
@@ -349,6 +351,7 @@ export default function Sessao({ filtros, nonce, onFinalizar, onVoltar }: Props)
                       {fraseDistribuicao && <span className="animate-desvanecer">{fraseDistribuicao}</span>}
                     </span>
                   </div>
+                  <TemaDoCaso tema={questaoAtual.subtopico} />
                   {questaoAtual.explicacao && (
                     <TextoDiscussao texto={questaoAtual.explicacao} />
                   )}

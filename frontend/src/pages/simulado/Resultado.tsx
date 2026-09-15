@@ -1,6 +1,7 @@
 import { ChevronDown, RotateCcw } from "lucide-react";
 import { useState } from "react";
 import { NumeroAnimado } from "../../components/NumeroAnimado";
+import { TemaDoCaso } from "../../components/TemaDoCaso";
 import { TextoDiscussao } from "../../components/TextoDiscussao";
 import { API_URL } from "../../lib/api";
 import { BOTAO_PRIMARIO } from "../../lib/estilos";
@@ -170,6 +171,7 @@ export default function Resultado({ simuladoId, onNovoSimulado }: Props) {
                     {item.explicacao && (
                       <div className="flex flex-col gap-2 border-t border-line-soft pt-5">
                         <span className="rotulo text-muted">Comentário</span>
+                        <TemaDoCaso tema={item.subtopico} />
                         <TextoDiscussao texto={item.explicacao} />
                       </div>
                     )}

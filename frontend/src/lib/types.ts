@@ -48,6 +48,16 @@ export interface Especialidade {
   total_questoes: number;
 }
 
+// Terceiro nível: o tema da especialidade (db.TEMAS). Na API e no banco se
+// chama subtópico (tabela `subtopicos`, campo `subtopico_id` da questão).
+export interface Subtopico {
+  id: number;
+  area_id: number;
+  especialidade_id: number | null;
+  nome: string;
+  total_questoes: number;
+}
+
 export interface RespondidaResumo {
   id: number;
   correta: boolean;

@@ -890,15 +890,21 @@ def listar_especialidades(area_id=None):
 
 def listar_temas(area_id, especialidade_id=None):
     """Temas (linhas de `subtopicos` semeadas de TEMAS) da grande área, ou só
-    da especialidade. Os assuntos antigos da sincronização do MediaFire, que
-    têm `origem`, ficam de fora."""
-    query = "SELECT * FROM subtopicos WHERE area_id = ? AND origem IS NULL"
+    da especialidade, com quantas questões cada um tem — o Praticar esconde os
+    vazios. Os assuntos antigos da sincronização do MediaFire, que têm
+    `origem`, ficam de fora."""
+    query = """
+        SELECT s.*, COUNT(q.id) AS total_questoes
+        FROM subtopicos s
+        LEFT JOIN questoes q ON q.subtopico_id = s.id
+        WHERE s.area_id = ? AND s.origem IS NULL
+    """
     params = [area_id]
     if especialidade_id:
-        query += " AND especialidade_id = ?"
+        query += " AND s.especialidade_id = ?"
         params.append(especialidade_id)
     with get_conn() as conn:
-        return conn.execute(query + " ORDER BY nome", params).fetchall()
+        return conn.execute(query + " GROUP BY s.id ORDER BY s.nome", params).fetchall()
 
 
 def obter_tema(area_id, nome):

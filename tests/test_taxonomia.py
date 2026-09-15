@@ -1,7 +1,7 @@
 """
-Taxonomia grande área > especialidade (`db.TAXONOMIA`): o resolvedor de
-nomes livres usado pelo importador de planilha e o filtro por especialidade
-do Praticar.
+Taxonomia grande área > especialidade > tema (`db.TAXONOMIA`, `db.TEMAS`): o
+resolvedor de nomes livres usado pelo importador de planilha e os filtros por
+especialidade e por tema do Praticar.
 """
 
 import pytest
@@ -99,3 +99,28 @@ def test_filtro_por_especialidade_em_praticar(usuario_teste, area_teste, questao
 
     contagens = {e["nome"]: e["total_questoes"] for e in db.listar_especialidades(area_teste)}
     assert contagens == {"__pytest_esp_a": 1, "__pytest_esp_b": 0}
+
+
+def test_filtro_por_tema_em_praticar(usuario_teste, area_teste, questao_teste, especialidades_teste):
+    esp_a, _ = especialidades_teste
+    temas = []
+    # Os temas somem com a área de teste (subtopicos.area_id é ON DELETE CASCADE).
+    with db.get_conn() as conn:
+        for nome in ("__pytest_tema_a", "__pytest_tema_b"):
+            conn.execute(
+                "INSERT INTO subtopicos (area_id, especialidade_id, nome) VALUES (?, ?, ?)", (area_teste, esp_a, nome)
+            )
+            temas.append(conn.execute(
+                "SELECT id FROM subtopicos WHERE area_id = ? AND nome = ?", (area_teste, nome)
+            ).fetchone()["id"])
+        conn.execute(
+            "UPDATE questoes SET especialidade_id = ?, subtopico_id = ? WHERE id = ?", (esp_a, temas[0], questao_teste)
+        )
+
+    assert questao_teste in db.ids_questoes_filtro_pratica(usuario_id=usuario_teste, subtopico_id=temas[0])
+    assert questao_teste not in db.ids_questoes_filtro_pratica(usuario_id=usuario_teste, subtopico_id=temas[1])
+    [questao] = db.obter_questoes_por_ids([questao_teste], usuario_id=usuario_teste)
+    assert questao["subtopico"] == "__pytest_tema_a"
+
+    contagens = {t["nome"]: t["total_questoes"] for t in db.listar_temas(area_teste, esp_a)}
+    assert contagens == {"__pytest_tema_a": 1, "__pytest_tema_b": 0}

@@ -228,12 +228,15 @@ Conteúdo das demais telas: largura máxima 1360px, padding 36/40px.
    na cor do nível). O mesmo limite de amostra do quadro vale para todo percentual.
 
 ### Praticar
-- **Configurador**: título "Praticar"; campos área, especialidade (só as que têm
-  casos, com a contagem), banca, ano; quantidade
+- **Configurador**: título "Praticar"; campos área, especialidade e tema (só os que
+  têm casos, com a contagem; cada um depende do anterior, e o tema ocupa a linha
+  inteira porque há nomes longos), banca, ano; quantidade
   como botões segmentados (10/20/30/50); dois interruptores; filtros escolhidos
   viram etiquetas removíveis; botão "Iniciar sessão de {n} casos".
 - **Sessão (modo foco)**: acima do cartão, "Caso" + número em display à esquerda,
-  área · especialidade e selo de prova oficial à direita. Cartão com enunciado, imagem,
+  área · especialidade e selo de prova oficial à direita. O tema não entra aí: numa
+  questão que pede o diagnóstico ele entregaria o gabarito, então só aparece
+  depois de confirmar, na discussão (decisão do usuário). Cartão com enunciado, imagem,
   pergunta, alternativas e, antes de confirmar, dicas de atalho + "Confirmar
   resposta". Progresso na barra superior: um quadrado por caso (t4 acerto, t1 erro,
   `--line` pendente).
@@ -241,7 +244,7 @@ Conteúdo das demais telas: largura máxima 1360px, padding 36/40px.
   bloco "Discussão do caso" com "Resposta correta: {letra}", "Você marcou {letra},
   como {x}% dos outros alunos" (só quando a distribuição chegar; o espaço fica
   reservado; sem respostas de outros alunos: "Ninguém mais respondeu este caso
-  ainda." e nenhum percentual nas alternativas) e a explicação em parágrafos (`src/lib/paragrafos.ts`: as explicações do banco
+  ainda." e nenhum percentual nas alternativas), "Tema: {tema}" e a explicação em parágrafos (`src/lib/paragrafos.ts`: as explicações do banco
   são um bloco único, então a quebra é na exibição — um parágrafo para a resposta
   certa, um por alternativa discutida, alternativas curtas juntas, blocos longos
   divididos por frase; quebras escritas no texto têm prioridade). Acertou: "Acertei com segurança" (primário) e "Acertei
@@ -259,7 +262,8 @@ Conteúdo das demais telas: largura máxima 1360px, padding 36/40px.
   área, banca, quantidade e tempo.
 - Prova em andamento e ainda dentro do tempo aparece acima das abas, com borda
   `--ink` e "Continuar prova"; ao retomar, abre na primeira questão em branco.
-- Mesmo cartão e alternativas do Praticar, sem feedback. Na prova oficial, a linha
+- Mesmo cartão e alternativas do Praticar, sem feedback e sem o tema (o resultado
+  mostra, junto da discussão). Na prova oficial, a linha
   de procedência mostra a edição e o número da questão no caderno.
 - Cronômetro em h:mm:ss a partir de 1 hora (a prova oficial passa de 4 horas).
 - Barra superior em modo foco com o cronômetro regressivo em display condensado:
@@ -283,8 +287,8 @@ Conteúdo das demais telas: largura máxima 1360px, padding 36/40px.
   "Revisar mais 10". A barra mostra os restantes com a duração estimada.
 - Um caso por vez, contagem restante na barra superior, "Recomeçar fila" e "Sair"
   (volta ao Painel; cada avaliação já foi gravada).
-- O aluno responde de novo, como no Praticar (A–E, Enter), e vê a correção e a
-  discussão. Quem decide se foi erro é o gabarito: resposta errada agenda sozinha
+- O aluno responde de novo, como no Praticar (A–E, Enter), e vê a correção, o
+  tema e a discussão. Quem decide se foi erro é o gabarito: resposta errada agenda sozinha
   ("Volta na sua revisão em 10 min" + "Próximo caso", Enter). Resposta certa pede
   "Como foi lembrar?": "Com esforço" (t2), "Lembrei" (t4), "Fácil" (t5), teclas
   1–3, cada botão com o prazo que vai de fato agendar ("volta em 6 dias"), vindo de

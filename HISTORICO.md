@@ -97,9 +97,15 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
      hidradenite supurativa (300, Infecções de pele), dermatite seborreica
      infantil (359, Dermatoses alérgicas) e colangite esclerosante na
      retocolite (51, Doenças inflamatórias intestinais). Vale o usuário
-     conferir os temas novos e essas mudanças. **Próxima: fase 4.**
-  4. Filtro de tema no Praticar e tema no cabeçalho do caso (o cabeçalho já
-     mostra `subtopico`).
+     conferir os temas novos e essas mudanças.
+  4. Filtro de tema no Praticar e tema no caso (feita, 2026-09-15). O
+     Configurador ganhou o campo Tema, que depende da especialidade e só lista
+     temas com casos (`GET /areas/{id}/temas`, contagem em `db.listar_temas`).
+     Decisão do usuário: o tema não fica no cabeçalho antes da resposta, porque
+     numa questão que pede o diagnóstico ele entregaria o gabarito (ex.:
+     "Leptospirose, tétano e raiva"). Aparece como "Tema: …" na discussão do
+     Praticar e da Revisão e no comentário do resultado do Simulado, e some
+     durante a prova (`components/TemaDoCaso.tsx`). **Próxima: fase 5.**
   5. Estatística por tema só quando houver respostas suficientes (hoje ~30 por
      aluno; o Painel exige 5 por grupo).
 
