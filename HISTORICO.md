@@ -42,7 +42,7 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   Inep nº 540/2020, art. 7º (conteúdos por área do Revalida); a Matriz Comum de
   2025 (Portaria 478) só define áreas, competências e cenários, sem lista de
   doenças. Fases:
-  1. Lista `db.TEMAS`, 200 temas (feita e aprovada). Na classificação entraram
+  1. Lista `db.TEMAS`, 202 temas (feita e aprovada). Na classificação entraram
      temas que faltavam, com aprovação do usuário: "Prolapso genital e
      incontinência urinária" (Ginecologia); em Pediatria clínica, diabetes e
      endócrino, vasculites e reumatologia, desenvolvimento e comportamento,
@@ -52,7 +52,9 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
      e "Cirurgia bariátrica" (Cirurgia geral, não citada pelo nome na portaria,
      mas cobrada nas provas) e "Trauma de pelve, extremidades e partes moles"
      (Trauma), "Doenças da coluna vertebral" (Ortopedia) e "Trauma ocular e
-     queimaduras químicas" (Oftalmologia) — os demais citados na Portaria
+     queimaduras químicas" (Oftalmologia), "História natural e determinantes
+     do processo saúde-doença" (Epidemiologia) e "Imunização e profilaxia
+     pós-exposição" (Vigilância) — os demais citados na Portaria
      540/2020, que a primeira lista tinha comprimido demais. Vale conferir as
      próximas especialidades contra o texto da portaria antes de classificar.
   2. Temas no banco (feita): `init_db` grava os temas em `subtopicos`;
@@ -68,9 +70,11 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
      Neonatologia (33), Infectologia pediátrica (30) e Puericultura (25) —
      Pediatria inteira; Cirurgia inteira (180: Cirurgia geral 57, Trauma 40,
      Urologia 18, Coloproctologia 16, Cirurgia pediátrica 15, Ortopedia 12,
-     Oftalmologia 10, Otorrinolaringologia 6, Cirurgia vascular 6). 541 de 986
-     questões com tema. **Próximo: Medicina Preventiva e Social**, depois
-     Clínica Médica.
+     Oftalmologia 10, Otorrinolaringologia 6, Cirurgia vascular 6); Medicina
+     Preventiva e Social inteira (159: Atenção primária 37,
+     Vigilância 34, Epidemiologia 30, Ética 24, Políticas 21, Trabalhador 13).
+     700 de 986 questões com tema. **Próximo: Clínica Médica** (a última
+     grande área, 286 questões em 15 especialidades).
   4. Filtro de tema no Praticar e tema no cabeçalho do caso (o cabeçalho já
      mostra `subtopico`).
   5. Estatística por tema só quando houver respostas suficientes (hoje ~30 por

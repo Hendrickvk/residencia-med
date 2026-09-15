@@ -398,7 +398,7 @@ TEMAS = {
     "Epidemiologia": [
         "Indicadores de saúde e medidas de frequência", "Desenhos de estudo e medidas de associação",
         "Testes diagnósticos", "Transição demográfica e epidemiológica", "Sistemas de informação em saúde",
-        "Medicina baseada em evidências",
+        "Medicina baseada em evidências", "História natural e determinantes do processo saúde-doença",
     ],
     "Ética e medicina legal": [
         "Código de ética médica e sigilo", "Documentos médicos e declaração de óbito",
@@ -415,7 +415,7 @@ TEMAS = {
     ],
     "Vigilância em saúde": [
         "Vigilância epidemiológica e notificação compulsória", "Surtos, epidemias e investigação",
-        "Vigilância sanitária e farmacovigilância", "Vigilância ambiental",
+        "Vigilância sanitária e farmacovigilância", "Vigilância ambiental", "Imunização e profilaxia pós-exposição",
     ],
 }
 
