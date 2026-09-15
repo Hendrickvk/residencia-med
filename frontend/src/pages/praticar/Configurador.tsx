@@ -1,6 +1,6 @@
 import { ArrowRight, X } from "lucide-react";
 import { useState } from "react";
-import { useAreas, useAnos, useBancas, useEspecialidades, useTemas } from "../../lib/catalogo";
+import { useAreas, useAnos, useBancas, useEspecialidades, useTemas, useTiposPergunta } from "../../lib/catalogo";
 import { BOTAO_PRIMARIO, CAMPO, PRESSAO } from "../../lib/estilos";
 import type { FiltrosPratica } from "../../lib/types";
 
@@ -10,6 +10,13 @@ interface Props {
 }
 
 const QUANTIDADES = [10, 20, 30, 50];
+
+// Botão de escolha única (quantidade, tipo de pergunta): o escolhido fica em tinta.
+function classeSegmento(ativo: boolean) {
+  return `h-10 min-w-[56px] rounded-btn border px-4 text-[15px] font-semibold transition duration-hover ease-brand ${PRESSAO} ${
+    ativo ? "border-ink bg-ink text-onink" : "border-line bg-surface text-ink-2 hover:border-muted"
+  }`;
+}
 
 function Interruptor({
   ligado,
@@ -49,6 +56,7 @@ export default function Configurador({ onIniciar, areaInicial }: Props) {
   const [areaId, setAreaId] = useState<number | undefined>(areaInicial);
   const [especialidadeId, setEspecialidadeId] = useState<number | undefined>(undefined);
   const [subtopicoId, setSubtopicoId] = useState<number | undefined>(undefined);
+  const [tipoPergunta, setTipoPergunta] = useState<string | undefined>(undefined);
   const [banca, setBanca] = useState<string | undefined>(undefined);
   const [ano, setAno] = useState<number | undefined>(undefined);
   const [quantidade, setQuantidade] = useState(20);
@@ -58,6 +66,7 @@ export default function Configurador({ onIniciar, areaInicial }: Props) {
   const { data: areas } = useAreas();
   const { data: especialidades } = useEspecialidades(areaId);
   const { data: temas } = useTemas(areaId, especialidadeId);
+  const { data: tipos } = useTiposPergunta();
   const { data: bancas } = useBancas();
   const { data: anos } = useAnos();
 
@@ -82,6 +91,7 @@ export default function Configurador({ onIniciar, areaInicial }: Props) {
   if (nomeArea) chips.push({ label: nomeArea, onRemover: () => escolherArea(undefined) });
   if (nomeEspecialidade) chips.push({ label: nomeEspecialidade, onRemover: () => escolherEspecialidade(undefined) });
   if (nomeTema) chips.push({ label: nomeTema, onRemover: () => setSubtopicoId(undefined) });
+  if (tipoPergunta) chips.push({ label: tipoPergunta, onRemover: () => setTipoPergunta(undefined) });
   if (banca) chips.push({ label: banca, onRemover: () => setBanca(undefined) });
   if (ano) chips.push({ label: String(ano), onRemover: () => setAno(undefined) });
   if (apenasErros) chips.push({ label: "Apenas erros", onRemover: () => setApenasErros(false) });
@@ -187,6 +197,25 @@ export default function Configurador({ onIniciar, areaInicial }: Props) {
           </label>
         </div>
 
+        {tipos && (
+          <div className="flex flex-col gap-2">
+            <span className="rotulo text-muted">Tipo de pergunta</span>
+            <div className="flex flex-wrap gap-2">
+              {[undefined, ...tipos].map((t) => (
+                <button
+                  key={t ?? "todos"}
+                  type="button"
+                  aria-pressed={tipoPergunta === t}
+                  onClick={() => setTipoPergunta(t)}
+                  className={classeSegmento(tipoPergunta === t)}
+                >
+                  {t ?? "Todos"}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="flex flex-col gap-2">
           <span className="rotulo text-muted">Quantidade de casos</span>
           <div className="flex flex-wrap gap-2">
@@ -196,9 +225,7 @@ export default function Configurador({ onIniciar, areaInicial }: Props) {
                 type="button"
                 aria-pressed={quantidade === q}
                 onClick={() => setQuantidade(q)}
-                className={`h-10 min-w-[56px] rounded-btn border px-4 text-[15px] font-semibold tabular-nums transition duration-hover ease-brand ${PRESSAO} ${
-                  quantidade === q ? "border-ink bg-ink text-onink" : "border-line bg-surface text-ink-2 hover:border-muted"
-                }`}
+                className={`${classeSegmento(quantidade === q)} tabular-nums`}
               >
                 {q}
               </button>
@@ -240,6 +267,7 @@ export default function Configurador({ onIniciar, areaInicial }: Props) {
                 area_id: areaId,
                 especialidade_id: especialidadeId,
                 subtopico_id: subtopicoId,
+                tipo_pergunta: tipoPergunta,
                 banca,
                 ano,
                 apenas_erros: apenasErros,

@@ -32,6 +32,7 @@ export default function Sessao({ filtros, nonce, onFinalizar, onVoltar }: Props)
         area_id: filtros.area_id,
         especialidade_id: filtros.especialidade_id,
         subtopico_id: filtros.subtopico_id,
+        tipo_pergunta: filtros.tipo_pergunta,
         banca: filtros.banca,
         ano: filtros.ano,
         apenas_erros: filtros.apenas_erros,
@@ -194,13 +195,18 @@ export default function Sessao({ filtros, nonce, onFinalizar, onVoltar }: Props)
   }
 
   const marcadaAtual = marcadas.has(questaoAtual.id);
-  const recorteSessao = filtros.subtopico_id
-    ? fila[0]?.subtopico
-    : filtros.especialidade_id
-      ? fila[0]?.especialidade
-      : filtros.area_id
-        ? fila[0]?.area
-        : null;
+  const recorteSessao = [
+    filtros.tipo_pergunta,
+    filtros.subtopico_id
+      ? fila[0]?.subtopico
+      : filtros.especialidade_id
+        ? fila[0]?.especialidade
+        : filtros.area_id
+          ? fila[0]?.area
+          : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
   // Sem o tema, que só entra na discussão (TemaDoCaso).
   const recorteCaso = [questaoAtual.area, questaoAtual.especialidade].filter(Boolean).join(" · ");
   const prova = [questaoAtual.banca, questaoAtual.ano].filter(Boolean).join(" ");

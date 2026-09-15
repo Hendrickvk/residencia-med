@@ -420,6 +420,14 @@ TEMAS = {
     ],
 }
 
+# Tipo de pergunta: o que a questão pede, pelo que as alternativas são — um
+# diagnóstico (Diagnóstico); um exame, achado ou resultado (Exames); uma ação,
+# como tratar, prescrever, encaminhar, orientar ou prevenir (Conduta); uma
+# afirmação, mecanismo, número ou lei (Conceitos). Pedindo mais de uma coisa ("o
+# diagnóstico e a conduta"), vale a etapa mais adiante: Conduta > Exames >
+# Diagnóstico. Segundo eixo do desempenho, ao lado do tema.
+TIPOS_PERGUNTA = ("Diagnóstico", "Exames", "Conduta", "Conceitos")
+
 # Padrões procurados no nome normalizado (minúsculo, sem acento), do mais
 # específico para o mais geral: "cirurgia vascular" precisa vencer "cirurg",
 # e "ginecologia e obstetricia" precisa vencer "gineco". Especialidade None =
@@ -833,6 +841,7 @@ def init_db():
                     "REFERENCES especialidades(id) ON DELETE SET NULL"
                 )
         c.execute("CREATE INDEX IF NOT EXISTS idx_questoes_especialidade_id ON questoes(especialidade_id)")
+        c.execute("ALTER TABLE questoes ADD COLUMN IF NOT EXISTS tipo_pergunta TEXT")  # TIPOS_PERGUNTA
 
         # Seed da taxonomia: grandes áreas, especialidades e temas. Antes
         # daqui entravam especialidades soltas como áreas ("Cardiologia",
@@ -960,7 +969,7 @@ def listar_anos():
 
 def ids_questoes_filtro_pratica(*, usuario_id, area_id=None, subtopico_id=None,
                                  banca=None, ano=None, apenas_erros=False,
-                                 excluir_respondidas=False, especialidade_id=None):
+                                 excluir_respondidas=False, especialidade_id=None, tipo_pergunta=None):
     """Configurador de Praticar (REDESIGN.md §4.2): filtros combináveis além
     de área/especialidade/subtópico — banca, ano, e dois interruptores que
     olham o histórico de respostas do próprio usuário."""
@@ -975,6 +984,9 @@ def ids_questoes_filtro_pratica(*, usuario_id, area_id=None, subtopico_id=None,
     if subtopico_id:
         condicoes.append("q.subtopico_id = ?")
         params.append(subtopico_id)
+    if tipo_pergunta:
+        condicoes.append("q.tipo_pergunta = ?")
+        params.append(tipo_pergunta)
     if banca:
         # Questão aplicada em mais de uma prova oficial vale para todas as bancas.
         condicoes.append(
@@ -1427,6 +1439,24 @@ def prioridades_estudo(*, usuario_id, limite=3):
         """, BANCAS_INEP).fetchone()
     prioridades = priorizar_temas(tentativas, temas, totais["questoes"], limite)
     return [{**p, "total_provas": totais["provas"]} for p in prioridades]
+
+
+def desempenho_por_tipo(*, usuario_id):
+    """Acerto na primeira resposta por tipo de pergunta, na ordem de
+    TIPOS_PERGUNTA, incluindo os tipos ainda sem resposta (total 0)."""
+    with get_conn() as conn:
+        linhas = conn.execute(f"""
+            SELECT q.tipo_pergunta AS tipo, COUNT(*) AS total, SUM(r.correta) AS acertos
+            FROM ({_PRIMEIRAS_TENTATIVAS}) r JOIN questoes q ON q.id = r.questao_id
+            WHERE q.tipo_pergunta IS NOT NULL
+            GROUP BY q.tipo_pergunta
+        """, (usuario_id,)).fetchall()
+    por_tipo = {linha["tipo"]: linha for linha in linhas}
+    return [
+        {"tipo": tipo, "total": por_tipo[tipo]["total"], "acertos": por_tipo[tipo]["acertos"]}
+        if tipo in por_tipo else {"tipo": tipo, "total": 0, "acertos": 0}
+        for tipo in TIPOS_PERGUNTA
+    ]
 
 
 # ---------------------------------------------------------------------------

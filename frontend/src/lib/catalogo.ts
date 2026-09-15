@@ -31,3 +31,8 @@ export function useBancas() {
 export function useAnos() {
   return useQuery({ queryKey: ["anos"], queryFn: () => api.get<number[]>("/questoes/anos"), staleTime: 60_000 });
 }
+
+// Lista fixa do servidor (db.TIPOS_PERGUNTA), para o front não repetir os nomes.
+export function useTiposPergunta() {
+  return useQuery({ queryKey: ["tipos-pergunta"], queryFn: () => api.get<string[]>("/questoes/tipos"), staleTime: 60_000 });
+}

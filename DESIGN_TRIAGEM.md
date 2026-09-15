@@ -217,7 +217,13 @@ Conteúdo das demais telas: largura máxima 1360px, padding 36/40px.
    evidência" ou percentual com barra de nível a partir de 5 respostas), "Caiu em
    {n} das {total} provas do INEP" e "Praticar {n}" (10, ou o tema inteiro se tiver
    menos), que abre a sessão já filtrada. Só o primeiro botão é primário.
-4. **Rodapé** em duas colunas: "Fila de revisão" (casos de hoje dentro da meta diária em
+4. **Por tipo de pergunta** (`db.desempenho_por_tipo`), largura total: o mesmo
+   aproveitamento do quadro separado pelo que a questão pede — Diagnóstico,
+   Exames, Conduta e Conceitos (`db.TIPOS_PERGUNTA`). Cada tipo com percentual,
+   fração e barra de nível a partir de 5 respostas ("Pouca evidência" antes), e o
+   tipo inteiro é um botão para "Praticar 10" dele. Quando o melhor e o pior tipo
+   com amostra diferem 15 pontos ou mais, uma frase aponta o ponto fraco.
+5. **Rodapé** em duas colunas: "Fila de revisão" (casos de hoje dentro da meta diária em
    display, com a duração estimada pelo tempo real do aluno e quantos podem esperar;
    seletor "Meta diária" 10/20/30/50; "Próximos 7 dias" em barras — parte dentro da
    meta em `--ink`, o que passa dela em t2 (atenção), linha tracejada na meta, legenda
@@ -225,7 +231,7 @@ Conteúdo das demais telas: largura máxima 1360px, padding 36/40px.
    dias" (linha em `--ink` sobre as faixas de nível em transparência, último ponto
    marcado e rotulado; menos de 3 dias: "Histórico começa a aparecer no terceiro dia
    de estudo.").
-5. **Evolução da memória** (`repeticao_espacada.evolucao_memoria`), largura total. Só
+6. **Evolução da memória** (`repeticao_espacada.evolucao_memoria`), largura total. Só
    conta como teste de memória o caso que voltou depois de pelo menos 1 dia sem ser
    visto (refazer 10 min depois do erro não conta). Frase da semana: "Nos últimos 7
    dias, {n} casos voltaram e você lembrou de {x} ({%})" com etiqueta de nível e,
@@ -242,8 +248,8 @@ Conteúdo das demais telas: largura máxima 1360px, padding 36/40px.
 ### Praticar
 - **Configurador**: título "Praticar"; campos área, especialidade e tema (só os que
   têm casos, com a contagem; cada um depende do anterior, e o tema ocupa a linha
-  inteira porque há nomes longos), banca, ano; quantidade
-  como botões segmentados (10/20/30/50); dois interruptores; filtros escolhidos
+  inteira porque há nomes longos), banca, ano; tipo de pergunta (Todos e os quatro
+  tipos) e quantidade como botões segmentados (10/20/30/50); dois interruptores; filtros escolhidos
   viram etiquetas removíveis; botão "Iniciar sessão de {n} casos".
 - **Sessão (modo foco)**: acima do cartão, "Caso" + número em display à esquerda,
   área · especialidade e selo de prova oficial à direita. O tema não entra aí: numa

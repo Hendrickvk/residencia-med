@@ -16,6 +16,7 @@ def obter_sessao_pratica(
     area_id: int | None = None,
     especialidade_id: int | None = None,
     subtopico_id: int | None = None,
+    tipo_pergunta: str | None = None,
     banca: str | None = None,
     ano: int | None = None,
     apenas_erros: bool = False,
@@ -31,6 +32,7 @@ def obter_sessao_pratica(
         usuario_id=usuario["id"], area_id=area_id, subtopico_id=subtopico_id,
         banca=banca, ano=ano, apenas_erros=apenas_erros,
         excluir_respondidas=excluir_respondidas, especialidade_id=especialidade_id,
+        tipo_pergunta=tipo_pergunta,
     )
     random.shuffle(ids)
     ids = ids[:quantidade]

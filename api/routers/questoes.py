@@ -18,6 +18,11 @@ def anos(usuario=Depends(usuario_atual)):
     return db.listar_anos()
 
 
+@router.get("/tipos")
+def tipos(usuario=Depends(usuario_atual)):
+    return list(db.TIPOS_PERGUNTA)
+
+
 @router.get("/{questao_id}/distribuicao")
 def distribuicao(questao_id: int, usuario=Depends(usuario_atual)):
     return db.distribuicao_respostas_questao(questao_id, excluir_usuario_id=usuario["id"])

@@ -17,6 +17,7 @@ interface EstadoNavegacao {
   areaId?: number;
   especialidadeId?: number;
   subtopicoId?: number;
+  tipoPergunta?: string;
   iniciarImediato?: boolean;
   quantidade?: number;
 }
@@ -34,6 +35,7 @@ export default function Praticar() {
           area_id: estadoNav.areaId,
           especialidade_id: estadoNav.especialidadeId,
           subtopico_id: estadoNav.subtopicoId,
+          tipo_pergunta: estadoNav.tipoPergunta,
           quantidade: estadoNav.quantidade ?? 20,
           apenas_erros: false,
           excluir_respondidas: false,

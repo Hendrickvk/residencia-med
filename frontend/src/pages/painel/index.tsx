@@ -6,6 +6,7 @@ import { Cabecalho } from "./Cabecalho";
 import { EvolucaoMemoria } from "./EvolucaoMemoria";
 import { EvolucaoTriagem } from "./EvolucaoTriagem";
 import { FilaRevisao } from "./FilaRevisao";
+import { PorTipoPergunta } from "./PorTipoPergunta";
 import { PrioridadesEstudo } from "./PrioridadesEstudo";
 import { QuadroTriagem } from "./QuadroTriagem";
 
@@ -70,14 +71,24 @@ export default function Painel() {
           />
         </div>
       )}
+      {data.por_tipo.some((t) => t.total > 0) && (
+        <div className="animate-entrar" style={{ animationDelay: "300ms" }}>
+          <PorTipoPergunta
+            tipos={data.por_tipo}
+            onPraticar={(tipo) =>
+              navigate("/praticar", { state: { tipoPergunta: tipo, iniciarImediato: true, quantidade: 10 } })
+            }
+          />
+        </div>
+      )}
       <div
         className="grid animate-entrar grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]"
-        style={{ animationDelay: "320ms" }}
+        style={{ animationDelay: "340ms" }}
       >
         <FilaRevisao revisao={data.revisao} onRevisar={() => navigate("/revisao")} />
         <EvolucaoTriagem evolucao={data.evolucao_14_dias} />
       </div>
-      <div className="animate-entrar" style={{ animationDelay: "380ms" }}>
+      <div className="animate-entrar" style={{ animationDelay: "400ms" }}>
         <EvolucaoMemoria memoria={data.memoria} />
       </div>
     </div>

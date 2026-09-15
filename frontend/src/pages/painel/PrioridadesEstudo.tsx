@@ -13,7 +13,7 @@ interface Props {
   onPraticar: (prioridade: PrioridadeEstudo, quantidade: number) => void;
 }
 
-// DESIGN_TRIAGEM.md §6, Painel item 3 (db.prioridades_estudo). A ordem vem do
+// DESIGN_TRIAGEM.md §6, Painel ("Onde você ganha mais pontos", db.prioridades_estudo). A ordem vem do
 // servidor; aqui só se mostra o motivo de cada tema estar na lista.
 export function PrioridadesEstudo({ prioridades, onPraticar }: Props) {
   return (

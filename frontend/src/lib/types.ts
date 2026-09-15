@@ -20,6 +20,7 @@ export interface FiltrosPratica {
   area_id?: number;
   especialidade_id?: number;
   subtopico_id?: number;
+  tipo_pergunta?: string;
   banca?: string;
   ano?: number;
   apenas_erros: boolean;
@@ -95,6 +96,15 @@ export interface PainelData {
   revisao: RevisaoHoje & { hoje: number; proximos_dias: PrevisaoDia[] };
   memoria: EvolucaoMemoria;
   prioridades: PrioridadeEstudo[];
+  por_tipo: DesempenhoTipo[];
+}
+
+// Acerto na primeira resposta por tipo de pergunta (db.desempenho_por_tipo), na
+// ordem de db.TIPOS_PERGUNTA, incluindo os tipos ainda sem resposta.
+export interface DesempenhoTipo {
+  tipo: string;
+  total: number;
+  acertos: number;
 }
 
 // Tema com mais pontos a ganhar (db.prioridades_estudo): fração dos cadernos do

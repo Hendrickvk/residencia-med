@@ -129,7 +129,22 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
      cadernos do INEP × (1 − domínio) (`db.priorizar_temas`, pura e testada), com
      "Praticar {n}" já filtrado pelo tema. Limite conhecido: questão respondida
      pela primeira vez na Revisão (marcada sem responder) não entra no domínio,
-     porque a Revisão só grava em `revisao_eventos`. **Próxima: item 4.**
+     porque a Revisão só grava em `revisao_eventos`.
+  2. Item 4 (feita, 2026-09-15). `questoes.tipo_pergunta` diz o que a questão
+     pede, pelo que as alternativas são: Diagnóstico, Exames, Conduta ou
+     Conceitos (`db.TIPOS_PERGUNTA`, validado no código, sem CHECK). Pedindo
+     mais de uma coisa, vale a etapa mais adiante (Conduta > Exames >
+     Diagnóstico). As 986 questões estão classificadas: a heurística na última
+     frase acertou 74% e o resto foi corrigido lendo cada questão. Deu 566
+     Conduta, 161 Diagnóstico, 143 Conceitos (83 deles de Preventiva, a única
+     área com mais Conceitos que Conduta) e 116 Exames.
+     `scripts/classificar_tipos.py` grava um JSON `{"tipos": {id: tipo}}`, com
+     simulação e backup. No Painel, "Por tipo de pergunta" mostra o acerto na
+     primeira resposta por tipo (`db.desempenho_por_tipo`) e aponta o ponto
+     fraco quando o melhor e o pior diferem 15 pontos ou mais; no Praticar, o
+     tipo virou filtro. Limite conhecido: o formulário e o importador do
+     Streamlit não preenchem o tipo, e questão sem tipo fica fora do filtro e
+     da seção. **Próxima: item 5.**
 
 ### Próximos passos sugeridos (enquanto o deploy espera)
 Levantados em 2026-09-14, em ordem de valor. O deploy continua sendo o item
