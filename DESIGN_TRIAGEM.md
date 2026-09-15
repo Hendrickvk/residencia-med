@@ -211,7 +211,18 @@ Conteúdo das demais telas: largura máxima 1360px, padding 36/40px.
    grupos empilhados. Todo o Painel conta só a primeira resposta a cada questão, e
    nela o acerto marcado como chute vale 0,5 (`db._PRIMEIRAS_TENTATIVAS`): os
    acertos podem ter vírgula ("14,5 acertos").
-3. **Onde você ganha mais pontos** (`db.prioridades_estudo`), largura total: os 3
+3. **Nota projetada na prova** (`db.nota_projetada`), largura total, só com 50
+   questões respondidas ou mais: a nota que o domínio de hoje dá numa prova do
+   INEP (o domínio estimado de cada tema, o mesmo de "Onde você ganha mais pontos",
+   pesado pelas questões de caderno do tema), com etiqueta de nível e
+   "Provavelmente entre {x}% e {y}% numa prova de 100 questões". A faixa (95%) soma
+   a incerteza das respostas à variação de uma prova só, então não fica menor que
+   uns 10 pontos para cada lado, e a tela diz isso. Ao lado, "Provas oficiais
+   feitas" (`db.simulados_oficiais_feitos`): as 5 últimas, com data, etiqueta de
+   percentual e "já tinha visto {n} das {total}" quando o aluno respondeu questões
+   do caderno antes de começar (o banco é feito dos cadernos, e nessas a nota mede
+   memória). Sem nenhuma, "Fazer uma prova oficial" abre o Simulado.
+4. **Onde você ganha mais pontos** (`db.prioridades_estudo`), largura total: os 3
    temas com mais pontos a ganhar, pela fração dos cadernos do INEP (Revalida e
    ENAMED) que o tema ocupa × o que falta de domínio. Com poucas respostas, o
    domínio do tema é estimado a partir da especialidade, e o dela a partir da
@@ -220,13 +231,13 @@ Conteúdo das demais telas: largura máxima 1360px, padding 36/40px.
    evidência" ou percentual com barra de nível a partir de 5 respostas), "Caiu em
    {n} das {total} provas do INEP" e "Praticar {n}" (10, ou o tema inteiro se tiver
    menos), que abre a sessão já filtrada. Só o primeiro botão é primário.
-4. **Por tipo de pergunta** (`db.desempenho_por_tipo`), largura total: o mesmo
+5. **Por tipo de pergunta** (`db.desempenho_por_tipo`), largura total: o mesmo
    aproveitamento do quadro separado pelo que a questão pede — Diagnóstico,
    Exames, Conduta e Conceitos (`db.TIPOS_PERGUNTA`). Cada tipo com percentual,
    fração e barra de nível a partir de 5 respostas ("Pouca evidência" antes), e o
    tipo inteiro é um botão para "Praticar 10" dele. Quando o melhor e o pior tipo
    com amostra diferem 15 pontos ou mais, uma frase aponta o ponto fraco.
-5. **Rodapé** em duas colunas: "Fila de revisão" (casos de hoje dentro da meta diária em
+6. **Rodapé** em duas colunas: "Fila de revisão" (casos de hoje dentro da meta diária em
    display, com a duração estimada pelo tempo real do aluno e quantos podem esperar;
    seletor "Meta diária" 10/20/30/50; "Próximos 7 dias" em barras — parte dentro da
    meta em `--ink`, o que passa dela em t2 (atenção), linha tracejada na meta, legenda
@@ -234,7 +245,7 @@ Conteúdo das demais telas: largura máxima 1360px, padding 36/40px.
    dias" (linha em `--ink` sobre as faixas de nível em transparência, último ponto
    marcado e rotulado; menos de 3 dias: "Histórico começa a aparecer no terceiro dia
    de estudo.").
-6. **Evolução da memória** (`repeticao_espacada.evolucao_memoria`), largura total. Só
+7. **Evolução da memória** (`repeticao_espacada.evolucao_memoria`), largura total. Só
    conta como teste de memória o caso que voltou depois de pelo menos 1 dia sem ser
    visto (refazer 10 min depois do erro não conta). Frase da semana: "Nos últimos 7
    dias, {n} casos voltaram e você lembrou de {x} ({%})" com etiqueta de nível e,
@@ -298,8 +309,13 @@ Conteúdo das demais telas: largura máxima 1360px, padding 36/40px.
 - Resultado: aproveitamento com etiqueta de nível; "Tempo médio de {mm:ss} por
   questão respondida, dentro (ou acima) do ritmo de {mm:ss} da prova", em que o
   ritmo é o tempo do simulado dividido pelas questões (3 min na prova oficial), e em
-  quantas questões passou dele; quadro de triagem por área do simulado; na revisão
-  completa, o tempo de cada questão, em `--ink` e negrito quando passou do ritmo.
+  quantas questões passou dele; quadro de triagem por área do simulado; "Temas para
+  revisar" (`db.temas_errados_simulado`): temas com erro ou em branco, mais erros
+  primeiro e, no empate, os que mais caem no INEP, 8 visíveis e "Mostrar os {n}
+  temas", cada um com especialidade, "acertou {x} de {y}" e "Praticar {n}" já
+  filtrado pelo tema; na revisão
+  completa, o tempo de cada questão, em `--ink` e negrito quando passou do ritmo, e
+  um traço na que o aluno nem abriu.
   Simulado de antes da medição não mostra tempo.
 
 ### Revisão espaçada

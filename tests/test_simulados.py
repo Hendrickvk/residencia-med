@@ -3,7 +3,8 @@ Testes da Fase 5 do MIGRACAO.md: gabarito não pode vazar num simulado em
 andamento, e o estado "marcada" (dívida do redesign em Streamlit) precisa
 estar disponível pra sustentar o terceiro estado da grade de navegação.
 Também cobre o simulado por edição oficial (ordem do caderno, tempo no
-ritmo oficial), a retomada de simulado em andamento e o tempo por questão.
+ritmo oficial), a retomada de simulado em andamento, o tempo por questão, as
+provas oficiais feitas e os temas para revisar.
 
 Chama as funções dos routers diretamente (sem TestClient/HTTP) passando
 `usuario=` explícito — os fixtures de usuário não têm senha em texto plano
@@ -15,12 +16,14 @@ import datetime
 
 import db
 from api.routers.simulados import criar_oficial as criar_oficial_endpoint
+from api.routers.simulados import desempenho as desempenho_endpoint
 from api.routers.simulados import disponiveis as disponiveis_endpoint
 from api.routers.simulados import edicoes as edicoes_endpoint
 from api.routers.simulados import em_andamento as em_andamento_endpoint
 from api.routers.simulados import finalizar as finalizar_endpoint
 from api.routers.simulados import itens as itens_endpoint
 from api.routers.simulados import somar_tempo as tempo_endpoint
+from api.routers.simulados import temas_errados as temas_endpoint
 from api.schemas import SimuladoOficialIn, TempoSimuladoIn
 
 
@@ -139,3 +142,39 @@ def test_tempo_por_questao_soma_as_passagens_ate_finalizar(usuario_teste, questa
             "SELECT tempo_ms FROM respostas WHERE usuario_id = ? AND questao_id = ?", (usuario_teste, questao_teste)
         ).fetchone()
     assert resposta["tempo_ms"] == 65_000
+
+
+def test_provas_oficiais_feitas_contam_as_questoes_ja_vistas(usuario_teste, edicao_teste):
+    banca, edicao, _ = edicao_teste
+    usuario = _usuario(usuario_teste)
+    vista = db.ids_questoes_da_edicao(banca, edicao)[0]
+    db.registrar_resposta(vista, "A", True, usuario_id=usuario_teste)  # no Praticar, antes da prova
+    criado = criar_oficial_endpoint(SimuladoOficialIn(banca=banca, edicao=edicao), usuario=usuario)
+    db.registrar_resposta_simulado(criado["id"], vista, "A", usuario_id=usuario_teste)
+    assert db.simulados_oficiais_feitos(usuario_id=usuario_teste) == []  # ainda em andamento
+
+    finalizar_endpoint(criado["id"], usuario=usuario)
+    [feita] = db.simulados_oficiais_feitos(usuario_id=usuario_teste)
+    assert (feita["edicao"], feita["acertos"], feita["num_questoes"], feita["ja_vistas"]) == (edicao, 1, 3, 1)
+
+
+def test_temas_para_revisar_so_depois_de_finalizar(usuario_teste, quatro_questoes):
+    usuario = _usuario(usuario_teste)
+    ids = quatro_questoes[:3]
+    with db.get_conn() as conn:
+        tema = conn.execute(
+            "SELECT id FROM subtopicos WHERE origem IS NULL AND especialidade_id IS NOT NULL ORDER BY id LIMIT 1"
+        ).fetchone()["id"]
+        for questao_id in ids:
+            conn.execute("UPDATE questoes SET subtopico_id = ? WHERE id = ?", (tema, questao_id))
+    simulado_id = db.criar_simulado(None, None, 3, 10, ids, usuario_id=usuario_teste)
+    db.registrar_resposta_simulado(simulado_id, ids[0], "A", usuario_id=usuario_teste)
+    db.registrar_resposta_simulado(simulado_id, ids[1], "B", usuario_id=usuario_teste)
+    # Durante a prova, acerto por tema ou por área entregaria o gabarito.
+    assert temas_endpoint(simulado_id, usuario=usuario) == []
+    assert desempenho_endpoint(simulado_id, usuario=usuario) == []
+
+    finalizar_endpoint(simulado_id, usuario=usuario)
+    [t] = temas_endpoint(simulado_id, usuario=usuario)
+    assert (t["subtopico_id"], t["total"], t["acertos"]) == (tema, 3, 1)
+    assert desempenho_endpoint(simulado_id, usuario=usuario)[0]["acertos"] == 1

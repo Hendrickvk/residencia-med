@@ -45,6 +45,25 @@ def test_tema_nunca_respondido_herda_a_especialidade():
     assert por_tema[200]["dominio_estimado"] == round(100 * especialidade, 1)
 
 
+def test_nota_projetada_pesa_os_temas_pela_prova():
+    # Acerta tudo no tema 100 e erra tudo no 200.
+    tentativas = [_tentativa(1, 100)] * 10 + [_tentativa(0, 200)] * 10
+    igual = db.projetar_nota(tentativas, [_tema(100, 5), _tema(200, 5)])
+    pesado = db.projetar_nota(tentativas, [_tema(100, 15), _tema(200, 5)])
+    assert igual["minimo"] < igual["nota"] == 50 < igual["maximo"]
+    assert pesado["nota"] > igual["nota"]
+    assert db.projetar_nota([], [_tema(100, 5)]) is None
+
+
+def test_margem_da_nota_diminui_mas_nao_some():
+    temas = [_tema(100, 5), _tema(200, 5)]
+    poucas = db.projetar_nota([_tentativa(1, 100), _tentativa(0, 200)] * 10, temas)
+    muitas = db.projetar_nota([_tentativa(1, 100), _tentativa(0, 200)] * 500, temas)
+    assert muitas["maximo"] - muitas["minimo"] < poucas["maximo"] - poucas["minimo"]
+    # Sobra a variação de uma prova de 100 questões: perto de 10 pontos para cada lado.
+    assert muitas["maximo"] - muitas["minimo"] > 19
+
+
 def test_painel_conta_so_a_primeira_resposta(usuario_teste, area_teste, questao_teste):
     db.registrar_resposta(questao_teste, "B", False, usuario_id=usuario_teste)
     db.registrar_resposta(questao_teste, "A", True, usuario_id=usuario_teste)
@@ -79,6 +98,15 @@ def test_prioridades_estudo_usam_os_cadernos_do_inep(usuario_teste, questao_test
         assert p["respondidas"] == 0
         assert 1 <= p["provas"] <= p["total_provas"]
         assert 0 < p["peso_prova"] <= 100
+
+
+def test_nota_projetada_do_aluno(usuario_teste, questao_teste):
+    assert db.nota_projetada(usuario_id=usuario_teste) is None
+
+    db.registrar_resposta(questao_teste, "A", True, usuario_id=usuario_teste)
+    nota = db.nota_projetada(usuario_id=usuario_teste)
+    # A questão de teste não tem tema: todo tema herda o acerto geral, de 100%.
+    assert (nota["respondidas"], nota["nota"], nota["maximo"]) == (1, 100, 100)
 
 
 def test_desempenho_por_tipo_conta_a_primeira_resposta(usuario_teste, questao_teste):

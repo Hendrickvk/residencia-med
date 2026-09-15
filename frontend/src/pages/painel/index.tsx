@@ -2,10 +2,12 @@ import { useNavigate } from "react-router-dom";
 import { EstadoVazio } from "../../components/EstadoVazio";
 import { useMe } from "../../lib/auth";
 import { usePainel } from "../../lib/painel";
+import { VOLUME_CONFIAVEL } from "../../lib/triagem";
 import { Cabecalho } from "./Cabecalho";
 import { EvolucaoMemoria } from "./EvolucaoMemoria";
 import { EvolucaoTriagem } from "./EvolucaoTriagem";
 import { FilaRevisao } from "./FilaRevisao";
+import { NotaProjetada } from "./NotaProjetada";
 import { PorTipoPergunta } from "./PorTipoPergunta";
 import { PrioridadesEstudo } from "./PrioridadesEstudo";
 import { QuadroTriagem } from "./QuadroTriagem";
@@ -53,8 +55,17 @@ export default function Painel() {
         onPraticar={(areaId) => navigate("/praticar", { state: { areaId, iniciarImediato: true, quantidade: 10 } })}
       />
       {/* Entram depois do quadro, que chega em cascata. */}
-      {data.prioridades.length > 0 && (
+      {data.nota_projetada && data.nota_projetada.respondidas >= VOLUME_CONFIAVEL && (
         <div className="animate-entrar" style={{ animationDelay: "260ms" }}>
+          <NotaProjetada
+            nota={data.nota_projetada}
+            simulados={data.simulados_oficiais}
+            onFazerProva={() => navigate("/simulado")}
+          />
+        </div>
+      )}
+      {data.prioridades.length > 0 && (
+        <div className="animate-entrar" style={{ animationDelay: "300ms" }}>
           <PrioridadesEstudo
             prioridades={data.prioridades}
             onPraticar={(p, quantidade) =>
@@ -72,7 +83,7 @@ export default function Painel() {
         </div>
       )}
       {data.por_tipo.some((t) => t.total > 0) && (
-        <div className="animate-entrar" style={{ animationDelay: "300ms" }}>
+        <div className="animate-entrar" style={{ animationDelay: "340ms" }}>
           <PorTipoPergunta
             tipos={data.por_tipo}
             onPraticar={(tipo) =>
@@ -83,12 +94,12 @@ export default function Painel() {
       )}
       <div
         className="grid animate-entrar grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]"
-        style={{ animationDelay: "340ms" }}
+        style={{ animationDelay: "380ms" }}
       >
         <FilaRevisao revisao={data.revisao} onRevisar={() => navigate("/revisao")} />
         <EvolucaoTriagem evolucao={data.evolucao_14_dias} />
       </div>
-      <div className="animate-entrar" style={{ animationDelay: "400ms" }}>
+      <div className="animate-entrar" style={{ animationDelay: "440ms" }}>
         <EvolucaoMemoria memoria={data.memoria} />
       </div>
     </div>

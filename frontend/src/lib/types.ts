@@ -96,7 +96,31 @@ export interface PainelData {
   revisao: RevisaoHoje & { hoje: number; proximos_dias: PrevisaoDia[] };
   memoria: EvolucaoMemoria;
   prioridades: PrioridadeEstudo[];
+  nota_projetada: NotaProjetada | null; // null sem nenhuma resposta
+  simulados_oficiais: SimuladoOficialFeito[];
   por_tipo: DesempenhoTipo[];
+}
+
+// Nota esperada numa prova do INEP (db.projetar_nota), em %: o domínio estimado
+// de cada tema pesado pelo tema nos cadernos. A faixa soma a incerteza das
+// respostas à variação de uma prova de 100 questões.
+export interface NotaProjetada {
+  nota: number;
+  minimo: number;
+  maximo: number;
+  respondidas: number; // primeiras respostas que sustentam a projeção
+}
+
+// Prova oficial terminada (db.simulados_oficiais_feitos), da mais recente para a mais antiga.
+export interface SimuladoOficialFeito {
+  id: number;
+  banca: string;
+  edicao: string;
+  finalizado_em: string;
+  num_questoes: number;
+  acertos: number;
+  pct_acerto: number;
+  ja_vistas: number; // já respondidas antes de começar: nelas a nota mede memória
 }
 
 // Acerto na primeira resposta por tipo de pergunta (db.desempenho_por_tipo), na
@@ -230,6 +254,19 @@ export interface DesempenhoAreaSimulado {
   total: number;
   acertos: number;
   pct_acerto: number;
+}
+
+// Tema com questão errada ou em branco num simulado terminado (db.temas_errados_simulado).
+export interface TemaErradoSimulado {
+  subtopico_id: number;
+  tema: string;
+  especialidade_id: number;
+  especialidade: string;
+  area_id: number;
+  area: string;
+  total: number;
+  acertos: number;
+  questoes_banco: number;
 }
 
 export interface ResultadoBuscaQuestao {

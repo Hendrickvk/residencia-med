@@ -9,6 +9,7 @@ ficam centralizadas aqui, para manter a interface (app.py) enxuta.
 import os
 import re
 import json
+import math
 import datetime
 import threading
 import time
@@ -1376,6 +1377,26 @@ def estimar_dominio(acertos, total, referencia, peso=PESO_ESTIMATIVA):
     return (acertos + peso * referencia) / (total + peso)
 
 
+def _dominio_dos_temas(tentativas, temas):
+    """(tema, domínio estimado de 0 a 1, acertos, respondidas) para cada tema,
+    com as mesmas entradas de priorizar_temas. Cada nível parte do de cima:
+    geral -> área -> especialidade -> tema."""
+    contagem = {}  # (nível, id) -> [acertos, respondidas]
+    for t in tentativas:
+        for chave in (("area", t["area_id"]), ("especialidade", t["especialidade_id"]), ("tema", t["subtopico_id"])):
+            grupo = contagem.setdefault(chave, [0, 0])
+            grupo[0] += float(t["pontos"])
+            grupo[1] += 1
+    geral = sum(float(t["pontos"]) for t in tentativas) / len(tentativas)
+    for tema in temas:
+        dominio = geral
+        for chave in (("area", tema["area_id"]), ("especialidade", tema["especialidade_id"]),
+                      ("tema", tema["subtopico_id"])):
+            dominio = estimar_dominio(*contagem.get(chave, (0, 0)), dominio)
+        acertos, respondidas = contagem.get(("tema", tema["subtopico_id"]), (0, 0))
+        yield tema, dominio, acertos, respondidas
+
+
 def priorizar_temas(tentativas, temas, questoes_provas, limite=3):
     """Os `limite` temas com mais pontos a ganhar: fração da prova que o tema
     ocupa × o que falta de domínio estimado. Pura, para testar sem banco.
@@ -1388,22 +1409,8 @@ def priorizar_temas(tentativas, temas, questoes_provas, limite=3):
     """
     if not tentativas or not questoes_provas:
         return []
-    contagem = {}  # (nível, id) -> [acertos, respondidas]
-    for t in tentativas:
-        for chave in (("area", t["area_id"]), ("especialidade", t["especialidade_id"]), ("tema", t["subtopico_id"])):
-            grupo = contagem.setdefault(chave, [0, 0])
-            grupo[0] += float(t["pontos"])
-            grupo[1] += 1
-    geral = sum(float(t["pontos"]) for t in tentativas) / len(tentativas)
-
     candidatos = []
-    for tema in temas:
-        # Cada nível parte do de cima: geral -> área -> especialidade -> tema.
-        dominio = geral
-        for chave in (("area", tema["area_id"]), ("especialidade", tema["especialidade_id"]),
-                      ("tema", tema["subtopico_id"])):
-            dominio = estimar_dominio(*contagem.get(chave, (0, 0)), dominio)
-        acertos, respondidas = contagem.get(("tema", tema["subtopico_id"]), (0, 0))
+    for tema, dominio, acertos, respondidas in _dominio_dos_temas(tentativas, temas):
         fracao = tema["questoes_provas"] / questoes_provas
         candidatos.append((fracao * (1 - dominio), {
             **tema,
@@ -1416,37 +1423,82 @@ def priorizar_temas(tentativas, temas, questoes_provas, limite=3):
     return [dados for _, dados in candidatos[:limite]]
 
 
+# Questões de uma prova do INEP (o Revalida tem 100): a variação de uma prova só
+# entra na faixa da nota projetada.
+QUESTOES_PROVA_INEP = 100
+
+
+def projetar_nota(tentativas, temas):
+    """Nota esperada numa prova do INEP, em %: o domínio estimado de cada tema
+    (_dominio_dos_temas) pesado pelas questões de caderno que ele tem. A faixa
+    (95%) soma a incerteza das respostas do aluno à variação de uma prova de 100
+    questões, que sozinha dá uns 10 pontos para cada lado. Pura; None sem
+    respostas."""
+    peso_total = sum(tema["questoes_provas"] for tema in temas)
+    if not tentativas or not peso_total:
+        return None
+    nota = sum(tema["questoes_provas"] * dominio for tema, dominio, _, _ in _dominio_dos_temas(tentativas, temas))
+    nota /= peso_total
+    # ponytail: margem binomial com todas as respostas; se elas se concentram em
+    # poucos temas, sai um pouco estreita. Bootstrap das respostas, se importar.
+    margem = 1.96 * math.sqrt(nota * (1 - nota) * (1 / len(tentativas) + 1 / QUESTOES_PROVA_INEP))
+    return {
+        "nota": round(100 * nota, 1),
+        "minimo": round(100 * max(0.0, nota - margem), 1),
+        "maximo": round(100 * min(1.0, nota + margem), 1),
+        "respondidas": len(tentativas),
+    }
+
+
+def _tentativas_e_temas_inep(conn, usuario_id):
+    """Base de prioridades_estudo e nota_projetada: as primeiras respostas do
+    aluno e os temas que caem nos cadernos do INEP, com quantas questões de
+    caderno cada um tem. Sem respostas, nem consulta os temas."""
+    tentativas = conn.execute(f"""
+        SELECT q.area_id, q.especialidade_id, q.subtopico_id, r.pontos
+        FROM ({_PRIMEIRAS_TENTATIVAS}) r JOIN questoes q ON q.id = r.questao_id
+    """, (usuario_id,)).fetchall()
+    if not tentativas:
+        return [], []
+    bancas = ", ".join(["?"] * len(BANCAS_INEP))
+    temas = conn.execute(f"""
+        SELECT s.id AS subtopico_id, s.nome AS tema, s.especialidade_id, e.nome AS especialidade,
+               s.area_id, a.nome AS area, COUNT(*) AS questoes_provas,
+               COUNT(DISTINCT qp.banca || ' ' || qp.edicao) AS provas,
+               (SELECT COUNT(*) FROM questoes q2 WHERE q2.subtopico_id = s.id) AS questoes_banco
+        FROM questoes_provas qp
+        JOIN questoes q ON q.id = qp.questao_id
+        JOIN subtopicos s ON s.id = q.subtopico_id
+        JOIN especialidades e ON e.id = s.especialidade_id
+        JOIN areas a ON a.id = s.area_id
+        WHERE qp.banca IN ({bancas})
+        GROUP BY s.id, e.nome, a.nome
+        ORDER BY questoes_provas DESC, s.nome
+    """, BANCAS_INEP).fetchall()
+    return tentativas, temas
+
+
 def prioridades_estudo(*, usuario_id, limite=3):
     """Temas prioritários do aluno (priorizar_temas), com o que o Painel precisa
     para mostrar o motivo e abrir o Praticar já filtrado."""
-    bancas = ", ".join(["?"] * len(BANCAS_INEP))
     with get_conn() as conn:
-        tentativas = conn.execute(f"""
-            SELECT q.area_id, q.especialidade_id, q.subtopico_id, r.pontos
-            FROM ({_PRIMEIRAS_TENTATIVAS}) r JOIN questoes q ON q.id = r.questao_id
-        """, (usuario_id,)).fetchall()
+        tentativas, temas = _tentativas_e_temas_inep(conn, usuario_id)
         if not tentativas:
             return []
-        temas = conn.execute(f"""
-            SELECT s.id AS subtopico_id, s.nome AS tema, s.especialidade_id, e.nome AS especialidade,
-                   s.area_id, a.nome AS area, COUNT(*) AS questoes_provas,
-                   COUNT(DISTINCT qp.banca || ' ' || qp.edicao) AS provas,
-                   (SELECT COUNT(*) FROM questoes q2 WHERE q2.subtopico_id = s.id) AS questoes_banco
-            FROM questoes_provas qp
-            JOIN questoes q ON q.id = qp.questao_id
-            JOIN subtopicos s ON s.id = q.subtopico_id
-            JOIN especialidades e ON e.id = s.especialidade_id
-            JOIN areas a ON a.id = s.area_id
-            WHERE qp.banca IN ({bancas})
-            GROUP BY s.id, e.nome, a.nome
-            ORDER BY questoes_provas DESC, s.nome
-        """, BANCAS_INEP).fetchall()
+        bancas = ", ".join(["?"] * len(BANCAS_INEP))
         totais = conn.execute(f"""
             SELECT COUNT(*) AS questoes, COUNT(DISTINCT banca || ' ' || edicao) AS provas
             FROM questoes_provas WHERE banca IN ({bancas})
         """, BANCAS_INEP).fetchone()
     prioridades = priorizar_temas(tentativas, temas, totais["questoes"], limite)
     return [{**p, "total_provas": totais["provas"]} for p in prioridades]
+
+
+def nota_projetada(*, usuario_id):
+    """Nota projetada do aluno numa prova do INEP (projetar_nota)."""
+    with get_conn() as conn:
+        tentativas, temas = _tentativas_e_temas_inep(conn, usuario_id)
+    return projetar_nota(tentativas, temas)
 
 
 def desempenho_por_tipo(*, usuario_id):
@@ -1704,6 +1756,33 @@ def desempenho_simulado(simulado_id, *, usuario_id):
         """, (simulado_id, usuario_id)).fetchall()
 
 
+def temas_errados_simulado(simulado_id, *, usuario_id):
+    """Temas com questão errada ou em branco no simulado, para revisar: mais
+    erros primeiro e, no empate, os que mais caem nos cadernos do INEP. Área e
+    especialidade vêm do tema, para o Praticar abrir já filtrado nele."""
+    bancas = ", ".join(["?"] * len(BANCAS_INEP))
+    with get_conn() as conn:
+        return conn.execute(f"""
+            SELECT t.id AS subtopico_id, t.nome AS tema, e.id AS especialidade_id, e.nome AS especialidade,
+                   a.id AS area_id, a.nome AS area,
+                   COUNT(*) AS total, SUM(COALESCE(si.correta, 0)) AS acertos,
+                   (SELECT COUNT(*) FROM questoes q2 WHERE q2.subtopico_id = t.id) AS questoes_banco
+            FROM simulado_itens si
+            JOIN simulados s ON s.id = si.simulado_id
+            JOIN questoes q ON q.id = si.questao_id
+            JOIN subtopicos t ON t.id = q.subtopico_id
+            JOIN especialidades e ON e.id = t.especialidade_id
+            JOIN areas a ON a.id = t.area_id
+            WHERE si.simulado_id = ? AND s.usuario_id = ?
+            GROUP BY t.id, e.id, a.id
+            HAVING SUM(COALESCE(si.correta, 0)) < COUNT(*)
+            ORDER BY COUNT(*) - SUM(COALESCE(si.correta, 0)) DESC,
+                     (SELECT COUNT(*) FROM questoes_provas qp JOIN questoes q3 ON q3.id = qp.questao_id
+                      WHERE q3.subtopico_id = t.id AND qp.banca IN ({bancas})) DESC,
+                     t.nome
+        """, (simulado_id, usuario_id, *BANCAS_INEP)).fetchall()
+
+
 def listar_simulados(limite=10, *, usuario_id):
     with get_conn() as conn:
         return conn.execute("""
@@ -1712,6 +1791,27 @@ def listar_simulados(limite=10, *, usuario_id):
             FROM simulados s
             LEFT JOIN areas a ON a.id = s.area_id
             WHERE s.finalizado_em IS NOT NULL AND s.usuario_id = ?
+            ORDER BY s.finalizado_em DESC
+            LIMIT ?
+        """, (usuario_id, limite)).fetchall()
+
+
+def simulados_oficiais_feitos(*, usuario_id, limite=5):
+    """Provas oficiais que o aluno terminou, da mais recente para a mais antiga.
+    `ja_vistas`: questões que ele já tinha respondido antes de começar; nelas a
+    nota mede memória, não preparo (o banco é feito dos próprios cadernos)."""
+    with get_conn() as conn:
+        return conn.execute("""
+            SELECT s.id, s.banca, s.edicao, s.finalizado_em, s.num_questoes, s.acertos,
+                   ROUND(100.0 * s.acertos / s.num_questoes, 1) AS pct_acerto,
+                   (SELECT COUNT(*) FROM simulado_itens si
+                    WHERE si.simulado_id = s.id AND EXISTS (
+                        SELECT 1 FROM respostas r
+                        WHERE r.usuario_id = s.usuario_id AND r.questao_id = si.questao_id
+                          AND r.respondida_em < s.iniciado_em
+                    )) AS ja_vistas
+            FROM simulados s
+            WHERE s.usuario_id = ? AND s.edicao IS NOT NULL AND s.finalizado_em IS NOT NULL
             ORDER BY s.finalizado_em DESC
             LIMIT ?
         """, (usuario_id, limite)).fetchall()

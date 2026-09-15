@@ -1,13 +1,20 @@
-import { ChevronDown, RotateCcw } from "lucide-react";
+import { ArrowRight, ChevronDown, RotateCcw } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { NumeroAnimado } from "../../components/NumeroAnimado";
 import { TemaDoCaso } from "../../components/TemaDoCaso";
 import { TextoDiscussao } from "../../components/TextoDiscussao";
 import { API_URL } from "../../lib/api";
-import { BOTAO_PRIMARIO } from "../../lib/estilos";
+import { BOTAO_PRIMARIO, BOTAO_SECUNDARIO } from "../../lib/estilos";
 import { formatarMMSS, formatarPctBR } from "../../lib/format";
 import { atraso } from "../../lib/movimento";
-import { nomeEdicao, useDesempenhoSimulado, useItensSimulado, useSimulado } from "../../lib/simulados";
+import {
+  nomeEdicao,
+  useDesempenhoSimulado,
+  useItensSimulado,
+  useSimulado,
+  useTemasErradosSimulado,
+} from "../../lib/simulados";
 import { CLASSES_NIVEL, NIVEIS, nivelTriagem } from "../../lib/triagem";
 import { AlternativaLinha, type EstadoAlternativa } from "../praticar/AlternativaLinha";
 
@@ -16,11 +23,17 @@ interface Props {
   onNovoSimulado: () => void;
 }
 
+// Temas para revisar mostrados antes de "Mostrar todos".
+const TEMAS_VISIVEIS = 8;
+
 export default function Resultado({ simuladoId, onNovoSimulado }: Props) {
   const { data: simulado } = useSimulado(simuladoId);
   const { data: itens } = useItensSimulado(simuladoId);
   const { data: desempenho } = useDesempenhoSimulado(simuladoId);
+  const { data: temas } = useTemasErradosSimulado(simuladoId);
   const [abertos, setAbertos] = useState<Set<number>>(new Set());
+  const [todosTemas, setTodosTemas] = useState(false);
+  const navigate = useNavigate();
 
   if (!simulado || !itens) {
     return (
@@ -125,6 +138,63 @@ export default function Resultado({ simuladoId, onNovoSimulado }: Props) {
         </div>
       )}
 
+      {temas && temas.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-1">
+            <h2 className="text-bloco">Temas para revisar</h2>
+            <p className="text-apoio text-muted">
+              Com erro ou em branco {nomeProva ? "nesta prova" : "neste simulado"}: os de mais erros primeiro e, no empate,
+              os que mais caem no Revalida e no ENAMED.
+            </p>
+          </div>
+          <div className="rounded-caso border border-line bg-surface">
+            {(todosTemas ? temas : temas.slice(0, TEMAS_VISIVEIS)).map((t) => {
+              const quantidade = Math.min(10, t.questoes_banco);
+              return (
+                <div
+                  key={t.subtopico_id}
+                  className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b border-line-soft px-5 py-3 last:border-0"
+                >
+                  <div className="min-w-0">
+                    <div className="truncate text-corpo font-semibold">{t.tema}</div>
+                    <div className="truncate text-apoio text-muted">
+                      {t.especialidade} · acertou {t.acertos} de {t.total}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      navigate("/praticar", {
+                        state: {
+                          areaId: t.area_id,
+                          especialidadeId: t.especialidade_id,
+                          subtopicoId: t.subtopico_id,
+                          iniciarImediato: true,
+                          quantidade,
+                        },
+                      })
+                    }
+                    className="group flex items-center gap-1 whitespace-nowrap text-apoio font-semibold text-ink underline-offset-2 hover:underline"
+                  >
+                    Praticar {quantidade}
+                    <ArrowRight
+                      size={14}
+                      strokeWidth={2}
+                      className="transition-transform duration-toggle ease-suave group-hover:translate-x-0.5"
+                    />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+          {!todosTemas && temas.length > TEMAS_VISIVEIS && (
+            <button type="button" onClick={() => setTodosTemas(true)} className={`self-start ${BOTAO_SECUNDARIO}`}>
+              Mostrar os {temas.length} temas
+            </button>
+          )}
+        </div>
+      )}
+
       <div className="flex flex-col gap-3">
         <h2 className="text-bloco">Revisão completa</h2>
         <div className="flex flex-col gap-2">
@@ -163,7 +233,8 @@ export default function Resultado({ simuladoId, onNovoSimulado }: Props) {
                       className={`text-apoio tabular-nums ${(item.tempo_ms ?? 0) > ritmoMs ? "font-semibold text-ink" : "text-muted"}`}
                     >
                       <span className="sr-only">Tempo na questão: </span>
-                      {formatarMMSS(item.tempo_ms ?? 0)}
+                      {/* Traço: o aluno nem abriu a questão. */}
+                      {item.tempo_ms === null ? "—" : formatarMMSS(item.tempo_ms)}
                     </span>
                   )}
                   <ChevronDown

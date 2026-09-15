@@ -131,6 +131,22 @@ def finalizar(simulado_id: int, usuario=Depends(usuario_atual)):
     return {"ok": True}
 
 
+def _finalizado(simulado_id, usuario):
+    """Se o simulado é do aluno e já terminou. Antes disso, o acerto por área ou
+    por tema entregaria o gabarito, como os itens."""
+    simulado = db.obter_simulado(simulado_id, usuario_id=usuario["id"])
+    return simulado is not None and simulado["finalizado_em"] is not None
+
+
 @router.get("/{simulado_id}/desempenho")
 def desempenho(simulado_id: int, usuario=Depends(usuario_atual)):
+    if not _finalizado(simulado_id, usuario):
+        return []
     return db.desempenho_simulado(simulado_id, usuario_id=usuario["id"])
+
+
+@router.get("/{simulado_id}/temas")
+def temas_errados(simulado_id: int, usuario=Depends(usuario_atual)):
+    if not _finalizado(simulado_id, usuario):
+        return []
+    return db.temas_errados_simulado(simulado_id, usuario_id=usuario["id"])

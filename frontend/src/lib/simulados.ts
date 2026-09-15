@@ -7,6 +7,7 @@ import type {
   ItemSimulado,
   Simulado,
   SimuladoEmAndamento,
+  TemaErradoSimulado,
 } from "./types";
 
 export function useHistoricoSimulados() {
@@ -64,6 +65,15 @@ export function useDesempenhoSimulado(id: number | null) {
   return useQuery({
     queryKey: ["simulado-desempenho", id],
     queryFn: () => api.get<DesempenhoAreaSimulado[]>(`/simulados/${id}/desempenho`),
+    enabled: id !== null,
+  });
+}
+
+// Vazio enquanto o simulado não termina (o servidor não entrega antes).
+export function useTemasErradosSimulado(id: number | null) {
+  return useQuery({
+    queryKey: ["simulado-temas", id],
+    queryFn: () => api.get<TemaErradoSimulado[]>(`/simulados/${id}/temas`),
     enabled: id !== null,
   });
 }

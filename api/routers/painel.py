@@ -37,5 +37,9 @@ def obter_painel(usuario=Depends(usuario_atual)):
         "revisao": {**revisao_hoje, "proximos_dias": sr.previsao_revisoes(usuario_id=uid, meta=meta)},
         "memoria": sr.evolucao_memoria(usuario_id=uid),
         "prioridades": db.prioridades_estudo(usuario_id=uid),
+        # ponytail: repete as consultas de prioridades_estudo (~90 ms medidos fora do
+        # servidor); juntar as duas numa função só se o Painel ficar lento.
+        "nota_projetada": db.nota_projetada(usuario_id=uid),
+        "simulados_oficiais": db.simulados_oficiais_feitos(usuario_id=uid),
         "por_tipo": db.desempenho_por_tipo(usuario_id=uid),
     }

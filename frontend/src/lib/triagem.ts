@@ -8,6 +8,10 @@ export type NivelTriagem = 1 | 2 | 3 | 4 | 5;
 // Abaixo disso a área não é classificada: "50% de 1/2 não é informação".
 export const MINIMO_AMOSTRA = 5;
 
+// Abaixo disso o Painel não conclui nada do todo: o título não aponta lacuna e a
+// nota projetada não aparece.
+export const VOLUME_CONFIAVEL = 50;
+
 export const NIVEIS: { nivel: NivelTriagem; nome: string; faixa: string }[] = [
   { nivel: 1, nome: "Emergência", faixa: "abaixo de 40%" },
   { nivel: 2, nome: "Muito urgente", faixa: "40 a 54%" },

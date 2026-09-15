@@ -1,11 +1,9 @@
 import { NumeroAnimado } from "../../components/NumeroAnimado";
 import { formatarPctBR } from "../../lib/format";
-import { MINIMO_AMOSTRA } from "../../lib/triagem";
+import { MINIMO_AMOSTRA, VOLUME_CONFIAVEL } from "../../lib/triagem";
 import type { AreaDesempenho, PainelData } from "../../lib/types";
 
 const META_DIARIA = 20;
-// Abaixo disso o título não aponta lacuna nenhuma: a triagem ainda não é confiável.
-const VOLUME_CONFIAVEL = 50;
 
 const DIAS_SEMANA = ["domingo", "segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado"];
 const MESES = [

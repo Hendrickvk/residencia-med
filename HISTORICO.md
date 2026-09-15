@@ -158,7 +158,29 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
      revisão completa. O tempo segue para `respostas` e `revisao_eventos`, como
      no Praticar. Limites conhecidos: simulado antigo não tem tempo; no
      Simulado não há como marcar chute, então lá todo acerto conta inteiro.
-     **Próxima: item 6.**
+     No QA pelo Chrome automatizado, a aba se declara escondida
+     (`document.hidden`, mesmo com foco) e o tempo não conta: para testar,
+     forçar `document.hidden` falso na página antes de começar a prova.
+  4. Item 6 (feita, 2026-09-15). "Nota projetada na prova" no Painel
+     (`db.projetar_nota`, pura e testada): o domínio estimado de cada tema, o
+     mesmo das prioridades, pesado pelas questões de caderno do INEP do tema,
+     com faixa de 95% que soma a incerteza das respostas à variação de uma
+     prova de 100 questões (por isso nunca fica abaixo de uns 10 pontos para
+     cada lado). Aparece a partir de 50 questões respondidas
+     (`VOLUME_CONFIAVEL`, o mesmo do título do Painel). Ao lado, as provas
+     oficiais feitas, com quantas questões o aluno já tinha visto antes de
+     começar: o banco é feito dos próprios cadernos, e nessas a nota mede
+     memória. Só a prova oficial entra, porque só ela é feita em condição de
+     prova. No resultado do Simulado, "Temas para revisar" lista os temas com
+     erro ou em branco, com "Praticar" já filtrado. Achado no caminho:
+     `GET /simulados/{id}/desempenho` devolvia o acerto por área durante a
+     prova, o que entregava o gabarito; agora ele e o novo `/temas` só
+     respondem depois de finalizado. Limites conhecidos: a faixa usa a
+     aproximação binomial e sai um pouco estreita quando as respostas se
+     concentram em poucos temas; edições têm dificuldades diferentes, e nada
+     aqui corrige isso; nenhuma prova oficial tinha sido feita até
+     2026-09-15. Conferido no navegador no mesmo dia, com dois simulados de
+     teste de 10 questões na conta demo. **Próxima: item 7.**
 
 ### Próximos passos sugeridos (enquanto o deploy espera)
 Levantados em 2026-09-14, em ordem de valor. O deploy continua sendo o item

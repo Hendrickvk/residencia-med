@@ -1,9 +1,10 @@
 import { AlertTriangle, ArrowRight } from "lucide-react";
 import { useState } from "react";
 import { Dialog } from "../../components/Dialog";
+import { EtiquetaPct } from "../../components/EtiquetaPct";
 import { useAreas, useBancas } from "../../lib/catalogo";
 import { BOTAO_PRIMARIO, BOTAO_SECUNDARIO, CAMPO, PRESSAO } from "../../lib/estilos";
-import { formatarDuracaoMin, formatarPctBR } from "../../lib/format";
+import { formatarDuracaoMin } from "../../lib/format";
 import { atraso } from "../../lib/movimento";
 import {
   criarSimulado,
@@ -14,7 +15,6 @@ import {
   useHistoricoSimulados,
   useSimuladoEmAndamento,
 } from "../../lib/simulados";
-import { CLASSES_NIVEL, NIVEIS, nivelTriagem } from "../../lib/triagem";
 import type { EdicaoOficial, HistoricoSimulado, SimuladoEmAndamento } from "../../lib/types";
 
 interface Props {
@@ -29,18 +29,6 @@ const MODOS = [
   ["oficial", "Prova oficial"],
   ["montar", "Montar simulado"],
 ] as const;
-
-function EtiquetaPct({ pct }: { pct: number }) {
-  const nivel = nivelTriagem(pct);
-  return (
-    <span
-      title={NIVEIS[nivel - 1].nome}
-      className={`rounded-etq px-2 py-1 text-center text-[13px] font-bold tabular-nums ${CLASSES_NIVEL[nivel].cheio} ${CLASSES_NIVEL[nivel].texto}`}
-    >
-      {formatarPctBR(pct, 0)}%
-    </span>
-  );
-}
 
 function rotuloHistorico(h: HistoricoSimulado): string {
   if (h.edicao && h.banca) return nomeEdicao(h.banca, h.edicao);
