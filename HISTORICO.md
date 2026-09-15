@@ -105,9 +105,31 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
      numa questão que pede o diagnóstico ele entregaria o gabarito (ex.:
      "Leptospirose, tétano e raiva"). Aparece como "Tema: …" na discussão do
      Praticar e da Revisão e no comentário do resultado do Simulado, e some
-     durante a prova (`components/TemaDoCaso.tsx`). **Próxima: fase 5.**
-  5. Estatística por tema só quando houver respostas suficientes (hoje ~30 por
-     aluno; o Painel exige 5 por grupo).
+     durante a prova (`components/TemaDoCaso.tsx`).
+  5. Estatística por tema: coberta pela estimativa ajustada do "Acompanhamento do
+     desempenho", abaixo, que funciona com poucas respostas.
+- **Acompanhamento do desempenho, em fases.** Decisão do usuário (2026-09-15):
+  com os temas prontos, o foco passa a ser medir e melhorar o desempenho do
+  aluno. Propostas, em ordem: (1) separar domínio (primeira resposta a cada
+  questão) de memória (Revisão); (2) estimativa por tema que aguente pouca
+  amostra; (3) prioridade = peso do tema na prova × lacuna; (4) tipo de pergunta
+  (conduta, diagnóstico, exame) como segundo eixo — uma heurística na última
+  frase do enunciado classifica ~70% do banco; (5) "acertei no chute" valer
+  menos e tempo por item no Simulado; (6) Simulado como medida de prontidão
+  (tendência, nota projetada, resultado por tema); (7) plano da semana com o
+  antes e depois de cada tema. Fora, de propósito: TRI e modelos de previsão,
+  sem alunos para isso (2 reais em 2026-09-15). Pesa em quase tudo a mediana de
+  4 questões por tema: importar o Revalida 2020, 2021 e 2022-1 ajuda.
+  1. Itens 1 a 3 (feita, 2026-09-15). Quadro, aproveitamento geral e acerto
+     diário contam só a primeira resposta a cada questão
+     (`db._PRIMEIRAS_TENTATIVAS`); na demo, 400 respostas com 58% de acerto
+     viraram 203 questões com 51%. O domínio de um tema parte da especialidade
+     (e ela, da área) com peso de 5 respostas (`db.estimar_dominio`). "Onde você
+     ganha mais pontos", no Painel, mostra os 3 temas de maior fração dos
+     cadernos do INEP × (1 − domínio) (`db.priorizar_temas`, pura e testada), com
+     "Praticar {n}" já filtrado pelo tema. Limite conhecido: questão respondida
+     pela primeira vez na Revisão (marcada sem responder) não entra no domínio,
+     porque a Revisão só grava em `revisao_eventos`. **Próxima: item 4.**
 
 ### Próximos passos sugeridos (enquanto o deploy espera)
 Levantados em 2026-09-14, em ordem de valor. O deploy continua sendo o item

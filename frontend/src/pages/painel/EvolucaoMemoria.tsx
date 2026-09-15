@@ -24,7 +24,7 @@ function dataCurta(iso: string) {
   return `${d.getDate()} ${MESES_CURTOS[d.getMonth()]}`;
 }
 
-// DESIGN_TRIAGEM.md §6, Painel item 4 (repeticao_espacada.evolucao_memoria).
+// DESIGN_TRIAGEM.md §6, Painel item 5 (repeticao_espacada.evolucao_memoria).
 export function EvolucaoMemoria({ memoria }: { memoria: Memoria }) {
   const { estagios, semanas, especialidades, ultimos_7_dias } = memoria;
   return (

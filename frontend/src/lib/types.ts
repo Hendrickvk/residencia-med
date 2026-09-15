@@ -94,6 +94,26 @@ export interface PainelData {
   revisoes_hoje: number;
   revisao: RevisaoHoje & { hoje: number; proximos_dias: PrevisaoDia[] };
   memoria: EvolucaoMemoria;
+  prioridades: PrioridadeEstudo[];
+}
+
+// Tema com mais pontos a ganhar (db.prioridades_estudo): fração dos cadernos do
+// INEP que ele ocupa × o que falta de domínio. Já vem na ordem de prioridade.
+export interface PrioridadeEstudo {
+  subtopico_id: number;
+  tema: string;
+  especialidade_id: number;
+  especialidade: string;
+  area_id: number;
+  area: string;
+  questoes_provas: number; // questões de caderno do INEP deste tema
+  provas: number; // em quantas provas do INEP ele caiu
+  total_provas: number;
+  questoes_banco: number;
+  respondidas: number; // primeira resposta a questões do tema
+  acertos: number;
+  dominio_estimado: number; // 0–100; com poucas respostas, puxado para a especialidade
+  peso_prova: number; // % das questões de caderno
 }
 
 // Acompanhamento da memória (repeticao_espacada.evolucao_memoria). "Teste" é um

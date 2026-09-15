@@ -1253,16 +1253,25 @@ def listar_questoes_marcadas(*, usuario_id):
         """, (usuario_id,)).fetchall()
 
 
+# Primeira resposta do aluno a cada questão: a base do domínio no Painel. A mesma
+# questão respondida de novo mede se ele lembra dela, não se domina o assunto, e
+# isso quem acompanha é a Revisão (repeticao_espacada.evolucao_memoria).
+_PRIMEIRAS_TENTATIVAS = """
+    SELECT DISTINCT ON (questao_id) id, questao_id, correta, respondida_em
+    FROM respostas WHERE usuario_id = ?
+    ORDER BY questao_id, id
+"""
+
+
 def evolucao_diaria(*, usuario_id):
-    """Total de respostas e % de acerto por dia (para gráfico de evolução)."""
+    """Questões novas e % de acerto por dia (para gráfico de evolução)."""
     with get_conn() as conn:
-        return conn.execute("""
+        return conn.execute(f"""
             SELECT substr(respondida_em, 1, 10) AS dia,
                    COUNT(*) AS total,
                    SUM(correta) AS acertos,
                    ROUND(100.0 * SUM(correta) / COUNT(*), 1) AS pct_acerto
-            FROM respostas
-            WHERE usuario_id = ?
+            FROM ({_PRIMEIRAS_TENTATIVAS}) r
             GROUP BY dia
             ORDER BY dia ASC
         """, (usuario_id,)).fetchall()
@@ -1275,19 +1284,20 @@ def desempenho_dashboard_combinado(*, usuario_id):
     um único SELECT, pra viajarem num só round-trip ao Postgres em vez
     de 4 sequenciais (era o gargalo que sobrava depois do cache: toda
     vez que o cache expira, o Dashboard pagava 4x a latência de rede até
-    o Neon, uma atrás da outra)."""
+    o Neon, uma atrás da outra). Contam só a primeira resposta a cada
+    questão (_PRIMEIRAS_TENTATIVAS)."""
     with get_conn() as conn:
-        row = conn.execute("""
+        row = conn.execute(f"""
+            WITH r AS ({_PRIMEIRAS_TENTATIVAS})
             SELECT
               (SELECT jsonb_agg(t) FROM (
                   SELECT a.id AS area_id, a.nome AS area,
                          COUNT(r.id) AS total,
                          SUM(r.correta) AS acertos,
                          ROUND(100.0 * SUM(r.correta) / COUNT(r.id), 1) AS pct_acerto
-                  FROM respostas r
+                  FROM r
                   JOIN questoes q ON q.id = r.questao_id
                   JOIN areas a ON a.id = q.area_id
-                  WHERE r.usuario_id = ?
                   GROUP BY a.id, a.nome
                   ORDER BY pct_acerto ASC
               ) t) AS por_area,
@@ -1296,9 +1306,9 @@ def desempenho_dashboard_combinado(*, usuario_id):
                          COUNT(r.id) AS total,
                          SUM(r.correta) AS acertos,
                          ROUND(100.0 * SUM(r.correta) / COUNT(r.id), 1) AS pct_acerto
-                  FROM respostas r
+                  FROM r
                   JOIN questoes q ON q.id = r.questao_id
-                  WHERE q.banca IS NOT NULL AND TRIM(q.banca) != '' AND r.usuario_id = ?
+                  WHERE q.banca IS NOT NULL AND TRIM(q.banca) != ''
                   GROUP BY q.banca
                   ORDER BY pct_acerto ASC
               ) t) AS por_banca,
@@ -1307,25 +1317,116 @@ def desempenho_dashboard_combinado(*, usuario_id):
                          COUNT(r.id) AS total,
                          SUM(r.correta) AS acertos,
                          ROUND(100.0 * SUM(r.correta) / COUNT(r.id), 1) AS pct_acerto
-                  FROM respostas r
+                  FROM r
                   JOIN questoes q ON q.id = r.questao_id
                   JOIN areas a ON a.id = q.area_id
-                  WHERE q.banca IS NOT NULL AND TRIM(q.banca) != '' AND r.usuario_id = ?
+                  WHERE q.banca IS NOT NULL AND TRIM(q.banca) != ''
                   GROUP BY q.banca, a.nome
                   ORDER BY q.banca, a.nome
               ) t) AS por_banca_area,
               (SELECT COUNT(*)
-                  FROM respostas r
+                  FROM r
                   JOIN questoes q ON q.id = r.questao_id
-                  WHERE (q.banca IS NULL OR TRIM(q.banca) = '') AND r.usuario_id = ?
+                  WHERE (q.banca IS NULL OR TRIM(q.banca) = '')
               ) AS sem_banca
-        """, (usuario_id, usuario_id, usuario_id, usuario_id)).fetchone()
+        """, (usuario_id,)).fetchone()
         return {
             "por_area": row["por_area"] or [],
             "por_banca": row["por_banca"] or [],
             "por_banca_area": row["por_banca_area"] or [],
             "sem_banca": row["sem_banca"] or 0,
         }
+
+
+# ---------------------------------------------------------------------------
+# Prioridades de estudo: onde o aluno ganha mais pontos
+# ---------------------------------------------------------------------------
+
+# Cadernos que dão o peso de cada tema na prova: os do INEP, alvo da plataforma.
+BANCAS_INEP = ("REVALIDA", "ENAMED")
+
+# Respostas "emprestadas" do nível de cima na estimativa de domínio. Com menos
+# respostas próprias que isso, o tema fica mais perto da especialidade do que do
+# próprio resultado. O mesmo 5 da amostra mínima do Painel.
+PESO_ESTIMATIVA = 5
+
+
+def estimar_dominio(acertos, total, referencia, peso=PESO_ESTIMATIVA):
+    """Acerto ajustado de um grupo, de 0 a 1: começa na referência do nível de
+    cima e se aproxima do resultado próprio conforme as respostas chegam."""
+    return (acertos + peso * referencia) / (total + peso)
+
+
+def priorizar_temas(tentativas, temas, questoes_provas, limite=3):
+    """Os `limite` temas com mais pontos a ganhar: fração da prova que o tema
+    ocupa × o que falta de domínio estimado. Pura, para testar sem banco.
+
+    tentativas: primeiras respostas (area_id, especialidade_id, subtopico_id, correta).
+    temas: temas que caem nos cadernos, com subtopico_id, especialidade_id,
+        area_id e questoes_provas; os demais campos seguem para o resultado.
+    questoes_provas: total de questões de caderno, a base da fração.
+    """
+    if not tentativas or not questoes_provas:
+        return []
+    contagem = {}  # (nível, id) -> [acertos, respondidas]
+    for t in tentativas:
+        for chave in (("area", t["area_id"]), ("especialidade", t["especialidade_id"]), ("tema", t["subtopico_id"])):
+            grupo = contagem.setdefault(chave, [0, 0])
+            grupo[0] += int(t["correta"])
+            grupo[1] += 1
+    geral = sum(int(t["correta"]) for t in tentativas) / len(tentativas)
+
+    candidatos = []
+    for tema in temas:
+        # Cada nível parte do de cima: geral -> área -> especialidade -> tema.
+        dominio = geral
+        for chave in (("area", tema["area_id"]), ("especialidade", tema["especialidade_id"]),
+                      ("tema", tema["subtopico_id"])):
+            dominio = estimar_dominio(*contagem.get(chave, (0, 0)), dominio)
+        acertos, respondidas = contagem.get(("tema", tema["subtopico_id"]), (0, 0))
+        fracao = tema["questoes_provas"] / questoes_provas
+        candidatos.append((fracao * (1 - dominio), {
+            **tema,
+            "respondidas": respondidas,
+            "acertos": acertos,
+            "dominio_estimado": round(100 * dominio, 1),
+            "peso_prova": round(100 * fracao, 1),
+        }))
+    candidatos.sort(key=lambda c: -c[0])
+    return [dados for _, dados in candidatos[:limite]]
+
+
+def prioridades_estudo(*, usuario_id, limite=3):
+    """Temas prioritários do aluno (priorizar_temas), com o que o Painel precisa
+    para mostrar o motivo e abrir o Praticar já filtrado."""
+    bancas = ", ".join(["?"] * len(BANCAS_INEP))
+    with get_conn() as conn:
+        tentativas = conn.execute(f"""
+            SELECT q.area_id, q.especialidade_id, q.subtopico_id, r.correta
+            FROM ({_PRIMEIRAS_TENTATIVAS}) r JOIN questoes q ON q.id = r.questao_id
+        """, (usuario_id,)).fetchall()
+        if not tentativas:
+            return []
+        temas = conn.execute(f"""
+            SELECT s.id AS subtopico_id, s.nome AS tema, s.especialidade_id, e.nome AS especialidade,
+                   s.area_id, a.nome AS area, COUNT(*) AS questoes_provas,
+                   COUNT(DISTINCT qp.banca || ' ' || qp.edicao) AS provas,
+                   (SELECT COUNT(*) FROM questoes q2 WHERE q2.subtopico_id = s.id) AS questoes_banco
+            FROM questoes_provas qp
+            JOIN questoes q ON q.id = qp.questao_id
+            JOIN subtopicos s ON s.id = q.subtopico_id
+            JOIN especialidades e ON e.id = s.especialidade_id
+            JOIN areas a ON a.id = s.area_id
+            WHERE qp.banca IN ({bancas})
+            GROUP BY s.id, e.nome, a.nome
+            ORDER BY questoes_provas DESC, s.nome
+        """, BANCAS_INEP).fetchall()
+        totais = conn.execute(f"""
+            SELECT COUNT(*) AS questoes, COUNT(DISTINCT banca || ' ' || edicao) AS provas
+            FROM questoes_provas WHERE banca IN ({bancas})
+        """, BANCAS_INEP).fetchone()
+    prioridades = priorizar_temas(tentativas, temas, totais["questoes"], limite)
+    return [{**p, "total_provas": totais["provas"]} for p in prioridades]
 
 
 # ---------------------------------------------------------------------------

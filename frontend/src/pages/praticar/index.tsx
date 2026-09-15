@@ -10,11 +10,13 @@ type Fase =
   | { tipo: "sessao"; filtros: FiltrosPratica; nonce: number }
   | { tipo: "resumo"; resumo: ResumoSessao };
 
-// Vindo do Painel ("Praticar 10 desta área" ou clique numa linha de "Onde
-// você está errando") — lido só na primeira montagem (useState lazy), não
+// Vindo do Painel ("Praticar 10" de uma área do quadro ou de um tema de "Onde
+// você ganha mais pontos") — lido só na primeira montagem (useState lazy), não
 // deveria reagir a re-renders posteriores da mesma navegação.
 interface EstadoNavegacao {
   areaId?: number;
+  especialidadeId?: number;
+  subtopicoId?: number;
   iniciarImediato?: boolean;
   quantidade?: number;
 }
@@ -30,6 +32,8 @@ export default function Praticar() {
         nonce: Date.now(),
         filtros: {
           area_id: estadoNav.areaId,
+          especialidade_id: estadoNav.especialidadeId,
+          subtopico_id: estadoNav.subtopicoId,
           quantidade: estadoNav.quantidade ?? 20,
           apenas_erros: false,
           excluir_respondidas: false,

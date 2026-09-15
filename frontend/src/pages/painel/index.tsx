@@ -6,6 +6,7 @@ import { Cabecalho } from "./Cabecalho";
 import { EvolucaoMemoria } from "./EvolucaoMemoria";
 import { EvolucaoTriagem } from "./EvolucaoTriagem";
 import { FilaRevisao } from "./FilaRevisao";
+import { PrioridadesEstudo } from "./PrioridadesEstudo";
 import { QuadroTriagem } from "./QuadroTriagem";
 
 export default function Painel() {
@@ -50,15 +51,33 @@ export default function Painel() {
         onAbrir={(areaId) => navigate("/praticar", { state: { areaId } })}
         onPraticar={(areaId) => navigate("/praticar", { state: { areaId, iniciarImediato: true, quantidade: 10 } })}
       />
-      {/* Entra depois do quadro, que chega em cascata. */}
+      {/* Entram depois do quadro, que chega em cascata. */}
+      {data.prioridades.length > 0 && (
+        <div className="animate-entrar" style={{ animationDelay: "260ms" }}>
+          <PrioridadesEstudo
+            prioridades={data.prioridades}
+            onPraticar={(p, quantidade) =>
+              navigate("/praticar", {
+                state: {
+                  areaId: p.area_id,
+                  especialidadeId: p.especialidade_id,
+                  subtopicoId: p.subtopico_id,
+                  iniciarImediato: true,
+                  quantidade,
+                },
+              })
+            }
+          />
+        </div>
+      )}
       <div
         className="grid animate-entrar grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]"
-        style={{ animationDelay: "260ms" }}
+        style={{ animationDelay: "320ms" }}
       >
         <FilaRevisao revisao={data.revisao} onRevisar={() => navigate("/revisao")} />
         <EvolucaoTriagem evolucao={data.evolucao_14_dias} />
       </div>
-      <div className="animate-entrar" style={{ animationDelay: "340ms" }}>
+      <div className="animate-entrar" style={{ animationDelay: "380ms" }}>
         <EvolucaoMemoria memoria={data.memoria} />
       </div>
     </div>

@@ -36,4 +36,5 @@ def obter_painel(usuario=Depends(usuario_atual)):
         "revisoes_hoje": revisao_hoje["hoje"],
         "revisao": {**revisao_hoje, "proximos_dias": sr.previsao_revisoes(usuario_id=uid, meta=meta)},
         "memoria": sr.evolucao_memoria(usuario_id=uid),
+        "prioridades": db.prioridades_estudo(usuario_id=uid),
     }

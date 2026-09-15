@@ -41,6 +41,9 @@ como tinta em vez de cor de marca.
 - "Tinta" = `--ink` do tema (quase preto no claro, quase branco no escuro). Os pares
   acima passam AA para texto de 13px em negrito; não trocar o texto de cor sem
   medir de novo.
+- **Aproveitamento** é o acerto na primeira vez que o aluno responde cada questão
+  (`db._PRIMEIRAS_TENTATIVAS`). Responder a mesma questão de novo mede se ele
+  lembra dela, e isso é da Revisão ("Evolução da memória"), não do quadro.
 - Áreas com **menos de 5 questões respondidas** não são classificadas: vão para a
   linha "Amostra insuficiente" (mesmo limite que já existia).
 - A função de classificação é de apresentação e mora em `frontend/src/lib/triagem.ts`
@@ -205,7 +208,16 @@ Conteúdo das demais telas: largura máxima 1360px, padding 36/40px.
    área acima de 85% ainda."). O primeiro cartão da coluna mais grave já mostra o
    botão "Praticar 10". Abaixo, legenda das faixas e a linha "Amostra insuficiente".
    Em telas estreitas, as colunas viram grupos empilhados.
-3. **Rodapé** em duas colunas: "Fila de revisão" (casos de hoje dentro da meta diária em
+3. **Onde você ganha mais pontos** (`db.prioridades_estudo`), largura total: os 3
+   temas com mais pontos a ganhar, pela fração dos cadernos do INEP (Revalida e
+   ENAMED) que o tema ocupa × o que falta de domínio. Com poucas respostas, o
+   domínio do tema é estimado a partir da especialidade, e o dela a partir da
+   área, para uma resposta certa não virar 100%. Cada cartão: tema, especialidade ·
+   área, o acerto ("Você ainda não praticou este tema", "Acertou 1 de 2 · pouca
+   evidência" ou percentual com barra de nível a partir de 5 respostas), "Caiu em
+   {n} das {total} provas do INEP" e "Praticar {n}" (10, ou o tema inteiro se tiver
+   menos), que abre a sessão já filtrada. Só o primeiro botão é primário.
+4. **Rodapé** em duas colunas: "Fila de revisão" (casos de hoje dentro da meta diária em
    display, com a duração estimada pelo tempo real do aluno e quantos podem esperar;
    seletor "Meta diária" 10/20/30/50; "Próximos 7 dias" em barras — parte dentro da
    meta em `--ink`, o que passa dela em t2 (atenção), linha tracejada na meta, legenda
@@ -213,7 +225,7 @@ Conteúdo das demais telas: largura máxima 1360px, padding 36/40px.
    dias" (linha em `--ink` sobre as faixas de nível em transparência, último ponto
    marcado e rotulado; menos de 3 dias: "Histórico começa a aparecer no terceiro dia
    de estudo.").
-4. **Evolução da memória** (`repeticao_espacada.evolucao_memoria`), largura total. Só
+5. **Evolução da memória** (`repeticao_espacada.evolucao_memoria`), largura total. Só
    conta como teste de memória o caso que voltou depois de pelo menos 1 dia sem ser
    visto (refazer 10 min depois do erro não conta). Frase da semana: "Nos últimos 7
    dias, {n} casos voltaram e você lembrou de {x} ({%})" com etiqueta de nível e,

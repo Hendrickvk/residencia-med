@@ -14,7 +14,7 @@ interface Props {
   onRevisar: () => void;
 }
 
-// DESIGN_TRIAGEM.md §6, Painel item 3: casos de hoje dentro da meta diária,
+// DESIGN_TRIAGEM.md §6, Painel item 4: casos de hoje dentro da meta diária,
 // duração estimada e a carga dos próximos 7 dias.
 export function FilaRevisao({ revisao, onRevisar }: Props) {
   const queryClient = useQueryClient();
