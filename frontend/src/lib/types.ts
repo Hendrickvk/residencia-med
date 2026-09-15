@@ -98,6 +98,7 @@ export interface PainelData {
   prioridades: PrioridadeEstudo[];
   nota_projetada: NotaProjetada | null; // null sem nenhuma resposta
   simulados_oficiais: SimuladoOficialFeito[];
+  semana: ProgressoSemana;
   por_tipo: DesempenhoTipo[];
 }
 
@@ -121,6 +122,30 @@ export interface SimuladoOficialFeito {
   acertos: number;
   pct_acerto: number;
   ja_vistas: number; // já respondidas antes de começar: nelas a nota mede memória
+}
+
+// Um tema praticado desde segunda-feira (db.progresso_semana).
+export interface TemaDaSemana {
+  subtopico_id: number;
+  tema: string;
+  area_id: number;
+  area: string;
+  especialidade_id: number;
+  especialidade: string;
+  novas: number; // questões do tema respondidas pela primeira vez na semana
+  acertos: number;
+  dominio_antes: number | null; // 0–100 na segunda; null se o aluno começou nesta semana
+  dominio_agora: number;
+  testes: number; // casos do tema que a Revisão cobrou na semana
+  lembrou: number;
+}
+
+// O ciclo da semana fechado: prioridade, prática, mudança (db.progresso_semana).
+export interface ProgressoSemana {
+  inicio: string; // segunda-feira
+  novas: number;
+  acertos: number;
+  temas: TemaDaSemana[]; // os mais praticados primeiro
 }
 
 // Acerto na primeira resposta por tipo de pergunta (db.desempenho_por_tipo), na

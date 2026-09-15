@@ -5,6 +5,8 @@ estudo (`db.priorizar_temas`: peso do tema nos cadernos do INEP × o que falta
 de domínio estimado) e desempenho por tipo de pergunta.
 """
 
+import datetime
+
 import db
 
 
@@ -98,6 +100,35 @@ def test_prioridades_estudo_usam_os_cadernos_do_inep(usuario_teste, questao_test
         assert p["respondidas"] == 0
         assert 1 <= p["provas"] <= p["total_provas"]
         assert 0 < p["peso_prova"] <= 100
+
+
+def test_semana_comeca_na_segunda():
+    quarta = datetime.datetime(2026, 9, 16, 15, 30)
+    assert db._inicio_da_semana(quarta) == datetime.datetime(2026, 9, 14)
+
+
+def test_progresso_da_semana_separa_o_antes_do_depois(usuario_teste, quatro_questoes):
+    antiga, nova = quatro_questoes[:2]
+    with db.get_conn() as conn:
+        tema = conn.execute(
+            "SELECT id FROM subtopicos WHERE origem IS NULL AND especialidade_id IS NOT NULL ORDER BY id LIMIT 1"
+        ).fetchone()["id"]
+        for questao_id in (antiga, nova):
+            conn.execute("UPDATE questoes SET subtopico_id = ? WHERE id = ?", (tema, questao_id))
+    db.registrar_resposta(antiga, "A", True, usuario_id=usuario_teste)
+    with db.get_conn() as conn:
+        conn.execute(
+            "UPDATE respostas SET respondida_em = ? WHERE usuario_id = ? AND questao_id = ?",
+            ((db._inicio_da_semana() - datetime.timedelta(days=1)).isoformat(), usuario_teste, antiga),
+        )
+    db.registrar_resposta(nova, "B", False, usuario_id=usuario_teste)
+
+    semana = db.progresso_semana(usuario_id=usuario_teste)
+    assert (semana["novas"], semana["acertos"]) == (1, 0)
+    [t] = semana["temas"]
+    assert (t["subtopico_id"], t["novas"], t["testes"]) == (tema, 1, 0)
+    # O acerto da semana passada é o "antes"; o erro desta semana derruba o "agora".
+    assert t["dominio_antes"] > t["dominio_agora"]
 
 
 def test_nota_projetada_do_aluno(usuario_teste, questao_teste):

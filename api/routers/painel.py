@@ -41,5 +41,6 @@ def obter_painel(usuario=Depends(usuario_atual)):
         # servidor); juntar as duas numa função só se o Painel ficar lento.
         "nota_projetada": db.nota_projetada(usuario_id=uid),
         "simulados_oficiais": db.simulados_oficiais_feitos(usuario_id=uid),
+        "semana": db.progresso_semana(usuario_id=uid),
         "por_tipo": db.desempenho_por_tipo(usuario_id=uid),
     }

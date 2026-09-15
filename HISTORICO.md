@@ -108,7 +108,7 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
      durante a prova (`components/TemaDoCaso.tsx`).
   5. Estatística por tema: coberta pela estimativa ajustada do "Acompanhamento do
      desempenho", abaixo, que funciona com poucas respostas.
-- **Acompanhamento do desempenho, em fases.** Decisão do usuário (2026-09-15):
+- **Acompanhamento do desempenho, em fases — os 7 itens estão feitos.** Decisão do usuário (2026-09-15):
   com os temas prontos, o foco passa a ser medir e melhorar o desempenho do
   aluno. Propostas, em ordem: (1) separar domínio (primeira resposta a cada
   questão) de memória (Revisão); (2) estimativa por tema que aguente pouca
@@ -180,7 +180,19 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
      concentram em poucos temas; edições têm dificuldades diferentes, e nada
      aqui corrige isso; nenhuma prova oficial tinha sido feita até
      2026-09-15. Conferido no navegador no mesmo dia, com dois simulados de
-     teste de 10 questões na conta demo. **Próxima: item 7.**
+     teste de 10 questões na conta demo.
+  5. Item 7 (feita, 2026-09-15). "O que mudou nesta semana" no Painel
+     (`db.progresso_semana`): desde segunda-feira, as questões novas de cada
+     tema praticado, o domínio estimado antes e agora e o que a Revisão cobrou
+     do tema na semana (`repeticao_espacada.retencao_por_tema`, a mesma
+     definição de teste de `classificar_eventos`). O "plano da semana" da
+     proposta virou isto mais a seção de prioridades, que já lista os temas e
+     abre o Praticar: uma lista congelada toda segunda seria uma cópia quase
+     igual dela na mesma tela. Limites conhecidos: o "antes" são as respostas
+     até segunda, então quem começou nesta semana fica só com o agora; o
+     domínio estimado se move devagar de propósito (encolhimento); e a seção
+     some quando a semana ainda não teve questão nova. Com ele, a lista dos 7
+     itens fecha.
 
 ### Próximos passos sugeridos (enquanto o deploy espera)
 Levantados em 2026-09-14, em ordem de valor. O deploy continua sendo o item

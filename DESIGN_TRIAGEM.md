@@ -231,13 +231,20 @@ Conteúdo das demais telas: largura máxima 1360px, padding 36/40px.
    evidência" ou percentual com barra de nível a partir de 5 respostas), "Caiu em
    {n} das {total} provas do INEP" e "Praticar {n}" (10, ou o tema inteiro se tiver
    menos), que abre a sessão já filtrada. Só o primeiro botão é primário.
-5. **Por tipo de pergunta** (`db.desempenho_por_tipo`), largura total: o mesmo
+5. **O que mudou nesta semana** (`db.progresso_semana`), largura total, só quando
+   houve questão nova desde segunda-feira: "{n} questões novas, {x} certas ({%})" e
+   até 4 temas praticados, do mais praticado para o menos. Cada tema traz a
+   especialidade, quantas novas e quantas certas, o que a Revisão cobrou dele na
+   semana ("lembrou de {a} de {b}", a mesma definição de teste da Evolução da
+   memória) e o domínio estimado na segunda → agora, o de agora em etiqueta de
+   nível. Quem começou nesta semana não tem "antes": só aparece o agora.
+6. **Por tipo de pergunta** (`db.desempenho_por_tipo`), largura total: o mesmo
    aproveitamento do quadro separado pelo que a questão pede — Diagnóstico,
    Exames, Conduta e Conceitos (`db.TIPOS_PERGUNTA`). Cada tipo com percentual,
    fração e barra de nível a partir de 5 respostas ("Pouca evidência" antes), e o
    tipo inteiro é um botão para "Praticar 10" dele. Quando o melhor e o pior tipo
    com amostra diferem 15 pontos ou mais, uma frase aponta o ponto fraco.
-6. **Rodapé** em duas colunas: "Fila de revisão" (casos de hoje dentro da meta diária em
+7. **Rodapé** em duas colunas: "Fila de revisão" (casos de hoje dentro da meta diária em
    display, com a duração estimada pelo tempo real do aluno e quantos podem esperar;
    seletor "Meta diária" 10/20/30/50; "Próximos 7 dias" em barras — parte dentro da
    meta em `--ink`, o que passa dela em t2 (atenção), linha tracejada na meta, legenda
@@ -245,7 +252,7 @@ Conteúdo das demais telas: largura máxima 1360px, padding 36/40px.
    dias" (linha em `--ink` sobre as faixas de nível em transparência, último ponto
    marcado e rotulado; menos de 3 dias: "Histórico começa a aparecer no terceiro dia
    de estudo.").
-7. **Evolução da memória** (`repeticao_espacada.evolucao_memoria`), largura total. Só
+8. **Evolução da memória** (`repeticao_espacada.evolucao_memoria`), largura total. Só
    conta como teste de memória o caso que voltou depois de pelo menos 1 dia sem ser
    visto (refazer 10 min depois do erro não conta). Frase da semana: "Nos últimos 7
    dias, {n} casos voltaram e você lembrou de {x} ({%})" com etiqueta de nível e,

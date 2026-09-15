@@ -504,6 +504,30 @@ def evolucao_memoria(*, usuario_id, semanas=SEMANAS_EVOLUCAO):
     }
 
 
+def retencao_por_tema(*, usuario_id, desde):
+    """Testes de memória por tema desde `desde`, na mesma definição da Evolução
+    da memória: o caso voltou depois de DIAS_MINIMOS_TESTE sem ser visto, de
+    qualquer origem. Devolve {subtopico_id: {"testes", "lembrou"}}."""
+    with get_conn() as conn:
+        eventos = conn.execute(f"""
+            SELECT q.subtopico_id, {_COLUNAS_CLASSIFICACAO}
+            FROM revisao_eventos e
+            JOIN questoes q ON q.id = e.questao_id
+            WHERE e.usuario_id = ? AND e.registrado_em >= ? AND q.subtopico_id IS NOT NULL
+        """, (usuario_id, desde)).fetchall()
+    por_tema = {}
+    for evento in eventos:
+        # Um evento por vez: só teste e lembrou, que não dependem do histórico
+        # da questão (recuperado depende, e não é usado aqui).
+        (_, marcas), = classificar_eventos([evento])
+        if not marcas["teste"]:
+            continue
+        grupo = por_tema.setdefault(evento["subtopico_id"], {"testes": 0, "lembrou": 0})
+        grupo["testes"] += 1
+        grupo["lembrou"] += marcas["lembrou"]
+    return por_tema
+
+
 def avaliar_revisao(questao_id, qualidade: int, *, usuario_id, alternativa=None, tempo_ms=None):
     """Avaliação feita na tela de Revisão.
 

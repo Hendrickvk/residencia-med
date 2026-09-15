@@ -10,6 +10,7 @@ import { FilaRevisao } from "./FilaRevisao";
 import { NotaProjetada } from "./NotaProjetada";
 import { PorTipoPergunta } from "./PorTipoPergunta";
 import { PrioridadesEstudo } from "./PrioridadesEstudo";
+import { ProgressoSemana } from "./ProgressoSemana";
 import { QuadroTriagem } from "./QuadroTriagem";
 
 export default function Painel() {
@@ -82,8 +83,13 @@ export default function Painel() {
           />
         </div>
       )}
-      {data.por_tipo.some((t) => t.total > 0) && (
+      {data.semana.novas > 0 && (
         <div className="animate-entrar" style={{ animationDelay: "340ms" }}>
+          <ProgressoSemana semana={data.semana} />
+        </div>
+      )}
+      {data.por_tipo.some((t) => t.total > 0) && (
+        <div className="animate-entrar" style={{ animationDelay: "380ms" }}>
           <PorTipoPergunta
             tipos={data.por_tipo}
             onPraticar={(tipo) =>
@@ -94,12 +100,12 @@ export default function Painel() {
       )}
       <div
         className="grid animate-entrar grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]"
-        style={{ animationDelay: "380ms" }}
+        style={{ animationDelay: "420ms" }}
       >
         <FilaRevisao revisao={data.revisao} onRevisar={() => navigate("/revisao")} />
         <EvolucaoTriagem evolucao={data.evolucao_14_dias} />
       </div>
-      <div className="animate-entrar" style={{ animationDelay: "440ms" }}>
+      <div className="animate-entrar" style={{ animationDelay: "460ms" }}>
         <EvolucaoMemoria memoria={data.memoria} />
       </div>
     </div>

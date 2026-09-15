@@ -1501,6 +1501,68 @@ def nota_projetada(*, usuario_id):
     return projetar_nota(tentativas, temas)
 
 
+def _inicio_da_semana(agora=None):
+    """Segunda-feira 00:00 desta semana, o começo do ciclo do Painel."""
+    dia = (agora or datetime.datetime.now()).replace(hour=0, minute=0, second=0, microsecond=0)
+    return dia - datetime.timedelta(days=dia.weekday())
+
+
+def progresso_semana(*, usuario_id, limite=4):
+    """O antes e o depois dos temas praticados desde segunda-feira: quantas
+    questões novas (primeira resposta na semana), o domínio estimado antes e
+    agora e o que a Revisão cobrou do tema na semana. Fecha o ciclo do Painel:
+    prioridade, prática, mudança."""
+    inicio = _inicio_da_semana()
+    with get_conn() as conn:
+        tentativas = conn.execute(f"""
+            SELECT q.area_id, q.especialidade_id, q.subtopico_id, r.pontos, r.respondida_em,
+                   s.nome AS tema, e.nome AS especialidade, a.nome AS area
+            FROM ({_PRIMEIRAS_TENTATIVAS}) r
+            JOIN questoes q ON q.id = r.questao_id
+            JOIN areas a ON a.id = q.area_id
+            LEFT JOIN subtopicos s ON s.id = q.subtopico_id
+            LEFT JOIN especialidades e ON e.id = q.especialidade_id
+        """, (usuario_id,)).fetchall()
+    # respondida_em é TEXT ISO: compara com texto.
+    corte = inicio.isoformat()
+    da_semana = [t for t in tentativas if t["respondida_em"] >= corte]
+    antes = [t for t in tentativas if t["respondida_em"] < corte]
+
+    praticados = {}
+    for t in da_semana:
+        if t["subtopico_id"] is None:
+            continue
+        tema = praticados.setdefault(t["subtopico_id"], {
+            "subtopico_id": t["subtopico_id"], "tema": t["tema"], "area_id": t["area_id"], "area": t["area"],
+            "especialidade_id": t["especialidade_id"], "especialidade": t["especialidade"],
+            "novas": 0, "acertos": 0.0,
+        })
+        tema["novas"] += 1
+        tema["acertos"] += float(t["pontos"])
+    # Onde ele mais estudou primeiro; no empate, o nome, para a ordem não dançar.
+    escolhidos = sorted(praticados.values(), key=lambda t: (-t["novas"], t["tema"]))[:limite]
+    resumo = {
+        "inicio": inicio.date().isoformat(),
+        "novas": len(da_semana),
+        "acertos": round(sum(float(t["pontos"]) for t in da_semana), 1),
+    }
+    if not escolhidos:
+        return {**resumo, "temas": []}
+
+    # Import aqui, e não no topo: repeticao_espacada importa db (ciclo).
+    import repeticao_espacada
+    retencao = repeticao_espacada.retencao_por_tema(usuario_id=usuario_id, desde=inicio)
+    dominio_antes = {t["subtopico_id"]: d for t, d, _, _ in _dominio_dos_temas(antes, escolhidos)} if antes else {}
+    dominio_agora = {t["subtopico_id"]: d for t, d, _, _ in _dominio_dos_temas(tentativas, escolhidos)}
+    return {**resumo, "temas": [{
+        **tema,
+        "acertos": round(tema["acertos"], 1),
+        "dominio_antes": round(100 * dominio_antes[tema["subtopico_id"]], 1) if antes else None,
+        "dominio_agora": round(100 * dominio_agora[tema["subtopico_id"]], 1),
+        **retencao.get(tema["subtopico_id"], {"testes": 0, "lembrou": 0}),
+    } for tema in escolhidos]}
+
+
 def desempenho_por_tipo(*, usuario_id):
     """Acerto na primeira resposta por tipo de pergunta, na ordem de
     TIPOS_PERGUNTA, incluindo os tipos ainda sem resposta (total 0)."""
