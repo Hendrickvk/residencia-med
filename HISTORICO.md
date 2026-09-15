@@ -42,7 +42,7 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   Inep nº 540/2020, art. 7º (conteúdos por área do Revalida); a Matriz Comum de
   2025 (Portaria 478) só define áreas, competências e cenários, sem lista de
   doenças. Fases:
-  1. Lista `db.TEMAS`, 202 temas (feita e aprovada). Na classificação entraram
+  1. Lista `db.TEMAS`, 209 temas (feita e aprovada). Na classificação entraram
      temas que faltavam, com aprovação do usuário: "Prolapso genital e
      incontinência urinária" (Ginecologia); em Pediatria clínica, diabetes e
      endócrino, vasculites e reumatologia, desenvolvimento e comportamento,
@@ -55,12 +55,18 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
      queimaduras químicas" (Oftalmologia), "História natural e determinantes
      do processo saúde-doença" (Epidemiologia) e "Imunização e profilaxia
      pós-exposição" (Vigilância) — os demais citados na Portaria
-     540/2020, que a primeira lista tinha comprimido demais. Vale conferir as
-     próximas especialidades contra o texto da portaria antes de classificar.
+     540/2020, que a primeira lista tinha comprimido demais. Em Clínica Médica
+     (2026-09-15, sem aprovação caso a caso) entraram "Cardiopatias congênitas
+     no adulto" (Cardiologia), "Via aérea e acesso venoso central" (Emergências
+     clínicas), "Sífilis e outras IST" e "Mononucleose, febre maculosa e outras
+     infecções" (Infectologia), "Complicações e emergências oncológicas"
+     (Oncologia), "Tromboembolismo pulmonar" (Pneumologia) e "Transtornos
+     mentais na infância e adolescência" (Psiquiatria). Texto da portaria:
+     `download.inep.gov.br/educacao_superior/revalida/portaria/2020/Portaria_540_17092020.pdf`.
   2. Temas no banco (feita): `init_db` grava os temas em `subtopicos`;
      `db.listar_temas` esconde os 44 assuntos antigos do MediaFire pelo campo
      `origem` (nenhum nome colide); a planilha e o formulário do Streamlit só
-     aceitam temas existentes, e "Adicionar assunto" saiu. **Próxima: fase 3.**
+     aceitam temas existentes, e "Adicionar assunto" saiu.
   3. Classificar as 986 questões lendo o conteúdo, uma especialidade por vez,
      com simulação, backup e amostra revisada pelo usuário. Ferramenta:
      `scripts/classificar_temas.py <json>` (simula; `--aplicar` grava e salva
@@ -71,10 +77,27 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
      Pediatria inteira; Cirurgia inteira (180: Cirurgia geral 57, Trauma 40,
      Urologia 18, Coloproctologia 16, Cirurgia pediátrica 15, Ortopedia 12,
      Oftalmologia 10, Otorrinolaringologia 6, Cirurgia vascular 6); Medicina
-     Preventiva e Social inteira (159: Atenção primária 37,
-     Vigilância 34, Epidemiologia 30, Ética 24, Políticas 21, Trabalhador 13).
-     700 de 986 questões com tema. **Próximo: Clínica Médica** (a última
-     grande área, 286 questões em 15 especialidades).
+     Preventiva e Social inteira (159: Atenção primária 37, Vigilância 34,
+     Epidemiologia 30, Ética 24, Políticas 21, Trabalhador 13). Em 2026-09-15,
+     Clínica Médica inteira (286) numa sessão só, a pedido do usuário, sem
+     amostra revisada: Psiquiatria 36, Infectologia 35, Cardiologia 32,
+     Dermatologia 22, Gastroenterologia 22, Emergências clínicas 21,
+     Endocrinologia 21, Neurologia 21, Pneumologia 17, Reumatologia 16,
+     Nefrologia 13, Hematologia 10, Geriatria 9, Oncologia 6, Hepatologia 5.
+     **Fase feita: 986 de 986 questões com tema.** Quando o tema certo era de
+     outra especialidade da mesma grande área, a questão mudou de
+     especialidade (o script passou a aceitar isso): 16 questões — emergência
+     hipertensiva (922) e dislipidemia (399) para Cardiologia; hipocalcemia e
+     hiponatremia (931, 189, 2297) para Emergências clínicas; cistite (194,
+     332, 2398) para Nefrologia; lombalgia com sinais de alarme (971, 2411)
+     para Reumatologia; demência vascular (1882) para Geriatria; encefalite
+     herpética (2415) para Infectologia; Wernicke (1792) e arterite temporal
+     cobrada como tipo de cefaleia (87) para Neurologia; tabagismo (1889, 2418)
+     para Psiquiatria. Ficaram no tema mais próximo, sem tema próprio:
+     hidradenite supurativa (300, Infecções de pele), dermatite seborreica
+     infantil (359, Dermatoses alérgicas) e colangite esclerosante na
+     retocolite (51, Doenças inflamatórias intestinais). Vale o usuário
+     conferir os temas novos e essas mudanças. **Próxima: fase 4.**
   4. Filtro de tema no Praticar e tema no cabeçalho do caso (o cabeçalho já
      mostra `subtopico`).
   5. Estatística por tema só quando houver respostas suficientes (hoje ~30 por

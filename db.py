@@ -259,7 +259,7 @@ TEMAS = {
         "Síndrome coronariana aguda e doença isquêmica", "Insuficiência cardíaca e miocardiopatias",
         "Hipertensão arterial e emergências hipertensivas", "Arritmias",
         "Febre reumática, valvopatias e endocardite", "Doenças do pericárdio",
-        "Prevenção cardiovascular e dislipidemias",
+        "Prevenção cardiovascular e dislipidemias", "Cardiopatias congênitas no adulto",
     ],
     "Dermatologia": [
         "Hanseníase", "Infecções e infestações de pele", "Dermatoses alérgicas e farmacodermias",
@@ -268,7 +268,7 @@ TEMAS = {
     "Emergências clínicas": [
         "Parada cardiorrespiratória e reanimação", "Choque e sepse",
         "Insuficiência respiratória aguda e ventilação mecânica", "Edema agudo de pulmão",
-        "Distúrbios hidroeletrolíticos e ácido-base", "Intoxicações exógenas",
+        "Distúrbios hidroeletrolíticos e ácido-base", "Intoxicações exógenas", "Via aérea e acesso venoso central",
     ],
     "Endocrinologia": [
         "Diabetes mellitus", "Doenças da tireoide e paratireoides", "Doenças da hipófise e das adrenais",
@@ -287,7 +287,7 @@ TEMAS = {
     "Infectologia": [
         "HIV/aids e infecções oportunistas", "Tuberculose", "Arboviroses", "Meningites e meningoencefalites",
         "Doenças parasitárias endêmicas", "Leptospirose, tétano e raiva", "Influenza e COVID-19",
-        "Antimicrobianos e infecção hospitalar",
+        "Antimicrobianos e infecção hospitalar", "Sífilis e outras IST", "Mononucleose, febre maculosa e outras infecções",
     ],
     "Nefrologia": [
         "Lesão renal aguda", "Doença renal crônica e diálise", "Glomerulopatias", "Infecção urinária e litíase",
@@ -299,16 +299,17 @@ TEMAS = {
     ],
     "Oncologia e cuidados paliativos": [
         "Prevenção e rastreamento do câncer", "Princípios do tratamento oncológico",
-        "Cuidados paliativos e terminalidade",
+        "Cuidados paliativos e terminalidade", "Complicações e emergências oncológicas",
     ],
     "Pneumologia": [
         "Asma e DPOC", "Pneumonias", "Câncer de pulmão e nódulo pulmonar", "Derrame pleural",
-        "Doenças intersticiais e ocupacionais",
+        "Doenças intersticiais e ocupacionais", "Tromboembolismo pulmonar",
     ],
     "Psiquiatria": [
         "Depressão e transtorno bipolar", "Transtornos de ansiedade", "Esquizofrenia e outras psicoses",
         "Uso de álcool e outras drogas", "Emergências psiquiátricas e suicídio",
         "Transtornos alimentares, somatoformes e de personalidade", "Rede de atenção psicossocial",
+        "Transtornos mentais na infância e adolescência",
     ],
     "Reumatologia": [
         "Artrite reumatoide e osteoartrite", "Lúpus e outras doenças do colágeno",
