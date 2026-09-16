@@ -27,29 +27,6 @@ inspirada em plataformas como a Medcof.
   modelo pronto). Detecta duplicatas e mostra um relatório de erros
   linha a linha.
 
-## Como instalar e rodar
-
-1. Tenha o **Python 3.10+** instalado.
-2. Abra um terminal dentro da pasta `residencia_med`.
-3. Instale as dependências:
-
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. Rode a aplicação:
-
-   ```bash
-   streamlit run app.py
-   ```
-
-5. O navegador vai abrir automaticamente em algo como
-   `http://localhost:8501` — essa é a sua plataforma rodando localmente.
-
-Os dados ficam salvos em `data/residencia.db` (SQLite), então tudo o
-que você cadastrar (questões, respostas) persiste entre
-uma sessão e outra.
-
 ## Como importar questões em massa
 
 1. Abra **"Importar Questões (planilha)"** no menu lateral.
