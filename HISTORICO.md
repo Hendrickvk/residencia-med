@@ -241,10 +241,16 @@ mais importante assim que houver acesso SSH.
    alternativa-imagem (USP 11, 14, 33, 40, 49, 66, 69, 70 e 72) e os recortes
    altos (USP 1 e 70), também em largura de celular. O usuário faz o login na
    conta de QA.
-4. **Tempo do simulado oficial por banca.** Hoje todas usam
-   `MINUTOS_POR_QUESTAO_PROVA_OFICIAL` = 3. Bate com o INEP e com a UNICAMP 2023
-   (80 questões em 4 h); conferir no edital da FUVEST a duração da prova da USP
-   (113 questões dão 5h39) e, se diferir, guardar o ritmo por banca.
+4. **Tempo do simulado oficial por banca** (conferido em 2026-09-15; nada a
+   mudar). Todas as bancas do banco usam o mesmo ritmo de 3 minutos por questão:
+   Revalida, 100 questões em 5 h; UNICAMP 2023, 80 em 4 h; e a USP, que era a
+   dúvida, 120 questões em 6 h, segundo as instruções do próprio caderno AD1 de
+   2026 — a conta antiga desconfiava de diferença porque partia das 113 questões
+   que entraram no banco, e não das 120 do caderno. Do ENAMED o Inep não publica
+   a duração (não está na página do exame, nas perguntas frequentes, na
+   legislação nem na nota de gabarito), e como metade das questões de 2025 é a
+   mesma da Revalida 2025/2, fica valendo o ritmo do INEP. Guardar ritmo por
+   banca só se aparecer prova com ritmo diferente.
 5. **Questões comuns a mais de uma prova.** No simulado da Revalida 2025/2, as
    43 questões compartilhadas aparecem com o selo "ENAMED 2025". Expor na API as
    provas de `questoes_provas` e mostrar todas na questão.

@@ -1625,9 +1625,12 @@ def questoes_aleatorias(area_id=None, banca=None, limite=10):
         return conn.execute(query, params + [limite]).fetchall()
 
 
-# Ritmo da prova objetiva oficial (Revalida/INEP): 100 questões em 5 horas.
-# O simulado por edição aplica esse ritmo às questões válidas da edição — as
-# anuladas pelo INEP não estão no banco.
+# Ritmo da prova objetiva oficial: 3 minutos por questão. Conferido em 2026-09-15
+# nas bancas que existem no banco, e todas batem — Revalida, 100 questões em 5 h;
+# USP/FUVEST, 120 em 6 h (instruções do caderno AD1 de 2026); UNICAMP, 80 em 4 h.
+# Do ENAMED o Inep não publica a duração, e como metade das questões de 2025 é a
+# mesma da Revalida 2025/2, vale o mesmo ritmo. O simulado por edição aplica isso
+# às questões válidas da edição — as anuladas pelo INEP não estão no banco.
 MINUTOS_POR_QUESTAO_PROVA_OFICIAL = 3
 
 
