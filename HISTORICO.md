@@ -44,7 +44,10 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   **Revalida 2022-1**, cujo caderno não tem mapa de caracteres — as fontes são
   subconjuntos com glifos "g87", sem ToUnicode, e pdfplumber e PyMuPDF devolvem
   lixo, de modo que só sairia por OCR, que exigiria instalar o Tesseract e
-  revisar 100 enunciados clínicos número a número. Também fora: edições
+  revisar 100 enunciados clínicos número a número. **Revalida 2026/2** é só
+  esperar: em 2026-09-15 o caderno 1 já estava publicado, mas o gabarito ainda
+  era o preliminar; quando sair o definitivo, é importação direta com
+  `scripts/importar_prova.py`. Também fora: edições
   anteriores da USP (a FUVEST só mantém a atual); UNICAMP de 2024 em diante
   (respostas curtas); UNIFESP e Santa Casa (caderno não público). O **ENARE**
   foi conferido em 2026-09-15 e não serve: a FGV publica 139 cadernos, todos de
@@ -493,6 +496,17 @@ governa as telas admin do Streamlit.
   checagem automática de que cada uma defende a letra oficial (uma não citava a
   alternativa e foi corrigida). Backup dos ids em
   `backups/importacao_revalida_2021_*.json`.
+- **Duas explicações corrigidas na revisão clínica** das cinco marcadas em
+  2026-09-14; as outras três estavam certas. Na Revalida 2025/2 Q91 (id 1803), o
+  texto defendia o gabarito dizendo que o Mycoplasma incuba 2 a 3 semanas, o que
+  não é exato (1 a 4 semanas): agora defende a letra oficial pelo padrão
+  radiológico e pelo contexto de aglomeração e diz ao aluno que o Mycoplasma é o
+  diferencial clássico nessa idade. Na USP 2026 Q116 (id 2405), o SIU de
+  levonorgestrel aparecia como escolha pacífica: o texto agora registra que,
+  pelos critérios de elegibilidade da OMS, com anticorpos antifosfolípides o DIU
+  de cobre é categoria 1 e o SIU é categoria 3 no início do uso, de modo que a
+  outra alternativa é defensável. Correção por UPDATE, com o texto anterior em
+  `backups/correcoes_explicacoes_*.json`.
 
 ## Armadilhas das telas admin (Streamlit)
 
