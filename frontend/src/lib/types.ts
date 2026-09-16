@@ -1,3 +1,11 @@
+// Caderno oficial em que a questão caiu (db.provas_das_questoes). A mesma questão
+// pode estar em mais de um: o Revalida 2025/2 e o ENAMED 2025 dividem 43 delas.
+export interface ProvaDaQuestao {
+  banca: string;
+  edicao: string;
+  numero_prova: number | null;
+}
+
 export interface Questao {
   id: number;
   area_id: number;
@@ -14,6 +22,7 @@ export interface Questao {
   ano: number | null;
   marcada: boolean;
   tem_imagem: boolean;
+  provas?: ProvaDaQuestao[]; // vazio na questão que não veio de caderno oficial
 }
 
 export interface FiltrosPratica {

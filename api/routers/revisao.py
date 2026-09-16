@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 import repeticao_espacada as sr
 from api.deps import usuario_atual
 from api.schemas import MarcarRevisaoIn
-from api.serialize import questao_publica
+from api.serialize import questoes_publicas
 
 router = APIRouter(prefix="/revisao", tags=["revisao"])
 
@@ -22,8 +22,8 @@ def obter_leva(
     proxima = sr.proxima_leva_revisao(usuario_id=uid)
     return {
         "fila": [
-            {**questao_publica(q), "prazos": sr.prever_prazos(estados.get(q["id"]))}
-            for q in fila
+            {**publica, "prazos": sr.prever_prazos(estados.get(publica["id"]))}
+            for publica in questoes_publicas(fila)
         ],
         "proxima_leva": proxima,
         "hoje": {

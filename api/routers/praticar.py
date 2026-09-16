@@ -6,7 +6,7 @@ import db
 import repeticao_espacada as sr
 from api.deps import usuario_atual
 from api.schemas import RespostaIn
-from api.serialize import questao_publica
+from api.serialize import questoes_publicas
 
 router = APIRouter(tags=["praticar"])
 
@@ -37,7 +37,7 @@ def obter_sessao_pratica(
     random.shuffle(ids)
     ids = ids[:quantidade]
     questoes = db.obter_questoes_por_ids(ids, usuario_id=usuario["id"])
-    return {"questoes": [questao_publica(q) for q in questoes]}
+    return {"questoes": questoes_publicas(questoes)}
 
 
 @router.post("/respostas")

@@ -221,6 +221,16 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
 Levantados em 2026-09-14, em ordem de valor. O deploy continua sendo o item
 mais importante assim que houver acesso SSH.
 
+**Onde paramos (2026-09-15).** Os 7 itens do acompanhamento do desempenho estão
+feitos, a Revalida 2021 foi importada (banco em 1 074 questões) e os passos 4, 5
+e 6 desta lista saíram. A próxima tarefa é o **passo 3, o QA no navegador das
+questões com figura**: depende de @browser e do login feito pelo usuário (conta
+de QA ou demo, senha da demo no `DEPLOY.md`), e entram nele também as três
+figuras novas da Revalida 2021 — questões 41, 99 e 100 —, conferidas só como
+recorte, nunca dentro do app. Para subir o ambiente: `uvicorn api.main:app
+--port 8000` na raiz e `npm run dev` em `frontend/`. Nada do que foi feito desde
+13/09 está no servidor: o deploy segue bloqueado por SSH.
+
 1. **Próxima edição do ENAMED.** É a prova que faz hoje a seleção de acesso
    direto e entra no peso do INEP que alimenta as prioridades e a nota projetada
    do Painel, então é a coleta de maior valor. As abas por ano da página do INEP
@@ -251,9 +261,14 @@ mais importante assim que houver acesso SSH.
    legislação nem na nota de gabarito), e como metade das questões de 2025 é a
    mesma da Revalida 2025/2, fica valendo o ritmo do INEP. Guardar ritmo por
    banca só se aparecer prova com ritmo diferente.
-5. **Questões comuns a mais de uma prova.** No simulado da Revalida 2025/2, as
-   43 questões compartilhadas aparecem com o selo "ENAMED 2025". Expor na API as
-   provas de `questoes_provas` e mostrar todas na questão.
+5. **Questões comuns a mais de uma prova** (feito, 2026-09-15). São 43, todas
+   entre o ENAMED 2025 e o Revalida 2025/2, e o selo mostrava só um caderno
+   porque saía de `questoes.banca`/`ano`. Agora `db.provas_das_questoes` devolve
+   os cadernos de um lote de questões numa consulta só,
+   `serialize.questoes_publicas` anexa a lista a toda questão que sai da API
+   (Praticar, Revisão e Simulado passam por lá) e o selo mostra todas —
+   "Revalida 2025/2 · ENAMED 2025" —, caindo para banca + ano quando a questão
+   não veio de caderno oficial.
 6. **Importador reutilizável em `scripts/`** (feito, 2026-09-15). Os scripts das
    importações de 2026-09-14 ficaram no scratchpad da sessão e se perderam;
    agora existe `scripts/importar_prova.py`, que recebe o JSON montado

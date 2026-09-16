@@ -12,6 +12,7 @@ import { BarraFoco } from "../../lib/foco";
 import { rolarParaTopo } from "../../lib/movimento";
 import { estimarDuracao, formatarPrazo } from "../../lib/prazo";
 import { avaliarRevisao, useLevaRevisao } from "../../lib/revisao";
+import { seloDasProvas } from "../../lib/simulados";
 import type { QuestaoRevisao } from "../../lib/types";
 import { AlternativaLinha, type EstadoAlternativa } from "../praticar/AlternativaLinha";
 import { useCronometro } from "../praticar/useCronometro";
@@ -213,7 +214,8 @@ export default function Revisao() {
 
   // Sem o tema, que só entra na discussão (TemaDoCaso).
   const recorte = [q.area, q.especialidade].filter(Boolean).join(" · ");
-  const prova = [q.banca, q.ano].filter(Boolean).join(" ");
+  // Todas as provas em que o caso caiu, não só o caderno principal.
+  const prova = seloDasProvas(q);
 
   return (
     <>

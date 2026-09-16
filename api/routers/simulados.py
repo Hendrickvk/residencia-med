@@ -4,7 +4,7 @@ import db
 import repeticao_espacada as sr
 from api.deps import usuario_atual
 from api.schemas import RespostaSimuladoIn, SimuladoIn, SimuladoOficialIn, TempoSimuladoIn
-from api.serialize import questao_publica
+from api.serialize import questoes_publicas
 
 router = APIRouter(prefix="/simulados", tags=["simulados"])
 
@@ -97,7 +97,7 @@ def itens(simulado_id: int, usuario=Depends(usuario_atual)):
     simulado = db.obter_simulado(simulado_id, usuario_id=usuario["id"])
     if simulado is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Simulado não encontrado.")
-    itens = [questao_publica(i) for i in db.listar_itens_simulado(simulado_id, usuario_id=usuario["id"])]
+    itens = questoes_publicas(db.listar_itens_simulado(simulado_id, usuario_id=usuario["id"]))
     if simulado["finalizado_em"] is None:
         for item in itens:
             item.pop("resposta_correta", None)

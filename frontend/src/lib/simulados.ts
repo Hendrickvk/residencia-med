@@ -5,6 +5,7 @@ import type {
   EdicaoOficial,
   HistoricoSimulado,
   ItemSimulado,
+  ProvaDaQuestao,
   Simulado,
   SimuladoEmAndamento,
   TemaErradoSimulado,
@@ -109,4 +110,18 @@ export function finalizarSimulado(simuladoId: number) {
 export function nomeEdicao(banca: string, edicao: string): string {
   const nome = banca === "REVALIDA" ? "Revalida" : banca;
   return `${nome} ${edicao}`;
+}
+
+// Todos os cadernos em que a questão caiu (db.provas_das_questoes): as 43 questões
+// comuns ao Revalida 2025/2 e ao ENAMED 2025 apareciam com um selo só. Sem lista
+// (questão fora de caderno oficial), cai no banca + ano da própria questão.
+export function seloDasProvas(questao: {
+  provas?: ProvaDaQuestao[];
+  banca?: string | null;
+  ano?: number | null;
+}): string {
+  if (questao.provas?.length) {
+    return questao.provas.map((p) => nomeEdicao(p.banca, p.edicao)).join(" · ");
+  }
+  return [questao.banca, questao.ano].filter(Boolean).join(" ");
 }

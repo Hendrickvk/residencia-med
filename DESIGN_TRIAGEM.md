@@ -273,7 +273,9 @@ Conteúdo das demais telas: largura máxima 1360px, padding 36/40px.
   tipos) e quantidade como botões segmentados (10/20/30/50); dois interruptores; filtros escolhidos
   viram etiquetas removíveis; botão "Iniciar sessão de {n} casos".
 - **Sessão (modo foco)**: acima do cartão, "Caso" + número em display à esquerda,
-  área · especialidade e selo de prova oficial à direita. O tema não entra aí: numa
+  área · especialidade e selo de prova oficial à direita, com todas as provas em que
+  o caso caiu ("Revalida 2025/2 · ENAMED 2025") e não só o caderno principal
+  (`db.provas_das_questoes`). O tema não entra aí: numa
   questão que pede o diagnóstico ele entregaria o gabarito, então só aparece
   depois de confirmar, na discussão (decisão do usuário). Cartão com enunciado, imagem,
   pergunta, alternativas e, antes de confirmar, dicas de atalho + "Confirmar

@@ -11,6 +11,7 @@ import { BarraFoco } from "../../lib/foco";
 import { formatarMMSS } from "../../lib/format";
 import { rolarParaTopo } from "../../lib/movimento";
 import { enfileirarResposta } from "../../lib/respostasQueue";
+import { seloDasProvas } from "../../lib/simulados";
 import type { FiltrosPratica, Questao, ResumoSessao } from "../../lib/types";
 import { AlternativaLinha, type EstadoAlternativa } from "./AlternativaLinha";
 import { useCronometro } from "./useCronometro";
@@ -209,7 +210,8 @@ export default function Sessao({ filtros, nonce, onFinalizar, onVoltar }: Props)
     .join(" · ");
   // Sem o tema, que só entra na discussão (TemaDoCaso).
   const recorteCaso = [questaoAtual.area, questaoAtual.especialidade].filter(Boolean).join(" · ");
-  const prova = [questaoAtual.banca, questaoAtual.ano].filter(Boolean).join(" ");
+  // Todas as provas em que o caso caiu, não só o caderno principal.
+  const prova = seloDasProvas(questaoAtual);
   // `{}` = ninguém além do próprio aluno respondeu ainda (db.distribuicao_respostas_questao
   // exclui o usuário atual). Sem esse caso, todas as alternativas apareciam com 0%.
   const distribuicaoVazia = distribuicao !== null && Object.keys(distribuicao).length === 0;

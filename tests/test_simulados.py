@@ -125,6 +125,24 @@ def test_em_andamento_ignora_finalizado_e_tempo_esgotado(usuario_teste, questao_
     assert em_andamento_endpoint(usuario=usuario) is None
 
 
+def test_questao_de_duas_provas_sai_com_as_duas_na_serializacao(usuario_teste, edicao_teste):
+    banca, edicao, _ = edicao_teste
+    questao_id = db.ids_questoes_da_edicao(banca, edicao)[0]
+    with db.get_conn() as conn:
+        conn.execute(
+            "INSERT INTO questoes_provas (questao_id, banca, edicao, numero_prova) VALUES (?, ?, ?, 42)",
+            (questao_id, "PYTEST-GEMEA", f"{edicao}-g"),
+        )
+    provas = db.provas_das_questoes([questao_id])[questao_id]
+    assert {(p["banca"], p["edicao"]) for p in provas} == {(banca, edicao), ("PYTEST-GEMEA", f"{edicao}-g")}
+
+    simulado_id = db.criar_simulado(None, banca, 1, 10, [questao_id], usuario_id=usuario_teste, edicao=edicao)
+    [item] = itens_endpoint(simulado_id, usuario=_usuario(usuario_teste))
+    assert len(item["provas"]) == 2
+    # A questão fora de caderno oficial vem com a lista vazia, não com None.
+    assert db.provas_das_questoes([]) == {}
+
+
 def test_tempo_por_questao_soma_as_passagens_ate_finalizar(usuario_teste, questao_teste):
     usuario = _usuario(usuario_teste)
     simulado_id = db.criar_simulado(None, None, 1, 10, [questao_teste], usuario_id=usuario_teste)

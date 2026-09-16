@@ -1110,6 +1110,29 @@ def contar_questoes():
         return conn.execute("SELECT COUNT(*) AS n FROM questoes").fetchone()["n"]
 
 
+def provas_das_questoes(ids):
+    """Cadernos oficiais de cada questão ({id: [{banca, edicao, numero_prova}]}),
+    da edição mais recente para a mais antiga. Uma questão pode estar em mais de
+    um caderno — o Revalida 2025/2 e o ENAMED 2025 aplicaram as mesmas 43 —, e as
+    colunas `questoes.banca`/`edicao` guardam só o caderno principal."""
+    ids = list(ids)
+    if not ids:
+        return {}
+    placeholders = ",".join(["?"] * len(ids))
+    with get_conn() as conn:
+        linhas = conn.execute(f"""
+            SELECT questao_id, banca, edicao, numero_prova
+            FROM questoes_provas WHERE questao_id IN ({placeholders})
+            ORDER BY edicao DESC, banca
+        """, ids).fetchall()
+    provas = {}
+    for linha in linhas:
+        provas.setdefault(linha["questao_id"], []).append(
+            {"banca": linha["banca"], "edicao": linha["edicao"], "numero_prova": linha["numero_prova"]}
+        )
+    return provas
+
+
 def obter_questao(questao_id):
     with get_conn() as conn:
         return conn.execute("""
