@@ -38,10 +38,20 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   migrado: Materiais lá mostra só as 5 grandes áreas, sem especialidades, e a
   Prova oficial lista a Revalida 2025/2 só com as 50 questões próprias (as 43
   comuns com o ENAMED 2025 só entram pela `questoes_provas`).
-- Questões oficiais ainda fora do banco: Revalida 2020, 2021 e 2022-1;
-  edições anteriores da USP (a FUVEST só mantém a atual); UNICAMP de 2024 em
-  diante (respostas curtas); UNIFESP e Santa Casa (caderno não público); ENARE
-  e hospitais.
+- Questões oficiais ainda fora do banco (a Revalida 2021 entrou em 2026-09-15):
+  **Revalida 2020**, porque o INEP só publica o gabarito preliminar dos dois
+  cadernos, e preliminar muda em anulação e em letra depois dos recursos;
+  **Revalida 2022-1**, cujo caderno não tem mapa de caracteres — as fontes são
+  subconjuntos com glifos "g87", sem ToUnicode, e pdfplumber e PyMuPDF devolvem
+  lixo, de modo que só sairia por OCR, que exigiria instalar o Tesseract e
+  revisar 100 enunciados clínicos número a número. Também fora: edições
+  anteriores da USP (a FUVEST só mantém a atual); UNICAMP de 2024 em diante
+  (respostas curtas); UNIFESP e Santa Casa (caderno não público). O **ENARE**
+  foi conferido em 2026-09-15 e não serve: a FGV publica 139 cadernos, todos de
+  ano adicional, área de atuação, pré-requisito e multiprofissional, porque o
+  acesso direto em medicina migrou para o ENAMED, que já está no banco. Sobram
+  as provas estaduais e de instituições (SES-DF, SES-PE, SUS-SP, AMRIGS,
+  IAMSPE), que dão volume de prática mas ficam fora do peso do INEP.
 - Se o shape ARM `VM.Standard.A1.Flex` (1 OCPU/6 GB, Always Free) aparecer em
   São Paulo e 1 GB apertar, recriar a instância nele.
 - Tema escuro do Triagem só existe por tokens, sem protótipo próprio.
@@ -208,11 +218,14 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
 Levantados em 2026-09-14, em ordem de valor. O deploy continua sendo o item
 mais importante assim que houver acesso SSH.
 
-1. **Revalida 2020, 2021 e 2022-1.** Procurar pelas abas por ano da página do
-   INEP (`…/revalida/provas-e-gabaritos/2020`, `/2021`, `/2022`), que trazem os
-   links dos PDFs no próprio HTML; foi assim que a 2025/2 e a 2026/1 foram
-   achadas depois de o padrão de nome falhar. Seguir o roteiro de importação do
-   `CLAUDE.md`.
+1. **Próxima edição do ENAMED.** É a prova que faz hoje a seleção de acesso
+   direto e entra no peso do INEP que alimenta as prioridades e a nota projetada
+   do Painel, então é a coleta de maior valor. As abas por ano da página do INEP
+   (`…/revalida/provas-e-gabaritos/{ano}`) trazem os links dos PDFs no próprio
+   HTML; foi assim que 2025/2, 2026/1 e a 2021 foram achadas depois de o padrão
+   de nome falhar. Seguir o roteiro do `CLAUDE.md` e gravar com
+   `scripts/importar_prova.py`. A USP precisa ser coletada todo ano, porque a
+   FUVEST só mantém a edição corrente no ar.
 2. **Revisão clínica de uma amostra das explicações de 2026-09-14**, começando
    pelas de gabarito discutível: Revalida 2025/2 Q91 (vírus sincicial
    respiratório em adolescente); USP 2026 Q31 (estadiamento antes de ampliar
@@ -232,12 +245,16 @@ mais importante assim que houver acesso SSH.
 5. **Questões comuns a mais de uma prova.** No simulado da Revalida 2025/2, as
    43 questões compartilhadas aparecem com o selo "ENAMED 2025". Expor na API as
    provas de `questoes_provas` e mostrar todas na questão.
-6. **Importador reutilizável em `scripts/`.** Os scripts das importações de
-   2026-09-14 ficaram no scratchpad da sessão e se perderam. Fazer um script
-   genérico que recebe o JSON montado (enunciado, alternativas, gabarito, área,
-   especialidade, explicação, imagem, banca, edição e número) e grava as
-   questões e os vínculos em `questoes_provas` numa transação, com simulação por
-   padrão, checagem de duplicatas e backup.
+6. **Importador reutilizável em `scripts/`** (feito, 2026-09-15). Os scripts das
+   importações de 2026-09-14 ficaram no scratchpad da sessão e se perderam;
+   agora existe `scripts/importar_prova.py`, que recebe o JSON montado
+   (enunciado, alternativas, gabarito, área, especialidade, tema, tipo,
+   explicação, imagem, banca, edição e número), valida os nomes contra a
+   taxonomia, recusa duplicata pelo início do enunciado e número repetido na
+   edição, simula por padrão e, com `--aplicar`, grava questões e vínculos de
+   `questoes_provas` numa transação, com backup dos ids em `backups/`. Armadilha
+   achada na estreia: `db.obter_tema` devolve a linha do tema, não o id, e a
+   simulação não pega esse tipo de erro porque não chega a montar o INSERT.
 
 ## Decisões, por data
 
@@ -460,6 +477,22 @@ governa as telas admin do Streamlit.
   mexido: a tabela `materiais` (1646 linhas) e a coluna `subtopicos.origem`
   continuam lá, sem código, porque o servidor ainda roda a versão antiga e o
   recurso pode voltar — o caminho é reverter o commit que os removeu.
+
+### 2026-09-15
+- **Revalida 2021 importada:** +88 questões, de 986 para 1074. Das 100 do
+  caderno 1, 12 foram anuladas pelo INEP e ficaram de fora; o gabarito usado é o
+  definitivo. A extração saiu por recorte de coluna com pdfplumber, mas a
+  questão 100 precisou de leitura em largura total, porque a figura ocupa a
+  página inteira e o corte por coluna embaralhou o texto. Armadilha nova do
+  parser: linha de enunciado que começa com "A " (como "A conduta indicada é")
+  era lida como alternativa A e sumia do enunciado — passou a valer só a
+  sequência A–D completa, e a última delas. As figuras das questões 41, 99 e 100
+  foram recortadas e conferidas uma a uma: o primeiro recorte da 100 pegou a
+  primeira alternativa junto do eletrocardiograma, o que entregaria a resposta,
+  e o da 41 cortava a legenda no meio. Explicações escritas do zero, com
+  checagem automática de que cada uma defende a letra oficial (uma não citava a
+  alternativa e foi corrigida). Backup dos ids em
+  `backups/importacao_revalida_2021_*.json`.
 
 ## Armadilhas das telas admin (Streamlit)
 
