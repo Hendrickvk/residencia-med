@@ -229,7 +229,11 @@ de QA ou demo, senha da demo no `DEPLOY.md`), e entram nele também as três
 figuras novas da Revalida 2021 — questões 41, 99 e 100 —, conferidas só como
 recorte, nunca dentro do app. Para subir o ambiente: `uvicorn api.main:app
 --port 8000` na raiz e `npm run dev` em `frontend/`. Nada do que foi feito desde
-13/09 está no servidor: o deploy segue bloqueado por SSH.
+13/09 está no servidor: o deploy segue bloqueado por SSH. Há também uma
+brincadeira de boas-vindas para uma conta específica
+(`frontend/src/lib/brincadeira.ts`, diálogos mostrados uma vez por navegador,
+e-mail guardado só como hash): a ideia fica, mas o texto é provisório e ainda
+será revisto.
 
 1. **Próxima edição do ENAMED.** É a prova que faz hoje a seleção de acesso
    direto e entra no peso do INEP que alimenta as prioridades e a nota projetada

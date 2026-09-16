@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { flushSync } from "react-dom";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { BrincadeiraBoasVindas } from "../BrincadeiraBoasVindas";
 import { FilaPendenteAviso } from "../FilaPendenteAviso";
 import { api } from "../../lib/api";
 import { useAuthActions, useMe } from "../../lib/auth";
@@ -81,6 +82,7 @@ export function AppShell() {
           </div>
         </main>
         <FilaPendenteAviso />
+        <BrincadeiraBoasVindas email={me?.email} />
       </div>
     </FocoProvider>
   );
