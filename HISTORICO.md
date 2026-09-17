@@ -646,6 +646,41 @@ governa as telas admin do Streamlit.
   dispensável e não volta. `marcar_relatos_avisados` age por usuário, e não por
   id, para o aviso não reaparecer se outro relato for resolvido entre a leitura
   e o clique.
+- **Revisão das explicações, 302 de 1 074 (parada aqui em 2026-09-16).** Feitas:
+  USP 2026 (113, com as 10 marcadas já reescritas), ENAMED 2025 (90) e Revalida
+  2026/1 (99). **Retomar por: Revalida 2025/2, UNICAMP 2023, depois as edições
+  mais antigas.** Estado por questão em `backups/revisao_explicacoes.json`.
+  Restam 4 marcadas, todas do ENAMED e nenhuma grave: id 86 (flumazenil
+  apresentado como conduta pacífica numa paciente que tomou 30 comprimidos de
+  clonazepam e já está intubada — é a letra oficial, mas do jeito que está
+  ensina a dar flumazenil em usuário crônico, onde pode precipitar convulsão
+  refratária), id 17 (frase truncada "e sem Müller regride normalmente"), id 29
+  ("olhos de guaxinim" numa equimose que tem trauma orbital direto) e id 40
+  ("útero fixo", que o enunciado não afirma).
+  **Achado que redireciona o trabalho:** a hipótese de que a leva de 14/09
+  estava ruim por ter sido escrita depressa é falsa — a Revalida 2026/1 é da
+  mesma leva e saiu sem um defeito em 99 questões. O que concentra problema é a
+  **USP**, a edição com mais alternativa-imagem e recortes difíceis, e 4 dos 10
+  defeitos dela eram descrição de imagem que não batia com a figura. Priorizar
+  questões com imagem.
+- **Backup do banco inteiro** (`scripts/backup_banco.py`). Até 2026-09-16 não
+  existia nenhum: os `backups/*.json` só guardam as linhas que cada operação
+  toca. São 35 MB com 1 074 questões e 79 imagens recortadas à mão que só
+  existiam no Neon. O script roda `pg_dump -Fc`, confere lendo o índice com
+  `pg_restore --list` **e contando as linhas de `questoes` dentro do arquivo**
+  contra o banco (arquivo com índice certo e conteúdo truncado já é um modo de
+  falha conhecido), e mantém os N mais recentes. `pg_dump` fica em
+  `C:/Program Files/PostgreSQL/18/bin`, fora do PATH. A restauração é
+  deliberadamente manual (`pg_restore --clean --if-exists`). Limite: `backups/`
+  é gitignorado, então os dumps só existem nesta máquina — falta uma cópia fora
+  dela.
+- **QA de celular** (2026-09-16): Painel, Praticar, Revisão e Simulado, as duas
+  sessões, os dois diálogos e a caixa de imagem passam a 399 px sem overflow.
+  Armadilha nova do método: um iframe estreito se declara `hidden`, o Chrome
+  congela as animações em `currentTime: 0` e o estado inicial de
+  `animate-entrar-frente` (`translateX(20px)`) vira um overflow fantasma de
+  4 px. Injetar `animation:none !important` antes de medir. Mesma família do
+  `document.hidden` do tempo do Simulado.
 - **Dois bugs achados ao testar o relato:**
   - **O tema nunca apareceu no resultado do Simulado**, apesar de a fase 4 dos
     temas afirmar que sim: `db.listar_itens_simulado` fazia join de `areas` e
