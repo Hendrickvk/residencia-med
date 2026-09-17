@@ -22,7 +22,10 @@ export function Marca({ grande = false }: { grande?: boolean }) {
   return (
     <span className={`flex items-center ${grande ? "gap-4" : "gap-2.5"}`}>
       <Simbolo escala={grande ? 2 : 1} />
-      <span className={grande ? "marca-texto text-[44px]" : "marca-texto"}>Conduta</span>
+      {/* Em tela estreita o símbolo sozinho sustenta a marca: a barra da sessão
+          precisa da largura para manter a saída (Encerrar/Finalizar/Sair)
+          visível, que o DESIGN_TRIAGEM.md §5 exige em toda sessão. */}
+      <span className={grande ? "marca-texto text-[44px]" : "marca-texto hidden sm:inline"}>Conduta</span>
     </span>
   );
 }

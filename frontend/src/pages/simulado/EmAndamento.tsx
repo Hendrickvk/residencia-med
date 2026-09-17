@@ -187,10 +187,10 @@ function Conteudo({
     <>
       <BarraFoco>
         <span className="hidden text-[14.5px] text-ink-2 xl:block">{nomeProva ?? "Simulado"}</span>
-        <span className="ml-auto shrink-0 text-[14px] font-semibold tabular-nums">
+        <span className="ml-auto hidden shrink-0 text-[14px] font-semibold tabular-nums sm:block">
           Questão {idx + 1} de {itens.length}
         </span>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="ml-auto flex shrink-0 items-center gap-2 sm:ml-0">
           <span
             aria-label="Tempo restante"
             className={`rounded-btn px-2.5 py-1 text-[24px] font-extrabold leading-none tabular-nums transition-colors duration-desliza [font-stretch:85%] ${estadoTempo}`}
