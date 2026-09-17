@@ -827,6 +827,11 @@ def init_db():
         # (somar_tempo_simulado).
         c.execute("ALTER TABLE simulado_itens ADD COLUMN IF NOT EXISTS tempo_ms INTEGER")
 
+        # Fecha o ciclo do relato: o aluno é avisado uma vez quando a questão
+        # que ele apontou é corrigida. Sem isso ele relata no escuro e para de
+        # relatar.
+        c.execute("ALTER TABLE relatos_questao ADD COLUMN IF NOT EXISTS avisado_em TIMESTAMP")
+
         # Postgres não indexa colunas de FK automaticamente (só o lado
         # referenciado/PK ganha índice). Sem isso, toda query do Dashboard
         # (JOIN respostas->questoes->areas filtrando por usuario_id/banca)
@@ -1344,6 +1349,29 @@ def resolver_relato(relato_id):
             "UPDATE relatos_questao SET resolvido_em = ? WHERE id = ?",
             (datetime.datetime.now(), relato_id),
         )
+
+
+def relatos_resolvidos_a_avisar(usuario_id):
+    """Relatos deste aluno já resolvidos e que ele ainda não viu."""
+    with get_conn() as conn:
+        return conn.execute("""
+            SELECT r.id, r.questao_id, r.parte, q.banca, q.ano, q.edicao, q.numero_prova
+            FROM relatos_questao r
+            JOIN questoes q ON q.id = r.questao_id
+            WHERE r.usuario_id = ? AND r.resolvido_em IS NOT NULL AND r.avisado_em IS NULL
+            ORDER BY r.resolvido_em
+        """, (usuario_id,)).fetchall()
+
+
+def marcar_relatos_avisados(usuario_id):
+    """Marca como vistos os relatos resolvidos deste aluno. Por usuário, e não
+    por id, para o aviso não reaparecer se dois relatos forem resolvidos entre
+    a leitura e o clique."""
+    with get_conn() as conn:
+        conn.execute("""
+            UPDATE relatos_questao SET avisado_em = ?
+            WHERE usuario_id = ? AND resolvido_em IS NOT NULL AND avisado_em IS NULL
+        """, (datetime.datetime.now(), usuario_id))
 
 
 def questao_esta_marcada(usuario_id, questao_id):

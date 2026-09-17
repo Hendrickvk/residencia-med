@@ -5,9 +5,9 @@ import { useNavigate } from "react-router-dom";
 import { EstadoVazio } from "../../components/EstadoVazio";
 import { Kbd } from "../../components/Kbd";
 import { TemaDoCaso } from "../../components/TemaDoCaso";
+import { ImagemQuestao } from "../../components/ImagemQuestao";
 import { RelatarErro } from "../../components/RelatarErro";
 import { TextoDiscussao } from "../../components/TextoDiscussao";
-import { API_URL } from "../../lib/api";
 import { BOTAO_PRIMARIO, PRESSAO } from "../../lib/estilos";
 import { BarraFoco } from "../../lib/foco";
 import { rolarParaTopo } from "../../lib/movimento";
@@ -275,7 +275,7 @@ export default function Revisao() {
           <div className="flex flex-col gap-6 rounded-caso border border-line bg-surface p-6 md:px-11 md:py-9">
             <p className="leitura-enunciado text-ink">{q.enunciado}</p>
             {q.tem_imagem && (
-              <img src={`${API_URL}/questoes/${q.id}/imagem`} alt="Imagem do caso" className="max-w-full rounded-card border border-line" />
+              <ImagemQuestao questaoId={q.id} alt="Imagem do caso" />
             )}
 
             <div className="flex flex-col gap-2">

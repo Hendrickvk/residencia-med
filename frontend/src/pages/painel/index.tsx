@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { EstadoVazio } from "../../components/EstadoVazio";
+import { RelatoResolvidoAviso } from "../../components/RelatoResolvidoAviso";
 import { useMe } from "../../lib/auth";
 import { usePainel } from "../../lib/painel";
 import { VOLUME_CONFIAVEL } from "../../lib/triagem";
@@ -44,6 +45,7 @@ export default function Painel() {
 
   return (
     <div className="flex flex-col gap-7">
+      <RelatoResolvidoAviso />
       <Cabecalho
         totais={data.totais}
         porArea={data.por_area}

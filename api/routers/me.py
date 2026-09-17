@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response, status
 
 import db
 from api.deps import eh_admin, usuario_atual
@@ -34,3 +34,16 @@ def atualizar_tema(dados: TemaIn, usuario=Depends(usuario_atual)):
 def atualizar_meta_revisao(dados: MetaRevisaoIn, usuario=Depends(usuario_atual)):
     db.atualizar_meta_revisao(usuario["id"], dados.meta)
     return {"meta_revisao_diaria": dados.meta}
+
+
+@router.get("/relatos-resolvidos")
+def relatos_resolvidos(usuario=Depends(usuario_atual)):
+    """Questões que este aluno reportou e que já foram corrigidas, ainda não
+    mostradas a ele."""
+    return [dict(r) for r in db.relatos_resolvidos_a_avisar(usuario["id"])]
+
+
+@router.post("/relatos-resolvidos/vistos", status_code=status.HTTP_204_NO_CONTENT)
+def marcar_relatos_vistos(usuario=Depends(usuario_atual)):
+    db.marcar_relatos_avisados(usuario["id"])
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

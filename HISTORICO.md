@@ -223,9 +223,9 @@ mais importante assim que houver acesso SSH.
 
 **Onde paramos (2026-09-16).** Os 7 itens do acompanhamento do desempenho estão
 feitos, a Revalida 2021 foi importada (banco em 1 074 questões) e os passos 3, 4,
-5 e 6 desta lista saíram. A USP 2026 teve as 113 explicações revisadas, com 10
-marcadas para ajuste que **ainda não foram reescritas** — é a tarefa mais curta
-em aberto (detalhe no passo 2). O **passo 1, a próxima edição do ENAMED**, está
+5 e 6 desta lista saíram. A USP 2026 teve as 113 explicações revisadas e as 10
+marcadas foram reescritas. Faltam revisar Revalida 2025/2 e 2026/1 e UNICAMP
+2023 (passo 2). O **passo 1, a próxima edição do ENAMED**, está
 bloqueado até 04/12/2026: a prova foi aplicada em 13/09 e o INEP só publicou o
 gabarito preliminar, que muda em anulação e em letra depois dos recursos (a
 Revalida 2026/2 está no mesmo estado). Para subir o
@@ -247,8 +247,8 @@ será revisto.
    FUVEST só mantém a edição corrente no ar.
 2. **Revisão clínica das explicações de 2026-09-14** (USP 2026 revisada em
    2026-09-16; faltam Revalida 2025/2 e 2026/1 e UNICAMP 2023).
-   **Resultado da USP 2026: 113 de 113 lidas, 10 marcadas para ajuste, nenhuma
-   reescrita ainda.** As letras guardadas no banco foram conferidas contra o
+   **Resultado da USP 2026: 113 de 113 lidas, 10 marcadas e as 10 reescritas
+   em 2026-09-16.** As letras guardadas no banco foram conferidas contra o
    gabarito oficial retificado da FUVEST e as 113 batem — o dado está íntegro, o
    problema é texto. A marcada mais grave é a **Q22 (id 2317)**: a explicação
    defende a alternativa A e descarta explicitamente a B, que é o gabarito, de
@@ -608,6 +608,44 @@ governa as telas admin do Streamlit.
   preciso corrigir", em vez de uma tela nova) e a contagem vai para o rodapé do
   menu. Relatos repetidos na mesma questão são permitidos de propósito: vindos
   de alunos diferentes, são sinal, não ruído. Testes em `tests/test_relatos.py`.
+- **As 10 explicações marcadas da USP 2026 foram reescritas** (a lista do passo
+  2 ficou zerada). A Q22 (id 2317) agora defende a letra B pelo estado volêmico
+  do dialítico — peso contra peso seco indicando hipervolemia interdialítica,
+  com ultrafiltração em vez de anti-hipertensivo — em vez de defender o fundo de
+  olho. As outras nove corrigiram descrição de imagem, nomenclatura (cerclagem
+  indicada por ultrassom x de emergência) e lacunas de refutação. Ferramenta:
+  `scripts/corrigir_explicacoes.py <json>` (simula, backup, `--aplicar`); texto
+  anterior em `backups/explicacoes_20260916_223235.json`. Na Q41 as setas 1, 2 e
+  4 continuam sem nome: não consegui distinguir ducto de artéria na foto, e o
+  texto passou a ensinar a regra de identificação (visão crítica de segurança)
+  em vez de fingir precisão que não tenho.
+- **`scripts/auditar_explicacoes.py`, com precisão medida e decepcionante.**
+  Procura explicações que não citam nenhuma palavra distintiva da alternativa
+  correta. Pega a Q22 com o texto antigo (validado contra o backup), que a
+  checagem anterior deixara passar. Mas no banco de 1 074 devolve 26 suspeitas
+  quase todas falso positivo por sinônimo ("soro fisiológico" x "cloreto de
+  sódio 0,9%"). **Não serve como auditoria do banco**; serve como rede logo
+  depois de escrever explicações novas, rodando só na edição recém-importada.
+  Uma segunda regra — marcar quando todas as frases que citam a alternativa
+  correta a negam — foi escrita, medida e **removida**: 6 falsos positivos e
+  nenhum acerto, porque prosa clínica é cheia de negação que descreve ("não
+  invasivo", "não caseoso") ou que descarta o distrator na mesma frase em que
+  afirma o gabarito. Está documentado no script para não ser reinventada.
+- **Imagem da questão com altura limitada e ampliação** (`ImagemQuestao.tsx`,
+  usado nas quatro telas que mostram figura). A altura limitada é a da *caixa*,
+  não a da imagem: um recorte em tira continua em largura cheia e legível e rola
+  por dentro. A primeira tentativa limitou a imagem, e a questão 70 da USP virou
+  uma miniatura de 179 px, ilegível — o oposto do objetivo. Com a caixa, a Q70
+  foi de 1 814 px renderizados e alternativas a 2 427 px do topo para 548 px de
+  caixa e alternativas a 1 169 px, sem perder resolução. Clique abre em tela
+  cheia, com Esc, clique no fundo e botão Fechar.
+- **O aluno é avisado quando o que ele relatou é corrigido**
+  (`RelatoResolvidoAviso.tsx` no Painel, coluna `relatos_questao.avisado_em`,
+  `GET /me/relatos-resolvidos` e `POST /me/relatos-resolvidos/vistos`). Fecha o
+  ciclo: sem a volta, o aluno relata no escuro e para de relatar. O aviso é
+  dispensável e não volta. `marcar_relatos_avisados` age por usuário, e não por
+  id, para o aviso não reaparecer se outro relato for resolvido entre a leitura
+  e o clique.
 - **Dois bugs achados ao testar o relato:**
   - **O tema nunca apareceu no resultado do Simulado**, apesar de a fase 4 dos
     temas afirmar que sim: `db.listar_itens_simulado` fazia join de `areas` e

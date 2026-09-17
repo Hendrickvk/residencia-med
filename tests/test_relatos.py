@@ -48,3 +48,31 @@ def test_apagar_usuario_leva_os_relatos_junto(usuario_teste, questao_teste):
             "SELECT COUNT(*) AS n FROM relatos_questao WHERE id = ?", (relato_id,)
         ).fetchone()["n"]
     assert sobrou == 0
+
+
+def test_aluno_e_avisado_uma_vez_quando_o_relato_e_resolvido(usuario_teste, questao_teste):
+    relato_id = db.relatar_erro_questao(usuario_teste, questao_teste, "Explicação")
+    # Enquanto pendente, não há o que avisar.
+    assert db.relatos_resolvidos_a_avisar(usuario_teste) == []
+
+    db.resolver_relato(relato_id)
+    a_avisar = db.relatos_resolvidos_a_avisar(usuario_teste)
+    assert [r["id"] for r in a_avisar] == [relato_id]
+    assert a_avisar[0]["questao_id"] == questao_teste
+
+    db.marcar_relatos_avisados(usuario_teste)
+    assert db.relatos_resolvidos_a_avisar(usuario_teste) == []
+
+
+def test_aviso_nao_vaza_entre_usuarios(usuario_teste, questao_teste):
+    relato_id = db.relatar_erro_questao(usuario_teste, questao_teste, "Imagem")
+    db.resolver_relato(relato_id)
+    # Outro usuário não vê o relato deste, nem o marca como visto.
+    outro = db.criar_usuario(f"pytest_outro_{relato_id}@teste.local", "hash")
+    try:
+        assert db.relatos_resolvidos_a_avisar(outro) == []
+        db.marcar_relatos_avisados(outro)
+        assert [r["id"] for r in db.relatos_resolvidos_a_avisar(usuario_teste)] == [relato_id]
+    finally:
+        with db.get_conn() as conn:
+            conn.execute("DELETE FROM usuarios WHERE id = ?", (outro,))

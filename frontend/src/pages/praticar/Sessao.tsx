@@ -4,9 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import { EstadoVazio } from "../../components/EstadoVazio";
 import { Kbd } from "../../components/Kbd";
 import { TemaDoCaso } from "../../components/TemaDoCaso";
+import { ImagemQuestao } from "../../components/ImagemQuestao";
 import { RelatarErro } from "../../components/RelatarErro";
 import { TextoDiscussao } from "../../components/TextoDiscussao";
-import { API_URL, api } from "../../lib/api";
+import { api } from "../../lib/api";
 import { BOTAO_PRIMARIO, BOTAO_SECUNDARIO, PRESSAO } from "../../lib/estilos";
 import { BarraFoco } from "../../lib/foco";
 import { formatarMMSS } from "../../lib/format";
@@ -303,11 +304,7 @@ export default function Sessao({ filtros, nonce, onFinalizar, onVoltar }: Props)
                 de 680px que mantém a linha curta (DESIGN_TRIAGEM.md §5). */}
             <p className="leitura-enunciado text-ink">{questaoAtual.enunciado}</p>
             {questaoAtual.tem_imagem && (
-              <img
-                src={`${API_URL}/questoes/${questaoAtual.id}/imagem`}
-                alt="Imagem do caso"
-                className="max-w-full rounded-card border border-line"
-              />
+              <ImagemQuestao questaoId={questaoAtual.id} alt="Imagem do caso" />
             )}
 
             <div className="flex flex-col gap-2">
