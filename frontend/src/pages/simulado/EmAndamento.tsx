@@ -2,7 +2,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, ArrowRight, BadgeCheck, Flag } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Dialog } from "../../components/Dialog";
-import { API_URL, api } from "../../lib/api";
+import { ImagemQuestao } from "../../components/ImagemQuestao";
+import { api } from "../../lib/api";
 import { BOTAO_PRIMARIO, BOTAO_SECUNDARIO, PRESSAO } from "../../lib/estilos";
 import { BarraFoco } from "../../lib/foco";
 import { formatarTempoRestante } from "../../lib/format";
@@ -241,11 +242,7 @@ function Conteudo({
           <div className="flex flex-col gap-6 rounded-caso border border-line bg-surface p-6 md:px-11 md:py-9">
             <p className="leitura-enunciado text-ink">{itemAtual.enunciado}</p>
             {itemAtual.tem_imagem && (
-              <img
-                src={`${API_URL}/questoes/${itemAtual.id}/imagem`}
-                alt="Imagem da questão"
-                className="max-w-full rounded-card border border-line"
-              />
+              <ImagemQuestao questaoId={itemAtual.id} alt="Imagem da questão" />
             )}
 
             <div className="flex flex-col gap-2">

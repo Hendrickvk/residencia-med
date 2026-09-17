@@ -3,9 +3,9 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { NumeroAnimado } from "../../components/NumeroAnimado";
 import { TemaDoCaso } from "../../components/TemaDoCaso";
+import { ImagemQuestao } from "../../components/ImagemQuestao";
 import { RelatarErro } from "../../components/RelatarErro";
 import { TextoDiscussao } from "../../components/TextoDiscussao";
-import { API_URL } from "../../lib/api";
 import { BOTAO_PRIMARIO, BOTAO_SECUNDARIO } from "../../lib/estilos";
 import { formatarMMSS, formatarPctBR } from "../../lib/format";
 import { atraso } from "../../lib/movimento";
@@ -249,11 +249,7 @@ export default function Resultado({ simuladoId, onNovoSimulado }: Props) {
                     {/* Mesmo recuo lateral do cartão do caso: a linha fica no mesmo comprimento. */}
                     <p className="leitura-enunciado text-ink">{item.enunciado}</p>
                     {item.tem_imagem && (
-                      <img
-                        src={`${API_URL}/questoes/${item.id}/imagem`}
-                        alt="Imagem da questão"
-                        className="max-w-full rounded-card border border-line"
-                      />
+                      <ImagemQuestao questaoId={item.id} alt="Imagem da questão" />
                     )}
                     <div className="flex flex-col gap-2">
                       {Object.keys(item.alternativas).map((letra) => {
