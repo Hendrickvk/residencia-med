@@ -83,3 +83,12 @@ class TempoSimuladoIn(BaseModel):
     questao_id: int
     # Uma passagem pela questão: no máximo o simulado mais longo (600 min).
     tempo_ms: int = Field(ge=0, le=600 * 60_000)
+
+
+# --- Relato de erro em questão ----------------------------------------------
+
+class RelatoIn(BaseModel):
+    # `parte` é validado contra db.PARTES_RELATO no router, para a lista viver
+    # num lugar só (db.py) e não ser duplicada aqui como um pattern.
+    parte: str
+    comentario: Optional[str] = Field(default=None, max_length=1000)

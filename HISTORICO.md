@@ -221,14 +221,16 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
 Levantados em 2026-09-14, em ordem de valor. O deploy continua sendo o item
 mais importante assim que houver acesso SSH.
 
-**Onde paramos (2026-09-15).** Os 7 itens do acompanhamento do desempenho estão
-feitos, a Revalida 2021 foi importada (banco em 1 074 questões) e os passos 4, 5
-e 6 desta lista saíram. A próxima tarefa é o **passo 3, o QA no navegador das
-questões com figura**: depende de @browser e do login feito pelo usuário (conta
-de QA ou demo, senha da demo no `DEPLOY.md`), e entram nele também as três
-figuras novas da Revalida 2021 — questões 41, 99 e 100 —, conferidas só como
-recorte, nunca dentro do app. Para subir o ambiente: `uvicorn api.main:app
---port 8000` na raiz e `npm run dev` em `frontend/`. Nada do que foi feito desde
+**Onde paramos (2026-09-16).** Os 7 itens do acompanhamento do desempenho estão
+feitos, a Revalida 2021 foi importada (banco em 1 074 questões) e os passos 3, 4,
+5 e 6 desta lista saíram. A USP 2026 teve as 113 explicações revisadas, com 10
+marcadas para ajuste que **ainda não foram reescritas** — é a tarefa mais curta
+em aberto (detalhe no passo 2). O **passo 1, a próxima edição do ENAMED**, está
+bloqueado até 04/12/2026: a prova foi aplicada em 13/09 e o INEP só publicou o
+gabarito preliminar, que muda em anulação e em letra depois dos recursos (a
+Revalida 2026/2 está no mesmo estado). Para subir o
+ambiente: `uvicorn api.main:app --port 8000` na raiz e `npm run dev` em
+`frontend/`. Nada do que foi feito desde
 13/09 está no servidor: o deploy segue bloqueado por SSH. Há também uma
 brincadeira de boas-vindas para uma conta específica
 (`frontend/src/lib/brincadeira.ts`, diálogos mostrados uma vez por navegador,
@@ -243,18 +245,71 @@ será revisto.
    de nome falhar. Seguir o roteiro do `CLAUDE.md` e gravar com
    `scripts/importar_prova.py`. A USP precisa ser coletada todo ano, porque a
    FUVEST só mantém a edição corrente no ar.
-2. **Revisão clínica de uma amostra das explicações de 2026-09-14**, começando
-   pelas de gabarito discutível: Revalida 2025/2 Q91 (vírus sincicial
-   respiratório em adolescente); USP 2026 Q31 (estadiamento antes de ampliar
-   margens no melanoma T4b), Q108 (ressonância na puberdade precoce aos 6 anos)
-   e Q116 (SIU de levonorgestrel em vez de DIU de cobre na paciente com SAAF
-   anticoagulada); UNICAMP 2023 Q6 (profilaxia meningocócica até 14 dias). Uma
-   página de revisão em que o usuário marca o que ajustar resolve; correções
-   entram por UPDATE, nunca apagando a questão.
-3. **QA no navegador das questões com figura**, sobretudo as de
-   alternativa-imagem (USP 11, 14, 33, 40, 49, 66, 69, 70 e 72) e os recortes
-   altos (USP 1 e 70), também em largura de celular. O usuário faz o login na
-   conta de QA.
+2. **Revisão clínica das explicações de 2026-09-14** (USP 2026 revisada em
+   2026-09-16; faltam Revalida 2025/2 e 2026/1 e UNICAMP 2023).
+   **Resultado da USP 2026: 113 de 113 lidas, 10 marcadas para ajuste, nenhuma
+   reescrita ainda.** As letras guardadas no banco foram conferidas contra o
+   gabarito oficial retificado da FUVEST e as 113 batem — o dado está íntegro, o
+   problema é texto. A marcada mais grave é a **Q22 (id 2317)**: a explicação
+   defende a alternativa A e descarta explicitamente a B, que é o gabarito, de
+   modo que quem estuda por ela erra a questão. Quatro descrevem errado o que
+   está na imagem (Q11 id 2306, Q40 id 2335, Q41 id 2336, Q64 id 2356) e cinco
+   são de clareza ou lacuna (Q2 id 2297, Q44 id 2339, Q88 id 2380, Q101 id 2393,
+   Q111 id 2401). As notas de cada uma estão em
+   `backups/revisao_explicacoes.json` e aparecem na tela Revisar explicações.
+   Lição que vale para o resto: a checagem automática que o `CLAUDE.md` descreve
+   ("cada explicação defende a letra oficial") não pegou a Q22 — não dá para
+   confiar nela sozinha. As cinco de gabarito discutível já
+   saíram em 15/09 (duas corrigidas, três conferidas e certas). O que resta são
+   as ~500 explicações escritas do zero naquele dia (Revalida 2025/2 e 2026/1,
+   USP 2026, UNICAMP 2023), que só passaram pela checagem automática de que cada
+   uma defende a letra oficial — isso não pega raciocínio clínico ruim
+   defendendo a letra certa, e por isso depende de leitura do usuário.
+   Ferramenta: a tela **Revisar explicações** no Acervo do Streamlit (`app.py`),
+   que abre na USP 2026 e mostra uma questão por vez na ordem do caderno —
+   enunciado, imagem, alternativas com a correta em verde, o gabarito por
+   extenso e a explicação —, com um campo de nota e os botões "Está certa" e
+   "Precisa de ajuste", que gravam e pulam para a próxima. Cada edição recomeça
+   na primeira questão ainda não revisada. Reaproveita
+   `ui.render_cabecalho_questao` e `ui.render_alternativas_resultado`, as mesmas
+   do Banco de questões. As marcas ficam em
+   `backups/revisao_explicacoes.json` (`{questao_id: {status, nota, em}}`), não
+   numa tabela: é varredura de um admin só, numa máquina só, e `backups/` é
+   gitignorado — vira tabela se algum dia precisar ser compartilhada com o
+   servidor. As correções entram depois em lote, por UPDATE com backup, nunca
+   apagando a questão. Armadilha conferida na estreia: o `st.text_area` mostra
+   "Press Ctrl+Enter to apply", mas clicar direto no botão comita a nota e
+   registra a marca na mesma ação — a nota não se perde.
+3. **QA no navegador das questões com figura** (feito, 2026-09-16). As 13
+   figuras (USP 1, 11, 14, 33, 40, 49, 66, 69, 70 e 72; Revalida 2021 41, 99 e
+   100) foram vistas dentro do Simulado de prova oficial, na conta demo, em
+   largura de desktop e de celular. As de alternativa-imagem mostram os rótulos
+   (A)–(D) legíveis e as quatro opções "Imagem A." a "Imagem D."; a USP 70 é a
+   mais alta (1814 px renderizados numa coluna de 590, ~2,3 telas até as
+   alternativas) mas está completa; a Revalida 2021 Q100, cujo primeiro recorte
+   pegava a primeira alternativa junto do ECG, está limpa. Na USP 1 as legendas
+   do painel de ultrassonografia ficam pequenas (render de 590 px a partir de
+   1274), legíveis em tela cheia. Dois defeitos achados e corrigidos:
+   - **Revalida 2021 Q41 (id 3232) tinha a legenda cortada.** O caderno lista 11
+     siglas e o recorte parava em "AG – Agressões", perdendo AS, LAI, a fonte
+     (DATASUS) e o título "Figura 1…" — e AS e LAI são barras do gráfico de
+     15 a 29 anos, que ficavam sem explicação. Não mudava o gabarito (a
+     alternativa certa usa AG e EII). Recorte refeito da página 12 do caderno
+     (bbox 38,164–292,570 a 200 dpi) e gravado com o novo
+     `scripts/substituir_imagem.py` (simula por padrão, backup em
+     `backups/imagem_q3232_*.json`, `--aplicar` grava). As figuras da Q99 e da
+     Q100 foram conferidas contra o PDF e estão completas.
+   - **A barra do Simulado estourava a tela abaixo de ~545 px de viewport**, com
+     o Finalizar cortado e rolagem horizontal — contra a regra do
+     `DESIGN_TRIAGEM.md` §5 de que toda sessão tem uma saída na própria barra.
+     Precisava de 376 px num espaço de 300, por causa do cronômetro de 24 px
+     somado a "Questão N de M" e ao Finalizar. Praticar e Revisão passavam na
+     mesma largura. Correção em dois pontos: o texto "Conduta" da marca some
+     abaixo de `sm` e fica só o símbolo (`Marca.tsx`; no login, que usa
+     `grande`, o texto continua), e o contador "Questão N de M" some abaixo de
+     `sm` (`EmAndamento.tsx`), já que o número aparece grande no corpo e no
+     navegador de questões. Com isso a barra cabe até ~320 px. Não se mexeu no
+     tamanho do cronômetro.
 4. **Tempo do simulado oficial por banca** (conferido em 2026-09-15; nada a
    mudar). Todas as bancas do banco usam o mesmo ritmo de 3 minutos por questão:
    Revalida, 100 questões em 5 h; UNICAMP 2023, 80 em 4 h; e a USP, que era a
@@ -533,6 +588,35 @@ governa as telas admin do Streamlit.
   outra alternativa é defensável. Correção por UPDATE, com o texto anterior em
   `backups/correcoes_explicacoes_*.json`.
 
+### 2026-09-16
+- **USP 2026 revisada.** Ver o passo 2 dos próximos passos, acima.
+- **Relato de erro em questão, pelo aluno.** Decisão do usuário: com alunos
+  reais usando a plataforma, o relato diz onde corrigir, em vez de depender de
+  varredura minha questão por questão — que a revisão da USP 2026 mostrou ser
+  cara e cega justamente onde o raciocínio está sutilmente torto. Tabela
+  `relatos_questao` (questão, usuário, `parte`, comentário, criado, resolvido),
+  lógica em `db.py` (`PARTES_RELATO`, `relatar_erro_questao`, `listar_relatos`,
+  `contar_relatos_pendentes`, `resolver_relato`) e `POST /questoes/{id}/relato`.
+  **A `parte` é uma lista fechada** (Enunciado, Alternativas, Gabarito,
+  Explicação, Imagem, Outro), e não texto livre: é ela que diz onde mexer, que
+  era o ponto do recurso. No app, `components/RelatarErro.tsx` é um link
+  discreto ao lado do `TemaDoCaso` — portanto nos mesmos três lugares em que o
+  gabarito já está visível (discussão do Praticar e da Revisão, comentário do
+  resultado do Simulado) e **nunca durante a prova**. Depois de enviar, o botão
+  vira agradecimento, para o aluno não repetir o relato achando que não foi. No
+  admin, os pendentes aparecem no topo de Revisar explicações (a tela de "onde
+  preciso corrigir", em vez de uma tela nova) e a contagem vai para o rodapé do
+  menu. Relatos repetidos na mesma questão são permitidos de propósito: vindos
+  de alunos diferentes, são sinal, não ruído. Testes em `tests/test_relatos.py`.
+- **Dois bugs achados ao testar o relato:**
+  - **O tema nunca apareceu no resultado do Simulado**, apesar de a fase 4 dos
+    temas afirmar que sim: `db.listar_itens_simulado` fazia join de `areas` e
+    `especialidades` mas não de `subtopicos`, então `item.subtopico` era
+    sempre indefinido e o `<TemaDoCaso>` do resultado não renderizava nada.
+    Corrigido com um `LEFT JOIN subtopicos sub` (alias `sub`, porque `s` já é o
+    simulado). Só apareceu porque o botão novo fica ao lado do tema.
+  - **Expander branco no tema escuro** do Streamlit — ver Armadilhas, abaixo.
+
 ## Armadilhas das telas admin (Streamlit)
 
 - `st.markdown('<div>')` … `st.markdown('</div>')` não envolve nada: cada
@@ -553,3 +637,10 @@ governa as telas admin do Streamlit.
 - `st.bar_chart`/`st.line_chart` não herdam a cor do tema: passar `color=`.
 - Clique por coordenada na automação do navegador pode errar elemento pequeno
   mesmo com DOM certo: testar com `.click()` via JS antes de concluir que é bug.
+- O `<summary>` do `st.expander` traz fundo branco próprio, que no tema escuro
+  fica branco sobre branco (texto `rgb(230,235,242)` sobre `rgb(250,251,252)`).
+  A regra em `ui.py` pintava só o container `[data-testid="stExpander"]`: o
+  `summary` precisa de `background: transparent !important`.
+- `st.text_area` mostra "Press Ctrl+Enter to apply", mas clicar direto num botão
+  comita o valor e registra o clique na mesma ação — a nota digitada não se
+  perde (conferido na tela Revisar explicações).

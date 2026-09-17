@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { EstadoVazio } from "../../components/EstadoVazio";
 import { Kbd } from "../../components/Kbd";
 import { TemaDoCaso } from "../../components/TemaDoCaso";
+import { RelatarErro } from "../../components/RelatarErro";
 import { TextoDiscussao } from "../../components/TextoDiscussao";
 import { API_URL, api } from "../../lib/api";
 import { BOTAO_PRIMARIO, BOTAO_SECUNDARIO, PRESSAO } from "../../lib/estilos";
@@ -359,7 +360,10 @@ export default function Sessao({ filtros, nonce, onFinalizar, onVoltar }: Props)
                       {fraseDistribuicao && <span className="animate-desvanecer">{fraseDistribuicao}</span>}
                     </span>
                   </div>
-                  <TemaDoCaso tema={questaoAtual.subtopico} />
+                  <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+                    <TemaDoCaso tema={questaoAtual.subtopico} />
+                    <RelatarErro questaoId={questaoAtual.id} />
+                  </div>
                   {questaoAtual.explicacao && (
                     <TextoDiscussao texto={questaoAtual.explicacao} />
                   )}
