@@ -60,13 +60,14 @@ PAGINAS_NAV = [
     ("Acervo", "Banco de questões", "database", "banco"),
     ("Acervo", "Nova questão", "post_add", "nova_questao"),
     ("Acervo", "Importar planilha", "upload_file", "importar"),
+    ("Acervo", "Revisar explicações", "rate_review", "revisar"),
 ]
 LABEL_POR_KEY = {key: label for _, label, _, key in PAGINAS_NAV}
 
 
 @st.cache_data(ttl=30)
 def _contadores_rail():
-    return db.contar_questoes()
+    return db.contar_questoes(), db.contar_relatos_pendentes()
 
 
 # Widgets com `key` não podem ter seu session_state sobrescrito depois de já
@@ -148,9 +149,12 @@ with st.sidebar:
     pagina_atual = st.session_state["pagina_atual"]
 
     if expandida:
-        n_questoes = _contadores_rail()
+        n_questoes, n_relatos = _contadores_rail()
+        # O relato do aluno é o sinal mais barato de erro de conteúdo: fica no
+        # rodapé para o admin ver sem abrir a tela de revisão.
+        aviso = f' · <strong>{n_relatos} relato(s)</strong>' if n_relatos else ""
         st.markdown(
-            f'<div class="rail-footer">{n_questoes} questões</div>',
+            f'<div class="rail-footer">{n_questoes} questões{aviso}</div>',
             unsafe_allow_html=True,
         )
 
@@ -543,3 +547,140 @@ elif pagina_atual == "importar":
                         st.warning(f"{len(relatorio['erros'])} linha(s) com problema:", icon=":material/warning:")
                         df_erros = pd.DataFrame(relatorio["erros"], columns=["Linha", "Motivo"])
                         st.dataframe(df_erros, hide_index=True, row_height=36)
+
+
+# ---------------------------------------------------------------------------
+# REVISAR EXPLICAÇÕES
+# ---------------------------------------------------------------------------
+# As explicações foram escritas do zero e só passaram por checagem automática
+# de que cada uma defende a letra oficial — isso não pega raciocínio clínico
+# ruim defendendo a letra certa. Esta tela é para o admin ler uma a uma e
+# marcar o que corrigir depois, em lote, por UPDATE.
+# ponytail: as marcas ficam num JSON do repositório, não numa tabela. É uma
+# varredura de um admin só, numa máquina só; vira tabela se precisar ser
+# compartilhada com o servidor.
+ARQUIVO_REVISAO = "backups/revisao_explicacoes.json"
+
+
+def _marcas_revisao():
+    try:
+        with open(ARQUIVO_REVISAO, encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return {}
+
+
+def _gravar_marca(questao_id, status, nota):
+    marcas = _marcas_revisao()
+    marcas[str(questao_id)] = {
+        "status": status,
+        "nota": nota.strip(),
+        "em": datetime.datetime.now().isoformat(timespec="seconds"),
+    }
+    with open(ARQUIVO_REVISAO, "w", encoding="utf-8") as f:
+        json.dump(marcas, f, ensure_ascii=False, indent=1, sort_keys=True)
+
+
+if pagina_atual == "revisar":
+    ui.page_title(
+        "Revisar explicações",
+        "Leia a explicação contra o gabarito e marque o que precisa de ajuste. "
+        "As marcas ficam em backups/revisao_explicacoes.json.",
+    )
+
+    # Relatos dos alunos vêm primeiro: apontam onde olhar, ao contrário da
+    # varredura questão a questão abaixo, que é cara e cega.
+    relatos = db.listar_relatos(pendentes=True)
+    if relatos:
+        with st.expander(f"⚑ {len(relatos)} relato(s) de erro pendente(s)", expanded=True):
+            for r in relatos:
+                prova = f"{r['banca']} {r['edicao']}" if r["edicao"] else (r["banca"] or "—")
+                numero = f" · questão {r['numero_prova']}" if r["numero_prova"] else ""
+                st.markdown(
+                    f"**id {r['questao_id']}** · {prova}{numero} · **{r['parte']}** — "
+                    f"{r['comentario'] or '_sem comentário_'}"
+                )
+                st.caption(
+                    f"{r['usuario']} em {r['criado_em']:%d/%m/%Y %H:%M} · {r['trecho']}…"
+                )
+                if st.button("Marcar como resolvido", key=f"rev_relato_{r['id']}"):
+                    db.resolver_relato(r["id"])
+                    st.rerun()
+                st.divider()
+
+    edicoes = db.listar_edicoes_oficiais()
+    rotulos = [f"{e['banca']} {e['edicao']}" for e in edicoes]
+    padrao = next((i for i, r in enumerate(rotulos) if r.startswith("USP")), 0)
+    escolha = st.selectbox("Edição", rotulos, index=padrao, key="rev_edicao")
+    edicao = edicoes[rotulos.index(escolha)]
+
+    ids = db.ids_questoes_da_edicao(edicao["banca"], edicao["edicao"])
+    marcas = _marcas_revisao()
+    pendentes = [i for i, qid in enumerate(ids) if str(qid) not in marcas]
+    ajustar = [qid for qid in ids if marcas.get(str(qid), {}).get("status") == "ajustar"]
+
+    faixa = [
+        {"label": "Questões", "valor": str(len(ids))},
+        {"label": "Revisadas", "valor": str(len(ids) - len(pendentes)), "cor": "var(--correct)"},
+    ]
+    item_ajustar = {"label": "Para ajustar", "valor": str(len(ajustar))}
+    if ajustar:
+        item_ajustar["cor"] = "var(--warn)"
+    ui.faixa_row(faixa + [item_ajustar])
+
+    chave_idx = f"rev_idx_{edicao['banca']}_{edicao['edicao']}"
+    if chave_idx not in st.session_state:
+        st.session_state[chave_idx] = pendentes[0] if pendentes else 0
+    idx = max(0, min(st.session_state[chave_idx], len(ids) - 1))
+
+    nav_a, nav_b, nav_c = st.columns([1, 2, 1])
+    if nav_a.button("← Anterior", key="rev_ant", disabled=idx == 0, use_container_width=True):
+        st.session_state[chave_idx] = idx - 1
+        st.rerun()
+    nav_b.markdown(
+        f"<div style='text-align:center;padding-top:.4rem'>{idx + 1} de {len(ids)}</div>",
+        unsafe_allow_html=True,
+    )
+    if nav_c.button("Próxima →", key="rev_prox", disabled=idx >= len(ids) - 1, use_container_width=True):
+        st.session_state[chave_idx] = idx + 1
+        st.rerun()
+
+    q = db.obter_questao(ids[idx])
+    marca = marcas.get(str(q["id"]), {})
+
+    with st.container(border=True):
+        ui.render_cabecalho_questao(q)
+        ui.render_alternativas_resultado(q)
+        st.caption(f"Gabarito oficial: **{q['resposta_correta']}** · questão {q['numero_prova']} do caderno")
+        if q["explicacao"]:
+            st.info(q["explicacao"], icon=":material/lightbulb:")
+        else:
+            st.warning("Sem explicação cadastrada.", icon=":material/warning:")
+
+    if marca:
+        rotulo = "precisa de ajuste" if marca["status"] == "ajustar" else "está certa"
+        st.caption(f"Já revisada em {marca['em'][:16].replace('T', ' ')} — {rotulo}."
+                   + (f" Nota: {marca['nota']}" if marca["nota"] else ""))
+
+    nota = st.text_area(
+        "O que ajustar (opcional)", value=marca.get("nota", ""),
+        key=f"rev_nota_{q['id']}", placeholder="Ex.: defende a letra certa, mas pelo motivo errado…",
+    )
+
+    col_ok, col_aj = st.columns(2)
+    if col_ok.button("Está certa", key=f"rev_ok_{q['id']}", use_container_width=True,
+                     icon=":material/check_circle:"):
+        _gravar_marca(q["id"], "ok", nota)
+        st.session_state[chave_idx] = min(idx + 1, len(ids) - 1)
+        st.rerun()
+    if col_aj.button("Precisa de ajuste", key=f"rev_aj_{q['id']}", type="primary",
+                     use_container_width=True, icon=":material/flag:"):
+        _gravar_marca(q["id"], "ajustar", nota)
+        st.session_state[chave_idx] = min(idx + 1, len(ids) - 1)
+        st.rerun()
+
+    if ajustar:
+        with st.expander(f"{len(ajustar)} marcada(s) para ajuste nesta edição"):
+            for qid in ajustar:
+                m = marcas[str(qid)]
+                st.markdown(f"**id {qid}** — {m['nota'] or '(sem nota)'}")

@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { NumeroAnimado } from "../../components/NumeroAnimado";
 import { TemaDoCaso } from "../../components/TemaDoCaso";
+import { RelatarErro } from "../../components/RelatarErro";
 import { TextoDiscussao } from "../../components/TextoDiscussao";
 import { API_URL } from "../../lib/api";
 import { BOTAO_PRIMARIO, BOTAO_SECUNDARIO } from "../../lib/estilos";
@@ -267,7 +268,10 @@ export default function Resultado({ simuladoId, onNovoSimulado }: Props) {
                     {item.explicacao && (
                       <div className="flex flex-col gap-2 border-t border-line-soft pt-5">
                         <span className="rotulo text-muted">Comentário</span>
-                        <TemaDoCaso tema={item.subtopico} />
+                        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+                          <TemaDoCaso tema={item.subtopico} />
+                          <RelatarErro questaoId={item.id} />
+                        </div>
                         <TextoDiscussao texto={item.explicacao} />
                       </div>
                     )}

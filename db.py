@@ -651,6 +651,25 @@ def init_db():
         )
         """)
 
+        # Erros de conteúdo relatados pelos alunos. As explicações são escritas
+        # do zero e a revisão de 2026-09-16 mostrou que varrer o banco inteiro
+        # lendo questão por questão é caro e fraco; o relato do aluno diz onde
+        # olhar. `parte` é o que ele aponta (enunciado, alternativas, gabarito,
+        # explicação, imagem, outro) e é o que torna a correção dirigida.
+        c.execute("""
+        CREATE TABLE IF NOT EXISTS relatos_questao (
+            id SERIAL PRIMARY KEY,
+            questao_id INTEGER NOT NULL,
+            usuario_id INTEGER NOT NULL,
+            parte TEXT NOT NULL,
+            comentario TEXT,
+            criado_em TIMESTAMP NOT NULL,
+            resolvido_em TIMESTAMP,       -- NULL enquanto pendente
+            FOREIGN KEY (questao_id) REFERENCES questoes(id) ON DELETE CASCADE,
+            FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+        )
+        """)
+
         # Questões marcadas manualmente pelo aluno durante uma sessão de
         # prática ("Marcar para revisão") — sinal independente do SM-2
         # (que já agenda revisão automática pra erros): aqui é o aluno
@@ -819,6 +838,10 @@ def init_db():
         # Acompanhamento de retenção: sempre por aluno, em janelas de tempo.
         c.execute(
             "CREATE INDEX IF NOT EXISTS idx_revisao_eventos_usuario_data ON revisao_eventos(usuario_id, registrado_em)"
+        )
+        # A tela do admin lê sempre os pendentes, mais recentes primeiro.
+        c.execute(
+            "CREATE INDEX IF NOT EXISTS idx_relatos_pendentes ON relatos_questao(resolvido_em, criado_em)"
         )
 
         conn.commit()
@@ -1268,6 +1291,58 @@ def desmarcar_questao(usuario_id, questao_id):
         conn.execute(
             "DELETE FROM questoes_marcadas WHERE usuario_id = ? AND questao_id = ?",
             (usuario_id, questao_id),
+        )
+
+
+# Partes de uma questão que o aluno pode apontar ao relatar um erro. São
+# fixas de propósito: cada uma diz onde mexer, e é isso que torna a
+# correção dirigida em vez de uma releitura da questão inteira.
+PARTES_RELATO = ("Enunciado", "Alternativas", "Gabarito", "Explicação", "Imagem", "Outro")
+
+
+def relatar_erro_questao(usuario_id, questao_id, parte, comentario=None):
+    """Registra um relato de erro numa questão. `parte` precisa estar em
+    PARTES_RELATO. Devolve o id do relato."""
+    if parte not in PARTES_RELATO:
+        raise ValueError(f"Parte inválida: {parte!r}")
+    comentario = (comentario or "").strip() or None
+    with get_conn() as conn:
+        return conn.execute("""
+            INSERT INTO relatos_questao (questao_id, usuario_id, parte, comentario, criado_em)
+            VALUES (?, ?, ?, ?, ?)
+            RETURNING id
+        """, (questao_id, usuario_id, parte, comentario, datetime.datetime.now())).fetchone()["id"]
+
+
+def listar_relatos(*, pendentes=True, limite=200):
+    """Relatos com os dados da questão, mais recentes primeiro."""
+    filtro = "WHERE r.resolvido_em IS NULL" if pendentes else ""
+    with get_conn() as conn:
+        return conn.execute(f"""
+            SELECT r.id, r.questao_id, r.parte, r.comentario, r.criado_em, r.resolvido_em,
+                   u.email AS usuario, q.banca, q.edicao, q.numero_prova,
+                   substr(q.enunciado, 1, 90) AS trecho
+            FROM relatos_questao r
+            JOIN usuarios u ON u.id = r.usuario_id
+            JOIN questoes q ON q.id = r.questao_id
+            {filtro}
+            ORDER BY r.criado_em DESC
+            LIMIT ?
+        """, (limite,)).fetchall()
+
+
+def contar_relatos_pendentes():
+    with get_conn() as conn:
+        return conn.execute(
+            "SELECT COUNT(*) AS n FROM relatos_questao WHERE resolvido_em IS NULL"
+        ).fetchone()["n"]
+
+
+def resolver_relato(relato_id):
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE relatos_questao SET resolvido_em = ? WHERE id = ?",
+            (datetime.datetime.now(), relato_id),
         )
 
 
@@ -1804,12 +1879,15 @@ def listar_itens_simulado(simulado_id, *, usuario_id):
     with get_conn() as conn:
         rows = conn.execute("""
             SELECT si.id AS item_id, si.ordem, si.resposta_dada, si.correta, si.tempo_ms,
-                   q.*, a.nome AS area, e.nome AS especialidade, (m.usuario_id IS NOT NULL) AS marcada,
+                   q.*, a.nome AS area, e.nome AS especialidade, sub.nome AS subtopico,
+                   (m.usuario_id IS NOT NULL) AS marcada,
                    qp.numero_prova AS numero_prova_edicao
             FROM simulado_itens si
             JOIN questoes q ON q.id = si.questao_id
             JOIN areas a ON a.id = q.area_id
             LEFT JOIN especialidades e ON e.id = q.especialidade_id
+            -- `sub`, e não `s`: o alias `s` é do simulado, no JOIN abaixo.
+            LEFT JOIN subtopicos sub ON sub.id = q.subtopico_id
             JOIN simulados s ON s.id = si.simulado_id
             LEFT JOIN questoes_provas qp
                    ON qp.questao_id = q.id AND qp.banca = s.banca AND qp.edicao = s.edicao

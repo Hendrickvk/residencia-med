@@ -435,7 +435,12 @@ label, [data-testid="stWidgetLabel"] p {{
     border-radius: 10px !important;
     background: var(--surface) !important;
 }}
-[data-testid="stExpander"] summary {{ color: var(--ink-700); font-weight: 500; }}
+/* O <summary> traz fundo branco próprio do Streamlit, que no tema escuro fica
+   branco sobre branco — o container acima já pinta o card, então aqui o fundo
+   tem que ser transparente. */
+[data-testid="stExpander"] summary {{
+    color: var(--ink-700); font-weight: 500; background: transparent !important;
+}}
 [data-testid="stMetric"] {{
     background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
     padding: 0.9rem 1.1rem;
