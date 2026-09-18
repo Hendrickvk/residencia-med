@@ -1781,11 +1781,13 @@ def listar_edicoes_oficiais():
 
 
 def ids_questoes_da_edicao(banca, edicao):
-    """Ids das questões de uma edição, na ordem do caderno oficial."""
+    """Ids das questões de uma edição, na ordem do caderno oficial. A banca
+    não diferencia maiúsculas: no banco ela está como "REVALIDA", e um
+    "Revalida" digitado num script devolvia lista vazia sem erro."""
     with get_conn() as conn:
         rows = conn.execute("""
             SELECT questao_id FROM questoes_provas
-            WHERE banca = ? AND edicao = ?
+            WHERE banca ILIKE ? AND edicao = ?
             ORDER BY numero_prova
         """, (banca, edicao)).fetchall()
     return [r["questao_id"] for r in rows]
