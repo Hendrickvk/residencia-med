@@ -962,33 +962,38 @@ def obter_tema(area_id, nome):
 # ---------------------------------------------------------------------------
 
 def criar_questao(area_id, subtopico_id, enunciado, alternativas: dict,
-                   resposta_correta, explicacao="", banca="", ano=None, especialidade_id=None):
-    """Devolve o id da questão criada (a tela Nova Questão anexa a imagem nele)."""
+                   resposta_correta, explicacao="", banca="", ano=None, especialidade_id=None,
+                   tipo_pergunta=None):
+    """Devolve o id da questão criada (a tela Nova Questão anexa a imagem nele).
+
+    `tipo_pergunta` é um de TIPOS_PERGUNTA: sem ele a questão fica fora do filtro
+    do Praticar e da seção "Por tipo de pergunta" do Painel."""
     with get_conn() as conn:
         cur = conn.execute("""
             INSERT INTO questoes
                 (area_id, especialidade_id, subtopico_id, enunciado, alternativas, resposta_correta,
-                 explicacao, banca, ano, criada_em)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 explicacao, banca, ano, tipo_pergunta, criada_em)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             area_id, especialidade_id, subtopico_id, enunciado, json.dumps(alternativas, ensure_ascii=False),
-            resposta_correta, explicacao, banca, ano,
+            resposta_correta, explicacao, banca, ano, tipo_pergunta,
             datetime.datetime.now().isoformat(),
         ))
         return cur.lastrowid
 
 
 def atualizar_questao(questao_id, area_id, subtopico_id, enunciado, alternativas: dict,
-                       resposta_correta, explicacao="", banca="", ano=None, especialidade_id=None):
+                       resposta_correta, explicacao="", banca="", ano=None, especialidade_id=None,
+                       tipo_pergunta=None):
     with get_conn() as conn:
         conn.execute("""
             UPDATE questoes
             SET area_id = ?, especialidade_id = ?, subtopico_id = ?, enunciado = ?, alternativas = ?,
-                resposta_correta = ?, explicacao = ?, banca = ?, ano = ?
+                resposta_correta = ?, explicacao = ?, banca = ?, ano = ?, tipo_pergunta = ?
             WHERE id = ?
         """, (
             area_id, especialidade_id, subtopico_id, enunciado, json.dumps(alternativas, ensure_ascii=False),
-            resposta_correta, explicacao, banca, ano, questao_id,
+            resposta_correta, explicacao, banca, ano, tipo_pergunta, questao_id,
         ))
 
 

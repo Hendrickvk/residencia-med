@@ -337,7 +337,7 @@ def _form_questao(q, *, key_prefix):
     valores_alt["D"] = col_d.text_input("D)", value=valores_alt["D"], key=f"{key_prefix}_alt_d")
     valores_alt["E"] = st.text_input("E) (opcional)", value=valores_alt["E"], key=f"{key_prefix}_alt_e")
 
-    col_correta, col_banca, col_ano = st.columns([1, 2, 1])
+    col_correta, col_tipo, col_banca, col_ano = st.columns([1, 1, 2, 1])
     correta_atual = q["resposta_correta"] if q and q["resposta_correta"] in letras else "A"
     resposta_correta_f = col_correta.selectbox(
         "Alternativa correta", letras, index=letras.index(correta_atual), key=f"{key_prefix}_correta",
@@ -346,6 +346,19 @@ def _form_questao(q, *, key_prefix):
         "Banca / Instituição (ex: ENAMED, USP-SP, UNIFESP)",
         value=(q["banca"] if q else "") or "", key=f"{key_prefix}_banca",
     )
+    # Sem tipo a questão fica fora do filtro do Praticar e da seção
+    # "Por tipo de pergunta" do Painel, por isso é exigido ao salvar.
+    tipos_opcoes = ["(nenhum)"] + list(db.TIPOS_PERGUNTA)
+    tipo_atual = (q["tipo_pergunta"] if q else None) or "(nenhum)"
+    tipo_f = col_tipo.selectbox(
+        "Tipo de pergunta", tipos_opcoes,
+        index=tipos_opcoes.index(tipo_atual) if tipo_atual in tipos_opcoes else 0,
+        key=f"{key_prefix}_tipo",
+        help="O que as alternativas pedem. Pedindo mais de uma coisa, vale a etapa mais "
+             "adiante (Conduta > Exames > Diagnóstico).",
+    )
+    tipo_pergunta_f = None if tipo_f == "(nenhum)" else tipo_f
+
     ano_f = col_ano.number_input(
         "Ano", min_value=1990, max_value=2100,
         value=(q["ano"] if q else None) or 2025, step=1, key=f"{key_prefix}_ano",
@@ -366,19 +379,21 @@ def _form_questao(q, *, key_prefix):
         nova_alternativas = {l: valores_alt[l] for l in letras if valores_alt[l].strip()}
         if not enunciado_f.strip() or not all(valores_alt[l].strip() for l in ["A", "B", "C", "D"]):
             st.error("Preencha ao menos o enunciado e as alternativas A a D.", icon=":material/cancel:")
+        elif tipo_pergunta_f is None:
+            st.error("Escolha o tipo de pergunta.", icon=":material/cancel:")
         else:
             if q is not None:
                 db.atualizar_questao(
                     q["id"], area_id_f, subtopico_id_f, enunciado_f, nova_alternativas,
                     resposta_correta_f, explicacao_f, banca_f, int(ano_f),
-                    especialidade_id=especialidade_id_f,
+                    especialidade_id=especialidade_id_f, tipo_pergunta=tipo_pergunta_f,
                 )
                 st.success("Questão atualizada.", icon=":material/check_circle:")
             else:
                 novo_id = db.criar_questao(
                     area_id_f, subtopico_id_f, enunciado_f, nova_alternativas,
                     resposta_correta_f, explicacao_f, banca_f, int(ano_f),
-                    especialidade_id=especialidade_id_f,
+                    especialidade_id=especialidade_id_f, tipo_pergunta=tipo_pergunta_f,
                 )
                 if nova_imagem is not None:
                     db.definir_imagem_questao(novo_id, nova_imagem.getvalue(), nova_imagem.type)
@@ -505,6 +520,7 @@ elif pagina_atual == "importar":
         - **alternativa_a, alternativa_b, alternativa_c, alternativa_d** *(obrigatórias)*
         - **alternativa_e** *(opcional)*
         - **resposta_correta** *(obrigatório — letra da alternativa certa)*
+        - **tipo** *(obrigatório — Diagnóstico, Exames, Conduta ou Conceitos, pelo que as alternativas pedem)*
         - **explicacao** *(opcional)*
         - **banca** *(opcional — ex: ENAMED, USP-SP, UNIFESP)*
         - **ano** *(opcional)*

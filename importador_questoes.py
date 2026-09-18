@@ -4,13 +4,17 @@ Importação em massa de questões a partir de uma planilha (.xlsx ou .csv).
 Formato esperado (nomes de coluna flexíveis — veja `COLUNAS_ACEITAS`):
 
 area | especialidade | tema | enunciado | alternativa_a | alternativa_b
-| alternativa_c | alternativa_d | alternativa_e | resposta_correta | explicacao | banca | ano
+| alternativa_c | alternativa_d | alternativa_e | resposta_correta | tipo | explicacao
+| banca | ano
 
 - `area` é obrigatória e segue a taxonomia fixa (`db.TAXONOMIA`): pode ser a
   grande área ("Clínica Médica") ou já a especialidade ("Cardiologia"). Um
   nome que não corresponde a nada vira erro da linha — nunca uma área nova.
 - `especialidade` e `tema` são opcionais. O tema segue a mesma regra: precisa
   ser um dos temas fixos da área (`db.TEMAS`), senão a linha vira erro.
+- `tipo` é o tipo de pergunta (`db.TIPOS_PERGUNTA`), pelo que as alternativas
+  pedem, e é obrigatório: sem ele a questão fica fora do filtro do Praticar e
+  da seção "Por tipo de pergunta" do Painel.
 - `alternativa_e` é opcional (questões com 4 ou 5 alternativas).
 - `resposta_correta` deve ser a letra (A, B, C, D ou E).
 """
@@ -42,6 +46,9 @@ COLUNAS_ACEITAS = {
     "d": "alternativa_d",
     "alternativa_e": "alternativa_e",
     "e": "alternativa_e",
+    "tipo": "tipo_pergunta",
+    "tipo_pergunta": "tipo_pergunta",
+    "tipo_de_pergunta": "tipo_pergunta",
     "resposta_correta": "resposta_correta",
     "gabarito": "resposta_correta",
     "resposta": "resposta_correta",
@@ -57,7 +64,7 @@ COLUNAS_ACEITAS = {
 
 COLUNAS_OBRIGATORIAS = [
     "area", "enunciado", "alternativa_a", "alternativa_b",
-    "alternativa_c", "alternativa_d", "resposta_correta",
+    "alternativa_c", "alternativa_d", "resposta_correta", "tipo_pergunta",
 ]
 
 
@@ -115,6 +122,7 @@ def importar(df: pd.DataFrame):
         banca = str(row.get("banca", "")).strip()
         especialidade_nome = str(row.get("especialidade", "")).strip()
         subtopico_nome = str(row.get("subtopico", "")).strip()
+        tipo_pergunta = str(row.get("tipo_pergunta", "")).strip()
         ano_raw = str(row.get("ano", "")).strip()
 
         if not area_nome:
@@ -134,6 +142,12 @@ def importar(df: pd.DataFrame):
         if resposta_correta not in alternativas:
             relatorio["erros"].append(
                 (linha_num, f"resposta_correta inválida: '{resposta_correta}' (use A-{'E' if alt_e else 'D'})")
+            )
+            continue
+
+        if tipo_pergunta not in db.TIPOS_PERGUNTA:
+            relatorio["erros"].append(
+                (linha_num, "tipo inválido: '%s' (use %s)" % (tipo_pergunta, ", ".join(db.TIPOS_PERGUNTA)))
             )
             continue
 
@@ -165,6 +179,7 @@ def importar(df: pd.DataFrame):
         db.criar_questao(
             area_id, subtopico_id, enunciado, alternativas,
             resposta_correta, explicacao, banca, ano, especialidade_id=especialidade_id,
+            tipo_pergunta=tipo_pergunta,
         )
         relatorio["importadas"] += 1
 
@@ -186,6 +201,7 @@ def gerar_template_bytes() -> bytes:
         "alternativa_d": "Observação clínica sem intervenção",
         "alternativa_e": "",
         "resposta_correta": "A",
+        "tipo": "Conduta",
         "explicacao": "Instabilidade hemodinâmica é indicação de cardioversão elétrica imediata, "
                        "independentemente do tempo de anticoagulação.",
         "banca": "ENAMED",
