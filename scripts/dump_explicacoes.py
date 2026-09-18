@@ -24,7 +24,11 @@ def main():
     p.add_argument("--ate", type=int, default=10**6, help="última questão do caderno")
     args = p.parse_args()
 
-    for qid in db.ids_questoes_da_edicao(args.banca, args.edicao):
+    ids = db.ids_questoes_da_edicao(args.banca, args.edicao)
+    if not ids:
+        p.error("nenhuma questão em %s %s (confira a edição, ex.: 2025/2)" % (args.banca, args.edicao))
+
+    for qid in ids:
         q = db.obter_questao(qid)
         n = q["numero_prova"]
         if not (args.de <= n <= args.ate):

@@ -165,9 +165,9 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
      simulação e backup. No Painel, "Por tipo de pergunta" mostra o acerto na
      primeira resposta por tipo (`db.desempenho_por_tipo`) e aponta o ponto
      fraco quando o melhor e o pior diferem 15 pontos ou mais; no Praticar, o
-     tipo virou filtro. Limite conhecido: o formulário e o importador do
-     Streamlit não preenchem o tipo, e questão sem tipo fica fora do filtro e
-     da seção.
+     tipo virou filtro. O limite conhecido (o formulário e o importador do
+     Streamlit não preenchiam o tipo, e questão sem tipo fica fora do filtro e
+     da seção) foi fechado em 2026-09-17: os dois passaram a exigir o tipo.
   3. Item 5 (feita, 2026-09-15). No domínio, o acerto marcado como chute vale
      meio (`pontos` em `db._PRIMEIRAS_TENTATIVAS`), em todo o Painel; os
      acertos podem ter vírgula, e a legenda do quadro explica. Meio, e não zero:
@@ -221,11 +221,12 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
 Levantados em 2026-09-14, em ordem de valor. O deploy continua sendo o item
 mais importante assim que houver acesso SSH.
 
-**Onde paramos (2026-09-16).** Os 7 itens do acompanhamento do desempenho estão
-feitos, a Revalida 2021 foi importada (banco em 1 074 questões) e os passos 3, 4,
-5 e 6 desta lista saíram. A USP 2026 teve as 113 explicações revisadas e as 10
-marcadas foram reescritas. Faltam revisar Revalida 2025/2 e 2026/1 e UNICAMP
-2023 (passo 2). O **passo 1, a próxima edição do ENAMED**, está
+**Onde paramos (2026-09-18).** Os 7 itens do acompanhamento do desempenho estão
+feitos, a Revalida 2021 foi importada (banco em 1 074 questões) e os passos 2, 3,
+4, 5 e 6 desta lista saíram. **A revisão das explicações foi encerrada: 1 074 de
+1 074 lidas, 51 reescritas, nenhuma marcação pendente** (resumo por edição no fim
+do passo 2). Com isso, o único passo desta lista que sobra é o 1, e ele está
+bloqueado. O **passo 1, a próxima edição do ENAMED**, está
 bloqueado até 04/12/2026: a prova foi aplicada em 13/09 e o INEP só publicou o
 gabarito preliminar, que muda em anulação e em letra depois dos recursos (a
 Revalida 2026/2 está no mesmo estado). Para subir o
@@ -245,8 +246,9 @@ será revisto.
    de nome falhar. Seguir o roteiro do `CLAUDE.md` e gravar com
    `scripts/importar_prova.py`. A USP precisa ser coletada todo ano, porque a
    FUVEST só mantém a edição corrente no ar.
-2. **Revisão clínica das explicações de 2026-09-14** (USP 2026 revisada em
-   2026-09-16; faltam Revalida 2025/2 e 2026/1 e UNICAMP 2023).
+2. **Revisão clínica das explicações — encerrada em 2026-09-18** (1 074 de
+   1 074, 51 reescritas). Começou em 2026-09-16 pela USP 2026 e terminou pela
+   Revalida 2021; o resumo por edição está no fim deste passo.
    **Resultado da USP 2026: 113 de 113 lidas, 10 marcadas e as 10 reescritas
    em 2026-09-16.** As letras guardadas no banco foram conferidas contra o
    gabarito oficial retificado da FUVEST e as 113 batem — o dado está íntegro, o
@@ -265,6 +267,152 @@ será revisto.
    USP 2026, UNICAMP 2023), que só passaram pela checagem automática de que cada
    uma defende a letra oficial — isso não pega raciocínio clínico ruim
    defendendo a letra certa, e por isso depende de leitura do usuário.
+   **Resultado da Revalida 2025/2 (2026-09-17): 93 de 93 lidas, 4 reescritas**
+   (texto anterior em `backups/explicacoes_20260917_201155.json`, que também
+   guarda a correção de uma grafia na ENAMED Q4).
+   Só 50 eram inéditas — as outras 43 são as mesmas questões do ENAMED 2025, já
+   revisadas em 16/09 e marcadas ok. A leitura achou 1 erro factual e 3 lacunas:
+   a Q58 (id 1772) afirmava "CHA2DS2-VASc zero" numa mulher de 30 anos, quando o
+   sexo feminino vale 1 ponto (conclusão de não anticoagular não muda, a conta
+   ensinada estava errada); a Q49 (id 48) não tinha a ressalva dos critérios da
+   OMS que a USP Q116 ganhou em 15/09; a Q8 (id 80) deixava passar que o padrão
+   pontilhado fino denso (anti-DFS70) depõe contra doença autoimune sistêmica; e
+   a Q5 (id 49) atribuía ao S. schenckii a esporotricose do gato, que no Brasil é
+   do S. brasiliensis. As 4 figuras da edição foram abertas uma a uma e batem com
+   o texto. **Achado que vale para o resto:** as 3 lacunas estavam em questões já
+   marcadas ok na primeira passada, ou seja, reler questão já revisada rende
+   lacuna, não defeito — vale a pena quando uma questão irmã recebeu correção
+   que a outra não recebeu, não como auditoria geral.
+   **Resultado da UNICAMP 2023 (2026-09-17): 79 de 79 lidas, 5 corrigidas**
+   (textos em `backups/explicacoes_20260917_202535.json`, imagem em
+   `backups/imagem_q2415_20260917_202538.json`). As 12 figuras, a maior
+   densidade depois da USP, foram abertas uma a uma, e o único achado de
+   prioridade média foi de **imagem, não de texto**: o recorte da Q7 (id 2415)
+   trazia uma tira de 12 px da figura vizinha, a histologia da Q9, na borda
+   direita. Os outros quatro são de texto: a Q53 (id 2460) sem a ressalva dos
+   critérios da OMS; a Q38 (id 2445), que dizia "nádegas e membros inferiores,
+   como na figura" quando a figura mostra só os membros; a Q64 (id 2471), que
+   atribuía à história a pele esbranquiçada do líquen escleroso, que está na
+   figura; e a Q50 (id 2457), com "terceiro trimestre (entre 24 e 28 semanas)",
+   que se contradiz. **Achado de método:** a ressalva da OMS faltando era a
+   terceira ocorrência do mesmo dilema, então em vez de esperar a quarta uma
+   consulta varreu o banco (questões que citam lúpus, antifosfolipíde ou
+   trombofilia e cujas alternativas são métodos contraceptivos, checando se a
+   explicação cita "categoria" ou "elegibilidade"): das 7, 6 já tinham a
+   ressalva e a UNICAMP era a última. Padrão fechado.
+   **Resultado da Revalida 2025/1 (2026-09-17): 97 de 97 lidas, 1 corrigida** —
+   a menor taxa de defeito de todas as edições até agora, coerente com o padrão,
+   porque a edição tem só 2 figuras. O achado vale pela natureza: na Q77 (id 898,
+   ATLS) a explicação escrevia "a primeira prioridade é a via aérea (A)", com (A)
+   significando o A do ABCDE, e duas frases depois usava "(A)" para a alternativa
+   A, que é a errada (tomografias) — quem lê rápido conclui que o gabarito é A,
+   e é C. Mesma família da USP Q22. As duas figuras foram conferidas, com a tira
+   de ritmo do ECG da Q1 ampliada para checar a afirmação de que há ondas P sem
+   QRS (confere). **Varredura feita de passagem:** 5 das 79 questões com imagem
+   do banco não citam a figura no enunciado (ids 49, 897, 1812, 2320, 2396). Não
+   é frase perdida na extração: é como os cadernos publicam, e a figura aparece no
+   app de todo jeito. Conferido, sem ação.
+   **Resultado da Revalida 2024/2 (2026-09-17): 94 de 94 lidas, 9 corrigidas** —
+   a pior taxa de todas as edições, e por um motivo que a hipótese das figuras não
+   explica: o caderno tem **uma única figura**. O que distingue esta edição é o
+   estilo das explicações, mais antigo e terso, que afirma fórmula, dose, corte
+   numérico e artigo de lei com confiança — e é exatamente aí que os erros
+   estavam. As duas graves: a **Q17 (id 115)** mandava calcular a reposição da
+   queimadura por Parkland (4 mL x kg x %SCQ), que dá 1.000 e 500 mL/h, os números
+   da alternativa B, **errada** — o gabarito só fecha com os 2 mL do ATLS 10ª
+   edição (500 e 250 mL/h), e a questão diz "preconizado pelo ATLS"; e a **Q5
+   (id 103)** afirmava que comissão de PCCS e plano de saúde não são exigências da
+   Lei 8.142, quando os dois estão no artigo 4º, que lista seis requisitos (o que
+   derruba aquelas alternativas é o outro item de cada par, prontuário eletrônico
+   e central de marcação). As outras sete: a Q84 (id 177) dizia "sem fator de
+   risco adicional" numa paciente com mãe com câncer de mama aos 42; a Q2 (id 101)
+   afirmava que exercício agrava a hipertensão venosa, quando a panturrilha é a
+   bomba que a reduz; a Q28 (id 125) e a Q57 (id 151) ignoravam o dado do enunciado
+   que puxa contra o gabarito (dor em flancos e epistaxe na reação transfusional;
+   tabagismo ativo na retocolite); a Q34 (id 130) dava o intervalo do ASC-US sem a
+   estratificação por idade que a questão testa; a Q25 (id 122) definia causa
+   básica de óbito ao contrário; e a Q1 (id 100) chamava de "a paciente" um homem
+   de 46 anos. Texto anterior em `backups/explicacoes_20260917_204647.json`.
+   **Varredura que nasceu disso** (`scripts/auditar_numeros.py`, novo): lista numa
+   tela todas as afirmações de fórmula, dose por kg e referência legal do banco.
+   No banco inteiro deu 2 frases de fórmula, 18 de dose por kg e 19 de referência
+   legal, e **só aquelas duas estavam erradas** — ou seja, a falha não era
+   sistêmica. O achado mais útil da varredura é que a outra questão de queimadura
+   do banco (Revalida 2026/1 Q60, id 1871) **já usava os 2 mL certos**: o banco se
+   contradizia, que é o mesmo padrão da ressalva da OMS e da mamografia.
+   **Resultado da Revalida 2024/1 (2026-09-17): 95 de 95 lidas, 5 corrigidas**
+   (texto anterior em `backups/explicacoes_20260917_210145.json`). O achado de
+   prioridade média é outra contradição interna do banco: a **Q15 (id 207)**
+   afirmava que a larva migrans cutânea "não se trata com tiabendazol tópico" —
+   trata, e é o que a Revalida 2024/2 Q48 (id 142) e a UNICAMP 2023 Q33 (id 2440)
+   já diziam; a alternativa errava pelo diagnóstico, não pelo tratamento. As
+   outras quatro são lacunas: a Q46 (id 236) não nomeava o abscesso pulmonar que
+   a radiografia mostra e chamava 20 dias de antibiótico de "tratamento clínico
+   prolongado" (são 4 a 6 semanas, com imagem que melhora atrasada), o que torna
+   "manter e acompanhar" defensável na prática; a Q66 (id 255) não nomeava o
+   flutter atrial que o enunciado entrega em "linha de base serrilhada" e "onda
+   F"; a Q69 (id 258) afirmava desaceleração "espelhada" sem encarar que as
+   quedas do traçado são mais profundas e abruptas que a precoce clássica, quando
+   o discriminador seguro é a linha de base somada à variabilidade; e a Q89
+   (id 277) dava o intervalo do LSIL sem o corte por idade.
+   **Resultado da Revalida 2023/2 (2026-09-17): 90 de 90 lidas, 2 corrigidas**
+   (texto anterior em `backups/explicacoes_20260917_210751.json`) — 8 figuras,
+   todas abertas uma a uma, nenhuma descrita errada. A Q75 (id 987) tinha frase
+   truncada ("A mistura percentil com escore Z…" sem a palavra que identificava a
+   alternativa), mesma família do defeito da ENAMED id 17; e a Q26 (id 946)
+   afirmava ver na foto a úlcera "em moldura" que a resolução do caderno não
+   permite cravar.
+   **Resultado da Revalida 2023/1 (2026-09-17): 93 de 93 lidas, 5 corrigidas**
+   (texto anterior em `backups/explicacoes_20260917_211407.json`). Duas são de
+   corte numérico, o padrão desta safra: a **Q44 (id 327)** chamava de sepse
+   neonatal "de início tardio" um quadro com 36 horas de vida, que é precoce — e a
+   distinção muda a etiologia presumida; e a **Q97 (id 378)** dava pancreatite
+   aguda por amilase e lipase cerca de 2 vezes o limite, abaixo do corte de 3
+   vezes que define o diagnóstico, e descartava isquemia mesentérica sem encarar o
+   lactato, o pH e o perfil vascular do paciente. Mais três: a Q8 (id 295), que
+   não registrava que 25,6 mg/dL de bilirrubina nessa idade já alcança o limiar de
+   exsanguineotransfusão — exatamente o que a questão irmã da 2023/2 Q83 (id 995)
+   ensina; a Q92 (id 373), que tratava qualquer pólipo achado como suficiente para
+   subir a categoria de risco, quando o hiperplásico não é lesão precursora; e a
+   Q77 (id 358), que não descrevia a radiografia sobre a qual a questão é
+   construída.
+   **Resultado da Revalida 2022/2 (2026-09-18): 86 de 86 lidas, 5 corrigidas**
+   (texto anterior em `backups/explicacoes_20260918_002625.json`). A mais grave é
+   a **Q45 (id 422)**, de um tipo que ainda não havia aparecido: a questão diz
+   "conforme os dados dos gráficos apresentados" e a explicação nunca lia os
+   gráficos — argumentava pela disparidade racial documentada nos boletins do
+   Ministério da Saúde, o que é verdade mas não é a resposta. Nas figuras, a fatia
+   das pessoas brancas cai de 65,1% das internações para 56,6% dos óbitos
+   enquanto a das pardas sobe de 26,9% para 34,6%, e é só dessa comparação que
+   sai a "melhor sobrevida" do gabarito; quem olhasse apenas a figura 2, onde a
+   maior fatia dos óbitos é branca, concluiria o oposto. As outras quatro: a Q27
+   (id 405) não descrevia a radiografia (ortostase, níveis hidroaéreos em alças
+   distendidas do andar superior, pelve sem gás); a Q17 (id 396) ignorava o "sem
+   ponto de flutuação" do enunciado, que é o dado posto para empurrar ao
+   antibiótico isolado (flutuação é sinal tardio e falta nos abscessos
+   profundos); a Q97 (id 464) inventava um dado, descrevendo o fluxo no equipo
+   como "ascendente **e pulsátil**" quando o enunciado não fala de
+   pulsatilidade; e a Q90 (id 457) refutava a alternativa só pela idade, sem
+   dizer o que ela erra de verdade — os requisitos do método definitivo são
+   alternativos (Lei 9.263/1996 na redação da Lei 14.443/2022: 21 anos **ou** dois
+   filhos vivos), e não cumulativos.
+   **Resultado da Revalida 2021 (2026-09-18): 88 de 88 lidas, 1 corrigida**
+   (texto anterior em `backups/explicacoes_20260918_003233.json`) — a edição mais
+   limpa do banco, e a última a ter sido importada. A única correção é lacuna de
+   figura: a Q100 (id 3283) dizia "onda Q e supradesnivelamento em evolução" sem
+   dizer onde olhar (supra convexo, em abóbada, em V2, V3 e V4, com padrão QS em
+   V1 e V2 — necrose estabelecida, que é o que tira a paciente da janela da
+   fibrinólise). A Q41 e a Q99 foram conferidas e batem, e a Q82 (Parkland) já
+   usava os 2 mL certos.
+   **Revisão encerrada em 2026-09-18: 1 074 de 1 074 lidas, 51 reescritas
+   (4,7%), nenhuma marcação pendente.** Por edição: USP 2026 10/113, ENAMED 2025
+   4/90, Revalida 2026/1 0/99, Revalida 2025/2 4/93, UNICAMP 2023 5/79, Revalida
+   2025/1 1/97, 2024/2 9/94, 2024/1 5/95, 2023/2 2/90, 2023/1 5/93, 2022/2 5/86 e
+   2021 1/88. Depois da USP Q22 e da 2025/1 Q77, nenhuma das 49 restantes
+   defendia a letra errada: o que a leitura humana acha é raciocínio incompleto,
+   número errado e figura não lida. **Se for para varrer o banco de novo, varrer
+   por padrão** (como se fez com a ressalva da OMS e com `auditar_numeros.py`), e
+   não questão por questão outra vez.
    Ferramenta: a tela **Revisar explicações** no Acervo do Streamlit (`app.py`),
    que abre na USP 2026 e mostra uma questão por vez na ordem do caderno —
    enunciado, imagem, alternativas com a correta em verde, o gabarito por
@@ -689,6 +837,71 @@ governa as telas admin do Streamlit.
     Corrigido com um `LEFT JOIN subtopicos sub` (alias `sub`, porque `s` já é o
     simulado). Só apareceu porque o botão novo fica ao lado do tema.
   - **Expander branco no tema escuro** do Streamlit — ver Armadilhas, abaixo.
+
+### 2026-09-17
+- **As 4 explicações marcadas do ENAMED 2025 foram reescritas** (a lista de
+  pendentes ficou zerada). A id 86 passou a dizer que o flumazenil é a letra
+  oficial e o único antídoto entre as opções, mas com a ressalva que faltava: em
+  usuário habitual — 30 comprimidos do próprio clonazepam — a reversão abrupta
+  pode precipitar convulsão refratária, e com a paciente já intubada o suporte
+  costuma bastar. A id 29 deixou de chamar a equimose periorbitária de sinal de
+  fratura de base de crânio e passou a ensinar a diferença (os "olhos de
+  guaxinim" são bilaterais, tardios e sem trauma direto), indicando a tomografia
+  pelo mecanismo, pela amnésia e pelo Glasgow abaixo de 15 por mais de 30
+  minutos. A id 40 parou de afirmar "útero fixo", que o enunciado não diz. A
+  id 17 teve a frase truncada sobre o ducto de Müller reescrita. Texto anterior
+  em `backups/explicacoes_20260917_200146.json`.
+- **Tipo de pergunta obrigatório no cadastro** (`db.criar_questao`,
+  `db.atualizar_questao`, o formulário compartilhado do `app.py` e
+  `importador_questoes.py`). Era o limite conhecido da fase 4 do acompanhamento
+  do desempenho: as 986 questões classificadas tinham tipo, mas qualquer questão
+  nova cadastrada pelo admin nascia sem ele e ficava invisível no filtro do
+  Praticar e na seção "Por tipo de pergunta" do Painel — um furo que só
+  apareceria meses depois, num número que não fecha. O formulário ganhou um
+  selectbox ao lado da alternativa correta e recusa salvar sem tipo; a planilha
+  ganhou a coluna `tipo` (aceita também "tipo_pergunta" e "tipo_de_pergunta"),
+  que entrou em `COLUNAS_OBRIGATORIAS` e no modelo `.xlsx`, e a linha vira erro
+  se o valor não estiver em `db.TIPOS_PERGUNTA`. Testes em
+  `tests/test_importador.py` (inclusive um que confere que o JSON das
+  alternativas não deslizou de posição com a coluna nova no INSERT).
+- **`db.ids_questoes_da_edicao` passou a comparar a banca com `ILIKE`.** No banco
+  a banca está como "REVALIDA", e `dump_explicacoes.py Revalida 2025/2` devolvia
+  lista vazia **sem erro nenhum**, o que parece "edição já revisada". O
+  `dump_explicacoes.py` também passou a abortar quando a edição não tem
+  questão. Mesma família da regra do `CLAUDE.md` de que filtro de texto livre em
+  `db.py` usa `ILIKE`.
+- **Revalida 2025/2, UNICAMP 2023, 2025/1, 2024/2, 2024/1, 2023/2 e 2023/1
+  revisadas.** Ver o passo 2 dos próximos passos, acima.
+
+### 2026-09-18
+- **Revisão das explicações encerrada: 1 074 de 1 074, 51 reescritas, nenhuma
+  marcação pendente.** As duas últimas edições foram a Revalida 2022/2 (5
+  correções em 86) e a Revalida 2021 (1 em 88). Detalhe por edição e o resumo
+  final no passo 2 dos próximos passos, acima.
+- **Achado novo, e o pior defeito de 2022/2: a explicação que responde a uma
+  questão de gráfico sem ler o gráfico.** A Q45 (id 422) argumentava pela
+  disparidade racial que os boletins do Ministério da Saúde documentam — verdade
+  histórica, resposta errada de método: o enunciado diz "conforme os dados dos
+  gráficos apresentados", e a alternativa correta só sai de comparar as duas
+  figuras (a fatia branca cai de 65,1% das internações para 56,6% dos óbitos,
+  a parda sobe de 26,9% para 34,6%). O teste barato para esse defeito: **se a
+  explicação continuaria válida com a figura removida, ela não leu a figura.**
+  Em questão que cita os próprios dados, isso é defeito, não estilo.
+- **A safra de escrita prediz o defeito melhor que a data.** A Revalida 2021,
+  a última edição importada e a de explicações mais longas — que nomeiam
+  mecanismo e fecham com uma consequência prática —, deu 1 defeito em 88, e as 3
+  figuras estavam certas. A 2024/2, de explicações curtas e assertivas que
+  cravam fórmula, dose e artigo de lei, deu 9 em 94 com uma única figura. As
+  duas pontas da mesma medida: **o estilo terso e confiante é o fator de risco,
+  o estilo que explica o mecanismo é o que se defende sozinho.** Escrever
+  explicação nova imitando a safra de 2021.
+- **Antes de recortar figura de novo porque "o rótulo está cortado", recortar a
+  página com folga e comparar.** A radiografia da 2022/2 Q27 mostra "OSTÁTICO"
+  no canto, e o corte parecia ser meu; refeito o recorte da página com 10 pt de
+  margem em cada lado, o "ORT" continua faltando — o corte está no raster que o
+  próprio caderno publicou, e a imagem guardada é fiel. Custa um comando e evita
+  substituir imagem à toa (diferente da legenda da 2021 Q41, que estava cortada
+  de verdade e foi consertada em 16/09).
 
 ## Armadilhas das telas admin (Streamlit)
 
