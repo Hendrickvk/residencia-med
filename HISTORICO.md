@@ -874,6 +874,51 @@ governa as telas admin do Streamlit.
   revisadas.** Ver o passo 2 dos próximos passos, acima.
 
 ### 2026-09-18
+- **"A plataforma parece estática" (observação do usuário) — diagnosticado no
+  navegador e corrigido em quatro pontos.** O que a leitura do código e a volta
+  pelo app mostraram: movimento não era o problema (`src/lib/movimento.ts` já
+  animava entrada, contagem de números e listas escalonadas), e a sessão de
+  Praticar já responde (teclado A–E/Enter/→/M, barra de progresso, cronômetro,
+  feedback sem ida ao servidor). O estático estava no **Painel**, que tinha 20
+  elementos clicáveis na tela inteira, e no **Configurador**. As quatro
+  correções:
+  - **Atalho escondido no hover era inalcançável no toque.** No Quadro de
+    triagem, o "Praticar 10" de quatro dos cinco cartões estava em
+    `opacity: 0; pointer-events: none` até o hover (medido no console). Em tela
+    de toque não existe hover, então no celular o atalho não existia: o dedo
+    caía no configurador. Agora é permanente — botão de tinta no cartão de
+    destaque, link de texto nos outros. Regra nova no `DESIGN_TRIAGEM.md`:
+    nenhuma ação pode depender de hover.
+  - **Dados que só o leitor de tela via.** Os dois gráficos do Painel
+    dependiam do `title`/`<title>` nativo: ~1s de espera, sem estilo, e
+    inexistente no toque. As barras dos próximos 7 dias já carregavam o texto
+    inteiro em `aria-label` ("Hoje: 56 casos, 36 acima da meta") e o olho não
+    alcançava; no gráfico de acerto, só o último ponto mostrava valor. Agora
+    ponto e barra têm `tabindex` e a dica aparece em hover **e** em foco (o
+    foco é o que funciona no celular). No gráfico de linha, o rótulo fixo do
+    último ponto sai de cena enquanto a dica está na tela.
+  - **Tema da semana sem saída.** "O que mudou nesta semana" listava os temas
+    com `15% → 42%` e não levava a lugar nenhum — o bloco fechava o ciclo das
+    prioridades sem dar como continuá-lo. O tema virou botão e abre 10 casos
+    dele, reusando o mesmo `navigate("/praticar", { state })` das prioridades
+    (`TemaDaSemana` já trazia area_id, especialidade_id e subtopico_id: não
+    precisou de API).
+  - **Configurador que não reagia** (`GET /praticar/contagem`, novo). Eram 5
+    selects, 2 segmentados e 2 interruptores sem nenhuma contagem: o recorte
+    era montado no escuro e o tamanho só aparecia depois de começar a sessão,
+    ou no "nenhum caso encontrado". Agora o rodapé diz "{n} casos nesse
+    recorte" a cada filtro, o botão anuncia o menor entre a quantidade
+    escolhida e o que existe ("Iniciar sessão de 7 casos") e desliga quando o
+    recorte é vazio. O endpoint conta pela mesma `db.ids_questoes_filtro_pratica`
+    que monta a sessão — um `count(*)` próprio duplicaria o WHERE e sairia da
+    sincronia no primeiro filtro novo; `tests/test_api_smoke.py` fixa o
+    contrato. Conferido no navegador: 1.074 no recorte vazio de filtros, 153
+    em Conceitos, 7 em Conceitos + apenas erros, e 0 (botão desligado) em
+    apenas erros + sem casos já respondidos, que se contradizem.
+  - **Checagem que não virou conserto:** o recorte da figura da Revalida
+    2022/2 Q27 parecia cortado e não estava (ver abaixo), e o vão vazio à
+    direita do quadro de triagem era só a janela estreita — em 1540px as cinco
+    colunas cabem e as vazias mostram "Nenhuma área nesta faixa".
 - **Revisão das explicações encerrada: 1 074 de 1 074, 51 reescritas, nenhuma
   marcação pendente.** As duas últimas edições foram a Revalida 2022/2 (5
   correções em 86) e a Revalida 2021 (1 em 88). Detalhe por edição e o resumo

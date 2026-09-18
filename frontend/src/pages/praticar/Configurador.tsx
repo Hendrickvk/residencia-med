@@ -1,5 +1,7 @@
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { ArrowRight, X } from "lucide-react";
 import { useState } from "react";
+import { api } from "../../lib/api";
 import { useAreas, useAnos, useBancas, useEspecialidades, useTemas, useTiposPergunta } from "../../lib/catalogo";
 import { BOTAO_PRIMARIO, CAMPO, PRESSAO } from "../../lib/estilos";
 import type { FiltrosPratica } from "../../lib/types";
@@ -62,6 +64,29 @@ export default function Configurador({ onIniciar, areaInicial }: Props) {
   const [quantidade, setQuantidade] = useState(20);
   const [apenasErros, setApenasErros] = useState(false);
   const [excluirRespondidas, setExcluirRespondidas] = useState(false);
+
+  // Recorte sem a quantidade: ela corta a fila, não muda o que existe no banco.
+  const recorte = {
+    area_id: areaId,
+    especialidade_id: especialidadeId,
+    subtopico_id: subtopicoId,
+    tipo_pergunta: tipoPergunta,
+    banca,
+    ano,
+    apenas_erros: apenasErros,
+    excluir_respondidas: excluirRespondidas,
+  };
+  // Chave exclusiva desta tela (a armadilha do CLAUDE.md sobre queryKey
+  // compartilhada) e o número anterior no lugar do vazio enquanto recarrega,
+  // para ele não piscar a cada filtro.
+  const { data: contagem } = useQuery({
+    queryKey: ["praticar-contagem", recorte],
+    queryFn: () => api.get<{ total: number }>("/praticar/contagem", recorte),
+    placeholderData: keepPreviousData,
+    staleTime: 30_000,
+  });
+  const total = contagem?.total;
+  const naFila = total === undefined ? quantidade : Math.min(quantidade, total);
 
   const { data: areas } = useAreas();
   const { data: especialidades } = useEspecialidades(areaId);
@@ -259,9 +284,19 @@ export default function Configurador({ onIniciar, areaInicial }: Props) {
           </div>
         )}
 
-        <div className="flex justify-end border-t border-line-soft pt-6">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line-soft pt-6">
+          {/* A contagem responde a cada filtro: antes só se descobria o tamanho
+              do recorte depois de começar a sessão, ou no "nenhum caso". */}
+          <span aria-live="polite" className="text-apoio tabular-nums text-muted">
+            {total === undefined
+              ? "Contando os casos…"
+              : total === 0
+                ? "Nenhum caso nesse recorte"
+                : `${total.toLocaleString("pt-BR")} ${total === 1 ? "caso" : "casos"} nesse recorte`}
+          </span>
           <button
             type="button"
+            disabled={total === 0}
             onClick={() =>
               onIniciar({
                 area_id: areaId,
@@ -277,7 +312,7 @@ export default function Configurador({ onIniciar, areaInicial }: Props) {
             }
             className={`group ${BOTAO_PRIMARIO}`}
           >
-            Iniciar sessão de {quantidade} casos
+            Iniciar sessão de {naFila} {naFila === 1 ? "caso" : "casos"}
             <ArrowRight size={18} strokeWidth={2} className="transition-transform duration-toggle ease-suave group-hover:translate-x-0.5" />
           </button>
         </div>

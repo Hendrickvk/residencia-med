@@ -46,9 +46,19 @@ export function PrevisaoSemana({ dias, meta }: { dias: PrevisaoDia[]; meta: numb
               key={d.dia}
               role="img"
               aria-label={descricao(d, i)}
-              title={descricao(d, i)}
-              className="flex flex-col items-center justify-end gap-1"
+              tabIndex={0}
+              className="group relative flex cursor-default flex-col items-center justify-end gap-1 outline-none"
             >
+              {/* No lugar do `title` nativo, que esperava ~1s e não existia no
+                  toque; aqui o foco (tabIndex) revela a dica no celular. Nas
+                  pontas ela se alinha pela borda, para não sair do cartão. */}
+              <span
+                className={`pointer-events-none absolute bottom-full z-10 mb-1.5 whitespace-nowrap rounded-etq border border-line bg-surface px-2 py-1 text-[12px] font-semibold text-ink opacity-0 transition-opacity duration-hover ease-brand group-hover:opacity-100 group-focus-within:opacity-100 ${
+                  i === 0 ? "left-0" : i === dias.length - 1 ? "right-0" : "left-1/2 -translate-x-1/2"
+                }`}
+              >
+                {descricao(d, i)}
+              </span>
               <span className="text-[12px] font-semibold tabular-nums text-ink-2">{total > 0 ? total : ""}</span>
               {total > 0 && (
                 <div

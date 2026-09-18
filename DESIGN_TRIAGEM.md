@@ -152,7 +152,16 @@ rótulo      13px / largura 70% / 700 / CAIXA ALTA / tracking 0.06em, cor --mute
   esquerda e contagem à direita.
 - **Cartão de área**: superfície, borda, raio 6, padding 14. Nome (15px/600),
   percentual (30px/800, largura 110%), fração (13px `--muted`), barra de 4px na cor
-  do nível. Clique leva ao Praticar filtrado; hover revela "Praticar 10".
+  do nível. Clique leva ao Praticar filtrado, e o atalho "Praticar 10" fica
+  **sempre visível** — botão de tinta no cartão de destaque, link de texto nos
+  outros. Era revelado no hover até 2026-09-18, o que o tornava inalcançável em
+  tela de toque: nenhuma ação pode depender de hover.
+- **Dica de gráfico**: aparece em hover **e** em foco — ponto e barra levam
+  `tabindex`, porque toque não gera hover. No gráfico de linha é texto de 12px/600
+  com contorno na cor da superfície (`paint-order: stroke`), ancorado para dentro
+  nas pontas; nas barras, caixa de superfície com borda `--line` e raio 3 acima da
+  barra. Nunca usar o `title` nativo de HTML ou SVG: espera ~1s, não aceita estilo
+  e não existe no celular.
 - **Alternativa**: grade `[letra 32px] [texto] [extra]`, borda 1px, raio 6, padding
   12/14. Letra num quadrado de 32px, raio 4, fundo `--ground`.
   - Selecionada (antes de confirmar): borda 2px `--ink`, letra com fundo `--ink`.
@@ -271,7 +280,12 @@ Conteúdo das demais telas: largura máxima 1360px, padding 36/40px.
   têm casos, com a contagem; cada um depende do anterior, e o tema ocupa a linha
   inteira porque há nomes longos), banca, ano; tipo de pergunta (Todos e os quatro
   tipos) e quantidade como botões segmentados (10/20/30/50); dois interruptores; filtros escolhidos
-  viram etiquetas removíveis; botão "Iniciar sessão de {n} casos".
+  viram etiquetas removíveis; no rodapé, "{n} casos nesse recorte" à esquerda e
+  o botão "Iniciar sessão de {n} casos" à direita. A contagem vem do servidor a
+  cada mudança de filtro (`GET /praticar/contagem`) e manda no botão: ele
+  anuncia o menor entre a quantidade escolhida e o que existe, e desliga em
+  "Nenhum caso nesse recorte" — antes o recorte vazio só aparecia depois de
+  começar a sessão.
 - **Sessão (modo foco)**: acima do cartão, "Caso" + número em display à esquerda,
   área · especialidade e selo de prova oficial à direita, com todas as provas em que
   o caso caiu ("Revalida 2025/2 · ENAMED 2025") e não só o caderno principal
