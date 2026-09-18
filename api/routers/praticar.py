@@ -40,6 +40,37 @@ def obter_sessao_pratica(
     return {"questoes": questoes_publicas(questoes)}
 
 
+@router.get("/praticar/contagem")
+def contar_casos_pratica(
+    area_id: int | None = None,
+    especialidade_id: int | None = None,
+    subtopico_id: int | None = None,
+    tipo_pergunta: str | None = None,
+    banca: str | None = None,
+    ano: int | None = None,
+    apenas_erros: bool = False,
+    excluir_respondidas: bool = False,
+    usuario=Depends(usuario_atual),
+):
+    """Quantos casos o recorte do Configurador tem, para ele responder enquanto
+    o aluno mexe nos filtros em vez de só no "nenhum caso encontrado" depois
+    de começar a sessão.
+
+    Conta pela mesma função que monta a sessão: um `count(*)` próprio aqui
+    duplicaria o WHERE e sairia da sincronia na primeira mudança de filtro.
+    """
+    # ponytail: traz os ids e conta em Python, porque o banco tem 1 074 questões
+    # e é o que o /praticar/sessao já faz a cada sessão. Se o banco crescer uma
+    # ordem de grandeza, virar count(*) dentro de db.py.
+    ids = db.ids_questoes_filtro_pratica(
+        usuario_id=usuario["id"], area_id=area_id, subtopico_id=subtopico_id,
+        banca=banca, ano=ano, apenas_erros=apenas_erros,
+        excluir_respondidas=excluir_respondidas, especialidade_id=especialidade_id,
+        tipo_pergunta=tipo_pergunta,
+    )
+    return {"total": len(ids)}
+
+
 @router.post("/respostas")
 def registrar_resposta(dados: RespostaIn, usuario=Depends(usuario_atual)):
     """Grava a resposta E aciona o SM-2 na mesma chamada — no app Streamlit

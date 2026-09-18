@@ -87,7 +87,20 @@ export default function Painel() {
       )}
       {data.semana.novas > 0 && (
         <div className="animate-entrar" style={{ animationDelay: "340ms" }}>
-          <ProgressoSemana semana={data.semana} />
+          <ProgressoSemana
+            semana={data.semana}
+            onPraticar={(t, quantidade) =>
+              navigate("/praticar", {
+                state: {
+                  areaId: t.area_id,
+                  especialidadeId: t.especialidade_id,
+                  subtopicoId: t.subtopico_id,
+                  iniciarImediato: true,
+                  quantidade,
+                },
+              })
+            }
+          />
         </div>
       )}
       {data.por_tipo.some((t) => t.total > 0) && (

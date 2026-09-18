@@ -2,10 +2,14 @@ import { ArrowRight } from "lucide-react";
 import { EtiquetaPct } from "../../components/EtiquetaPct";
 import { formatarPctBR } from "../../lib/format";
 import { atraso } from "../../lib/movimento";
-import type { ProgressoSemana as Dados } from "../../lib/types";
+import type { ProgressoSemana as Dados, TemaDaSemana } from "../../lib/types";
+
+// Mesma quantidade das prioridades, o outro atalho de tema do Painel.
+const QUANTIDADE = 10;
 
 interface Props {
   semana: Dados;
+  onPraticar: (tema: TemaDaSemana, quantidade: number) => void;
 }
 
 function dataCurta(iso: string): string {
@@ -14,7 +18,7 @@ function dataCurta(iso: string): string {
 
 // DESIGN_TRIAGEM.md §6, Painel ("O que mudou nesta semana", db.progresso_semana):
 // o fim do ciclo que começa nas prioridades e passa pela prática.
-export function ProgressoSemana({ semana }: Props) {
+export function ProgressoSemana({ semana, onPraticar }: Props) {
   const pct = semana.novas ? (100 * semana.acertos) / semana.novas : 0;
   return (
     <section className="flex flex-col gap-4 rounded-card border border-line bg-surface p-6">
@@ -39,7 +43,24 @@ export function ProgressoSemana({ semana }: Props) {
             style={atraso(i + 1, 60)}
           >
             <div className="min-w-0">
-              <div className="truncate text-corpo font-semibold">{t.tema}</div>
+              {/* O bloco fechava o ciclo das prioridades sem dar como continuá-lo:
+                  o tema agora abre a sessão dele, como em "Onde você ganha mais pontos". */}
+              <button
+                type="button"
+                onClick={() => onPraticar(t, QUANTIDADE)}
+                aria-label={`Praticar ${QUANTIDADE} casos de ${t.tema}`}
+                className="group/tema flex w-full min-w-0 items-center gap-1.5 text-left"
+              >
+                <span className="truncate text-corpo font-semibold underline-offset-2 group-hover/tema:underline">
+                  {t.tema}
+                </span>
+                <ArrowRight
+                  size={14}
+                  strokeWidth={2}
+                  aria-hidden="true"
+                  className="shrink-0 text-muted transition-transform duration-toggle ease-suave group-hover/tema:translate-x-0.5"
+                />
+              </button>
               <div className="truncate text-apoio text-muted">
                 {t.especialidade} · {t.novas} {t.novas === 1 ? "nova" : "novas"},{" "}
                 {t.acertos.toLocaleString("pt-BR")} {t.acertos === 1 ? "certa" : "certas"}

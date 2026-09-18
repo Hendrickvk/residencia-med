@@ -99,34 +99,81 @@ export function EvolucaoTriagem({ evolucao }: { evolucao: DiaEvolucao[] }) {
           strokeDasharray="1 2"
           className="animate-tracar stroke-ink"
         />
-        {pontos.map((p) => (
-          <circle key={p.dia.dia} cx={p.x} cy={p.y} r={9} fill="transparent">
-            <title>{`${rotuloDia(p.dia.dia, false)}: ${formatarPctBR(p.dia.pct_acerto, 0)}% (${p.dia.acertos.toLocaleString("pt-BR")} de ${p.dia.total})`}</title>
-          </circle>
-        ))}
-        <circle
-          cx={ultimo.x}
-          cy={ultimo.y}
-          r={5.5}
-          strokeWidth={2}
-          pointerEvents="none"
-          className="animate-desvanecer fill-ink stroke-surface"
-          style={{ animationDelay: "900ms" }}
-        />
-        {/* Contorno na cor da superfície: o rótulo continua legível quando cai sobre a linha. */}
-        <text
-          x={ultimo.x - 10}
-          y={yRotuloUltimo}
-          textAnchor="end"
-          fontSize={13}
-          fontWeight={700}
-          strokeWidth={4}
-          strokeLinejoin="round"
-          style={{ paintOrder: "stroke", animationDelay: "950ms" }}
-          className="animate-desvanecer fill-ink stroke-surface"
-        >
-          {formatarPctBR(ultimo.dia.pct_acerto, 0)}%
-        </text>
+        {pontos.map((p, i) => {
+          const eUltimo = i === pontos.length - 1;
+          // Dica acima do ponto, ou abaixo quando ele está colado no teto.
+          const yDica = p.y - 14 > Y0 ? p.y - 14 : p.y + 24;
+          const ancora = p.x < 150 ? "start" : p.x > LARGURA - 150 ? "end" : "middle";
+          const xDica = ancora === "start" ? p.x - 8 : ancora === "end" ? p.x + 8 : p.x;
+          return (
+            <g key={p.dia.dia} className="group">
+              {/* Alvo generoso e focável: o toque não produz hover, então é o
+                  foco que revela a dica no celular (e o Tab, no teclado). */}
+              <circle
+                cx={p.x}
+                cy={p.y}
+                r={9}
+                fill="transparent"
+                tabIndex={0}
+                className="cursor-pointer outline-none"
+              />
+              <circle
+                cx={p.x}
+                cy={p.y}
+                r={4}
+                strokeWidth={2}
+                pointerEvents="none"
+                className="fill-ink stroke-surface opacity-0 transition-opacity duration-hover ease-brand group-hover:opacity-100 group-focus-within:opacity-100"
+              />
+              {eUltimo && (
+                <>
+                  <circle
+                    cx={p.x}
+                    cy={p.y}
+                    r={5.5}
+                    strokeWidth={2}
+                    pointerEvents="none"
+                    className="animate-desvanecer fill-ink stroke-surface"
+                    style={{ animationDelay: "900ms" }}
+                  />
+                  {/* Contorno na cor da superfície: o rótulo continua legível
+                      quando cai sobre a linha. Sai de cena quando a dica entra,
+                      para os dois não se sobreporem. */}
+                  <text
+                    x={p.x - 10}
+                    y={yRotuloUltimo}
+                    textAnchor="end"
+                    fontSize={13}
+                    fontWeight={700}
+                    strokeWidth={4}
+                    strokeLinejoin="round"
+                    pointerEvents="none"
+                    style={{ paintOrder: "stroke", animationDelay: "950ms" }}
+                    className="animate-desvanecer fill-ink stroke-surface transition-opacity duration-hover ease-brand group-hover:opacity-0 group-focus-within:opacity-0"
+                  >
+                    {formatarPctBR(p.dia.pct_acerto, 0)}%
+                  </text>
+                </>
+              )}
+              {/* No lugar do <title> do SVG, que só aparecia depois de ~1s, não
+                  aceitava estilo nenhum e não existia no toque. */}
+              <text
+                x={xDica}
+                y={yDica}
+                textAnchor={ancora}
+                fontSize={12}
+                fontWeight={600}
+                strokeWidth={4}
+                strokeLinejoin="round"
+                pointerEvents="none"
+                style={{ paintOrder: "stroke" }}
+                className="fill-ink stroke-surface opacity-0 transition-opacity duration-hover ease-brand group-hover:opacity-100 group-focus-within:opacity-100"
+              >
+                {`${rotuloDia(p.dia.dia, false)} · ${formatarPctBR(p.dia.pct_acerto, 0)}% (${p.dia.acertos.toLocaleString("pt-BR")} de ${p.dia.total})`}
+              </text>
+            </g>
+          );
+        })}
         <text x={X0} y={ALTURA - 2} fontSize={10} className="fill-muted">
           {rotuloDia(evolucao[0].dia, false)}
         </text>

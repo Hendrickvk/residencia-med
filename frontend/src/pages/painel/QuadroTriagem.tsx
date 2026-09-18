@@ -56,25 +56,7 @@ function CartaoArea({
       <span className="text-[15px] font-semibold leading-snug">{area.area}</span>
       <div className="flex items-baseline justify-between gap-2">
         <span className="num-md">{formatarPctBR(area.pct_acerto)}%</span>
-        {destaque ? (
-          fracao
-        ) : (
-          // Fração e atalho empilhados na mesma célula: no hover um sobe e some
-          // enquanto o outro sobe e aparece. O cartão não cresce e a coluna não pula.
-          <span className="grid justify-items-end">
-            <span className="transition duration-toggle ease-brand [grid-area:1/1] group-focus-within:-translate-y-1 group-focus-within:opacity-0 group-hover:-translate-y-1 group-hover:opacity-0">
-              {fracao}
-            </span>
-            <button
-              type="button"
-              onClick={() => onPraticar(area.area_id)}
-              className="pointer-events-none relative z-10 flex translate-y-1 items-center gap-1 whitespace-nowrap text-[13px] font-semibold text-ink opacity-0 underline-offset-2 transition duration-toggle ease-brand [grid-area:1/1] hover:underline group-focus-within:pointer-events-auto group-focus-within:translate-y-0 group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100"
-            >
-              Praticar 10
-              <ArrowRight size={14} strokeWidth={2} />
-            </button>
-          </span>
-        )}
+        {fracao}
       </div>
       <div className="h-1 overflow-hidden rounded-[2px] bg-line-soft">
         {/* Enche da esquerda ao entrar; se o valor muda depois, a largura desliza. */}
@@ -83,7 +65,10 @@ function CartaoArea({
           style={{ width: `${area.pct_acerto}%`, animationDelay: `${atrasoMs + 120}ms` }}
         />
       </div>
-      {destaque && (
+      {/* O atalho fica sempre visível. Ele já existia nos outros cartões, mas
+          escondido até o hover: em tela de toque não existe hover, então o
+          "Praticar 10" era inalcançável no celular fora do cartão de destaque. */}
+      {destaque ? (
         <button
           type="button"
           onClick={() => onPraticar(area.area_id)}
@@ -92,6 +77,19 @@ function CartaoArea({
           Praticar 10
           <ArrowRight
             size={15}
+            strokeWidth={2}
+            className="transition-transform duration-toggle ease-suave group-hover/praticar:translate-x-0.5"
+          />
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => onPraticar(area.area_id)}
+          className="group/praticar relative z-10 mt-1 flex items-center gap-1 self-start whitespace-nowrap text-[13px] font-semibold text-ink underline-offset-2 transition duration-hover hover:underline active:scale-[0.97]"
+        >
+          Praticar 10
+          <ArrowRight
+            size={14}
             strokeWidth={2}
             className="transition-transform duration-toggle ease-suave group-hover/praticar:translate-x-0.5"
           />
