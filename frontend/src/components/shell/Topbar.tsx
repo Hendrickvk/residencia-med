@@ -1,4 +1,4 @@
-import { Flame, LogOut, Menu, Moon, Sun, X } from "lucide-react";
+import { Flame, LogOut, Menu, Moon, Sun, Terminal, X } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { PRESSAO } from "../../lib/estilos";
@@ -16,6 +16,9 @@ interface TopbarProps {
   me?: Me;
   revisoesHoje?: number;
   onSair: () => void;
+  // Só a convidada da brincadeira recebe esta opção; para todo mundo vem
+  // `undefined` e o item não existe.
+  onRever?: () => void;
 }
 
 function textoProva(provaAlvo: string | null): string | null {
@@ -66,7 +69,7 @@ function useIndicadorAba(ativo: boolean) {
 
 // DESIGN_TRIAGEM.md §5: barra superior com abas no lugar do rail lateral. Em
 // modo foco (sessão em andamento) as abas dão lugar à barra da sessão.
-export function Topbar({ tema, onAlternarTema, me, revisoesHoje, onSair }: TopbarProps) {
+export function Topbar({ tema, onAlternarTema, me, revisoesHoje, onSair, onRever }: TopbarProps) {
   const { ativo: emFoco, setSlot } = useFoco();
   const [gavetaAberta, setGavetaAberta] = useState(false);
   const [contaAberta, setContaAberta] = useState(false);
@@ -120,7 +123,7 @@ export function Topbar({ tema, onAlternarTema, me, revisoesHoje, onSair }: Topba
           onClick={() => setGavetaAberta(false)}
           aria-label="Conduta, ir para o Painel"
           title="Ir para o Painel"
-          className="shrink-0 rounded-btn transition-opacity duration-hover hover:opacity-80"
+          className="group/marca shrink-0 rounded-btn transition-opacity duration-hover hover:opacity-80"
         >
           <Marca />
         </Link>
@@ -226,6 +229,22 @@ export function Topbar({ tema, onAlternarTema, me, revisoesHoje, onSair }: Topba
                             {item.label}
                           </NavLink>
                         ))}
+                      </div>
+                    )}
+
+                    {onRever && (
+                      <div className="border-t border-line-soft pt-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setContaAberta(false);
+                            onRever();
+                          }}
+                          className="flex w-full items-center gap-2.5 rounded-btn px-2.5 py-2 text-corpo text-ink-2 transition duration-hover hover:bg-ground hover:text-ink"
+                        >
+                          <Terminal size={16} strokeWidth={2} />
+                          Rever as boas-vindas
+                        </button>
                       </div>
                     )}
 

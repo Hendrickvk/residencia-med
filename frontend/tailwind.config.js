@@ -95,6 +95,8 @@ export default {
           from: { opacity: "0", transform: "rotate(-90deg) scale(0.6)" },
           to: { opacity: "1", transform: "none" },
         },
+        // Cursor de terminal: liga/desliga, sem meio-tom.
+        piscar: { "0%, 49%": { opacity: "1" }, "50%, 100%": { opacity: "0" } },
       },
       // `backwards` aplica o quadro inicial durante o atraso (escalonamento) e
       // não deixa transform preso no elemento depois — um transform residual
@@ -110,6 +112,7 @@ export default {
         crescer: `crescer 800ms ${SUAVE} backwards`,
         marcar: `marcar 260ms ${SUAVE}`,
         girar: `girar 320ms ${SUAVE}`,
+        piscar: "piscar 1s steps(1, end) infinite",
       },
     },
   },

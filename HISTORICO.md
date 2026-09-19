@@ -234,9 +234,10 @@ ambiente: `uvicorn api.main:app --port 8000` na raiz e `npm run dev` em
 `frontend/`. Nada do que foi feito desde
 13/09 está no servidor: o deploy segue bloqueado por SSH. Há também uma
 brincadeira de boas-vindas para uma conta específica
-(`frontend/src/lib/brincadeira.ts`, diálogos mostrados uma vez por navegador,
-e-mail guardado só como hash): a ideia fica, mas o texto é provisório e ainda
-será revisto.
+(`frontend/src/lib/brincadeira.ts`, mostrada uma vez por navegador, e-mail
+guardado só como hash). Reescrita em 2026-09-18: um alerta de ameaça como ato
+de abertura, com as linhas da varredura aparecendo uma a uma, e oito diálogos
+de frase curta em que os botões são a fala da convidada.
 
 1. **Próxima edição do ENAMED.** É a prova que faz hoje a seleção de acesso
    direto e entra no peso do INEP que alimenta as prioridades e a nota projetada
