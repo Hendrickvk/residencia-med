@@ -107,6 +107,12 @@ rótulo      13px / largura 70% / 700 / CAIXA ALTA / tracking 0.06em, cor --mute
   botão e texto corrido em caixa normal.
 - A marca "Conduta": 21px, 800, largura 115%, tracking -0.03em, precedida do
   **símbolo**: cinco barras de 4px de largura, alturas 20/16/12/8/4px, nas cores t1→t5.
+  Na barra superior, onde a marca é o link para o Painel, o cursor inverte a
+  escala: cada barra vai à altura da sua oposta (`scaleY`, origem embaixo,
+  320ms `suave`, 45ms de atraso entre elas) e volta ao sair — o t1 encolhe e o
+  t5 cresce, que é o percurso que a plataforma existe para provocar. É a única
+  animação decorativa do sistema, e só existe onde o hover já significa algo:
+  no Login a marca não é link e fica parada, para não prometer clique.
 
 ### Forma, espaço, movimento
 
