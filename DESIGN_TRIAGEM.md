@@ -145,6 +145,22 @@ rótulo      13px / largura 70% / 700 / CAIXA ALTA / tracking 0.06em, cor --mute
     reservada, percentuais entram em coluna já reservada.
   - `prefers-reduced-motion` zera durações e atrasos; contagens pulam direto ao valor.
 
+### Ícone e instalação no celular
+
+O ícone **é** o símbolo da marca (§3): as cinco barras da triagem, sem texto.
+- `favicon.svg` (32×32, fundo transparente, tons do tema claro) serve a aba em
+  qualquer tema. Um SVG em `public/` não é achado sozinho pelo navegador — o
+  `<link rel="icon">` no `index.html` é obrigatório.
+- `apple-touch-icon.png` (180), `icone-192.png` e `icone-512.png` são azulejos de
+  fundo `--ground` escuro com as barras nos tons do tema escuro, ocupando 68% da
+  largura para sobrar a zona segura do recorte circular do Android
+  (`"purpose": "any maskable"` no `manifest.webmanifest`).
+- `<meta name="theme-color">` existe porque a barra de endereço do celular não
+  segue o CSS: o `aplicarTema` (`lib/theme.ts`) copia para ela o `--ground` do
+  tema em vigor, senão a barra fica branca por cima do app escuro.
+- Para refazer os PNGs: cinco retângulos de 4×{20,16,12,8,4} com vão de 2, raio 1,
+  nas cores t1–t5 do tema escuro, centrados sobre `#0e1012`.
+
 ## 4. Componentes
 
 - **Botão primário**: fundo `--ink`, texto `--on-ink`, 600, altura 42–46px, raio 5.
@@ -180,6 +196,17 @@ rótulo      13px / largura 70% / 700 / CAIXA ALTA / tracking 0.06em, cor --mute
   `--line-soft` fora dele.
 - **Estado vazio**: caixa com borda tracejada `--line`, uma frase que orienta e no
   máximo um botão.
+- **Estado de falha**: mesma caixa, borda **cheia** (a tracejada é do vazio), uma
+  frase que não culpa o aluno e um "Tentar de novo". Sem cor de triagem: vermelho
+  aqui seria decoração, e t1–t5 só codificam nível (§2). **Falha não é vazio** —
+  até 2026-09-19 o Painel, a Revisão e o Praticar caíam no estado vazio quando a
+  requisição não voltava, e a tela dizia "ainda não há respostas" ou "nenhuma
+  revisão vencida hoje" a quem tinha histórico e fila. Toda tela cuja consulta
+  principal pode falhar precisa distinguir `isError` de "não tem nada".
+- **Tela quebrada** (`BarreiraErro`, a barreira de erro na raiz do app): cartão de
+  superfície centrado, "Esta tela quebrou.", uma frase e "Recarregar"; a mensagem
+  técnica do erro aparece só em desenvolvimento. É o fundo do poço da interface,
+  não um lugar para explicar o erro.
 - **Skeleton**: blocos `--line-soft` com as dimensões finais.
 
 ## 5. Estrutura
@@ -381,6 +408,9 @@ Conteúdo das demais telas: largura máxima 1360px, padding 36/40px.
 ### Login
 - Marca grande com o símbolo, frase "Sua plataforma de estudos para residência
   médica", cartão com abas Entrar / Criar conta. Fundo `--ground`.
+- O tema é aplicado no `main.tsx`, antes do primeiro quadro, e não no `AppShell`:
+  o login e a redefinição de senha ficam fora dele e apareciam sempre claros para
+  quem usa o escuro.
 
 ## 7. Voz
 

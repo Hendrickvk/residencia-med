@@ -1,5 +1,8 @@
 import { useState } from "react";
 import { useLocation } from "react-router-dom";
+import { useMe } from "../../lib/auth";
+import { BOTAO_PRIMARIO, BOTAO_SECUNDARIO } from "../../lib/estilos";
+import { lerSessao, limparSessao, type SessaoSalva } from "../../lib/sessaoSalva";
 import type { FiltrosPratica, ResumoSessao } from "../../lib/types";
 import Configurador from "./Configurador";
 import Resumo from "./Resumo";
@@ -7,7 +10,7 @@ import Sessao from "./Sessao";
 
 type Fase =
   | { tipo: "config" }
-  | { tipo: "sessao"; filtros: FiltrosPratica; nonce: number }
+  | { tipo: "sessao"; filtros: FiltrosPratica; nonce: number; salva?: SessaoSalva | null }
   | { tipo: "resumo"; resumo: ResumoSessao };
 
 // Vindo do Painel ("Praticar 10" de uma área do quadro ou de um tema de "Onde
@@ -25,6 +28,11 @@ interface EstadoNavegacao {
 export default function Praticar() {
   const location = useLocation();
   const estadoNav = (location.state as EstadoNavegacao | null) ?? null;
+  const { data: me } = useMe();
+  // Lido uma vez: se ela fechou a aba no meio de uma sessão, é isto que
+  // aparece aqui em vez de a sessão simplesmente ter deixado de existir.
+  const [salva, setSalva] = useState<SessaoSalva | null>(() => lerSessao());
+  const pendente = salva && me && salva.email === me.email ? salva : null;
 
   const [fase, setFaseBruta] = useState<Fase>(() => {
     if (estadoNav?.iniciarImediato) {
@@ -57,7 +65,36 @@ export default function Praticar() {
 
   if (fase.tipo === "config") {
     return (
-      <div key="config" className={entrada}>
+      <div key="config" className={`flex flex-col gap-5 ${entrada}`}>
+        {pendente && (
+          <div className="flex flex-col gap-3 rounded-card border border-line bg-surface px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-corpo text-ink-2">
+              Você parou no caso {pendente.idx + 1} de {pendente.questoes.length} de uma sessão anterior.
+            </p>
+            <div className="flex shrink-0 gap-2">
+              <button
+                type="button"
+                className={BOTAO_PRIMARIO}
+                onClick={() => {
+                  setFase({ tipo: "sessao", filtros: pendente.filtros, nonce: pendente.salvoEm, salva: pendente });
+                  setSalva(null);
+                }}
+              >
+                Retomar
+              </button>
+              <button
+                type="button"
+                className={BOTAO_SECUNDARIO}
+                onClick={() => {
+                  limparSessao();
+                  setSalva(null);
+                }}
+              >
+                Descartar
+              </button>
+            </div>
+          </div>
+        )}
         <Configurador
           areaInicial={estadoNav?.areaId}
           onIniciar={(filtros) => setFase({ tipo: "sessao", filtros, nonce: Date.now() })}
@@ -71,6 +108,8 @@ export default function Praticar() {
       <Sessao
         filtros={fase.filtros}
         nonce={fase.nonce}
+        salva={fase.salva}
+        email={me?.email}
         onFinalizar={(resumo) => setFase({ tipo: "resumo", resumo })}
         onVoltar={() => setFase({ tipo: "config" })}
       />

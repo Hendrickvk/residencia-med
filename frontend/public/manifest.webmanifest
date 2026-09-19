@@ -1,0 +1,16 @@
+{
+  "name": "Conduta",
+  "short_name": "Conduta",
+  "description": "Banco de questões, painel de desempenho, revisão espaçada e simulados para ENAMED e Revalida.",
+  "lang": "pt-BR",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0e1012",
+  "theme_color": "#0e1012",
+  "icons": [
+    { "src": "/favicon.svg", "type": "image/svg+xml", "sizes": "any" },
+    { "src": "/icone-192.png", "type": "image/png", "sizes": "192x192", "purpose": "any maskable" },
+    { "src": "/icone-512.png", "type": "image/png", "sizes": "512x512", "purpose": "any maskable" }
+  ]
+}

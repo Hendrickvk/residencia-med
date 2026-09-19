@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { BadgeCheck, Clock, Flag, RefreshCw } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { EstadoFalha } from "../../components/EstadoFalha";
 import { EstadoVazio } from "../../components/EstadoVazio";
 import { Kbd } from "../../components/Kbd";
 import { TemaDoCaso } from "../../components/TemaDoCaso";
@@ -13,6 +14,7 @@ import { BarraFoco } from "../../lib/foco";
 import { formatarMMSS } from "../../lib/format";
 import { rolarParaTopo } from "../../lib/movimento";
 import { enfileirarResposta } from "../../lib/respostasQueue";
+import { limparSessao, salvarSessao, type SessaoSalva } from "../../lib/sessaoSalva";
 import { seloDasProvas } from "../../lib/simulados";
 import type { FiltrosPratica, Questao, ResumoSessao } from "../../lib/types";
 import { AlternativaLinha, type EstadoAlternativa } from "./AlternativaLinha";
@@ -21,14 +23,18 @@ import { useCronometro } from "./useCronometro";
 interface Props {
   filtros: FiltrosPratica;
   nonce: number;
+  // Sessão retomada: o lote vem do `localStorage` e não do servidor, porque
+  // `/praticar/sessao` sorteia e devolveria outras questões.
+  salva?: SessaoSalva | null;
+  email?: string;
   onFinalizar: (resumo: ResumoSessao) => void;
   onVoltar: () => void;
 }
 
 const LETRAS = ["A", "B", "C", "D", "E"];
 
-export default function Sessao({ filtros, nonce, onFinalizar, onVoltar }: Props) {
-  const { data, isLoading, isError } = useQuery({
+export default function Sessao({ filtros, nonce, salva, email, onFinalizar, onVoltar }: Props) {
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["sessao-pratica", nonce],
     queryFn: () =>
       api.get<{ questoes: Questao[] }>("/praticar/sessao", {
@@ -44,20 +50,24 @@ export default function Sessao({ filtros, nonce, onFinalizar, onVoltar }: Props)
       }),
     staleTime: Infinity,
     gcTime: 0,
+    enabled: !salva,
   });
 
-  const fila = data?.questoes ?? [];
-  const [idx, setIdx] = useState(0);
+  // Referência estável: o efeito que grava a sessão depende do lote, e um
+  // `[]` novo a cada render o faria rodar sem nada ter mudado.
+  const fila = useMemo(() => salva?.questoes ?? data?.questoes ?? [], [salva, data]);
+  const [idx, setIdx] = useState(salva?.idx ?? 0);
   const [selecionada, setSelecionada] = useState<string | null>(null);
   const [confirmado, setConfirmado] = useState(false);
   const [distribuicao, setDistribuicao] = useState<Record<string, number> | null>(null);
-  const [marcadas, setMarcadas] = useState<Set<number>>(() => new Set());
+  const [marcadas, setMarcadas] = useState<Set<number>>(() => new Set(salva?.marcadas ?? []));
   // Acerto/erro de cada caso já concluído, para o progresso na barra de foco.
-  const [resultados, setResultados] = useState<boolean[]>([]);
+  const [resultados, setResultados] = useState<boolean[]>(salva?.resultados ?? []);
   // O primeiro caso só esmaece (chega depois do esqueleto); os seguintes deslizam.
   const [avancou, setAvancou] = useState(false);
-  const respondidasRef = useRef<ResumoSessao["respondidas"]>([]);
-  const inicioSessaoRef = useRef(Date.now());
+  const respondidasRef = useRef<ResumoSessao["respondidas"]>(salva?.respondidas ?? []);
+  // Retomando, o cronômetro continua de onde parou em vez de zerar.
+  const inicioSessaoRef = useRef(Date.now() - (salva?.duracaoMs ?? 0));
   const { decorridoMs, tempoDecorridoMs } = useCronometro(idx);
 
   const questaoAtual = fila[idx];
@@ -67,6 +77,28 @@ export default function Sessao({ filtros, nonce, onFinalizar, onVoltar }: Props)
     if (data) setMarcadas(new Set(fila.filter((q) => q.marcada).map((q) => q.id)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data]);
+
+  // Guarda onde ela está a cada caso concluído, e uma vez quando o lote chega —
+  // quem fecha a aba no primeiro caso também tem o que retomar.
+  useEffect(() => {
+    if (!email || fila.length === 0) return;
+    salvarSessao({
+      email,
+      filtros,
+      questoes: fila,
+      idx,
+      respondidas: respondidasRef.current,
+      resultados,
+      marcadas: [...marcadas],
+      duracaoMs: Date.now() - inicioSessaoRef.current,
+    });
+  }, [email, filtros, fila, idx, resultados, marcadas]);
+
+  // Sessão encerrada não é sessão para retomar.
+  function finalizar() {
+    limparSessao();
+    onFinalizar({ respondidas: respondidasRef.current, duracaoTotalMs: Date.now() - inicioSessaoRef.current });
+  }
 
   function confirmar() {
     if (!selecionada || !questaoAtual) return;
@@ -82,7 +114,7 @@ export default function Sessao({ filtros, nonce, onFinalizar, onVoltar }: Props)
 
   function avancarOuFinalizar() {
     if (idx + 1 >= fila.length) {
-      onFinalizar({ respondidas: respondidasRef.current, duracaoTotalMs: Date.now() - inicioSessaoRef.current });
+      finalizar();
     } else {
       setIdx((i) => i + 1);
       setSelecionada(null);
@@ -132,7 +164,7 @@ export default function Sessao({ filtros, nonce, onFinalizar, onVoltar }: Props)
   }
 
   function encerrarSessao() {
-    onFinalizar({ respondidas: respondidasRef.current, duracaoTotalMs: Date.now() - inicioSessaoRef.current });
+    finalizar();
   }
 
   // A–E seleciona, Enter confirma, → avança, M marca (MIGRACAO.md §4, Fase 3).
@@ -186,7 +218,20 @@ export default function Sessao({ filtros, nonce, onFinalizar, onVoltar }: Props)
     );
   }
 
-  if (isError || fila.length === 0) {
+  // Falha de rede e recorte sem casos diziam a mesma frase — e "amplie o
+  // recorte" é conselho errado para quem só perdeu o sinal.
+  if (isError) {
+    return (
+      <div className="mx-auto max-w-[680px] animate-entrar">
+        <EstadoFalha
+          mensagem="Não deu para montar a sessão. Pode ser a conexão."
+          onTentarDeNovo={() => refetch()}
+        />
+      </div>
+    );
+  }
+
+  if (fila.length === 0) {
     return (
       <div className="mx-auto max-w-[680px] animate-entrar">
         <EstadoVazio

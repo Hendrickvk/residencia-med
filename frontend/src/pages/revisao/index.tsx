@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { BadgeCheck, RefreshCw, RotateCcw } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { EstadoFalha } from "../../components/EstadoFalha";
 import { EstadoVazio } from "../../components/EstadoVazio";
 import { Kbd } from "../../components/Kbd";
 import { TemaDoCaso } from "../../components/TemaDoCaso";
@@ -40,7 +41,7 @@ const NOTAS_ACERTO = [
 export default function Revisao() {
   // 0 = só o que cabe na meta de hoje; LOTE_EXTRA depois de "Revisar mais".
   const [extra, setExtra] = useState(0);
-  const { data, isLoading, refetch } = useLevaRevisao(extra);
+  const { data, isLoading, isError, refetch } = useLevaRevisao(extra);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   // Cópia local só depois que o aluno muda a ordem (erro reinsere o caso
@@ -171,6 +172,19 @@ export default function Revisao() {
       <div className="mx-auto flex max-w-[680px] flex-col gap-5">
         <div className="h-[72px] w-32 animate-pulse rounded-card bg-line-soft" />
         <div className="h-[360px] animate-pulse rounded-caso bg-line-soft" />
+      </div>
+    );
+  }
+
+  // Mesma regra do Painel: falha não é fila vazia. `filaSessao` significa
+  // revisão em andamento, que uma falha de rede não pode interromper.
+  if (isError && !filaSessao) {
+    return (
+      <div className="mx-auto max-w-[680px]">
+        <EstadoFalha
+          mensagem="Não deu para carregar a sua fila de revisão. Pode ser a conexão."
+          onTentarDeNovo={() => refetch()}
+        />
       </div>
     );
   }

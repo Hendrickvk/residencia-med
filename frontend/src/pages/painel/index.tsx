@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { EstadoFalha } from "../../components/EstadoFalha";
 import { EstadoVazio } from "../../components/EstadoVazio";
 import { RelatoResolvidoAviso } from "../../components/RelatoResolvidoAviso";
 import { useMe } from "../../lib/auth";
@@ -15,7 +16,7 @@ import { ProgressoSemana } from "./ProgressoSemana";
 import { QuadroTriagem } from "./QuadroTriagem";
 
 export default function Painel() {
-  const { data, isLoading } = usePainel();
+  const { data, isLoading, isError, refetch } = usePainel();
   const { data: me } = useMe();
   const navigate = useNavigate();
 
@@ -34,7 +35,18 @@ export default function Painel() {
     );
   }
 
-  if (!data || data.totais.respostas === 0) {
+  // Antes do estado vazio: sem `data` por falha de rede não é "você ainda não
+  // praticou", e dizer isso a quem tem histórico é o pior jeito de errar.
+  if (isError || !data) {
+    return (
+      <EstadoFalha
+        mensagem="Não deu para carregar a sua triagem. Pode ser a conexão."
+        onTentarDeNovo={() => refetch()}
+      />
+    );
+  }
+
+  if (data.totais.respostas === 0) {
     return (
       <EstadoVazio
         mensagem="Ainda não há respostas para montar a sua triagem. Responda alguns casos e ela aparece aqui."

@@ -17,6 +17,11 @@ export function temaJaTemPreferencia(): boolean {
 
 export function aplicarTema(tema: Tema) {
   document.documentElement.classList.toggle("dark", tema === "dark");
+  // A barra de endereço do celular é pintada pela meta, não pelo CSS. Lê a cor
+  // do tema já aplicado para não repetir aqui um valor que vive no theme.css.
+  const meta = document.querySelector('meta[name="theme-color"]');
+  const ground = getComputedStyle(document.documentElement).getPropertyValue("--ground").trim();
+  if (meta && ground) meta.setAttribute("content", ground);
 }
 
 export function persistirTema(tema: Tema) {
