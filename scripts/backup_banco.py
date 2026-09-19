@@ -10,7 +10,14 @@ correção de texto) e de vez em quando por hábito.
 
     python scripts/backup_banco.py
     python scripts/backup_banco.py --manter 10
+    python scripts/backup_banco.py --espelho "D:/algum/lugar"
     python scripts/backup_banco.py --restaurar-instrucoes
+
+`backups/` fica nesta máquina, que é o mesmo lugar de onde o banco é acessado:
+um HD que morre leva o backup junto. `--espelho DIR` (ou a variável de
+ambiente `BACKUP_ESPELHO`) copia o dump conferido para fora — uma pasta de
+nuvem que sincroniza, um HD externo, um pendrive. A cópia é rotacionada igual
+à daqui.
 
 Restauração (não é automática de propósito — sobrescrever o banco tem de ser
 um ato deliberado, digitado à mão):
@@ -21,6 +28,7 @@ um ato deliberado, digitado à mão):
 import argparse
 import glob
 import os
+import shutil
 import subprocess
 import sys
 from datetime import datetime
@@ -31,6 +39,9 @@ import db
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DESTINO = os.path.join(RAIZ, "backups", "db")
+# Pasta fora desta máquina (nuvem sincronizada, HD externo). Sem ela, o backup
+# existe só onde está o risco.
+ESPELHO = os.environ.get("BACKUP_ESPELHO", "")
 
 # O Windows não põe o pg_dump no PATH por padrão.
 CANDIDATOS = ["pg_dump"] + sorted(
@@ -53,6 +64,8 @@ def main():
     p = argparse.ArgumentParser(description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--manter", type=int, default=7, help="quantos backups manter (padrão 7)")
+    p.add_argument("--espelho", default=ESPELHO, metavar="DIR",
+                   help="copia o dump conferido para fora desta máquina (padrão: $BACKUP_ESPELHO)")
     p.add_argument("--restaurar-instrucoes", action="store_true")
     args = p.parse_args()
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -87,6 +100,8 @@ def main():
 
     print("  %s (%.1f MB)" % (arquivo, tamanho / 1e6))
     podar(args.manter)
+    if not espelhar(arquivo, args.espelho, args.manter):
+        return 1
     return 0
 
 
@@ -144,13 +159,42 @@ def contar_no_arquivo(pg_restore, arquivo, tabela):
     return linhas
 
 
-def podar(manter):
-    arquivos = sorted(glob.glob(os.path.join(DESTINO, "conduta_*.dump")))
+def podar(manter, diretorio=DESTINO):
+    arquivos = sorted(glob.glob(os.path.join(diretorio, "conduta_*.dump")))
     velhos = arquivos[:-manter] if manter > 0 else []
     for a in velhos:
         os.remove(a)
     if velhos:
         print("Removidos %d backup(s) antigo(s); %d mantido(s)." % (len(velhos), manter))
+
+
+def espelhar(arquivo, diretorio, manter):
+    """Copia o dump para fora da máquina. Devolve False só quando o destino foi
+    pedido e a cópia não deu certo — não ter pedido não é erro."""
+    if not diretorio:
+        print("Sem espelho: o backup existe só nesta máquina "
+              "(--espelho DIR ou BACKUP_ESPELHO resolve).")
+        return True
+    if not os.path.isdir(diretorio):
+        print("Espelho %s não existe ou não é pasta — o dump local está salvo, "
+              "mas não saiu daqui." % diretorio)
+        return False
+    fora = os.path.join(diretorio, os.path.basename(arquivo))
+    try:
+        shutil.copy2(arquivo, fora)
+        # Pasta de nuvem escreve por cima enquanto sincroniza; conferir o
+        # tamanho pega a cópia truncada, que é como isso falha na prática.
+        copiado = os.path.getsize(fora)
+    except OSError as erro:
+        print("Falhou ao copiar para o espelho: %s" % erro)
+        return False
+    if copiado != os.path.getsize(arquivo):
+        print("Cópia em %s saiu com %d bytes, o original tem %d — não confie nela."
+              % (fora, copiado, os.path.getsize(arquivo)))
+        return False
+    print("Espelhado: %s (%.1f MB)" % (fora, copiado / 1e6))
+    podar(manter, diretorio)
+    return True
 
 
 if __name__ == "__main__":
