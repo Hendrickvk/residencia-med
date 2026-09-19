@@ -21,6 +21,27 @@ class CredenciaisIn(BaseModel):
         return v.strip().lower()
 
 
+class EsqueciSenhaIn(BaseModel):
+    """Só o e-mail. A resposta do endpoint é a mesma exista ou não a conta,
+    então este schema não valida nada além do formato."""
+
+    email: str = Field(min_length=3)
+
+    @field_validator("email")
+    @classmethod
+    def _validar_email(cls, v: str) -> str:
+        if "@" not in v:
+            raise ValueError("Informe um e-mail válido.")
+        return v.strip().lower()
+
+
+class RedefinirSenhaIn(BaseModel):
+    # Mesmo mínimo do cadastro (CredenciaisIn): trocar a senha não pode ser
+    # uma porta para uma senha mais fraca do que a que o signup aceita.
+    token: str = Field(min_length=20)
+    senha: str = Field(min_length=6)
+
+
 class MeOut(BaseModel):
     id: int
     email: str

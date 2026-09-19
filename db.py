@@ -655,6 +655,22 @@ def init_db():
         # do zero e a revisão de 2026-09-16 mostrou que varrer o banco inteiro
         # lendo questão por questão é caro e fraco; o relato do aluno diz onde
         # olhar. `parte` é o que ele aponta (enunciado, alternativas, gabarito,
+        # Redefinição de senha: o token nunca é guardado em claro, só o seu
+        # SHA-256. Quem tiver acesso de leitura ao banco não consegue usar um
+        # token pendente, e o e-mail enviado é o único lugar onde ele existe.
+        c.execute("""
+        CREATE TABLE IF NOT EXISTS senha_tokens (
+            id SERIAL PRIMARY KEY,
+            usuario_id INTEGER NOT NULL,
+            token_hash TEXT NOT NULL UNIQUE,
+            criado_em TIMESTAMP NOT NULL,
+            expira_em TIMESTAMP NOT NULL,
+            usado_em TIMESTAMP,            -- NULL enquanto não foi usado
+            FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+        )
+        """)
+        c.execute("CREATE INDEX IF NOT EXISTS idx_senha_tokens_usuario ON senha_tokens(usuario_id)")
+
         # explicação, imagem, outro) e é o que torna a correção dirigida.
         c.execute("""
         CREATE TABLE IF NOT EXISTS relatos_questao (
@@ -2050,3 +2066,57 @@ def obter_usuario(usuario_id):
         return conn.execute(
             "SELECT * FROM usuarios WHERE id = ?", (usuario_id,)
         ).fetchone()
+
+
+# --- Redefinição de senha --------------------------------------------------
+# O fluxo inteiro (api/routers/auth.py) guarda só o hash do token e trata
+# qualquer token inválido, expirado ou já usado do mesmo jeito: não existe.
+
+def criar_token_senha(usuario_id, token_hash, minutos_validade=60):
+    """Registra um pedido de redefinição e devolve o instante de expiração."""
+    agora = datetime.datetime.now()
+    expira_em = agora + datetime.timedelta(minutes=minutos_validade)
+    with get_conn() as conn:
+        conn.execute(
+            "INSERT INTO senha_tokens (usuario_id, token_hash, criado_em, expira_em) VALUES (?, ?, ?, ?)",
+            (usuario_id, token_hash, agora, expira_em),
+        )
+    return expira_em
+
+
+def obter_token_senha(token_hash):
+    """Token utilizável: existe, não foi usado e não expirou. Qualquer outro
+    caso devolve None, para o chamador não poder distinguir os motivos."""
+    with get_conn() as conn:
+        return conn.execute(
+            """
+            SELECT * FROM senha_tokens
+            WHERE token_hash = ? AND usado_em IS NULL AND expira_em > ?
+            """,
+            (token_hash, datetime.datetime.now()),
+        ).fetchone()
+
+
+def contar_tokens_recentes(usuario_id, minutos=15):
+    """Quantos pedidos a conta fez na última janela — o freio contra usar o
+    'esqueci minha senha' para bombardear a caixa de entrada de alguém."""
+    desde = datetime.datetime.now() - datetime.timedelta(minutes=minutos)
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT count(*) AS n FROM senha_tokens WHERE usuario_id = ? AND criado_em > ?",
+            (usuario_id, desde),
+        ).fetchone()
+    return row["n"]
+
+
+def redefinir_senha(usuario_id, senha_hash, token_id):
+    """Troca a senha e queima **todos** os tokens da conta na mesma transação:
+    usar um link não pode deixar os outros pendentes valendo."""
+    agora = datetime.datetime.now()
+    with get_conn() as conn:
+        conn.execute("UPDATE usuarios SET senha_hash = ? WHERE id = ?", (senha_hash, usuario_id))
+        conn.execute(
+            "UPDATE senha_tokens SET usado_em = ? WHERE usuario_id = ? AND usado_em IS NULL",
+            (agora, usuario_id),
+        )
+        return token_id
