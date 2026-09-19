@@ -2,6 +2,11 @@ __pycache__/
 *.pyc
 data/
 .streamlit/secrets.toml
+# Ambiente local da API (chave do Brevo e afins). O padrão precisa ser
+# ancorado na raiz, como o de produção, para não casar com o
+# frontend/.env.production, que não tem segredo e deve ser versionado.
+/.env
+/.env.local
 /.env.production
 /.env.production.local
 deploy/.env.production

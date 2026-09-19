@@ -3,6 +3,7 @@ import { RequireAuth } from "./components/RequireAuth";
 import { AppShell } from "./components/shell/AppShell";
 import { ACERVO } from "./lib/nav";
 import Login from "./pages/Login";
+import Senha from "./pages/Senha";
 import Painel from "./pages/painel";
 import { PermaneceNoStreamlit } from "./pages/PermaneceNoStreamlit";
 import Praticar from "./pages/praticar";
@@ -13,6 +14,9 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      {/* Link do e-mail de redefinição: público, porque quem chega aqui é
+          exatamente quem não consegue entrar. */}
+      <Route path="/senha/:token" element={<Senha />} />
 
       <Route element={<RequireAuth />}>
         <Route element={<AppShell />}>

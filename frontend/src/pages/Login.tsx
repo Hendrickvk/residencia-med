@@ -12,7 +12,11 @@ export default function Login() {
   const [confirmar, setConfirmar] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
-  const { entrar, cadastrar } = useAuthActions();
+  // Terceiro estado da tela, além de entrar/criar: pedir o link de
+  // redefinição. Fica aqui em vez de virar rota porque é o mesmo cartão.
+  const [esqueci, setEsqueci] = useState(false);
+  const [pedido, setPedido] = useState(false);
+  const { entrar, cadastrar, pedirRedefinicao } = useAuthActions();
   const navigate = useNavigate();
 
   async function onSubmit(e: React.FormEvent) {
@@ -24,6 +28,11 @@ export default function Login() {
     }
     setEnviando(true);
     try {
+      if (esqueci) {
+        await pedirRedefinicao(email);
+        setPedido(true);
+        return;
+      }
       if (aba === "entrar") await entrar(email, senha);
       else await cadastrar(email, senha);
       navigate("/painel", { replace: true });
@@ -82,6 +91,7 @@ export default function Login() {
                 className={CAMPO}
               />
             </label>
+            {!esqueci && (
             <label htmlFor="login-senha" className="flex flex-col gap-1.5">
               <span className="rotulo text-muted">Senha</span>
               <input
@@ -95,7 +105,8 @@ export default function Login() {
                 className={CAMPO}
               />
             </label>
-            {aba === "criar" && (
+            )}
+            {aba === "criar" && !esqueci && (
               <label htmlFor="login-confirmar" className="flex animate-entrar flex-col gap-1.5">
                 <span className="rotulo text-muted">Confirmar senha</span>
                 <input
@@ -117,9 +128,32 @@ export default function Login() {
               </p>
             )}
 
+            {/* Mensagem de propósito vaga: dizer "não existe conta com esse
+                e-mail" contaria a um estranho quem tem cadastro aqui. */}
+            {pedido && (
+              <p role="status" className="animate-entrar rounded-card border border-line bg-ground p-3 text-apoio text-ink-2">
+                Se existe uma conta com esse e-mail, o link para criar uma senha nova já está a caminho. Ele vale
+                por uma hora e só pode ser usado uma vez.
+              </p>
+            )}
+
             <button type="submit" disabled={enviando} className={`${BOTAO_PRIMARIO} mt-1 w-full`}>
-              {aba === "entrar" ? "Entrar" : "Criar conta"}
+              {esqueci ? "Enviar o link" : aba === "entrar" ? "Entrar" : "Criar conta"}
             </button>
+
+            {aba === "entrar" && (
+              <button
+                type="button"
+                onClick={() => {
+                  setEsqueci((v) => !v);
+                  setErro(null);
+                  setPedido(false);
+                }}
+                className="self-center text-apoio text-muted underline-offset-2 transition-colors duration-hover hover:text-ink hover:underline"
+              >
+                {esqueci ? "Voltar para o login" : "Esqueci minha senha"}
+              </button>
+            )}
           </form>
         </div>
       </div>

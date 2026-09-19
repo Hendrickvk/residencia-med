@@ -55,6 +55,31 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   acesso direto em medicina migrou para o ENAMED, que já está no banco. Sobram
   as provas estaduais e de instituições (SES-DF, SES-PE, SUS-SP, AMRIGS,
   IAMSPE), que dão volume de prática mas ficam fora do peso do INEP.
+- **Domínio próprio, agora com dois motivos (2026-09-19).** A decisão de não
+  pagar domínio foi tomada quando o único uso era HTTPS, que o DuckDNS resolve
+  de graça. O e-mail de redefinição de senha criou o segundo motivo, e o
+  DuckDNS não atende: ele aceita **um único registro TXT**, já ocupado pelo
+  ACME do certificado, e autenticar domínio no Brevo pede 2 a 3 registros
+  (DKIM e DMARC). Consequência hoje: o Brevo reescreve o remetente para
+  `hendrickvk@12189774.brevosend.com` — porque `From:` de freemail sem domínio
+  autenticado quebraria o DMARC do Gmail — e o nome de exibição "Conduta" é o
+  que segura a aparência. Funciona e entrega (conferido em 18 e 19/09), mas o
+  endereço é feio e a entrega depende da boa vontade do filtro alheio.
+  Caminhos, do mais barato ao melhor:
+  1. **Ficar como está.** Zero custo. Nome "Conduta" na caixa de entrada,
+     endereço `@…brevosend.com` no cabeçalho, risco de spam que até agora não
+     se materializou (o teste foi aberto na caixa de entrada).
+  2. **Domínio grátis com DNS próprio** (`is-a.dev`, `eu.org`): permite DKIM e
+     DMARC, resolve o e-mail, aprovação por pull request e nome com cara de
+     projeto de dev. Não resolve bem o site, porque o certificado e o endereço
+     público ficariam num domínio de terceiro com cara informal.
+  3. **Domínio pago barato** (~R$ 40/ano num `.com.br`, ou US$ 5–12 num
+     `.site`/`.com`): resolve os dois de uma vez — `acesso@conduta.xxx` com
+     DKIM alinhado **e** HTTPS no lugar do DuckDNS, aposentando o
+     `conduta.duckdns.org` e o `deploy/Caddyfile` que depende dele.
+  Enquanto nada disso for decidido, o fluxo de senha está completo e
+  funcionando; o que muda com o domínio é só o valor de `EMAIL_REMETENTE` (e
+  os registros de DNS), não o código.
 - Se o shape ARM `VM.Standard.A1.Flex` (1 OCPU/6 GB, Always Free) aparecer em
   São Paulo e 1 GB apertar, recriar a instância nele.
 - Tema escuro do Triagem só existe por tokens, sem protótipo próprio.
@@ -875,6 +900,55 @@ governa as telas admin do Streamlit.
   revisadas.** Ver o passo 2 dos próximos passos, acima.
 
 ### 2026-09-18
+- **"Esqueci minha senha" (pedido do usuário).** O projeto não tinha envio de
+  e-mail nenhum — nem `smtplib`, nem provedor, nada no `requirements.txt` —, e
+  isso é o que decide o desenho: sem e-mail, "esqueci minha senha" clássico não
+  existe. Foram oferecidos três caminhos (link emitido pelo admin sem e-mail;
+  e-mail de verdade; só o aviso no login) e o usuário escolheu **e-mail de
+  verdade**. Decisões:
+  - **Brevo pela API HTTP, não SMTP.** `httpx` já era dependência (SMTP pediria
+    lidar com TLS e porta na mão) e o Brevo verifica **remetente por e-mail**,
+    sem exigir domínio próprio — que é a situação enquanto o DuckDNS não sai.
+    `api/email.py` isola isso; trocar de provedor é mexer num arquivo.
+  - **Sem oráculo de cadastro.** `POST /auth/senha/esqueci` responde sempre
+    `200 {"ok": true}`: conta inexistente, envio falhado e limite atingido são
+    indistinguíveis, senão o endpoint viraria uma forma de descobrir quem tem
+    conta. A tela repete a mesma vagueza ("se existe uma conta com esse
+    e-mail…").
+  - **O banco guarda só o SHA-256 do token.** Quem lê o Postgres não redefine
+    nada; o token em claro existe apenas no e-mail. Resgatar queima todos os
+    tokens pendentes da conta na mesma transação, e token inválido, expirado ou
+    usado devolvem a mesma mensagem.
+  - **Sem chave configurada, o fluxo não finge.** `enviar_email` devolve False e
+    escreve no log do servidor o e-mail que teria saído, com o link — é assim
+    que se testa em desenvolvimento, e em produção o problema aparece no log em
+    vez de virar e-mail que nunca chega. Foi como o fluxo foi validado ponta a
+    ponta em 18/09: conta de teste criada, link lido do log, senha trocada,
+    senha antiga recusada (401), nova aceita (200) e reuso do link recusado
+    (400).
+  - Limite de 3 pedidos por conta a cada 15 minutos, para o "esqueci minha
+    senha" não virar ferramenta de encher a caixa de entrada de alguém.
+  - **Ligado de verdade em 18/09.** Conta criada no Brevo, remetente
+    `hendrickvk@gmail.com` já verificado por padrão (o Brevo valida sozinho o
+    e-mail do cadastro) e chave v3 gerada — a criação da chave exige um código
+    de 6 dígitos enviado por e-mail, que só o dono da conta pode digitar. As
+    variáveis ficam no `.env` da raiz, que **passou a ser gitignorado nesta
+    mudança**: o padrão antigo cobria só `/.env.production`, e chave colada num
+    `.env` seria commitável. A API local sobe com `uvicorn … --env-file .env`.
+    Envio real conferido pela API do Brevo (`/v3/smtp/statistics/events`), não
+    por ausência de erro no log: `requests` às 18:17:29 e `delivered` às
+    18:17:30.
+  - **Risco conhecido de entrega:** o remetente é um `@gmail.com`, e a própria
+    tela do Brevo avisa que domínio de freemail não é recomendado — enviar
+    "de" um Gmail por provedor terceiro não alinha DMARC e pode cair no spam.
+    Para duas pessoas, aceitável; se algum dia virar problema, a saída é um
+    domínio próprio com DKIM (o DuckDNS não serve: só aceita um TXT, usado pelo
+    ACME).
+  - **Pendência:** preencher `BREVO_API_KEY`, `EMAIL_REMETENTE` e `APP_URL` no
+    `.env.production` do servidor quando o deploy sair (ver
+    `deploy/.env.production.example`); sem `APP_URL` o link do e-mail aponta
+    para localhost. Testes em `tests/test_senha.py` (5), que passam com ou sem
+    chave configurada.
 - **"A plataforma parece estática" (observação do usuário) — diagnosticado no
   navegador e corrigido em quatro pontos.** O que a leitura do código e a volta
   pelo app mostraram: movimento não era o problema (`src/lib/movimento.ts` já
