@@ -9,9 +9,19 @@ const HASH_CONVIDADA = "1fdfe32f7ab4082eb40d7cc3925d5096adf40add8fa60fc258eb3e24
 const CHAVE = "conduta:brincadeira-boas-vindas";
 
 export async function ehConvidada(email: string | undefined): Promise<boolean> {
+  // Em desenvolvimento, `?brincadeira=1` força a sessão. Existe porque testar
+  // no celular pela rede local (http://<ip>:5173) não é contexto seguro, e sem
+  // `crypto.subtle` a verificação sempre diz não. `import.meta.env.DEV` é
+  // eliminado no build, então isto não existe em produção.
+  if (import.meta.env.DEV && new URLSearchParams(location.search).has("brincadeira")) return true;
   // `crypto.subtle` só existe em contexto seguro (https ou localhost); sem ele,
-  // ninguém vê a brincadeira, o que é o comportamento certo para uma piada.
-  if (!email || !window.crypto?.subtle) return false;
+  // ninguém vê a brincadeira, o que é o comportamento certo para uma piada —
+  // mas falhar calado seria pior, porque a estreia dela acontece uma vez só.
+  if (!window.crypto?.subtle) {
+    console.warn("[conduta] sem crypto.subtle (contexto não seguro): a brincadeira não roda aqui.");
+    return false;
+  }
+  if (!email) return false;
   const bytes = new TextEncoder().encode(email.trim().toLowerCase());
   const digest = await window.crypto.subtle.digest("SHA-256", bytes);
   const hex = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
@@ -75,6 +85,7 @@ export type PassoBrincadeira =
 export function normalizarNome(valor: string): string {
   return valor
     .trim()
+    .replace(/\s+/g, " ")
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
@@ -139,6 +150,8 @@ export const ROTEIRO: PassoBrincadeira[] = [
       "> sono: 14 horas por dia, sob protesto.",
       "> resposta a mensagens: 7 a 10 dias úteis.",
       "> vitamina d: 12. sol: nunca.",
+      "> dieta: a parmegiana de berinjela da sua mãe.",
+      "> nada que este sistema prescreva compete com isso.",
     ],
   },
   {
@@ -167,7 +180,7 @@ export const ROTEIRO: PassoBrincadeira[] = [
   // dela, que é o que faz a resposta chegar sem forçar.
   {
     tipo: "escolha",
-    linhas: ["> observação: este prontuário não foi preenchido pelo sistema.", "> quer saber por quem?"],
+    linhas: ["> este prontuário não foi preenchido pelo sistema.", "> quer saber por quem?"],
     opcoes: [
       { rotulo: "já sei", resposta: ["> imaginei.", "> ele também."] },
       {
@@ -183,7 +196,7 @@ export const ROTEIRO: PassoBrincadeira[] = [
       "> conduta proposta:",
       ">   1. dormir à noite.",
       ">   2. quinze minutos de sol por dia.",
-      ">   3. responder ainda na semana em que a mensagem chegou.",
+      ">   3. responder na mesma semana.",
       ">   4. estudar por aqui, que sai mais barato que terapia.",
       ">   5. em caso de crise: kinder bueno. dois.",
     ],
@@ -208,7 +221,7 @@ export const ROTEIRO: PassoBrincadeira[] = [
     // apelido vale, e o sistema recusa duas vezes antes de ceder, porque
     // insistir e ser recusada é justamente a brincadeira que ela gosta de
     // fazer. Ceder na terceira evita que alguém fique preso no campo.
-    aceitos: ["giovanna", "giovana", "gi"],
+    aceitos: ["giovanna", "giovana", "gi", "giovanna romano", "giovana romano", "giovannaromano"],
     confirmacao: ["> assinatura confere."],
     recusas: [
       ["> não confere.", "> assine com o seu nome."],

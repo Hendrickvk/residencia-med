@@ -899,6 +899,39 @@ governa as telas admin do Streamlit.
 - **Revalida 2025/2, UNICAMP 2023, 2025/1, 2024/2, 2024/1, 2023/2 e 2023/1
   revisadas.** Ver o passo 2 dos próximos passos, acima.
 
+### 2026-09-19
+- **HTTPS virou pré-requisito da estreia dela, não só melhoria de segurança.**
+  A brincadeira usa `crypto.subtle` para comparar o SHA-256 do e-mail, e
+  `crypto.subtle` **só existe em contexto seguro** (https ou localhost). Hoje a
+  produção serve HTTP puro por IP: se ela entrar antes do HTTPS, a sessão de
+  boas-vindas não roda e não há erro nenhum — falha calada, e a estreia
+  acontece uma vez só. Descoberto ao testar pelo celular na rede local
+  (`http://192.168.1.218:5173`), que tem o mesmo problema. Duas consequências
+  no código: um atalho `?brincadeira=1` que só existe em desenvolvimento
+  (`import.meta.env.DEV`, eliminado no build) para permitir o teste em
+  aparelho real, e um aviso no console quando falta `crypto.subtle`, porque
+  falhar em silêncio era o pior jeito de descobrir.
+- **Três defeitos que só existem em tela pequena, achados no celular.**
+  1. **A barra da Revisão comia o "Sair"** — o `DESIGN_TRIAGEM.md` §5 exige a
+     saída visível em toda sessão, e em 390px o conteúdo somava 416px, com o
+     "Sair" por último na fila. O vão entre itens da barra de foco caiu para
+     12px no celular (`gap-3 sm:gap-6`) e o "Recomeçar fila" virou só ícone
+     abaixo de 640px, como o Simulado já fazia. Deu 274px.
+  2. **O bloco em digitação desalinhava do histórico.** `text-indent` vale só
+     para a primeira linha de um parágrafo: com o texto todo num `<p>` e `
+`,
+     as linhas seguintes ficavam 12px à direita e saltavam para o lugar ao
+     descer para o histórico. Agora o bloco digitado tem a **mesma estrutura**
+     do histórico — uma linha por `<p>` —, e é a igualdade de estrutura que
+     garante o alinhamento.
+  3. **Linhas longas quebravam.** Medidas com a fonte real (canvas), as piores
+     davam 376px contra 310px úteis. Duas foram encurtadas, o padding do
+     terminal caiu para 16px no celular (`p-4 md:p-6`) e entrou recuo pendente
+     para a quebra que sobrar parecer intencional.
+- **Lição de método:** o desktop esconde esta classe de defeito inteira. Os
+  três só apareceram em 390px, e o segundo foi **criado** pelo conserto do
+  terceiro — recuo pendente é invisível enquanto nada quebra.
+
 ### 2026-09-18
 - **"Esqueci minha senha" (pedido do usuário).** O projeto não tinha envio de
   e-mail nenhum — nem `smtplib`, nem provedor, nada no `requirements.txt` —, e

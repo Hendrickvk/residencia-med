@@ -128,8 +128,11 @@ export function Topbar({ tema, onAlternarTema, me, revisoesHoje, onSair, onRever
           <Marca />
         </Link>
 
+        {/* `gap-3` no celular: com 24px entre os itens, a barra da Revisão
+            estourava 390px e comia o "Sair", que o DESIGN_TRIAGEM.md §5 exige
+            visível em toda sessão. */}
         {emFoco ? (
-          <div ref={setSlot} className="flex min-w-0 flex-1 animate-desvanecer items-center gap-6" />
+          <div ref={setSlot} className="flex min-w-0 flex-1 animate-desvanecer items-center gap-3 sm:gap-6" />
         ) : (
           <>
             <nav ref={navRef} className="relative hidden h-16 animate-desvanecer gap-5 lg:flex xl:gap-7">
