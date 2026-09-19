@@ -80,6 +80,29 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   Enquanto nada disso for decidido, o fluxo de senha está completo e
   funcionando; o que muda com o domínio é só o valor de `EMAIL_REMETENTE` (e
   os registros de DNS), não o código.
+- **Backup do banco fora desta máquina — falta só escolher o destino
+  (2026-09-19).** O `scripts/backup_banco.py` agora aceita `--espelho DIR` (ou
+  a variável `BACKUP_ESPELHO`) e copia o dump já conferido para fora, com a
+  mesma rotação da pasta local; sem destino ele avisa em voz alta que o backup
+  existe só aqui. O que falta não é código, é um lugar. Estado da máquina,
+  conferido em 19/09: só o disco `C:` (nenhum HD externo nem pendrive), o
+  OneDrive tem a pasta `C:\Users\Hendrick\OneDrive` registrada mas **nunca foi
+  logado** (o registro não tem `cid` nem `UserEmail`, e a pasta só tem o
+  `desktop.ini`), e não há `gh` instalado. Ou seja: o banco inteiro (1074
+  questões e as 79 imagens recortadas à mão) tem uma cópia só, num disco só,
+  na mesma máquina de onde ele é acessado. Cada dump tem 23,8 MB. Opções:
+  1. **Nuvem sincronizada** (OneDrive, já vem no Windows): entrar na conta uma
+     vez e depois
+     `setx BACKUP_ESPELHO "C:\Users\Hendrick\OneDrive\conduta-backups"`.
+     Só isso; daí em diante todo backup sobe sozinho.
+  2. **Repositório privado no GitHub** dedicado aos dumps: não pede conta nova
+     nem cartão, mas são 23,8 MB por snapshot dentro de um git, que nunca
+     esquece — exige rotação curta ou histórico reescrito de vez em quando.
+  3. **HD externo ou pendrive**: nenhuma dependência de terceiro, mas só
+     protege quando está plugado, e lembrar de plugar é exatamente o que
+     ninguém faz.
+  Depois de escolher, automatizar no Agendador de Tarefas do Windows:
+  `python scripts/backup_banco.py --manter 7`, semanal.
 - Se o shape ARM `VM.Standard.A1.Flex` (1 OCPU/6 GB, Always Free) aparecer em
   São Paulo e 1 GB apertar, recriar a instância nele.
 - Tema escuro do Triagem só existe por tokens, sem protótipo próprio.
@@ -931,6 +954,54 @@ governa as telas admin do Streamlit.
 - **Lição de método:** o desktop esconde esta classe de defeito inteira. Os
   três só apareceram em 390px, e o segundo foi **criado** pelo conserto do
   terceiro — recuo pendente é invisível enquanto nada quebra.
+- **Falha de rede virou "você não tem nada" em três telas.** Procurando o que
+  faltava fora do deploy, a medição foi esta: 40 `useQuery` no front, **3**
+  arquivos tratando `isError`. O efeito não era tela em branco, era pior — o
+  Painel (`if (!data || data.totais.respostas === 0)`), a Revisão e a sessão do
+  Praticar caíam todos no mesmo galho do estado vazio, então uma conexão que
+  caiu dizia "ainda não há respostas para montar a sua triagem" a quem tem
+  histórico, "nenhuma revisão vencida hoje" a quem tem 30 vencidas e "amplie o
+  recorte" a quem só perdeu o sinal. Entrou o `EstadoFalha` (borda cheia,
+  "Tentar de novo") nas três, e a regra no `DESIGN_TRIAGEM.md` §4: falha não é
+  vazio. **A lição não é sobre React** — é que o estado de erro de um app assim
+  não aparece no desenvolvimento, onde o servidor está a 1ms de distância, e
+  ninguém tinha rodado a plataforma com a rede ruim que o celular dela terá.
+- **Nada segurava um erro de renderização.** Zero barreiras de erro no
+  `frontend/src`: qualquer componente que lançasse deixava a página em branco,
+  sem saída e, no celular, sem console para descobrir o motivo. `BarreiraErro`
+  na raiz do `main.tsx` (classe, porque o React não dá hook para isso).
+  Conferido forçando um `throw` de verdade na tela de login, não por leitura.
+- **A plataforma não tinha ícone.** O `index.html` não tinha `<link rel="icon">`
+  — e um `favicon.svg` em `public/` não é descoberto sozinho, o navegador só
+  pede `/favicon.ico` —, nem `theme-color`, nem `apple-touch-icon`, nem
+  manifesto. Os dois SVGs que existiam em `public/` eram restos de template
+  (um logo roxo e um sprite com ícone do Bluesky), sem uma única referência no
+  código: apagados. O ícone agora **é** a marca, as cinco barras da triagem,
+  em SVG na aba e em azulejo escuro na tela de início. Com o manifesto, "adicionar
+  à tela de início" instala de verdade, em modo standalone.
+- **O tema não valia fora do `AppShell`.** Ele era aplicado só lá dentro, e o
+  login e a redefinição de senha ficam fora: quem usa o escuro via uma tela
+  branca justo nas duas telas em que a plataforma se apresenta. Passou para o
+  `main.tsx`, antes do primeiro quadro — resolve também o pisca-claro do
+  carregamento e o valor inicial do `theme-color`.
+- **Figura de questão descia de novo a cada aparição.** A rota da imagem
+  devolvia os bytes sem `ETag` nem `Cache-Control`. São ~300 KB por figura, 79
+  questões com figura, e a revisão espaçada traz a mesma questão de volta muitas
+  vezes — o que no 4G dela é a diferença entre a imagem aparecer na hora ou
+  depois de segundos. `private, max-age=86400` + ETag do conteúdo (então trocar
+  a imagem pelo `substituir_imagem.py` invalida o cache na revalidação
+  seguinte, sem esperar as 24 h).
+- **Sessão de prática agora sobrevive a fechar a aba** (`lib/sessaoSalva.ts`,
+  12 h, com "Retomar"/"Descartar" no Configurador). Guarda o **lote inteiro** de
+  questões, não os ids: `/praticar/sessao` sorteia, e pedir de novo com os
+  mesmos filtros traria outras questões. As respostas já dadas nunca estiveram
+  em risco (a `respostasQueue` as envia na hora); o que se perdia era o lugar.
+- **O `Dialog` prende o foco.** Esc e clique fora já fechavam, mas o Tab
+  passeava pela página atrás — para quem navega por teclado ou leitor de tela, o
+  diálogo não existia. O detalhe que fez diferença: o `onFechar` é função nova a
+  cada render do pai, então o efeito ficou preso só em `aberto`, com o `onFechar`
+  numa ref — senão ele se remontava no meio da digitação e devolvia o foco ao
+  primeiro campo.
 
 ### 2026-09-18
 - **"Esqueci minha senha" (pedido do usuário).** O projeto não tinha envio de

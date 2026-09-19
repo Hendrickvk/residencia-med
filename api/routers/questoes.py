@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+import hashlib
+
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 
 import db
 from api.deps import usuario_atual
@@ -57,9 +59,25 @@ def relatar(questao_id: int, dados: RelatoIn, usuario=Depends(usuario_atual)):
     return {"id": relato_id}
 
 
+# A figura de uma questão é o conteúdo mais pesado da plataforma (~300 KB) e o
+# que menos muda: trocar uma imagem é operação de admin, pelo
+# `scripts/substituir_imagem.py`. Sem estes cabeçalhos o celular rebaixava a
+# mesma figura a cada vez que a questão aparecia — na revisão espaçada, a mesma
+# questão volta muitas vezes. `private` porque a rota exige sessão: o cache é do
+# navegador dela, não de um proxy no caminho.
+CACHE_IMAGEM = "private, max-age=86400"
+
+
 @router.get("/{questao_id}/imagem")
-def obter_imagem(questao_id: int, usuario=Depends(usuario_atual)):
+def obter_imagem(questao_id: int, request: Request, usuario=Depends(usuario_atual)):
     q = db.obter_questao(questao_id)
     if q is None or not q["imagem"]:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Sem imagem.")
-    return Response(content=bytes(q["imagem"]), media_type=q["imagem_mime"] or "image/png")
+    dados = bytes(q["imagem"])
+    # ETag do conteúdo: se a imagem for substituída, o navegador recebe a nova
+    # na primeira revalidação em vez de esperar as 24 h do max-age.
+    etag = '"%s"' % hashlib.sha256(dados).hexdigest()[:32]
+    cabecalhos = {"ETag": etag, "Cache-Control": CACHE_IMAGEM}
+    if request.headers.get("if-none-match") == etag:
+        return Response(status_code=status.HTTP_304_NOT_MODIFIED, headers=cabecalhos)
+    return Response(content=dados, media_type=q["imagem_mime"] or "image/png", headers=cabecalhos)
