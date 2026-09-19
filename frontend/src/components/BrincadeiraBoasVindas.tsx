@@ -261,7 +261,7 @@ export function BrincadeiraBoasVindas({
         role="alertdialog"
         aria-modal="true"
         aria-label={`${ALERTA.selo}: ${ALERTA.veredito}`}
-        className="relative flex w-full max-w-lg flex-col gap-3 rounded-caso border-2 border-t1 bg-surface p-6"
+        className="relative flex w-full max-w-lg flex-col gap-3 rounded-caso border-2 border-t1 bg-surface p-4 md:p-6"
       >
         <span className="rotulo text-t1">{ALERTA.selo}</span>
 
@@ -280,22 +280,34 @@ export function BrincadeiraBoasVindas({
             ) : (
               <p
                 key={i}
-                className={
-                  entrada.tipo === "ela"
-                    ? "text-apoio leading-relaxed text-ink"
-                    : "text-apoio leading-relaxed text-muted"
-                }
+                // `pl-3 -indent-3`: em tela estreita a linha quebra, e sem o
+                // recuo pendente a continuação começava embaixo do ">", como
+                // se fosse uma linha nova do log.
+                className={`pl-3 -indent-3 text-apoio leading-relaxed ${
+                  entrada.tipo === "ela" ? "text-ink" : "text-muted"
+                }`}
               >
                 {entrada.tipo === "ela" ? `$ ${entrada.texto}` : entrada.texto}
               </p>
             ),
           )}
-          {bloco && (
-            <p className="whitespace-pre-line text-apoio leading-relaxed text-muted">
-              {texto.slice(0, letras)}
-              {!completo && <span className="animate-piscar text-ink">▍</span>}
-            </p>
-          )}
+          {/* Uma linha por parágrafo, e não um parágrafo com `\n`: o recuo
+              pendente (`-indent-3`) só vale para a primeira linha de cada
+              parágrafo, então no bloco único as linhas seguintes ficavam 12px
+              à direita durante a digitação e saltavam para o lugar ao terminar,
+              quando desciam para o histórico. */}
+          {bloco &&
+            texto
+              .slice(0, letras)
+              .split("\n")
+              .map((linha, i, todas) => (
+                <p key={i} className="pl-3 -indent-3 text-apoio leading-relaxed text-muted">
+                  {linha}
+                  {i === todas.length - 1 && !completo && (
+                    <span className="animate-piscar text-ink">▍</span>
+                  )}
+                </p>
+              ))}
         </div>
 
         {esperando === "menu" && completo && atual.tipo === "escolha" && (

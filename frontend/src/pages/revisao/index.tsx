@@ -231,17 +231,21 @@ export default function Revisao() {
             </span>
           )}
         </span>
+        {/* Em tela estreita fica só o ícone: o rótulo inteiro empurrava o
+            "Sair" para fora da barra. Mesmo padrão do Simulado. */}
         <button
           type="button"
           onClick={recomecar}
-          className={`group flex h-9 shrink-0 items-center gap-1.5 rounded-btn border border-line px-3 text-[14px] font-medium text-ink-2 transition duration-hover hover:border-muted hover:text-ink ${PRESSAO}`}
+          title="Recomeçar fila"
+          aria-label="Recomeçar fila"
+          className={`group flex h-9 shrink-0 items-center gap-1.5 rounded-btn border border-line px-2.5 text-[14px] font-medium text-ink-2 transition duration-hover hover:border-muted hover:text-ink sm:px-3 ${PRESSAO}`}
         >
           <RotateCcw
             size={15}
             strokeWidth={2}
             className="transition-transform duration-desliza ease-suave group-hover:-rotate-[120deg]"
           />
-          Recomeçar fila
+          <span className="hidden sm:inline">Recomeçar fila</span>
         </button>
         {/* Cada avaliação já foi gravada ao clicar: sair não perde nada. */}
         <button
