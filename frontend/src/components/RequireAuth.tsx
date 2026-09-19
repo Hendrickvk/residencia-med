@@ -1,9 +1,9 @@
 import { Navigate, Outlet } from "react-router-dom";
 import { ehNaoAutenticado, useMe } from "../lib/auth";
-import { EstadoVazio } from "./EstadoVazio";
+import { EstadoFalha } from "./EstadoFalha";
 
 export function RequireAuth() {
-  const { data, isLoading, isError, error, refetch, isFetching } = useMe();
+  const { data, isLoading, isError, error, refetch, isFetching, isPaused } = useMe();
 
   if (isLoading) {
     // Skeleton com as dimensões finais do shell (barra superior de 64px +
@@ -27,13 +27,15 @@ export function RequireAuth() {
   // Um refetch em segundo plano que falhou mantém os dados de antes: segue a tela.
   if (data) return <Outlet />;
 
-  if (isError) {
+  if (isError || isPaused) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-ground px-4">
         <div className="w-full max-w-[520px]">
-          <EstadoVazio
+          <EstadoFalha
             mensagem="Não foi possível falar com o servidor. Sua conta e suas respostas continuam salvas."
-            cta={{ label: isFetching ? "Tentando…" : "Tentar de novo", onClick: () => void refetch() }}
+            ocupado={isFetching}
+            pausado={isPaused}
+            onTentarDeNovo={() => void refetch()}
           />
         </div>
       </div>

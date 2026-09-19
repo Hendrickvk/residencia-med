@@ -34,7 +34,7 @@ interface Props {
 const LETRAS = ["A", "B", "C", "D", "E"];
 
 export default function Sessao({ filtros, nonce, salva, email, onFinalizar, onVoltar }: Props) {
-  const { data, isLoading, isError, refetch } = useQuery({
+  const { data, isLoading, isError, isPaused, refetch } = useQuery({
     queryKey: ["sessao-pratica", nonce],
     queryFn: () =>
       api.get<{ questoes: Questao[] }>("/praticar/sessao", {
@@ -220,11 +220,12 @@ export default function Sessao({ filtros, nonce, salva, email, onFinalizar, onVo
 
   // Falha de rede e recorte sem casos diziam a mesma frase — e "amplie o
   // recorte" é conselho errado para quem só perdeu o sinal.
-  if (isError) {
+  if ((isError || isPaused) && fila.length === 0) {
     return (
       <div className="mx-auto max-w-[680px] animate-entrar">
         <EstadoFalha
           mensagem="Não deu para montar a sessão. Pode ser a conexão."
+          pausado={isPaused}
           onTentarDeNovo={() => refetch()}
         />
       </div>

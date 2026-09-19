@@ -41,7 +41,7 @@ const NOTAS_ACERTO = [
 export default function Revisao() {
   // 0 = só o que cabe na meta de hoje; LOTE_EXTRA depois de "Revisar mais".
   const [extra, setExtra] = useState(0);
-  const { data, isLoading, isError, refetch } = useLevaRevisao(extra);
+  const { data, isLoading, isPaused, refetch } = useLevaRevisao(extra);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   // Cópia local só depois que o aluno muda a ordem (erro reinsere o caso
@@ -176,13 +176,15 @@ export default function Revisao() {
     );
   }
 
-  // Mesma regra do Painel: falha não é fila vazia. `filaSessao` significa
-  // revisão em andamento, que uma falha de rede não pode interromper.
-  if (isError && !filaSessao) {
+  // Mesma regra do Painel: falha não é fila vazia, e só vale quando não há nada
+  // para mostrar — `filaSessao` é revisão em andamento, e dado em cache segue
+  // na tela mesmo com refetch falhado.
+  if (!data && !filaSessao) {
     return (
       <div className="mx-auto max-w-[680px]">
         <EstadoFalha
           mensagem="Não deu para carregar a sua fila de revisão. Pode ser a conexão."
+          pausado={isPaused}
           onTentarDeNovo={() => refetch()}
         />
       </div>

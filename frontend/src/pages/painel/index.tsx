@@ -16,7 +16,7 @@ import { ProgressoSemana } from "./ProgressoSemana";
 import { QuadroTriagem } from "./QuadroTriagem";
 
 export default function Painel() {
-  const { data, isLoading, isError, refetch } = usePainel();
+  const { data, isLoading, isPaused, refetch } = usePainel();
   const { data: me } = useMe();
   const navigate = useNavigate();
 
@@ -35,12 +35,15 @@ export default function Painel() {
     );
   }
 
-  // Antes do estado vazio: sem `data` por falha de rede não é "você ainda não
-  // praticou", e dizer isso a quem tem histórico é o pior jeito de errar.
-  if (isError || !data) {
+  // Sem `data` depois do skeleton só pode ser falha — e falha não é "você ainda
+  // não praticou", que é o pior jeito de errar com quem tem histórico. A ordem
+  // importa: com dado em cache a tela segue, mesmo que o refetch tenha falhado
+  // (mesma regra do RequireAuth).
+  if (!data) {
     return (
       <EstadoFalha
         mensagem="Não deu para carregar a sua triagem. Pode ser a conexão."
+        pausado={isPaused}
         onTentarDeNovo={() => refetch()}
       />
     );

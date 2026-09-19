@@ -203,6 +203,15 @@ O ícone **é** o símbolo da marca (§3): as cinco barras da triagem, sem texto
   requisição não voltava, e a tela dizia "ainda não há respostas" ou "nenhuma
   revisão vencida hoje" a quem tinha histórico e fila. Toda tela cuja consulta
   principal pode falhar precisa distinguir `isError` de "não tem nada".
+  São **três** estados, não dois, e a ordem é esta:
+  1. **Tem dado** (mesmo velho): mostra o dado. Refetch que falhou não apaga a
+     tela — é a regra que o `RequireAuth` já seguia.
+  2. **Pausado** (`isPaused`): sem conexão ou aba em segundo plano. Aqui a caixa
+     diz "Sem conexão agora. Assim que ela voltar, isto carrega sozinho." e
+     **não tem botão**, porque o React Query retoma sozinho no foco/online e o
+     `refetch()` não faz nada enquanto está pausado. Botão que não faz nada é
+     pior que nenhum botão.
+  3. **Falhou** (`isError`): aí sim a frase da tela e o "Tentar de novo".
 - **Tela quebrada** (`BarreiraErro`, a barreira de erro na raiz do app): cartão de
   superfície centrado, "Esta tela quebrou.", uma frase e "Recarregar"; a mensagem
   técnica do erro aparece só em desenvolvimento. É o fundo do poço da interface,

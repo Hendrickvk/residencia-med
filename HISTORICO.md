@@ -966,6 +966,23 @@ governa as telas admin do Streamlit.
   vazio. **A lição não é sobre React** — é que o estado de erro de um app assim
   não aparece no desenvolvimento, onde o servidor está a 1ms de distância, e
   ninguém tinha rodado a plataforma com a rede ruim que o celular dela terá.
+- **O teste no navegador achou dois defeitos no próprio conserto.** O primeiro
+  saiu da leitura do `RequireAuth`, que já fazia certo: `if (data) return
+  <Outlet/>` **antes** de `if (isError)`. A minha condição era `isError ||
+  !data`, que jogaria fora dado bom sempre que um refetch de segundo plano
+  falhasse — e refetch de segundo plano é o que mais acontece, porque o React
+  Query refaz a consulta a cada volta de foco. O segundo só apareceu clicando: o
+  "Tentar de novo" não disparava pedido nenhum. A causa está no `retryer.js` do
+  query-core — em `networkMode: "online"` (o padrão), depois de uma tentativa
+  falha ele chama `canContinue() = focusManager.isFocused() && onlineManager
+  .isOnline()` e, se der falso, **pausa** em vez de falhar. Aba em segundo plano
+  ou celular sem sinal caem aí: `isError` nunca fica true, `refetch()` é no-op e
+  a query volta sozinha quando o foco ou a conexão voltam. Ou seja, eu tinha
+  posto um botão morto justo no caso mais comum no celular. Agora são três
+  estados (dado > pausado > erro), o pausado diz "carrega sozinho" e não mostra
+  botão. Conferido ao vivo: com a aba escondida a query pausou depois de uma
+  tentativa e voltou sozinha ao tornar a aba visível; com a aba visível foram 4
+  tentativas (1 + 3 padrão) até o erro, e aí o botão funcionou.
 - **Nada segurava um erro de renderização.** Zero barreiras de erro no
   `frontend/src`: qualquer componente que lançasse deixava a página em branco,
   sem saída e, no celular, sem console para descobrir o motivo. `BarreiraErro`
