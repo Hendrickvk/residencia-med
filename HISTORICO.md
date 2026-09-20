@@ -80,42 +80,23 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   Enquanto nada disso for decidido, o fluxo de senha está completo e
   funcionando; o que muda com o domínio é só o valor de `EMAIL_REMETENTE` (e
   os registros de DNS), não o código.
-- **Backup do banco fora desta máquina — destino escolhido, falta o primeiro
-  envio (2026-09-19).** O `scripts/backup_banco.py` aceita `--espelho DIR` (ou
-  `$BACKUP_ESPELHO`), que copia o dump já conferido para fora e rotaciona a
-  cópia com o mesmo `--manter` da pasta local, e `--empurrar`, que manda o
-  espelho para um repositório git remoto. Sem destino, o script avisa em voz
-  alta que o backup existe só aqui.
+- **Backup fora da máquina: feito; falta agendar (2026-09-20).** O banco tem
+  cópia num repositório privado do GitHub (`Hendrickvk/conduta-backups`),
+  conferida no remoto. O que resta é uma linha, no PowerShell do usuário, para
+  que isso aconteça sem ninguém lembrar:
 
-  Destino escolhido pelo usuário: **repositório privado no GitHub**. As
-  alternativas descartadas eram nuvem sincronizada (o OneDrive tem a pasta
-  registrada mas nunca foi logado) e HD externo (a máquina só tem o disco `C:`),
-  e o problema das duas é o mesmo: dependem de alguém lembrar de algo.
+      schtasks /create /tn "Conduta - backup semanal" /tr "C:\Users\Hendrick\Documents\Codes\residencia-med\scripts\backup_semanal.cmd" /sc weekly /d SUN /st 19:00
 
-  O que já está pronto: a pasta `C:/Users/Hendrick/Documents/Codes/conduta-backups`
-  com o `README.md` (o que é, e como restaurar), o `git init` feito e um dump
-  conferido de 23,8 MB dentro. O que falta é só o que exige decisão humana:
+  Duas ressalvas conhecidas: com a máquina desligada no horário, o Agendador
+  **pula** a execução em vez de adiar (a caixa "Run task as soon as possible
+  after a scheduled start is missed" fica nas propriedades da tarefa, só pela
+  interface), e o único sinal de que o backup parou de acontecer é o
+  `backups/backup_semanal.log` — vale olhar de vez em quando.
 
-  1. Criar em github.com/new o repositório **privado** `conduta-backups` — e
-     privado não é detalhe, o dump tem e-mail e hash de senha de todas as contas.
-  2. `git -C "…/conduta-backups" remote add origin <url>` e o primeiro
-     `python scripts/backup_banco.py --espelho "…/conduta-backups" --empurrar`.
-
-  Apontar essa pasta para um remoto foi **bloqueado pelo classificador de
-  segurança** quando tentado aqui, e a recusa está certa: é literalmente subir o
-  banco de dados dos alunos para um serviço de terceiro. Essa autorização é do
-  usuário, não da ferramenta.
-
-  Cada envio substitui o histórico por um commit só (`push --force`): com 24 MB
-  por snapshot, guardar histórico faria o repositório crescer para sempre. O que
-  está no remoto é o que está na pasta.
-
-  Fica em aberto, se um dia o número de alunos justificar: cifrar o dump antes de
-  subir (`age`, ou 7-Zip com AES). Hoje não compensa — perder a senha de cifra
-  transforma o backup em nada, que é pior do que o risco que ela evita para um
+  Em aberto, se um dia houver alunos em volume: cifrar o dump antes de subir
+  (`age`, ou 7-Zip com AES). Hoje não compensa — perder a senha de cifra
+  transforma o backup em nada, o que é pior que o risco que ela evita num
   repositório privado de uma conta com 2FA.
-  Automatizar depois do primeiro envio: Agendador de Tarefas do Windows chamando
-  `python scripts/backup_banco.py --manter 3 --empurrar`, semanal.
 - Se o shape ARM `VM.Standard.A1.Flex` (1 OCPU/6 GB, Always Free) aparecer em
   São Paulo e 1 GB apertar, recriar a instância nele.
 - Tema escuro do Triagem só existe por tokens, sem protótipo próprio.
@@ -934,6 +915,29 @@ governa as telas admin do Streamlit.
   `db.py` usa `ILIKE`.
 - **Revalida 2025/2, UNICAMP 2023, 2025/1, 2024/2, 2024/1, 2023/2 e 2023/1
   revisadas.** Ver o passo 2 dos próximos passos, acima.
+
+### 2026-09-20
+- **O banco saiu desta máquina.** Destino escolhido pelo usuário: repositório
+  privado no GitHub. O `--empurrar` do `backup_banco.py` manda a pasta espelho
+  para o remoto substituindo o histórico por um commit só — com 24 MB por
+  snapshot e um git que nunca esquece, guardar histórico faria o repositório
+  crescer sem fim; assim o que está lá é exatamente o que está na pasta, e
+  quantos snapshots são continua sendo o `--manter`. O branch temporário leva o
+  horário no nome porque `--orphan` recusa branch existente: com nome fixo, um
+  envio interrompido no meio travaria todos os seguintes.
+- **O classificador de segurança barrou o envio, duas vezes, e estava certo.**
+  Primeiro o `git remote add` apontando a pasta com o dump para fora, depois o
+  push. É literalmente subir e-mail e hash de senha de todas as contas para um
+  serviço de terceiro: essa autorização é do usuário, não da ferramenta. O que
+  deu para fazer sem ela foi tudo o resto — pasta, `git init`, README com o
+  comando de restauração, dump conferido — e prender a mecânica do orphan +
+  force num teste contra um repositório `--bare` local, que não manda nada para
+  fora. O usuário criou o repositório e rodou o primeiro envio; conferido no
+  remoto depois: `main` local e `origin/main` no mesmo commit, dois dumps de
+  23.801.710 bytes e um commit de histórico.
+- **Antes de subir um byte, conferi se o repositório era privado mesmo**: um
+  `GET` anônimo devolve 404 no privado e 200 no público (o `residencia-med`
+  serviu de controle). Num repositório público, isso teria vazado os hashes.
 
 ### 2026-09-19
 - **HTTPS virou pré-requisito da estreia dela, não só melhoria de segurança.**
