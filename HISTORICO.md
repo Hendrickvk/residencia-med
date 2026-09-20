@@ -80,29 +80,42 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   Enquanto nada disso for decidido, o fluxo de senha está completo e
   funcionando; o que muda com o domínio é só o valor de `EMAIL_REMETENTE` (e
   os registros de DNS), não o código.
-- **Backup do banco fora desta máquina — falta só escolher o destino
-  (2026-09-19).** O `scripts/backup_banco.py` agora aceita `--espelho DIR` (ou
-  a variável `BACKUP_ESPELHO`) e copia o dump já conferido para fora, com a
-  mesma rotação da pasta local; sem destino ele avisa em voz alta que o backup
-  existe só aqui. O que falta não é código, é um lugar. Estado da máquina,
-  conferido em 19/09: só o disco `C:` (nenhum HD externo nem pendrive), o
-  OneDrive tem a pasta `C:\Users\Hendrick\OneDrive` registrada mas **nunca foi
-  logado** (o registro não tem `cid` nem `UserEmail`, e a pasta só tem o
-  `desktop.ini`), e não há `gh` instalado. Ou seja: o banco inteiro (1074
-  questões e as 79 imagens recortadas à mão) tem uma cópia só, num disco só,
-  na mesma máquina de onde ele é acessado. Cada dump tem 23,8 MB. Opções:
-  1. **Nuvem sincronizada** (OneDrive, já vem no Windows): entrar na conta uma
-     vez e depois
-     `setx BACKUP_ESPELHO "C:\Users\Hendrick\OneDrive\conduta-backups"`.
-     Só isso; daí em diante todo backup sobe sozinho.
-  2. **Repositório privado no GitHub** dedicado aos dumps: não pede conta nova
-     nem cartão, mas são 23,8 MB por snapshot dentro de um git, que nunca
-     esquece — exige rotação curta ou histórico reescrito de vez em quando.
-  3. **HD externo ou pendrive**: nenhuma dependência de terceiro, mas só
-     protege quando está plugado, e lembrar de plugar é exatamente o que
-     ninguém faz.
-  Depois de escolher, automatizar no Agendador de Tarefas do Windows:
-  `python scripts/backup_banco.py --manter 7`, semanal.
+- **Backup do banco fora desta máquina — destino escolhido, falta o primeiro
+  envio (2026-09-19).** O `scripts/backup_banco.py` aceita `--espelho DIR` (ou
+  `$BACKUP_ESPELHO`), que copia o dump já conferido para fora e rotaciona a
+  cópia com o mesmo `--manter` da pasta local, e `--empurrar`, que manda o
+  espelho para um repositório git remoto. Sem destino, o script avisa em voz
+  alta que o backup existe só aqui.
+
+  Destino escolhido pelo usuário: **repositório privado no GitHub**. As
+  alternativas descartadas eram nuvem sincronizada (o OneDrive tem a pasta
+  registrada mas nunca foi logado) e HD externo (a máquina só tem o disco `C:`),
+  e o problema das duas é o mesmo: dependem de alguém lembrar de algo.
+
+  O que já está pronto: a pasta `C:/Users/Hendrick/Documents/Codes/conduta-backups`
+  com o `README.md` (o que é, e como restaurar), o `git init` feito e um dump
+  conferido de 23,8 MB dentro. O que falta é só o que exige decisão humana:
+
+  1. Criar em github.com/new o repositório **privado** `conduta-backups` — e
+     privado não é detalhe, o dump tem e-mail e hash de senha de todas as contas.
+  2. `git -C "…/conduta-backups" remote add origin <url>` e o primeiro
+     `python scripts/backup_banco.py --espelho "…/conduta-backups" --empurrar`.
+
+  Apontar essa pasta para um remoto foi **bloqueado pelo classificador de
+  segurança** quando tentado aqui, e a recusa está certa: é literalmente subir o
+  banco de dados dos alunos para um serviço de terceiro. Essa autorização é do
+  usuário, não da ferramenta.
+
+  Cada envio substitui o histórico por um commit só (`push --force`): com 24 MB
+  por snapshot, guardar histórico faria o repositório crescer para sempre. O que
+  está no remoto é o que está na pasta.
+
+  Fica em aberto, se um dia o número de alunos justificar: cifrar o dump antes de
+  subir (`age`, ou 7-Zip com AES). Hoje não compensa — perder a senha de cifra
+  transforma o backup em nada, que é pior do que o risco que ela evita para um
+  repositório privado de uma conta com 2FA.
+  Automatizar depois do primeiro envio: Agendador de Tarefas do Windows chamando
+  `python scripts/backup_banco.py --manter 3 --empurrar`, semanal.
 - Se o shape ARM `VM.Standard.A1.Flex` (1 OCPU/6 GB, Always Free) aparecer em
   São Paulo e 1 GB apertar, recriar a instância nele.
 - Tema escuro do Triagem só existe por tokens, sem protótipo próprio.

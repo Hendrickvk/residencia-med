@@ -11,6 +11,7 @@ correção de texto) e de vez em quando por hábito.
     python scripts/backup_banco.py
     python scripts/backup_banco.py --manter 10
     python scripts/backup_banco.py --espelho "D:/algum/lugar"
+    python scripts/backup_banco.py --espelho "..." --empurrar
     python scripts/backup_banco.py --restaurar-instrucoes
 
 `backups/` fica nesta máquina, que é o mesmo lugar de onde o banco é acessado:
@@ -18,6 +19,13 @@ um HD que morre leva o backup junto. `--espelho DIR` (ou a variável de
 ambiente `BACKUP_ESPELHO`) copia o dump conferido para fora — uma pasta de
 nuvem que sincroniza, um HD externo, um pendrive. A cópia é rotacionada igual
 à daqui.
+
+Com `--empurrar`, o espelho ainda vai para um repositório git remoto — que
+tem de ser **privado**, porque o dump tem e-mail e hash de senha dos alunos
+dentro. O histórico é substituído por um commit só a cada envio: com 24 MB
+por snapshot e um git que nunca esquece, guardar histórico faria o
+repositório crescer para sempre. O que está no remoto é exatamente o que
+está na pasta espelho, que é o que `--manter` já controla.
 
 Restauração (não é automática de propósito — sobrescrever o banco tem de ser
 um ato deliberado, digitado à mão):
@@ -66,6 +74,8 @@ def main():
     p.add_argument("--manter", type=int, default=7, help="quantos backups manter (padrão 7)")
     p.add_argument("--espelho", default=ESPELHO, metavar="DIR",
                    help="copia o dump conferido para fora desta máquina (padrão: $BACKUP_ESPELHO)")
+    p.add_argument("--empurrar", action="store_true",
+                   help="envia a pasta espelho para o repositório git remoto dela")
     p.add_argument("--restaurar-instrucoes", action="store_true")
     args = p.parse_args()
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -101,6 +111,8 @@ def main():
     print("  %s (%.1f MB)" % (arquivo, tamanho / 1e6))
     podar(args.manter)
     if not espelhar(arquivo, args.espelho, args.manter):
+        return 1
+    if args.empurrar and not empurrar(args.espelho):
         return 1
     return 0
 
@@ -194,6 +206,60 @@ def espelhar(arquivo, diretorio, manter):
         return False
     print("Espelhado: %s (%.1f MB)" % (fora, copiado / 1e6))
     podar(manter, diretorio)
+    return True
+
+
+def git(diretorio, *args):
+    return subprocess.run(["git", "-C", diretorio, *args], capture_output=True, text=True, errors="replace")
+
+
+def empurrar(diretorio):
+    """Sobe a pasta espelho para o remoto dela, com um commit só.
+
+    O histórico é descartado de propósito (`--force`): cada dump tem 24 MB e o
+    git nunca esquece, então manter histórico faria o repositório crescer sem
+    fim. O que fica no remoto é o que está na pasta — controlado por `--manter`.
+    """
+    # ponytail: um commit, sempre. Se um dia precisar de versões mais antigas lá
+    # fora, aumentar `--manter` (elas sobem juntas) em vez de guardar histórico.
+    if not diretorio:
+        print("--empurrar precisa de --espelho.")
+        return False
+    if git(diretorio, "rev-parse", "--git-dir").returncode != 0:
+        print("%s não é um repositório git." % diretorio)
+        print("Crie o repositório privado no GitHub e rode, uma vez:")
+        print('  git -C "%s" init' % diretorio)
+        print('  git -C "%s" remote add origin <url>' % diretorio)
+        return False
+    if not git(diretorio, "remote", "get-url", "origin").stdout.strip():
+        print("O espelho %s não tem remoto `origin`." % diretorio)
+        return False
+
+    # Nome único por envio: `--orphan` recusa um branch que já existe, então um
+    # envio interrompido no meio deixaria `_envio` para trás e travaria todos os
+    # seguintes. O `branch -M main` no fim apaga o nome de qualquer forma.
+    agora = datetime.now()
+    ramo = "_envio_" + agora.strftime("%Y%m%d%H%M%S")
+    passos = [("checkout", "--orphan", ramo),
+              ("add", "-A"),
+              ("commit", "-m", "Backup de %s" % agora.strftime("%d/%m/%Y %H:%M")),
+              ("branch", "-M", "main")]
+    for cmd in passos:
+        r = git(diretorio, *cmd)
+        if r.returncode != 0:
+            print("git %s falhou:" % cmd[0])
+            print((r.stderr or r.stdout).strip())
+            return False
+
+    mb = sum(os.path.getsize(os.path.join(diretorio, f))
+             for f in os.listdir(diretorio) if f.endswith(".dump")) / 1e6
+    print("Enviando %.0f MB..." % mb)
+    r = git(diretorio, "push", "--force", "-u", "origin", "main")
+    if r.returncode != 0:
+        print("push falhou:")
+        print((r.stderr or "").strip())
+        return False
+    print("No remoto: " + git(diretorio, "remote", "get-url", "origin").stdout.strip())
     return True
 
 
