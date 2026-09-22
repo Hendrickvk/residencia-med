@@ -19,6 +19,62 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   Networks → `residencia-med-vcn` → Security → Default Security List → apagar a
   regra de ingresso da 8080. O OCI CLI não está no servidor, e instalá-lo com
   instance principals só para isso seria desproporcional.
+- **Endurecimento de segurança, em fases (plano de 2026-09-22).** A auditoria
+  de 20/09 e o deploy de 22/09 fecharam o que era urgente; o que sobrou está
+  abaixo, em ordem de proporção entre risco e custo. Medido em produção, não
+  suposto. **O que já está feito e não precisa ser refeito:** limite de
+  tentativas no login (10 por IP+e-mail em 5 min, contando conta inexistente —
+  `api/routers/auth.py`, `tests/test_login_limite.py`), senha mínima de 8,
+  segredos e e-mail de admin fora do código, HTTPS com cookie
+  `HttpOnly; Secure; SameSite=lax`, `.env.production` em 600, senha publicada do
+  demo rotacionada. **O que foi conferido e está correto:** SQL todo
+  parametrizado, nenhum IDOR (todo endpoint de simulado empurra `usuario_id`
+  para dentro do WHERE), gabarito escondido durante a prova, CSRF coberto pelo
+  `SameSite=lax` + corpo JSON, `comentario` de relato limitado a 1000
+  caracteres, e `npm audit --omit=dev` com **0 vulnerabilidades**.
+
+  1. **Cabeçalhos de segurança no `deploy/Caddyfile`** — hoje não existe
+     nenhum, conferido com `curl -I https://qualaconduta.com.br/`. Entram:
+     `Strict-Transport-Security` (importa agora que o HTTPS existe: impede
+     rebaixar para http depois da primeira visita), `X-Content-Type-Options`,
+     `Referrer-Policy`, `Permissions-Policy` e um CSP com `frame-ancestors`
+     (o admin é onde estão as ações destrutivas, e clickjacking é a via óbvia).
+     O CSP dá para apertar porque o app carrega só a si mesmo e o Google Fonts
+     — conferir `fonts.googleapis.com` (CSS) **e** `fonts.gstatic.com` (fontes)
+     no `style-src`/`font-src`, senão a tipografia quebra. Verificar depois com
+     o mesmo `curl -I` e um carregamento real no navegador.
+  2. **Teto diário por usuário no `/praticar/sessao`** — este é o item que não
+     é de checklist, é do produto. O endpoint aceita `quantidade=200`
+     (`Query(default=20, ge=1, le=200)`) e devolve gabarito e explicação
+     embutidos, por decisão de arquitetura (MIGRACAO.md §0/§2, é o que dá o
+     feedback instantâneo). Conta: **1074 ÷ 200 = 6 requisições** para levar o
+     banco inteiro, com qualquer conta válida. Um teto diário por usuário
+     (ex.: 500 casos/dia, contados no banco e não em memória, para valer entre
+     reinícios) mata o roubo em massa sem atrapalhar quem estuda — 500 casos é
+     muito mais do que um dia de estudo real. Precisa de teste.
+  3. **Segundo fator no admin** — `admin.qualaconduta.com.br` está aberto à
+     internet protegido só pela senha da conta, e é de lá que se apaga questão
+     (e `questoes.area_id` é `ON DELETE CASCADE`). `basic_auth` do Caddy são 3
+     linhas e eliminam a categoria "alguém descobriu a senha". A senha do
+     basic_auth vai para o `.env.production`/Caddyfile do servidor, nunca para
+     o repositório.
+  4. **Revogação de sessão de verdade** (menor prioridade, maior custo). O JWT
+     é stateless com 12 h: `POST /auth/logout` limpa o cookie, mas um token
+     roubado vale até expirar. Conserto honesto é um `token_version` por
+     usuário, checado no `usuario_atual` — uma coluna, uma comparação, e o
+     logout passa a invalidar de fato.
+
+  **Decisão do usuário, pendente:** o cadastro é **aberto e sem limite**
+  (`POST /auth/signup` não passa pelo limitador do login). Qualquer pessoa cria
+  contas à vontade, e cada conta pode fazer o item 2. Para uma plataforma que
+  hoje é de duas pessoas, lista de e-mails autorizados resolveria os dois de
+  uma vez; aberto-com-limite mantém a porta para crescer. Enquanto não houver
+  decisão, o item 2 é o que segura o estrago.
+
+  Nota lateral, baixa gravidade e conhecida: o signup devolve 409 "Já existe
+  uma conta com esse e-mail", o que é um oráculo de quem tem conta aqui — o
+  `/senha/esqueci` foi desenhado para não vazar isso. Trocar por mensagem
+  genérica piora a usabilidade do cadastro; fica registrado como aceito.
 - Se o shape ARM `VM.Standard.A1.Flex` (1 OCPU/6 GB, Always Free) aparecer em
   São Paulo e 1 GB apertar, recriar a instância nele.
 - Tema escuro do Triagem só existe por tokens, sem protótipo próprio.
