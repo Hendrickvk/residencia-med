@@ -1,16 +1,17 @@
 # MIGRACAO.md §7 — proxy reverso + HTTPS automático (Let's Encrypt via Caddy).
 #
-# Decisão de 2026-09-13: domínio pago descartado por custo; HTTPS vem de um
-# subdomínio gratuito do DuckDNS (conduta.duckdns.org → 64.181.167.174). O
-# DuckDNS resolve qualquer sub-subdomínio pro mesmo IP, então
-# admin.conduta.duckdns.org funciona sem registro extra.
+# Domínio próprio desde 2026-09-22: `qualaconduta.com.br`, comprado na
+# Hostinger (o DNS é o deles, `dns-parking.com`), com dois registros A para
+# 64.181.167.174 — o domínio e `admin`. O nome é a pergunta que a prova faz.
 #
-# Pressupõe portas 80 e 443 abertas (firewall do servidor + Security List da
-# Oracle) — o Caddy precisa das duas pra validar o certificado.
+# Os endereços antigos continuam existindo, como redirect permanente: o
+# `conduta.duckdns.org` foi o endereço público enquanto não havia domínio, e
+# link compartilhado não morre só porque a gente mudou de casa.
 #
-# Se um dia houver domínio próprio, basta trocar os nomes abaixo.
+# Pressupõe portas 80 e 443 abertas (iptables do host + Security List da
+# Oracle) — o Caddy precisa das duas: 80 para a validação ACME, 443 para servir.
 
-conduta.duckdns.org {
+qualaconduta.com.br {
 	encode gzip
 
 	# Front-end e API no MESMO host (MIGRACAO.md §1) — elimina CORS entre
@@ -31,14 +32,22 @@ conduta.duckdns.org {
 # o roteamento de websocket sob prefixo. Aberto a qualquer IP por decisão de
 # 2026-09-13 — com HTTPS, a senha não trafega mais em texto claro, que era o
 # motivo da antiga restrição de IP na porta 8080.
-admin.conduta.duckdns.org {
+admin.qualaconduta.com.br {
 	encode gzip
 	reverse_proxy 127.0.0.1:8501
 }
 
-# Links antigos por IP (http://64.181.167.174) caem no endereço novo.
-# Redirect temporário (302) de propósito: um 301 fica em cache no navegador
-# e atrapalharia se o endereço mudar de novo (ex.: domínio próprio).
+# Endereços antigos e o `www` caem no endereço novo. Redirect temporário (302)
+# de propósito: um 301 fica em cache no navegador e atrapalharia se o endereço
+# mudar de novo.
+www.qualaconduta.com.br, conduta.duckdns.org {
+	redir https://qualaconduta.com.br{uri}
+}
+
+admin.conduta.duckdns.org {
+	redir https://admin.qualaconduta.com.br{uri}
+}
+
 http://64.181.167.174 {
-	redir https://conduta.duckdns.org{uri}
+	redir https://qualaconduta.com.br{uri}
 }

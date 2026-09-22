@@ -14,66 +14,6 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   no navegador pelo https**, já que o resto foi verificado por curl; e limpar a
   regra de ingresso da porta **8080** na Security List da Oracle, que não expõe
   nada (nada escuta lá) mas ficou para trás.
-- **Domínio próprio, agora com dois motivos (2026-09-19).** A decisão de não
-  pagar domínio foi tomada quando o único uso era HTTPS, que o DuckDNS resolve
-  de graça. O e-mail de redefinição de senha criou o segundo motivo, e o
-  DuckDNS não atende: ele aceita **um único registro TXT**, já ocupado pelo
-  ACME do certificado, e autenticar domínio no Brevo pede 2 a 3 registros
-  (DKIM e DMARC). Consequência hoje: o Brevo reescreve o remetente para
-  `hendrickvk@12189774.brevosend.com` — porque `From:` de freemail sem domínio
-  autenticado quebraria o DMARC do Gmail — e o nome de exibição "Conduta" é o
-  que segura a aparência. Funciona e entrega (conferido em 18 e 19/09), mas o
-  endereço é feio e a entrega depende da boa vontade do filtro alheio.
-  Caminhos, do mais barato ao melhor:
-  1. **Ficar como está.** Zero custo. Nome "Conduta" na caixa de entrada,
-     endereço `@…brevosend.com` no cabeçalho, risco de spam que até agora não
-     se materializou (o teste foi aberto na caixa de entrada).
-  2. **Domínio grátis com DNS próprio** (`is-a.dev`, `eu.org`): permite DKIM e
-     DMARC, resolve o e-mail, aprovação por pull request e nome com cara de
-     projeto de dev. Não resolve bem o site, porque o certificado e o endereço
-     público ficariam num domínio de terceiro com cara informal.
-  3. **Domínio pago barato** (~R$ 40/ano num `.com.br`, ou US$ 5–12 num
-     `.site`/`.com`): resolve os dois de uma vez — `acesso@conduta.xxx` com
-     DKIM alinhado **e** HTTPS no lugar do DuckDNS, aposentando o
-     `conduta.duckdns.org` e o `deploy/Caddyfile` que depende dele.
-  Enquanto nada disso for decidido, o fluxo de senha está completo e
-  funcionando; o que muda com o domínio é só o valor de `EMAIL_REMETENTE` (e
-  os registros de DNS), não o código.
-- **Backup fora da máquina: feito; falta agendar (2026-09-20).** O banco tem
-  cópia num repositório privado do GitHub (`Hendrickvk/conduta-backups`),
-  conferida no remoto. O que resta é uma linha, no PowerShell do usuário, para
-  que isso aconteça sem ninguém lembrar:
-
-      schtasks /create /tn "Conduta - backup semanal" /tr "C:\Users\Hendrick\Documents\Codes\residencia-med\scripts\backup_semanal.cmd" /sc weekly /d SUN /st 19:00
-
-  Duas ressalvas conhecidas: com a máquina desligada no horário, o Agendador
-  **pula** a execução em vez de adiar (a caixa "Run task as soon as possible
-  after a scheduled start is missed" fica nas propriedades da tarefa, só pela
-  interface), e o único sinal de que o backup parou de acontecer é o
-  `backups/backup_semanal.log` — vale olhar de vez em quando.
-
-  Em aberto, se um dia houver alunos em volume: cifrar o dump antes de subir
-  (`age`, ou 7-Zip com AES). Hoje não compensa — perder a senha de cifra
-  transforma o backup em nada, o que é pior que o risco que ela evita num
-  repositório privado de uma conta com 2FA.
-- **Dados pessoais dela num repositório público (2026-09-20).** O
-  `frontend/src/lib/brincadeira.ts` tem nome completo, gostos pessoais, o nome de
-  outra pessoa e o SHA-256 do e-mail dela. Ela não sabe que isso está público, e
-  quem achar o repositório também estraga a surpresa. Três caminhos:
-  1. **Tornar o repositório privado.** Resolve isto, o histórico da senha
-     publicada, o e-mail e qualquer coisa futura de uma vez. **Não é só um
-     clique**: o servidor clonou por HTTPS anônimo e atualiza com `git pull`,
-     que passa a falhar — precisa de uma chave de deploy só de leitura, e os
-     comandos estão no `DEPLOY.md` (§3). Como o deploy já está parado por falta
-     de SSH, o custo real é fazer isso na mesma visita ao servidor.
-  2. **Mover o roteiro para trás de autenticação**: um endpoint que só devolve o
-     texto para a conta dela (a comparação do hash passa a ser no servidor), com
-     o roteiro num arquivo fora do git. Resolve de verdade, inclusive para quem
-     baixa o bundle do site — que é público mesmo com o repositório privado — ao
-     preço de um arquivo a mais no deploy e de um jeito novo de a brincadeira
-     falhar calada (arquivo ausente no servidor).
-  3. Não fazer nada: o risco é alguém achar o repositório antes dela ver a
-     brincadeira.
 - Se o shape ARM `VM.Standard.A1.Flex` (1 OCPU/6 GB, Always Free) aparecer em
   São Paulo e 1 GB apertar, recriar a instância nele.
 - Tema escuro do Triagem só existe por tokens, sem protótipo próprio.
@@ -894,6 +834,44 @@ governa as telas admin do Streamlit.
   revisadas.** Ver o passo 2 dos próximos passos, acima.
 
 ### 2026-09-22
+- **Domínio próprio: `qualaconduta.com.br`.** "Qual a conduta?" é a pergunta
+  que o enunciado faz — o domínio não precisa ser explicado para quem estuda
+  para a prova, e o nome do app continua dentro dele. `conduta.com` é premium e
+  `conduta.com.br` já estava registrado (consultado por RDAP, junto com
+  `.med.br` e `condutamed.*`, todos tomados). O critério de escolha não foi
+  estética e sim **entrega de e-mail**: gTLD novo e barato (`.study`, `.site`)
+  é o que filtro de spam olha torto, e pagar para continuar com problema de
+  entrega seria o pior dos mundos. `.com.br` custa R$ 40/ano fixos.
+- **Comprado na Hostinger, não no Registro.br** — descoberto pelo RDAP, que
+  mostrou os nameservers `*.dns-parking.com` e o domínio resolvendo para a
+  página de estacionamento deles. O DNS é gerenciado no painel da Hostinger.
+- **O DuckDNS não foi descartado, virou redirect.** `conduta.duckdns.org` e
+  `admin.conduta.duckdns.org` continuam respondendo com 302 para os endereços
+  novos, e o Caddy mantém os certificados dos dois. Custa nada e nenhum link já
+  compartilhado morre.
+- **Autenticação do domínio no Brevo, pelo método manual.** A opção
+  "Automatic" conecta o Brevo à conta do provedor de DNS para criar os
+  registros sozinho — autorização de terceiro na conta do usuário, que não é
+  decisão de ferramenta. Manual: quatro registros (posse, DKIM 1, DKIM 2,
+  DMARC) postos à mão no painel. **A prova de que funcionou** está na própria
+  API do Brevo: o envio de 22/09 saiu de `acesso@qualaconduta.com.br`, os de
+  19/09 saíram de `hendrickvk@12189774.brevosend.com`. Sem domínio autenticado
+  o Brevo reescreve o `From:` de um freemail, senão o DMARC de quem recebe
+  reprova a mensagem.
+- **Trocar de domínio custa quatro lugares, e só um exige rebuild** (está no
+  `DEPLOY.md` §2): Caddyfile, `.env.production`, `frontend/.env.production` e
+  Brevo. O bundle embute **apenas** o `VITE_STREAMLIT_URL`, porque
+  `VITE_API_URL=/api` é relativo — foi o que permitiu, no mesmo dia, o mesmo
+  bundle servir http e https e depois dois domínios diferentes.
+- **Armadilha do painel da Hostinger**, para a próxima vez: escolher o tipo TXT
+  **renomeia o campo de valor** (`pointsTo` → `txtValue`), e o formulário
+  re-renderiza sozinho com frequência suficiente para matar qualquer referência
+  de DOM guardada. Automatizar por seletor deu `null` três vezes seguidas; o
+  caminho visual (clicar e digitar, conferindo por screenshot antes de salvar)
+  funcionou de primeira. Vale a regra: **em painel de terceiro, olhar a tela
+  antes de salvar** — o formulário desloca entre o clique e a digitação, e foi
+  exatamente assim que o campo Valor ficou com o IP antigo numa das tentativas.
+
 - **Deploy feito: 60 commits de uma vez** (`bf5798d`, de 12/09, → `04ffc5b`), e
   o HTTPS saiu do papel depois de nove dias parado. O desbloqueio foi o usuário
   trazer a chave original da instância do outro computador: com ela entrei uma

@@ -47,15 +47,34 @@ Endereços em produção:
 
 | Endereço | O que serve |
 |----------|-------------|
-| `https://conduta.duckdns.org` | app do aluno (front + API em `/api`) |
-| `https://admin.conduta.duckdns.org` | telas administrativas (Streamlit) |
-| `http://conduta.duckdns.org` | redirect 308 para o https |
-| `http://64.181.167.174` | redirect 302 para o domínio (links antigos) |
+| `https://qualaconduta.com.br` | app do aluno (front + API em `/api`) |
+| `https://admin.qualaconduta.com.br` | telas administrativas (Streamlit) |
+| `https://conduta.duckdns.org` | redirect 302 para o endereço novo |
+| `http://…` e `http://64.181.167.174` | redirect para https |
 
-Domínio pago descartado por custo (2026-09-13): o HTTPS vem de um subdomínio
-gratuito do DuckDNS, e o DuckDNS resolve qualquer sub-subdomínio para o mesmo
-IP — então `admin.` funcionou sem registro extra. Certificados Let's Encrypt
-emitidos pelo Caddy para os dois nomes.
+O domínio é `qualaconduta.com.br` — a pergunta que a prova faz —, comprado na
+**Hostinger**, que também hospeda o DNS (`*.dns-parking.com`). O DuckDNS
+gratuito serviu enquanto não havia domínio e **continua existindo como
+redirect**: link já compartilhado não morre porque a gente mudou de casa.
+
+Registros DNS (todos com TTL 300 — numa migração, TTL curto é o que torna um
+erro barato de corrigir):
+
+| Tipo | Nome | Valor | Para quê |
+|------|------|-------|----------|
+| A | `@` | 64.181.167.174 | o site |
+| A | `admin` | 64.181.167.174 | o Streamlit |
+| CNAME | `www` | qualaconduta.com.br | veio da Hostinger, o Caddy atende |
+| TXT | `@` | `brevo-code:…` | posse do domínio, para o Brevo |
+| CNAME | `brevo1._domainkey` | `b1.qualaconduta-com-br.dkim.brevo.com` | DKIM |
+| CNAME | `brevo2._domainkey` | `b2.qualaconduta-com-br.dkim.brevo.com` | DKIM |
+| TXT | `_dmarc` | `v=DMARC1; p=none; rua=mailto:rua@dmarc.brevo.com` | DMARC |
+
+Os quatro últimos são o que fez o e-mail parar de sair de
+`hendrickvk@12189774.brevosend.com`: sem domínio autenticado, o Brevo reescreve
+o `From:` de um freemail, porque senão o DMARC de quem recebe reprovaria a
+mensagem. Conferido na API do Brevo depois da troca — o envio de 22/09 saiu de
+`acesso@qualaconduta.com.br`, os de 19/09 saíram do endereço reescrito.
 
 Portas liberadas (iptables do host + Security List da VCN):
 
@@ -66,14 +85,24 @@ Portas liberadas (iptables do host + Security List da VCN):
 | 443 | tudo | qualquer IP |
 
 A **8080 foi fechada** no iptables e a regra removida do `/etc/iptables/rules.v4`
-(persistida com `netfilter-persistent save`): o Caddy novo não a usa, porque o
-admin passou a ser um subdomínio com HTTPS. Era ela que precisava ficar restrita
-a um IP, porque sem HTTPS a senha do Streamlit trafegava em texto claro — o
-motivo deixou de existir. **Sobra uma limpeza no console da Oracle**: a regra de
-ingresso da 8080 na Security List continua lá, apontando para um IP que era o do
-administrador em 12/09; não expõe nada (nada escuta na porta), mas é sujeira.
+(persistida com `netfilter-persistent save`): o Caddy não a usa mais, porque o
+admin virou subdomínio com HTTPS. Era ela que precisava ficar restrita a um IP,
+porque sem HTTPS a senha do Streamlit trafegava em texto claro — o motivo
+deixou de existir. **Sobra uma limpeza no console da Oracle**: a regra de
+ingresso da 8080 na Security List continua lá; não expõe nada (nada escuta na
+porta), mas é sujeira.
 
-Se um dia houver domínio próprio, é só trocar os nomes no `deploy/Caddyfile`.
+### Trocar de domínio de novo, se um dia precisar
+
+São quatro lugares, e só um exige rebuild:
+
+1. `deploy/Caddyfile` — os blocos de domínio (o Caddy emite o certificado novo
+   sozinho; manter o antigo como `redir` custa nada).
+2. `.env.production` no servidor — `APP_URL` e `CORS_ORIGENS`.
+3. `frontend/.env.production` — `VITE_STREAMLIT_URL`, **o único endereço que o
+   bundle embute**; `VITE_API_URL=/api` é relativo de propósito. Exige rebuild
+   e envio (§8).
+4. Brevo — autenticar o domínio novo e trocar `EMAIL_REMETENTE`.
 
 ## 3. Deploy do código ✅ Concluído (2026-09-12)
 
@@ -190,12 +219,12 @@ trocada** e a nova não volta para cá.
 Conferido em 2026-09-22, no deploy que trouxe os 60 commits parados desde
 12/09 (`bf5798d` → `04ffc5b`):
 
-- [x] `https://conduta.duckdns.org` → 200, com certificado Let's Encrypt
-- [x] `http://conduta.duckdns.org` → 308 para o https; IP antigo → 302
-- [x] `https://admin.conduta.duckdns.org` → 200, e o websocket do Streamlit
+- [x] `https://qualaconduta.com.br` → 200, com certificado Let's Encrypt
+- [x] `http://` → 308 para o https; DuckDNS, `www` e IP antigo → 302
+- [x] `https://admin.qualaconduta.com.br` → 200, e o websocket do Streamlit
       negocia `101 Switching Protocols` através do Caddy (é o que costuma
       quebrar em proxy novo)
-- [x] `COOKIE_SECURE=true` e `CORS_ORIGENS=https://conduta.duckdns.org`
+- [x] `COOKIE_SECURE=true` e `CORS_ORIGENS=https://qualaconduta.com.br`
 - [x] Cookie de sessão conferido em produção: `HttpOnly; Secure; SameSite=lax;
       Path=/; Max-Age=43200` — verificado com uma conta descartável
       `@teste.local` criada pela API e removida depois, para não usar
@@ -208,6 +237,7 @@ Conferido em 2026-09-22, no deploy que trouxe os 60 commits parados desde
 - [ ] **Trocar a senha do `demo@residenciamed.com`** (ver seção 7) — a que foi
       publicada ainda funciona
 - [ ] Login real no navegador, pelo https (o resto foi verificado por curl)
+- [x] E-mail saindo de `acesso@qualaconduta.com.br` (conferido na API do Brevo)
 - [ ] Limpar a regra de ingresso da 8080 na Security List da Oracle
 
 ### O front é construído aqui, não no servidor
