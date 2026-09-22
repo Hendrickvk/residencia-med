@@ -35,6 +35,26 @@ _DEC2FLOAT = psycopg2.extensions.new_type(
 psycopg2.extensions.register_type(_DEC2FLOAT)
 
 
+def emails_admin():
+    """E-mails com poder administrativo, lidos da configuração.
+
+    Ficavam escritos no código — `api/deps.py` e `app.py` —, e o repositório é
+    público: além do spam, isso dizia a qualquer pessoa qual conta atacar para
+    conseguir acesso administrativo. Sem configuração ninguém é admin, que é o
+    lado seguro do erro. Mesma ordem de leitura do `_database_url`: st.secrets
+    quando rodando por `streamlit run`, senão a variável de ambiente.
+    """
+    bruto = ""
+    try:
+        import streamlit as st
+        if "ADMIN_EMAILS" in st.secrets:
+            bruto = st.secrets["ADMIN_EMAILS"]
+    except Exception:
+        pass
+    bruto = bruto or os.environ.get("ADMIN_EMAILS", "")
+    return {e.strip().lower() for e in bruto.split(",") if e.strip()}
+
+
 def _database_url():
     """Lê a connection string do Postgres. Prioriza st.secrets (rodando
     via `streamlit run`); cai para a variável de ambiente DATABASE_URL

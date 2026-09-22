@@ -11,7 +11,9 @@ class CredenciaisIn(BaseModel):
     # demais para um cadastro real e que barraria até os e-mails de teste.
     # Mesmo critério que `auth.py::render_login_signup` já usa hoje.
     email: str = Field(min_length=3)
-    senha: str = Field(min_length=6)
+    # 8 caracteres, não 6: com o login agora limitado a 10 tentativas por
+    # janela, o gargalho volta a ser o tamanho da senha.
+    senha: str = Field(min_length=8)
 
     @field_validator("email")
     @classmethod

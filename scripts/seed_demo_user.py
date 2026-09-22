@@ -17,6 +17,7 @@ rodado de novo por engano).
 import datetime
 import json
 import random
+import os
 import sys
 from pathlib import Path
 
@@ -27,7 +28,12 @@ import bcrypt  # noqa: E402
 import db  # noqa: E402
 
 EMAIL_DEMO = "demo@residenciamed.com"
-SENHA_DEMO = "ResidenciaDemo2026!"
+# A senha estava escrita aqui, neste repositório público, e a conta existe em
+# produção: era uma credencial funcional publicada, e quem entrasse com ela
+# baixava o banco inteiro (o /praticar/sessao devolve gabarito e explicação a
+# qualquer sessão válida). Agora vem do ambiente, e a senha antiga foi trocada —
+# tirar o literal não bastaria, o histórico do git é público para sempre.
+SENHA_DEMO = os.environ.get("SENHA_DEMO", "")
 TOTAL_RESPOSTAS = 400
 DIAS_JANELA = 56  # 8 semanas
 HORARIOS_PLAUSIVEIS = [7, 8, 9, 19, 20, 21, 22]
@@ -41,6 +47,10 @@ def obter_ou_criar_demo() -> int:
     usuario = db.obter_usuario_por_email(EMAIL_DEMO)
     if usuario:
         return usuario["id"]
+    if not SENHA_DEMO:
+        print("Defina SENHA_DEMO no ambiente para criar a conta de demonstração.")
+        print('  Ex.: SENHA_DEMO="$(python -c \'import secrets;print(secrets.token_urlsafe(16))\')"')
+        sys.exit(1)
     usuario_id = db.criar_usuario(EMAIL_DEMO, _hash(SENHA_DEMO))
     if usuario_id is None:
         # corrida rara com outra execução — a conta já existe, só buscar de novo
@@ -122,7 +132,7 @@ def main():
             )
             inseridas += 1
 
-    print(f"{inseridas} respostas semeadas para {EMAIL_DEMO} (senha: {SENHA_DEMO}).")
+    print(f"{inseridas} respostas semeadas para {EMAIL_DEMO}.")
     print("Desempenho por área sorteado (menor = pior, aparece como lacuna no Painel):")
     for area in areas_com_questoes:
         print(f"  {area['nome']}: ~{taxa_por_area[area['id']] * 100:.0f}%")

@@ -97,6 +97,24 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   (`age`, ou 7-Zip com AES). Hoje não compensa — perder a senha de cifra
   transforma o backup em nada, o que é pior que o risco que ela evita num
   repositório privado de uma conta com 2FA.
+- **Dados pessoais dela num repositório público (2026-09-20).** O
+  `frontend/src/lib/brincadeira.ts` tem nome completo, gostos pessoais, o nome de
+  outra pessoa e o SHA-256 do e-mail dela. Ela não sabe que isso está público, e
+  quem achar o repositório também estraga a surpresa. Três caminhos:
+  1. **Tornar o repositório privado.** Resolve isto, o histórico da senha
+     publicada, o e-mail e qualquer coisa futura de uma vez. **Não é só um
+     clique**: o servidor clonou por HTTPS anônimo e atualiza com `git pull`,
+     que passa a falhar — precisa de uma chave de deploy só de leitura, e os
+     comandos estão no `DEPLOY.md` (§3). Como o deploy já está parado por falta
+     de SSH, o custo real é fazer isso na mesma visita ao servidor.
+  2. **Mover o roteiro para trás de autenticação**: um endpoint que só devolve o
+     texto para a conta dela (a comparação do hash passa a ser no servidor), com
+     o roteiro num arquivo fora do git. Resolve de verdade, inclusive para quem
+     baixa o bundle do site — que é público mesmo com o repositório privado — ao
+     preço de um arquivo a mais no deploy e de um jeito novo de a brincadeira
+     falhar calada (arquivo ausente no servidor).
+  3. Não fazer nada: o risco é alguém achar o repositório antes dela ver a
+     brincadeira.
 - Se o shape ARM `VM.Standard.A1.Flex` (1 OCPU/6 GB, Always Free) aparecer em
   São Paulo e 1 GB apertar, recriar a instância nele.
 - Tema escuro do Triagem só existe por tokens, sem protótipo próprio.
@@ -917,6 +935,47 @@ governa as telas admin do Streamlit.
   revisadas.** Ver o passo 2 dos próximos passos, acima.
 
 ### 2026-09-20
+- **Auditoria de segurança do repositório inteiro**, pedida pelo usuário depois
+  de notar o próprio e-mail à vista. O que ela achou, em ordem de gravidade:
+  1. **Credencial funcional publicada.** O `scripts/seed_demo_user.py` trazia a
+     senha da conta `demo@residenciamed.com` escrita, e o `bcrypt.checkpw`
+     contra o banco confirmou: ainda funcionava. Como qualquer sessão válida
+     baixa o banco inteiro pelo `/praticar/sessao` (gabarito e explicação vêm
+     embutidos, por decisão de arquitetura), era acesso aberto ao conteúdo todo.
+     A senha saiu do código **e tem de ser trocada** — o histórico do git é
+     público para sempre, tirar o literal não desfaz a publicação.
+  2. **Segredo do JWT com default fixo no código** (`dev-insecure-...`), num
+     repositório público: se a env var faltasse em produção — um
+     `EnvironmentFile` esquecido no systemd bastava —, a API subia aceitando
+     cookie de sessão assinado por qualquer pessoa, para qualquer usuário. Agora
+     sem default: com a variável ausente, o processo gera um segredo aleatório e
+     avisa no log. Falha para o lado seguro.
+  3. **E-mail do admin escrito em três lugares** (`api/deps.py` como valor
+     padrão, `app.py` como única fonte, e o exemplo de produção). Além do spam,
+     dizia a quem lesse o repositório qual conta atacar para ter poder
+     administrativo — e admin é decidido por string de e-mail. Passou a sair de
+     `db.emails_admin()` (secrets.toml, senão ambiente), com o lado seguro sendo
+     *ninguém* é admin.
+  4. **Login sem limite de tentativas**, enquanto o "esqueci minha senha" já
+     tinha três por janela. Agora 10 falhas por (IP, e-mail) em 5 minutos,
+     contadas também para conta inexistente — senão o próprio limite viraria
+     oráculo de quem tem conta. Senha mínima subiu de 6 para 8.
+  5. **Dados pessoais de terceiro no repositório público**: o
+     `frontend/src/lib/brincadeira.ts` tem o nome completo dela, gostos pessoais, o nome
+     de outra pessoa e o SHA-256 do e-mail dela — com o nome ao lado, adivinhar
+     o e-mail e confirmar pelo hash é trivial. Continua em aberto: esconder do
+     repositório não basta, porque o bundle servido também é público; o conserto
+     de verdade é mover o roteiro para trás de autenticação, e isso é decisão do
+     usuário (ver Pendências).
+- **O que a auditoria conferiu e estava correto:** SQL todo parametrizado (as
+  f-strings do `db.py` interpolam só `?, ?, ?` e nomes de coluna de tupla fixa);
+  nenhum IDOR — todo endpoint de simulado passa `usuario_id` para dentro do
+  `WHERE`, em vez de confiar no id da URL; gabarito e explicação removidos dos
+  itens enquanto a prova corre; nenhum segredo jamais commitado (`.env` e
+  `secrets.toml` nunca entraram no histórico); CORS com lista explícita de
+  origens; cookie de sessão httpOnly; e nenhum endpoint devolvendo e-mail de
+  outro usuário (só o `/me` devolve o do próprio).
+
 - **O banco saiu desta máquina.** Destino escolhido pelo usuário: repositório
   privado no GitHub. O `--empurrar` do `backup_banco.py` manda a pasta espelho
   para o remoto substituindo o histórico por um commit só — com 24 MB por

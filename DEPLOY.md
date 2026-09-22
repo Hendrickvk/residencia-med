@@ -94,6 +94,36 @@ cd frontend && npm install && npm run build && cd ..
 `frontend/dist/` é o build estático que o Caddy serve (passo 6) — build
 confirmado (`✓ built in 7.13s`, 3 arquivos gerados).
 
+### Se o repositório virar privado: chave de deploy
+
+O clone acima é HTTPS **anônimo**, e a atualização é `git pull`: os dois só
+funcionam enquanto o repositório é público. Tornar o repositório privado sem
+mais nada quebra o `git pull` no servidor com "Authentication failed" /
+"repository not found" — não é restrição da Oracle, é o git pedindo credencial
+que ninguém configurou ali.
+
+A saída é uma **chave de deploy só de leitura**, gerada no próprio servidor
+(nunca uma chave que já exista em outro lugar), pelo usuário que roda o `pull`:
+
+```bash
+ssh-keygen -t ed25519 -f ~/.ssh/github-deploy -N ""   # sem passphrase: o pull roda sem interação
+cat ~/.ssh/github-deploy.pub                          # colar em Settings > Deploy keys, SEM "Allow write access"
+printf 'Host github.com\n  IdentityFile ~/.ssh/github-deploy\n  IdentitiesOnly yes\n' >> ~/.ssh/config
+ssh-keyscan github.com >> ~/.ssh/known_hosts          # senão a primeira conexão para, esperando confirmação
+cd /var/www/residencia-med
+git remote set-url origin git@github.com:Hendrickvk/residencia-med.git
+git pull
+```
+
+Chave de deploy é por repositório e só de leitura — se o servidor for
+comprometido, o atacante lê o código (que ele já teria, tendo a máquina) e não
+escreve no repositório. Um token de acesso pessoal também resolveria, mas vale
+para a conta inteira, o que é poder demais para um `git pull`.
+
+Como o deploy hoje está parado por falta de SSH, a ordem que evita surpresa é:
+tornar privado quando for entrar no servidor de qualquer forma, e configurar a
+chave antes do primeiro `git pull` da visita.
+
 ## 4. Segredos ✅ Concluído (2026-09-12)
 
 `.env.production` gerado no próprio servidor (nunca passou pelo terminal

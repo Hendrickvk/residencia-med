@@ -14,9 +14,10 @@ st.set_page_config(
     layout="wide",
 )
 
-# Questões são um recurso compartilhado entre todos os usuários —
-# ações destrutivas ficam restritas a quem está nessa lista.
-ADMIN_EMAILS = {"hendrickvk@gmail.com"}
+# Questões são um recurso compartilhado entre todos os usuários — ações
+# destrutivas ficam restritas a quem está na configuração (`ADMIN_EMAILS` no
+# .streamlit/secrets.toml ou no ambiente). Estava escrito aqui, e este
+# repositório é público.
 
 
 # db.init_db() cria tabelas/índices/seed — precisa rodar uma vez, não a cada
@@ -44,7 +45,7 @@ if "tema" not in st.session_state:
 
 ui.inject_theme_css(st.session_state["tema"])
 
-eh_admin = st.session_state.get("usuario_email") in ADMIN_EMAILS
+eh_admin = st.session_state.get("usuario_email") in db.emails_admin()
 usuario_id = st.session_state.usuario_id
 
 # ---------------------------------------------------------------------------

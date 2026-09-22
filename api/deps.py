@@ -1,15 +1,11 @@
-import os
-
 from fastapi import HTTPException, Request, status
 
 import db
 from api.security import COOKIE_NOME, decodificar_token
 
-ADMIN_EMAILS = {
-    e.strip().lower()
-    for e in os.environ.get("ADMIN_EMAILS", "hendrickvk@gmail.com").split(",")
-    if e.strip()
-}
+# Lido a cada chamada, e não uma vez no import, para o `ADMIN_EMAILS` do
+# ambiente valer sem reiniciar o processo — e porque guardar a lista num módulo
+# global era o que fazia o e-mail do admin virar constante no código.
 
 
 def usuario_atual(request: Request):
@@ -24,4 +20,4 @@ def usuario_atual(request: Request):
 
 
 def eh_admin(usuario) -> bool:
-    return usuario["email"] in ADMIN_EMAILS
+    return usuario["email"] in db.emails_admin()

@@ -2,8 +2,9 @@ import datetime
 import hashlib
 import os
 import secrets
+import time
 
-from fastapi import APIRouter, HTTPException, Response, status
+from fastapi import APIRouter, HTTPException, Request, Response, status
 
 import db
 from api.email import enviar_email
@@ -17,6 +18,36 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 APP_URL = os.environ.get("APP_URL", "http://localhost:5173").rstrip("/")
 # Pedidos de redefinição por conta em 15 minutos (db.contar_tokens_recentes).
 LIMITE_PEDIDOS = 3
+
+# Força bruta no login: o "esqueci minha senha" já tinha limite e o login não,
+# então tentar milhares de senhas contra uma conta conhecida era grátis — e o
+# e-mail do admin estava escrito no código, num repositório público.
+JANELA_LOGIN_S = 300
+MAX_TENTATIVAS_LOGIN = 10
+# ponytail: contador na memória do processo — zera no restart e não é
+# compartilhado entre workers. A API roda em um; com vários, isto vira tabela.
+_TENTATIVAS_LOGIN: dict[str, list[float]] = {}
+
+
+def _chave_tentativa(request: Request, email: str) -> str:
+    return "%s|%s" % (request.client.host if request.client else "?", email.strip().lower())
+
+
+def _login_bloqueado(chave: str) -> bool:
+    agora = time.monotonic()
+    recentes = [t for t in _TENTATIVAS_LOGIN.get(chave, []) if agora - t < JANELA_LOGIN_S]
+    _TENTATIVAS_LOGIN[chave] = recentes
+    return len(recentes) >= MAX_TENTATIVAS_LOGIN
+
+
+def _registrar_falha_login(chave: str) -> None:
+    _TENTATIVAS_LOGIN.setdefault(chave, []).append(time.monotonic())
+    # O dicionário nunca encolheria sozinho: sem isso, cada par IP+e-mail
+    # tentado deixaria uma entrada para sempre no processo.
+    if len(_TENTATIVAS_LOGIN) > 5000:
+        agora = time.monotonic()
+        for k in [k for k, v in _TENTATIVAS_LOGIN.items() if all(agora - t > JANELA_LOGIN_S for t in v)]:
+            del _TENTATIVAS_LOGIN[k]
 
 
 def _hash_token(token: str) -> str:
@@ -42,10 +73,19 @@ def signup(dados: CredenciaisIn, response: Response):
 
 
 @router.post("/login")
-def login(dados: CredenciaisIn, response: Response):
+def login(dados: CredenciaisIn, request: Request, response: Response):
+    chave = _chave_tentativa(request, dados.email)
+    if _login_bloqueado(chave):
+        raise HTTPException(
+            status.HTTP_429_TOO_MANY_REQUESTS,
+            "Muitas tentativas. Espere alguns minutos antes de tentar de novo.",
+        )
     usuario = db.obter_usuario_por_email(dados.email)
     if usuario is None or not verificar_senha(dados.senha, usuario["senha_hash"]):
+        _registrar_falha_login(chave)
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "E-mail ou senha incorretos.")
+    # Acertou: a conta não fica penalizada pelos erros de digitação de antes.
+    _TENTATIVAS_LOGIN.pop(chave, None)
     _definir_cookie_sessao(response, usuario["id"])
     return {"id": usuario["id"], "email": usuario["email"]}
 
