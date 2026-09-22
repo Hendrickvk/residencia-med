@@ -41,41 +41,39 @@ provedor. Fly.io (região `gru`) é uma alternativa, mas usa um modelo de
 deploy diferente (Docker + `fly.toml`, proxy/TLS próprios) — o `Caddyfile`
 e os `.service` deste diretório não se aplicam a ele.
 
-## 2. Domínio + DNS — adiado, publicando por IP (decisão de 2026-09-12)
+## 2. Domínio + HTTPS ✅ Concluído (2026-09-22)
 
-Por ora, sem domínio: acesso direto por `http://64.181.167.174`. Isso
-significa **sem HTTPS automático** (Let's Encrypt via Caddy exige um
-domínio real pra validar o certificado) — o site fica em HTTP puro
-enquanto isso durar.
+Endereços em produção:
 
-Portas liberadas (firewall do servidor + Security List da Oracle VCN):
+| Endereço | O que serve |
+|----------|-------------|
+| `https://conduta.duckdns.org` | app do aluno (front + API em `/api`) |
+| `https://admin.conduta.duckdns.org` | telas administrativas (Streamlit) |
+| `http://conduta.duckdns.org` | redirect 308 para o https |
+| `http://64.181.167.174` | redirect 302 para o domínio (links antigos) |
 
-| Porta | Uso | Origem permitida |
-|-------|-----|-------------------|
-| 22 | SSH | qualquer IP (protegido pela chave privada) |
-| 80 | Frontend + API via Caddy | qualquer IP |
-| 443 | reservada pra quando houver HTTPS | qualquer IP |
-| 8080 | Streamlit (admin) via Caddy | **só o IP `179.216.39.216/32`** |
+Domínio pago descartado por custo (2026-09-13): o HTTPS vem de um subdomínio
+gratuito do DuckDNS, e o DuckDNS resolve qualquer sub-subdomínio para o mesmo
+IP — então `admin.` funcionou sem registro extra. Certificados Let's Encrypt
+emitidos pelo Caddy para os dois nomes.
 
-A porta do admin foi restrita de propósito: sem HTTPS, a senha de login do
-Streamlit trafega em texto claro, então não expusemos essa porta pra
-qualquer IP da internet — só o IP de quem administra hoje. **Se esse IP
-mudar** (troca de rede, provedor dinâmico), a regra da Security List
-precisa ser atualizada (Oracle Console → Networking → Virtual Cloud
-Networks → `residencia-med-vcn` → Security → `Default Security List for
-residencia-med-vcn` → editar a regra da porta 8080), senão o admin fica
-inacessível. Alternativa mais robusta: acessar via túnel SSH
-(`ssh -L 8501:localhost:8501 ubuntu@64.181.167.174` e abrir
-`http://localhost:8501`) em vez de depender de IP fixo.
+Portas liberadas (iptables do host + Security List da VCN):
 
-Quando houver um domínio real, trocar `deploy/Caddyfile` pela versão em
-`deploy/Caddyfile.com-dominio.example` (HTTPS automático, Streamlit em
-subdomínio em vez de porta), e então dois registros DNS tipo A:
+| Porta | Uso | Origem |
+|-------|-----|--------|
+| 22 | SSH | qualquer IP (protegido pela chave) |
+| 80 | redirect para https + validação ACME | qualquer IP |
+| 443 | tudo | qualquer IP |
 
-```
-SEUDOMINIO.com        → 64.181.167.174
-admin.SEUDOMINIO.com  → 64.181.167.174
-```
+A **8080 foi fechada** no iptables e a regra removida do `/etc/iptables/rules.v4`
+(persistida com `netfilter-persistent save`): o Caddy novo não a usa, porque o
+admin passou a ser um subdomínio com HTTPS. Era ela que precisava ficar restrita
+a um IP, porque sem HTTPS a senha do Streamlit trafegava em texto claro — o
+motivo deixou de existir. **Sobra uma limpeza no console da Oracle**: a regra de
+ingresso da 8080 na Security List continua lá, apontando para um IP que era o do
+administrador em 12/09; não expõe nada (nada escuta na porta), mas é sujeira.
+
+Se um dia houver domínio próprio, é só trocar os nomes no `deploy/Caddyfile`.
 
 ## 3. Deploy do código ✅ Concluído (2026-09-12)
 
@@ -148,42 +146,91 @@ sudo systemctl enable --now residencia-api residencia-streamlit
 
 Confirmado `active (running)` para os dois serviços.
 
-## 6. Proxy reverso ✅ Concluído (2026-09-12)
+## 6. Proxy reverso ✅ Concluído (2026-09-12, HTTPS em 2026-09-22)
 
 ```bash
 sudo cp deploy/Caddyfile /etc/caddy/Caddyfile
 sudo systemctl reload caddy
 ```
 
-Sem domínio ainda, esse `Caddyfile` serve por IP puro em HTTP (porta 80
-pro frontend+API, porta 8080 pro Streamlit). Quando houver domínio, usar
-`deploy/Caddyfile.com-dominio.example` no lugar (HTTPS automático via
-Let's Encrypt, só editar as duas ocorrências de `SEUDOMINIO.com`).
+O `deploy/Caddyfile` é a configuração de verdade: os dois subdomínios do
+DuckDNS com HTTPS automático, a API em `/api` no mesmo host do front (same-origin,
+sem CORS entre eles) e o redirect do IP antigo. A versão que servia por IP puro
+ficou em `/etc/caddy/Caddyfile.antes-do-https` no servidor, para rollback.
+
+**Armadilha encontrada na troca (2026-09-22).** A ideia era aplicar primeiro uma
+versão com `auto_https disable_redirects`, para a porta 80 continuar servindo o
+site caso a 443 estivesse fechada na Oracle. **Não é isso que essa opção faz**:
+ela só remove o redirect, e um site declarado como `host { }` passa a ser servido
+apenas em 443 — a porta 80 ficou sem servir nada por dois minutos. Se algum dia
+precisar desse escalonamento de verdade, declare um bloco explícito
+`http://host { }`. No caso não houve prejuízo, porque a 443 estava aberta desde
+sempre: a conexão que não respondia antes era ausência de quem escutasse, e não
+firewall. **Como distinguir os dois**, que foi o que levou tempo: porta fechada
+por firewall dá timeout (o `-m` do curl estoura), porta sem ninguém escutando dá
+recusa rápida — e, em dúvida, `ss -lntp` no servidor responde na hora.
 
 ## 7. Usuário de demonstração ✅ Já populado (executado antes desta publicação)
 
-`demo@residenciamed.com` / `ResidenciaDemo2026!` já tem ~400 respostas
-sintéticas espalhadas em 8 semanas (rodado direto contra o Neon de
-produção, antes mesmo do servidor existir — mesmo banco, então nada a
-refazer). Confirmado via login real na API publicada: ofensiva de 36 dias,
-458 questões, 1646 materiais.
+`demo@residenciamed.com` tem ~400 respostas sintéticas espalhadas em 8 semanas
+(rodado direto contra o Neon de produção, antes mesmo do servidor existir —
+mesmo banco, então nada a refazer).
+
+A senha **não fica escrita aqui nem no `scripts/seed_demo_user.py`**, que agora
+a lê de `SENHA_DEMO` no ambiente. Ela estava nos dois lugares, neste
+repositório público, e continuava valendo na conta de produção quando a
+auditoria de 2026-09-20 a encontrou — qualquer pessoa que lesse o repositório
+entrava na plataforma e, autenticada, baixava as 1074 questões com gabarito e
+explicação pelo `/praticar/sessao`. Tirar o literal não desfaz a publicação: o
+histórico do git é público para sempre, então a senha antiga **tem de ser
+trocada** e a nova não volta para cá.
 
 ## 8. Checklist final antes de compartilhar qualquer link
 
-- [x] `COOKIE_SECURE=false` em `.env.production` (sem HTTPS ainda — trocar
-      pra `true` só depois de migrar pro `Caddyfile.com-dominio.example`)
-- [x] Usuário de demonstração populado (passo 7)
-- [x] Login funciona em `http://64.181.167.174` (testado via curl:
-      `POST /api/auth/login` → 200, `GET /api/me` autenticado → 200)
-- [x] `http://64.181.167.174:8080` abre o Streamlit (só do IP liberado —
-      ver seção 2) — testado, HTTP 200
-- [x] Testar o fluxo de Praticar de ponta a ponta no navegador (não só
-      curl) — login real no Chrome, painel com dados reais, uma questão
-      respondida com feedback instantâneo e explicação exibidos sem
-      round-trip; Streamlit também confirmado carregando via WebSocket
-      através do proxy Caddy
+Conferido em 2026-09-22, no deploy que trouxe os 60 commits parados desde
+12/09 (`bf5798d` → `04ffc5b`):
 
-Quando migrar pra domínio + HTTPS, revisitar esta checklist: `COOKIE_SECURE`
-volta a `true`, `CORS_ORIGENS` e `VITE_STREAMLIT_URL` voltam a usar o
-domínio real, e a porta 8080 pode ser fechada na Security List (Streamlit
-passa a viver em `admin.SEUDOMINIO.com` via HTTPS).
+- [x] `https://conduta.duckdns.org` → 200, com certificado Let's Encrypt
+- [x] `http://conduta.duckdns.org` → 308 para o https; IP antigo → 302
+- [x] `https://admin.conduta.duckdns.org` → 200, e o websocket do Streamlit
+      negocia `101 Switching Protocols` através do Caddy (é o que costuma
+      quebrar em proxy novo)
+- [x] `COOKIE_SECURE=true` e `CORS_ORIGENS=https://conduta.duckdns.org`
+- [x] Cookie de sessão conferido em produção: `HttpOnly; Secure; SameSite=lax;
+      Path=/; Max-Age=43200` — verificado com uma conta descartável
+      `@teste.local` criada pela API e removida depois, para não usar
+      credencial de ninguém
+- [x] `.env.production` com as 9 variáveis (inclusive `APP_URL` e as três do
+      Brevo, sem as quais o "esqueci minha senha" só escreve o link no log) e
+      permissão **600** — estava 664, com `DATABASE_URL` e `JWT_SECRET_KEY`
+      legíveis por qualquer usuário da máquina
+- [x] 8080 fechada e a mudança persistida
+- [ ] **Trocar a senha do `demo@residenciamed.com`** (ver seção 7) — a que foi
+      publicada ainda funciona
+- [ ] Login real no navegador, pelo https (o resto foi verificado por curl)
+- [ ] Limpar a regra de ingresso da 8080 na Security List da Oracle
+
+### O front é construído aqui, não no servidor
+
+A instância tem 954 MB de RAM e **nenhum swap**, com API, Streamlit e Caddy
+rodando: sobram ~390 MB, e `npm install` + build ali é convite a OOM. Desde
+2026-09-22 o build sai da máquina de desenvolvimento e vai empacotado, com
+troca atômica para não haver janela de 404:
+
+```bash
+cd frontend && npm run build && cd ..
+tar -czf /tmp/dist.tgz -C frontend dist
+scp /tmp/dist.tgz residencia-med:/tmp/dist.tgz
+ssh residencia-med 'cd /var/www/residencia-med/frontend \
+  && sudo -u residenciamed tar -xzf /tmp/dist.tgz --transform "s|^dist|dist.novo|" \
+  && sudo -u residenciamed rm -rf dist.antigo \
+  && sudo -u residenciamed mv dist dist.antigo && sudo -u residenciamed mv dist.novo dist'
+```
+
+`dist.antigo` fica no servidor: rollback é um `mv` de volta. O
+`frontend/.env.production` é versionado e usa `VITE_API_URL=/api`, caminho
+relativo — por isso o mesmo bundle serve http e https sem rebuild.
+
+O código no servidor pertence ao usuário `residenciamed`, então todo `git` e
+todo `pip` ali vão com `sudo -u residenciamed` (rodar como `ubuntu` dá
+"dubious ownership").

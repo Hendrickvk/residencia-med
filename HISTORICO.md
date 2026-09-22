@@ -7,54 +7,13 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
 
 ## Pendências
 
-- **Deploy no servidor (bloqueado por SSH).** A chave autorizada na instância
-  Oracle ficou em outro computador, e a Oracle não deixa baixar nem trocar a
-  chave de uma instância existente. No notebook atual existe
-  `~/.ssh/conduta-oracle` (alias `residencia-med` no `~/.ssh/config`), ainda
-  não autorizada: a partir do outro PC, anexar o conteúdo de
-  `~/.ssh/conduta-oracle.pub` deste notebook ao `~/.ssh/authorized_keys` do
-  servidor; a alternativa é trazer para cá a chave original da instância
-  (`ssh-key-2026-09-12.key`). Estado conferido em 2026-09-15: a host key
-  ED25519 que o servidor apresenta é a esperada
-  (`SHA256:c5q+FAcRSupd1hNDvfaGk6Su6oepMnb1cf+8DTQJN6A`) e já está no
-  `known_hosts` deste PC, então a primeira conexão não vai perguntar nada;
-  `ssh residencia-med` chega até a autenticação e volta
-  `Permission denied (publickey)`, ou seja, falta só a autorização no servidor.
-  A permissão da chave privada foi restringida ao usuário pela ACL do Windows
-  (`icacls … /inheritance:r /grant:r`); o `ls` do Git Bash continua mostrando
-  `-rw-r--r--`, que ali não reflete a ACL. Esperando esse deploy: HTTPS via
-  DuckDNS, redesign Triagem, simulado por prova oficial e `questoes_provas`,
-  taxonomia de especialidades, correção da conexão morta do Neon, revisão
-  espaçada em 3 fases, a limpeza de código morto, a remoção dos materiais, os
-  temas e o tipo de pergunta das questões e os 7 itens do acompanhamento do
-  desempenho. Passos: `git pull`,
-  rebuild do front, no `.env.production` `COOKIE_SECURE=true` e
-  `CORS_ORIGENS=https://conduta.duckdns.org`, copiar o Caddyfile, reload do
-  caddy, restart de api e streamlit, testar, só então fechar a 8080 (iptables
-  **e** Security List) e atualizar o `DEPLOY.md`, apagando junto o
-  `deploy/Caddyfile.com-dominio.example` (é do domínio pago descartado, e o
-  `DEPLOY.md` ainda o cita).
-- Enquanto o deploy não sai, o servidor roda código antigo sobre o banco já
-  migrado: Materiais lá mostra só as 5 grandes áreas, sem especialidades, e a
-  Prova oficial lista a Revalida 2025/2 só com as 50 questões próprias (as 43
-  comuns com o ENAMED 2025 só entram pela `questoes_provas`).
-- Questões oficiais ainda fora do banco (a Revalida 2021 entrou em 2026-09-15):
-  **Revalida 2020**, porque o INEP só publica o gabarito preliminar dos dois
-  cadernos, e preliminar muda em anulação e em letra depois dos recursos;
-  **Revalida 2022-1**, cujo caderno não tem mapa de caracteres — as fontes são
-  subconjuntos com glifos "g87", sem ToUnicode, e pdfplumber e PyMuPDF devolvem
-  lixo, de modo que só sairia por OCR, que exigiria instalar o Tesseract e
-  revisar 100 enunciados clínicos número a número. **Revalida 2026/2** é só
-  esperar: em 2026-09-15 o caderno 1 já estava publicado, mas o gabarito ainda
-  era o preliminar; quando sair o definitivo, é importação direta com
-  `scripts/importar_prova.py`. Também fora: edições
-  anteriores da USP (a FUVEST só mantém a atual); UNICAMP de 2024 em diante
-  (respostas curtas); UNIFESP e Santa Casa (caderno não público). O **ENARE**
-  foi conferido em 2026-09-15 e não serve: a FGV publica 139 cadernos, todos de
-  ano adicional, área de atuação, pré-requisito e multiprofissional, porque o
-  acesso direto em medicina migrou para o ENAMED, que já está no banco. Sobram
-  as provas estaduais e de instituições (SES-DF, SES-PE, SUS-SP, AMRIGS,
-  IAMSPE), que dão volume de prática mas ficam fora do peso do INEP.
+- **O que sobrou do deploy (2026-09-22).** O servidor está em dia — HTTPS,
+  código e variáveis conferidos (ver `DEPLOY.md` §2 e §8). Três coisas não
+  dependem de código e continuam abertas: **trocar a senha do
+  `demo@residenciamed.com`**, que foi publicada e ainda funciona; **login real
+  no navegador pelo https**, já que o resto foi verificado por curl; e limpar a
+  regra de ingresso da porta **8080** na Security List da Oracle, que não expõe
+  nada (nada escuta lá) mas ficou para trás.
 - **Domínio próprio, agora com dois motivos (2026-09-19).** A decisão de não
   pagar domínio foi tomada quando o único uso era HTTPS, que o DuckDNS resolve
   de graça. O e-mail de redefinição de senha criou o segundo motivo, e o
@@ -933,6 +892,47 @@ governa as telas admin do Streamlit.
   `db.py` usa `ILIKE`.
 - **Revalida 2025/2, UNICAMP 2023, 2025/1, 2024/2, 2024/1, 2023/2 e 2023/1
   revisadas.** Ver o passo 2 dos próximos passos, acima.
+
+### 2026-09-22
+- **Deploy feito: 60 commits de uma vez** (`bf5798d`, de 12/09, → `04ffc5b`), e
+  o HTTPS saiu do papel depois de nove dias parado. O desbloqueio foi o usuário
+  trazer a chave original da instância do outro computador: com ela entrei uma
+  vez, anexei a chave **deste** notebook ao `authorized_keys` e o acesso passou
+  a ser local (`ssh residencia-med`), sem depender mais do arquivo. A chave
+  veio como arquivo, nunca colada na conversa, e foi validada derivando a
+  pública dela — o conteúdo nunca precisou ser lido.
+- **O front passou a ser construído aqui, não no servidor.** A instância tem
+  954 MB e **nenhum swap**, com API, Streamlit e Caddy rodando: sobram ~390 MB,
+  e `npm install` + build ali é convite a OOM. Agora vai empacotado e entra por
+  troca atômica (`dist.novo` → `dist`, com `dist.antigo` guardado para
+  rollback). Funciona porque o `frontend/.env.production` usa
+  `VITE_API_URL=/api`, caminho relativo: o mesmo bundle serve http e https.
+- **`auto_https disable_redirects` não faz o que o nome sugere.** Para escalonar
+  a troca — manter a porta 80 servindo caso a 443 estivesse fechada na Oracle —
+  apliquei uma configuração com essa opção. Ela só remove o redirect: um site
+  declarado como `host { }` passa a ser servido **apenas** em 443, e a porta 80
+  ficou sem servir nada por dois minutos. O escalonamento de verdade exige um
+  bloco explícito `http://host { }`. Não houve prejuízo porque a 443 estava
+  aberta desde sempre — o que faltava era alguém escutando nela.
+- **Porta fechada por firewall e porta sem ninguém escutando se distinguem pelo
+  tempo**: firewall dá timeout (o `-m` do curl estoura), ausência de serviço dá
+  recusa rápida. Foi o que resolveu a dúvida sobre a 443 — e `ss -lntp` no
+  servidor teria respondido na hora.
+- **O `.env.production` estava 664**, com `DATABASE_URL` e `JWT_SECRET_KEY`
+  legíveis por qualquer usuário da máquina. Agora 600. Ganhou também `APP_URL` e
+  as três variáveis do Brevo, sem as quais o "esqueci minha senha" em produção
+  só escreveria o link no log do servidor.
+- **A senha do demo também estava no `DEPLOY.md`**, em texto claro, e não só no
+  script — a varredura da auditoria de 20/09 tinha excluído os `.md` da busca
+  por e-mails, e a de segredos procurava formatos de chave, não senha comum. A
+  lição é sobre a varredura: procurar *padrões de segredo* não acha uma senha
+  que parece uma palavra. O que acha é procurar pelo valor conhecido em **todo**
+  arquivo rastreado, `.md` inclusive.
+- **8080 fechada** no iptables e persistida: o admin virou
+  `https://admin.conduta.duckdns.org`, e o motivo da restrição por IP (senha do
+  Streamlit em texto claro) deixou de existir. O websocket do Streamlit negocia
+  `101 Switching Protocols` através do Caddy, que é o que costuma quebrar em
+  proxy novo.
 
 ### 2026-09-20
 - **Auditoria de segurança do repositório inteiro**, pedida pelo usuário depois

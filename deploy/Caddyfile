@@ -8,8 +8,7 @@
 # Pressupõe portas 80 e 443 abertas (firewall do servidor + Security List da
 # Oracle) — o Caddy precisa das duas pra validar o certificado.
 #
-# Se um dia houver domínio próprio, basta trocar os nomes abaixo (a versão
-# genérica está em `Caddyfile.com-dominio.example`).
+# Se um dia houver domínio próprio, basta trocar os nomes abaixo.
 
 conduta.duckdns.org {
 	encode gzip
