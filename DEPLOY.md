@@ -211,8 +211,9 @@ repositório público, e continuava valendo na conta de produção quando a
 auditoria de 2026-09-20 a encontrou — qualquer pessoa que lesse o repositório
 entrava na plataforma e, autenticada, baixava as 1074 questões com gabarito e
 explicação pelo `/praticar/sessao`. Tirar o literal não desfaz a publicação: o
-histórico do git é público para sempre, então a senha antiga **tem de ser
-trocada** e a nova não volta para cá.
+histórico do git é público para sempre, então a senha antiga **tinha de ser
+trocada** — foi, em 22/09 — e a nova não volta para cá: ela vive no `.env`
+local (gitignorado), em `SENHA_DEMO`, que é de onde o script a lê.
 
 ## 8. Checklist final antes de compartilhar qualquer link
 
@@ -234,8 +235,8 @@ Conferido em 2026-09-22, no deploy que trouxe os 60 commits parados desde
       permissão **600** — estava 664, com `DATABASE_URL` e `JWT_SECRET_KEY`
       legíveis por qualquer usuário da máquina
 - [x] 8080 fechada e a mudança persistida
-- [ ] **Trocar a senha do `demo@residenciamed.com`** (ver seção 7) — a que foi
-      publicada ainda funciona
+- [x] Senha do `demo@residenciamed.com` rotacionada em 22/09 (ver seção 7): a
+      publicada devolve 401 no site, a nova vive só no `.env` local
 - [ ] Login real no navegador, pelo https (o resto foi verificado por curl)
 - [x] E-mail saindo de `acesso@qualaconduta.com.br` (conferido na API do Brevo)
 - [ ] Limpar a regra de ingresso da 8080 na Security List da Oracle

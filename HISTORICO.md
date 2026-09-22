@@ -8,12 +8,17 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
 ## Pendências
 
 - **O que sobrou do deploy (2026-09-22).** O servidor está em dia — HTTPS,
-  código e variáveis conferidos (ver `DEPLOY.md` §2 e §8). Três coisas não
-  dependem de código e continuam abertas: **trocar a senha do
-  `demo@residenciamed.com`**, que foi publicada e ainda funciona; **login real
-  no navegador pelo https**, já que o resto foi verificado por curl; e limpar a
-  regra de ingresso da porta **8080** na Security List da Oracle, que não expõe
-  nada (nada escuta lá) mas ficou para trás.
+  domínio próprio, código e variáveis conferidos (ver `DEPLOY.md` §2 e §8), e a
+  senha publicada do `demo@residenciamed.com` foi rotacionada (a nova vive no
+  `.env` local, de onde o `seed_demo_user.py` a lê; conferido no site público:
+  a antiga devolve 401). Sobraram duas coisas que não dependem de código:
+  **login real no navegador** pelo https, já que o resto foi verificado por
+  curl, e limpar a regra de ingresso da porta **8080** na Security List da
+  Oracle — não expõe nada, porque nada escuta lá e o iptables do host já a
+  fechou, mas ficou para trás. O caminho é Console → Networking → Virtual Cloud
+  Networks → `residencia-med-vcn` → Security → Default Security List → apagar a
+  regra de ingresso da 8080. O OCI CLI não está no servidor, e instalá-lo com
+  instance principals só para isso seria desproporcional.
 - Se o shape ARM `VM.Standard.A1.Flex` (1 OCPU/6 GB, Always Free) aparecer em
   São Paulo e 1 GB apertar, recriar a instância nele.
 - Tema escuro do Triagem só existe por tokens, sem protótipo próprio.
