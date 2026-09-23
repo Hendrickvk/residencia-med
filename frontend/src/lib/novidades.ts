@@ -39,34 +39,13 @@ export const NOVIDADES: Novidade[] = [
   {
     id: "2026-09-23",
     data: "23 de setembro de 2026",
-    titulo: "Sua conta, mais protegida",
+    titulo: "Conta e sessão",
     itens: [
-      {
-        tipo: "novo",
-        texto:
-          "Quem cria uma conta agora confirma o e-mail antes de abrir as questões. Quem já estuda aqui não precisa fazer nada.",
-      },
-      {
-        tipo: "novo",
-        texto:
-          "Sair da conta encerra a sessão em todos os aparelhos, e redefinir a senha derruba quem estiver logado com a antiga.",
-      },
+      { tipo: "novo", texto: "Conta nova confirma o e-mail antes de começar." },
+      { tipo: "novo", texto: "Sair da conta encerra a sessão em todos os aparelhos." },
       {
         tipo: "corrigido",
-        texto:
-          "Quando a sessão expira, a plataforma leva você ao login em vez de mostrar um erro de carregamento no meio do estudo.",
-      },
-    ],
-  },
-  {
-    id: "2026-09-22",
-    data: "22 de setembro de 2026",
-    titulo: "Endereço próprio",
-    itens: [
-      {
-        tipo: "novo",
-        texto:
-          "A plataforma passou a morar em qualaconduta.com.br, com conexão segura. Os links antigos continuam funcionando.",
+        texto: "Sessão expirada leva pro login, em vez de dar erro no meio do estudo.",
       },
     ],
   },
