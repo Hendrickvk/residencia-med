@@ -34,7 +34,25 @@ export interface FiltrosPratica {
   ano?: number;
   apenas_erros: boolean;
   excluir_respondidas: boolean;
+  // Só as marcadas: entra pela página de perfil, não pelo Configurador.
+  apenas_marcadas?: boolean;
   quantidade: number;
+}
+
+// O resumo que a lista de marcadas mostra. Não tem alternativas, gabarito nem
+// explicação de propósito — esse conteúdo sai por um caminho só, a sessão de
+// Praticar, que tem teto diário.
+export interface QuestaoMarcada {
+  id: number;
+  enunciado: string;
+  area: string;
+  especialidade: string | null;
+  tema: string | null;
+  banca: string | null;
+  ano: number | null;
+  tipo_pergunta: string | null;
+  tem_imagem: boolean;
+  marcada_em: string;
 }
 
 export interface RespostaPayload {
@@ -318,6 +336,7 @@ export interface Me {
   novidades_vistas: string | null;
   nome: string | null;
   cor_perfil: string;
+  foto_versao: string | null;
   tema: "light" | "dark";
   prova_alvo: string | null;
   ofensiva_dias: number;

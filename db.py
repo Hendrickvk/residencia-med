@@ -6,6 +6,7 @@ Todas as tabelas e funções de CRUD/consulta usadas pelo app Streamlit
 ficam centralizadas aqui, para manter a interface (app.py) enxuta.
 """
 
+import hashlib
 import os
 import re
 import json
@@ -850,6 +851,23 @@ def init_db():
             c.execute("ALTER TABLE usuarios ADD COLUMN nome TEXT")
         if "cor_perfil" not in colunas_usuarios:
             c.execute("ALTER TABLE usuarios ADD COLUMN cor_perfil TEXT")
+        # Versão da foto: fica em `usuarios` (é uma string curta) para o `/me`
+        # saber se existe foto sem encostar no blob. NULL = sem foto.
+        if "foto_versao" not in colunas_usuarios:
+            c.execute("ALTER TABLE usuarios ADD COLUMN foto_versao TEXT")
+
+        # A foto em tabela separada, e não numa coluna de `usuarios`: o
+        # `obter_usuario` faz `SELECT *` e roda em **toda** requisição
+        # autenticada — um BYTEA ali seria a foto descendo do Postgres a cada
+        # chamada de API, para nada.
+        c.execute("""
+        CREATE TABLE IF NOT EXISTS fotos_perfil (
+            usuario_id INTEGER PRIMARY KEY,
+            imagem BYTEA NOT NULL,
+            mime TEXT NOT NULL,
+            FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+        )
+        """)
 
         # Migração leve: calibração de confiança ("acertei com segurança" /
         # "acertei no chute"), usada para ajustar a qualidade informada ao
@@ -1110,7 +1128,8 @@ def listar_anos():
 
 def ids_questoes_filtro_pratica(*, usuario_id, area_id=None, subtopico_id=None,
                                  banca=None, ano=None, apenas_erros=False,
-                                 excluir_respondidas=False, especialidade_id=None, tipo_pergunta=None):
+                                 excluir_respondidas=False, especialidade_id=None, tipo_pergunta=None,
+                                 apenas_marcadas=False):
     """Configurador de Praticar (REDESIGN.md §4.2): filtros combináveis além
     de área/especialidade/subtópico — banca, ano, e dois interruptores que
     olham o histórico de respostas do próprio usuário."""
@@ -1147,6 +1166,14 @@ def ids_questoes_filtro_pratica(*, usuario_id, area_id=None, subtopico_id=None,
     if excluir_respondidas:
         condicoes.append(
             "NOT EXISTS (SELECT 1 FROM respostas r WHERE r.questao_id = q.id AND r.usuario_id = ?)"
+        )
+        params.append(usuario_id)
+    if apenas_marcadas:
+        # A lista de marcadas (tela de perfil) sai por aqui em vez de devolver
+        # as questões inteiras: assim o gabarito e a explicação continuam
+        # saindo por um caminho só, o `/praticar/sessao`, que tem teto diário.
+        condicoes.append(
+            "EXISTS (SELECT 1 FROM questoes_marcadas m WHERE m.questao_id = q.id AND m.usuario_id = ?)"
         )
         params.append(usuario_id)
     query = f"SELECT q.id FROM questoes q WHERE {' AND '.join(condicoes)}"
@@ -1438,6 +1465,46 @@ def atualizar_perfil(usuario_id, nome: str | None, cor: str):
     return nome, cor
 
 
+# Tipos aceitos na foto de perfil. **SVG fica de fora de propósito**: é XML
+# com script dentro, e serví-lo do nosso domínio seria executar código de
+# terceiro na origem da aluna.
+FOTO_MIMES = {
+    # Assinatura de cada formato, conferida contra os primeiros bytes do
+    # arquivo: o tipo declarado pelo cliente não prova nada.
+    "image/jpeg": bytes.fromhex("ffd8ff"),
+    "image/png": bytes.fromhex("89504e47"),
+    "image/webp": b"RIFF",
+}
+FOTO_MAX_BYTES = 200 * 1024
+
+
+def definir_foto_perfil(usuario_id, imagem: bytes, mime: str) -> str:
+    """Guarda a foto e devolve a versão — os 12 primeiros dígitos do sha256 do
+    conteúdo. A versão vai na URL que o navegador pede, então trocar a foto
+    troca a URL e a nova aparece na hora, sem esperar cache vencer."""
+    versao = hashlib.sha256(imagem).hexdigest()[:12]
+    with get_conn() as conn:
+        conn.execute("""
+            INSERT INTO fotos_perfil (usuario_id, imagem, mime) VALUES (?, ?, ?)
+            ON CONFLICT (usuario_id) DO UPDATE SET imagem = excluded.imagem, mime = excluded.mime
+        """, (usuario_id, psycopg2.Binary(imagem), mime))
+        conn.execute("UPDATE usuarios SET foto_versao = ? WHERE id = ?", (versao, usuario_id))
+    return versao
+
+
+def remover_foto_perfil(usuario_id):
+    with get_conn() as conn:
+        conn.execute("DELETE FROM fotos_perfil WHERE usuario_id = ?", (usuario_id,))
+        conn.execute("UPDATE usuarios SET foto_versao = NULL WHERE id = ?", (usuario_id,))
+
+
+def obter_foto_perfil(usuario_id):
+    with get_conn() as conn:
+        return conn.execute(
+            "SELECT imagem, mime FROM fotos_perfil WHERE usuario_id = ?", (usuario_id,)
+        ).fetchone()
+
+
 def marcar_novidades_vistas(usuario_id, id_entrada: str):
     with get_conn() as conn:
         conn.execute("UPDATE usuarios SET novidades_vistas = ? WHERE id = ?", (id_entrada, usuario_id))
@@ -1547,6 +1614,31 @@ def questao_esta_marcada(usuario_id, questao_id):
             (usuario_id, questao_id),
         ).fetchone()
         return row is not None
+
+
+def resumo_questoes_marcadas(*, usuario_id):
+    """O que a lista de marcadas mostra: enunciado e classificação, **sem**
+    gabarito, alternativas nem explicação.
+
+    Não é economia de bytes, é a mesma decisão do teto diário: o conteúdo que
+    levou meses para existir sai por um caminho só, o `/praticar/sessao`. Se
+    esta lista devolvesse as questões inteiras, marcar 1074 questões (os ids
+    são sequenciais) e pedir a lista uma vez levaria o banco inteiro.
+    """
+    with get_conn() as conn:
+        return conn.execute("""
+            SELECT q.id, q.enunciado, q.banca, q.ano, q.tipo_pergunta,
+                   (q.imagem IS NOT NULL) AS tem_imagem,
+                   a.nome AS area, e.nome AS especialidade, s.nome AS tema,
+                   m.criada_em AS marcada_em
+            FROM questoes_marcadas m
+            JOIN questoes q ON q.id = m.questao_id
+            JOIN areas a ON a.id = q.area_id
+            LEFT JOIN especialidades e ON e.id = q.especialidade_id
+            LEFT JOIN subtopicos s ON s.id = q.subtopico_id
+            WHERE m.usuario_id = ?
+            ORDER BY m.criada_em DESC
+        """, (usuario_id,)).fetchall()
 
 
 def listar_questoes_marcadas(*, usuario_id):

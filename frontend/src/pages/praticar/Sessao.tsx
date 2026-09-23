@@ -46,6 +46,7 @@ export default function Sessao({ filtros, nonce, salva, email, onFinalizar, onVo
         ano: filtros.ano,
         apenas_erros: filtros.apenas_erros,
         excluir_respondidas: filtros.excluir_respondidas,
+        apenas_marcadas: filtros.apenas_marcadas,
         quantidade: filtros.quantidade,
       }),
     staleTime: Infinity,

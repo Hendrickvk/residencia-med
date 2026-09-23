@@ -23,6 +23,8 @@ interface EstadoNavegacao {
   tipoPergunta?: string;
   iniciarImediato?: boolean;
   quantidade?: number;
+  // Vindo da lista de marcadas, na página de perfil.
+  apenasMarcadas?: boolean;
 }
 
 export default function Praticar() {
@@ -47,6 +49,7 @@ export default function Praticar() {
           quantidade: estadoNav.quantidade ?? 20,
           apenas_erros: false,
           excluir_respondidas: false,
+          apenas_marcadas: estadoNav.apenasMarcadas,
         },
       };
     }

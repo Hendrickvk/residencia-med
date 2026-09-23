@@ -37,6 +37,16 @@ export const ROTULO_TIPO: Record<TipoNovidade, string> = {
 
 export const NOVIDADES: Novidade[] = [
   {
+    id: "2026-09-23b",
+    data: "23 de setembro de 2026",
+    titulo: "Seu perfil",
+    itens: [
+      { tipo: "novo", texto: "Dá para pôr uma foto, um nome e escolher a cor do seu avatar." },
+      { tipo: "novo", texto: "As questões que você marca agora têm onde aparecer, e dá para praticar só elas." },
+      { tipo: "novo", texto: "A data da prova virou sua: dá para mudar quando quiser." },
+    ],
+  },
+  {
     id: "2026-09-23",
     data: "23 de setembro de 2026",
     titulo: "Conta e sessão",

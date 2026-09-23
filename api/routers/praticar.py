@@ -21,6 +21,7 @@ def obter_sessao_pratica(
     ano: int | None = None,
     apenas_erros: bool = False,
     excluir_respondidas: bool = False,
+    apenas_marcadas: bool = False,
     quantidade: int = Query(default=20, ge=1, le=200),
     usuario=Depends(usuario_confirmado),
 ):
@@ -32,7 +33,7 @@ def obter_sessao_pratica(
         usuario_id=usuario["id"], area_id=area_id, subtopico_id=subtopico_id,
         banca=banca, ano=ano, apenas_erros=apenas_erros,
         excluir_respondidas=excluir_respondidas, especialidade_id=especialidade_id,
-        tipo_pergunta=tipo_pergunta,
+        tipo_pergunta=tipo_pergunta, apenas_marcadas=apenas_marcadas,
     )
     random.shuffle(ids)
     ids = ids[:quantidade]
@@ -63,6 +64,7 @@ def contar_casos_pratica(
     ano: int | None = None,
     apenas_erros: bool = False,
     excluir_respondidas: bool = False,
+    apenas_marcadas: bool = False,
     usuario=Depends(usuario_atual),
 ):
     """Quantos casos o recorte do Configurador tem, para ele responder enquanto
@@ -79,7 +81,7 @@ def contar_casos_pratica(
         usuario_id=usuario["id"], area_id=area_id, subtopico_id=subtopico_id,
         banca=banca, ano=ano, apenas_erros=apenas_erros,
         excluir_respondidas=excluir_respondidas, especialidade_id=especialidade_id,
-        tipo_pergunta=tipo_pergunta,
+        tipo_pergunta=tipo_pergunta, apenas_marcadas=apenas_marcadas,
     )
     return {"total": len(ids)}
 

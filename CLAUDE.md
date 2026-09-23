@@ -91,13 +91,27 @@ capping it would make the Configurador's live count lie about the bank.
 - Layout is a top bar with tabs (no side rail). Session screens (Praticar session, Simulado in progress, Revisão) render `<BarraFoco>` (`src/lib/foco.tsx`), which portals the session's own bar into the top bar and hides the tabs, so the shell never needs to know which session is running.
 - TanStack Query (React Query) for server state. **Known pitfall already hit twice**: a hook with `staleTime: Infinity` reused across two different screens under the *same* queryKey leaks stale data from one screen's phase into another's (happened with `useItensSimulado` between "em andamento" and "resultado"). Before setting a long/infinite `staleTime`, confirm the queryKey is exclusive to one screen/phase, or invalidate explicitly before navigating (see `EmAndamento.tsx`).
 - React Router paths are stable keys, deliberately decoupled from the nav label shown in the menu (same lesson learned the hard way on the Streamlit side, where the label used to double as the routing key).
+- **`/perfil`** (`pages/perfil/`) — the account page: identity, exam date, marked questions. It is
+  deliberately outside `NAV` (the account is not a study tab; the way in is the account menu). The
+  **marked list returns no gabarito, alternativas or explicação** (`db.resumo_questoes_marcadas`) and
+  that is a security boundary, not a payload choice: question ids are sequential, so marking all 1074
+  and fetching the list once would drain the bank around the `/praticar/sessao` daily cap. Reviewing
+  them goes through the `apenas_marcadas` filter on that same capped endpoint.
+  `tests/test_pagina_perfil.py` fails if the list ever starts returning answers.
 - **Profile identity** (`src/lib/perfil.ts`, `components/Perfil.tsx`): a display name and an avatar
   colour, per account. The six colours are a **separate palette from the triage scale** and must stay
   that way — t1–t5 encode performance, so a green avatar would read as "doing well"; they also do not
   change with the theme, because it is the person's colour. The DB stores the **key**, validated
   against `db.CORES_PERFIL` (a colour arriving from the client becomes CSS), and the Tailwind classes
   are written out literally, never built as `bg-perfil-${cor}`. An empty name goes back to NULL and the
-  UI falls back to the e-mail. Photo upload is a deliberate phase 2 — see `HISTORICO.md`.
+  UI falls back to the e-mail. The **photo** lives in `fotos_perfil`, a table of its own and never a
+  column on `usuarios` — `obter_usuario` does `SELECT *` on every authenticated request, so a BYTEA
+  there would ship the photo from Postgres on every API call. `usuarios.foto_versao` (the content sha)
+  is what `/me` exposes and what goes in the image URL, so a new photo is a new URL and the response
+  can be cached `immutable` for a year. Resizing happens in the browser (`lib/foto.ts`, 256px square,
+  JPEG); the server checks what the client cannot be trusted for — decoded byte size and the file
+  signature against the declared type. **SVG is not an accepted type**, and that is not an oversight:
+  it is XML with script in it, served back from our own origin.
 - **"O que mudou"** (`src/lib/novidades.ts` + `components/Novidades.tsx`). The changelog the student
   sees: entries live in the **front-end list**, newest first, and the server deliberately doesn't know
   them — it only remembers the id of the last entry each account read (`usuarios.novidades_vistas`,

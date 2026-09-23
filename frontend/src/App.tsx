@@ -7,6 +7,7 @@ import Confirmar from "./pages/Confirmar";
 import Senha from "./pages/Senha";
 import Painel from "./pages/painel";
 import { PermaneceNoStreamlit } from "./pages/PermaneceNoStreamlit";
+import PaginaPerfil from "./pages/perfil";
 import Praticar from "./pages/praticar";
 import Revisao from "./pages/revisao";
 import Simulado from "./pages/simulado";
@@ -28,6 +29,9 @@ export default function App() {
           <Route path="/painel" element={<Painel />} />
           <Route path="/praticar" element={<Praticar />} />
           <Route path="/revisao" element={<Revisao />} />
+          {/* Fora do NAV de propósito: a conta não é uma aba de estudo, e o
+              caminho para ela é o menu da conta. */}
+          <Route path="/perfil" element={<PaginaPerfil />} />
           <Route path="/simulado" element={<Simulado />} />
           {/* Fase 7 do MIGRACAO.md §5: as telas do Acervo ficam no Streamlit
               e não ganham rota React própria. */}

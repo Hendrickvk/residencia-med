@@ -1,5 +1,7 @@
 import { Flame, LogOut, Menu, Moon, Sparkles, Sun, Terminal, UserRound, X } from "lucide-react";
-import { fundoDaCor, inicial, nomeExibido } from "../../lib/perfil";
+import { textoProva } from "../../lib/format";
+import { nomeExibido } from "../../lib/perfil";
+import { Avatar } from "../Avatar";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { PRESSAO } from "../../lib/estilos";
@@ -18,21 +20,10 @@ interface TopbarProps {
   revisoesHoje?: number;
   onSair: () => void;
   onNovidades: () => void;
-  onPerfil: () => void;
   temNovidade: boolean;
   // Só a convidada da brincadeira recebe esta opção; para todo mundo vem
   // `undefined` e o item não existe.
   onRever?: () => void;
-}
-
-function textoProva(provaAlvo: string | null): string | null {
-  if (!provaAlvo) return null;
-  const hoje = new Date();
-  hoje.setHours(0, 0, 0, 0);
-  const alvo = new Date(`${provaAlvo}T00:00:00`);
-  const dias = Math.round((alvo.getTime() - hoje.getTime()) / 86_400_000);
-  if (dias < 0) return "A data da prova já passou";
-  return `Prova em ${dias} dia${dias !== 1 ? "s" : ""}`;
 }
 
 // Sublinhado único que desliza até a aba ativa, em vez de um por aba que só
@@ -73,13 +64,12 @@ function useIndicadorAba(ativo: boolean) {
 
 // DESIGN_TRIAGEM.md §5: barra superior com abas no lugar do rail lateral. Em
 // modo foco (sessão em andamento) as abas dão lugar à barra da sessão.
-export function Topbar({ tema, onAlternarTema, me, revisoesHoje, onSair, onRever, onNovidades, onPerfil, temNovidade }: TopbarProps) {
+export function Topbar({ tema, onAlternarTema, me, revisoesHoje, onSair, onRever, onNovidades, temNovidade }: TopbarProps) {
   const { ativo: emFoco, setSlot } = useFoco();
   const [gavetaAberta, setGavetaAberta] = useState(false);
   const [contaAberta, setContaAberta] = useState(false);
   const menuConta = usePresenca(contaAberta);
   const { navRef, posicao: posicaoAba, pronto: indicadorPronto } = useIndicadorAba(!emFoco);
-  const letra = inicial(me);
   const prova = textoProva(me?.prova_alvo ?? null);
 
   useEffect(() => {
@@ -203,11 +193,11 @@ export function Topbar({ tema, onAlternarTema, me, revisoesHoje, onSair, onRever
                 <button
                   type="button"
                   onClick={() => setContaAberta((v) => !v)}
-                  className={`flex h-9 w-9 items-center justify-center rounded-pill text-[13px] font-bold text-white transition duration-hover hover:opacity-90 ${fundoDaCor(me?.cor_perfil)} ${PRESSAO}`}
+                  className={`flex rounded-pill transition duration-hover hover:opacity-90 ${PRESSAO}`}
                   aria-label="Abrir menu da conta"
                   aria-expanded={contaAberta}
                 >
-                  {letra}
+                  <Avatar me={me} />
                 </button>
                 {contaAberta && <div className="fixed inset-0 z-40" onClick={() => setContaAberta(false)} />}
                 {menuConta.montado && (
@@ -223,6 +213,19 @@ export function Topbar({ tema, onAlternarTema, me, revisoesHoje, onSair, onRever
                           nome ele já é a linha de cima e não se repete. */}
                       {me?.nome && <div className="break-all text-apoio text-muted">{me.email}</div>}
                       {prova && <div className="mt-0.5 text-apoio text-muted">{prova}</div>}
+                    </div>
+
+                    {/* Primeiro item da lista: é o que a pessoa procura
+                        quando abre o menu da conta. */}
+                    <div className="border-t border-line-soft py-1">
+                      <NavLink
+                        to="/perfil"
+                        onClick={() => setContaAberta(false)}
+                        className="flex items-center gap-2.5 rounded-btn px-2.5 py-2 text-corpo text-ink-2 transition duration-hover hover:bg-ground hover:text-ink"
+                      >
+                        <UserRound size={16} strokeWidth={2} />
+                        Seu perfil
+                      </NavLink>
                     </div>
 
                     {me?.is_admin && (
@@ -241,20 +244,6 @@ export function Topbar({ tema, onAlternarTema, me, revisoesHoje, onSair, onRever
                         ))}
                       </div>
                     )}
-
-                    <div className="border-t border-line-soft pt-1">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setContaAberta(false);
-                          onPerfil();
-                        }}
-                        className="flex w-full items-center gap-2.5 rounded-btn px-2.5 py-2 text-corpo text-ink-2 transition duration-hover hover:bg-ground hover:text-ink"
-                      >
-                        <UserRound size={16} strokeWidth={2} />
-                        Seu perfil
-                      </button>
-                    </div>
 
                     <div className="border-t border-line-soft pt-1">
                       <button

@@ -203,15 +203,36 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   uma conta com esse e-mail", o que é um oráculo de quem tem conta aqui — o
   `/senha/esqueci` foi desenhado para não vazar isso. Trocar por mensagem
   genérica piora a usabilidade do cadastro; fica registrado como aceito.
-- **Perfil: nome e cor do avatar (2026-09-23, fase 1 de 2).** O usuário mandou
+- **Perfil: nome, cor e foto (2026-09-23, as duas fases).** O usuário mandou
   a plataforma para amigas e a primeira reação delas foi querer "uma fotinho ou
   mudar a cor do meu perfil". Decisões:
   - **Nome antes de foto.** A plataforma não guardava nome nenhum: o avatar era
     a primeira letra do **e-mail** e o menu mostrava o endereço inteiro. Nome
     próprio resolve metade do "quero que seja meu" com uma fração do trabalho
-    de um upload. Foto fica para a fase 2 (redimensionar no navegador, BYTEA e
-    o mesmo padrão de ETag do `/questoes/{id}/imagem`, só jpeg/png/webp — SVG
-    é script disfarçado de imagem).
+    de um upload. Por isso ele veio primeiro; a foto entrou logo depois, na
+    fase 2.
+  - **Foto (fase 2).** Vive em `fotos_perfil`, **tabela separada e não uma
+    coluna de `usuarios`**: o `obter_usuario` faz `SELECT *` e roda em toda
+    requisição autenticada — um BYTEA ali seria a foto descendo do Postgres a
+    cada chamada de API, para nada. Em `usuarios` fica só `foto_versao`, uma
+    string curta, que é o sha do conteúdo e entra na URL da imagem: foto nova é
+    URL nova, então o servidor manda cachear por um ano (`immutable`) e a troca
+    aparece na hora. O resto copia o `/questoes/{id}/imagem`: ETag do conteúdo,
+    `private` porque depende da sessão, e 304 no `If-None-Match`.
+  - **O recorte e a redução são do navegador** (`lib/foto.ts`: recorte quadrado
+    pelo centro, 256px, JPEG 0.85 — uma foto de câmera vira ~5 KB). Não é
+    preguiça: o servidor não tem biblioteca de imagem e não precisa ganhar uma
+    só por isto. O que ele faz é o que **não** dá para delegar ao cliente, já
+    que quem chama a API pode ser qualquer coisa: confere o **tamanho** dos
+    bytes decodificados (teto de 200 KB) e a **assinatura** do arquivo contra o
+    tipo declarado. Sem essa segunda conferência, um SVG com script dentro
+    entraria como `image/png` e voltaria a ser servido da nossa origem — por
+    isso SVG não está na lista de tipos aceitos, e por isso a lista existe.
+  - A imagem chega em **base64 dentro do JSON**, não como multipart: evita a
+    dependência `python-multipart` e casa com o `canvas.toDataURL()` que o
+    navegador já produz ao redimensionar.
+  - `tests/test_foto_perfil.py` prende o ciclo inteiro (sobe, 304, sai) e as
+    três recusas: tipo mentido, tipo fora da lista e tamanho.
   - **A paleta do perfil não pode sair da escala de triagem**
     (DESIGN_TRIAGEM.md §2): t1–t5 significam nível de aproveitamento, e um
     avatar verde leria como "vai bem". As seis cores evitam os matizes da
@@ -227,6 +248,32 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
     existiria no CSS (mesma armadilha do `CLASSES_NIVEL`).
   - Nome vazio volta a NULL e a tela mostra o e-mail de novo, em vez de um
     avatar em branco. `tests/test_perfil.py`.
+
+- **Página de perfil (2026-09-23).** O diálogo virou tela (`/perfil`), fora do
+  `NAV` — conta não é aba de estudo, e o caminho é o menu da conta, agora no
+  topo dele. **Dois lugares para editar a mesma coisa é pior que um**, então o
+  diálogo foi apagado em vez de conviver com a página.
+
+  A página existe porque havia conteúdo esperando por ela, não porque faltava
+  tela: `db.listar_questoes_marcadas` e `db.definir_prova_alvo` estavam no
+  banco e **não eram alcançáveis de lugar nenhum**. Ou seja, a aluna marcava
+  uma questão com "M" e nunca mais a reencontrava, e a contagem regressiva da
+  prova aparecia na barra sem haver como definir a data.
+
+  - **A lista de marcadas não devolve gabarito, alternativas nem explicação**
+    (`db.resumo_questoes_marcadas`). Não é economia de bytes: os ids das
+    questões são sequenciais, então marcar as 1074 e pedir a lista uma vez
+    levaria o banco inteiro, contornando o teto diário do `/praticar/sessao`.
+    Rever de verdade é pelo botão "Praticar as N", que entra pelo filtro
+    `apenas_marcadas` — o conteúdo continua saindo por uma porta só.
+    `tests/test_pagina_perfil.py` prende justamente isso: se alguém
+    "completar" o retorno da lista com as alternativas, o teste quebra.
+  - O botão usa o mesmo `location.state` com `iniciarImediato` que o "Praticar
+    10" do Painel já usava.
+  - `textoProva` saiu da `Topbar` para o `lib/format`: a página mostra a mesma
+    contagem ao lado do campo, e duas versões dessa conta divergiriam.
+  - A data usa `<input type="date">`, sem biblioteca: o calendário nativo já
+    resolve formato, fuso e teclado no celular.
 
 - **"O que mudou" — a caixa de novidades (2026-09-23).** Pedido do usuário: um
   jeito de mostrar à aluna o que foi acrescentado ou corrigido, "não muito

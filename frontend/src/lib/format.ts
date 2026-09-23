@@ -31,3 +31,17 @@ export function formatarTempoRestante(segundos: number): string {
   const mmss = formatarMMSS(total % 3600, "s");
   return horas > 0 ? `${horas}:${mmss}` : mmss;
 }
+
+
+/** Quantos dias faltam para a prova, já em texto. Vive aqui, e não na barra
+ *  superior, porque a página de perfil mostra a mesma contagem ao lado do
+ *  campo da data — duas versões dessa conta divergiriam. */
+export function textoProva(provaAlvo: string | null): string | null {
+  if (!provaAlvo) return null;
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+  const alvo = new Date(`${provaAlvo}T00:00:00`);
+  const dias = Math.round((alvo.getTime() - hoje.getTime()) / 86_400_000);
+  if (dias < 0) return "A data da prova já passou";
+  return `Prova em ${dias} dia${dias !== 1 ? "s" : ""}`;
+}

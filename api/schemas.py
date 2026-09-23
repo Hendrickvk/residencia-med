@@ -66,10 +66,28 @@ class MeOut(BaseModel):
     novidades_vistas: Optional[str] = None
     nome: Optional[str] = None
     cor_perfil: str
+    # Muda quando a foto muda: é o que entra na URL da imagem e faz a nova
+    # aparecer na hora, sem esperar o cache vencer. NULL = sem foto.
+    foto_versao: Optional[str] = None
 
 
 class TemaIn(BaseModel):
     tema: str = Field(pattern="^(light|dark)$")
+
+
+class ProvaAlvoIn(BaseModel):
+    # `None` limpa a data e desliga a contagem regressiva.
+    data: Optional[str] = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")
+
+
+class FotoIn(BaseModel):
+    # A imagem chega em base64 dentro do JSON, e não como multipart: evita a
+    # dependência `python-multipart` e casa com o `canvas.toDataURL()` que o
+    # navegador já produz ao redimensionar. O limite aqui é do texto em base64
+    # (~4/3 do binário); o limite que vale é o dos bytes decodificados, no
+    # endpoint.
+    dados: str = Field(max_length=4 * db.FOTO_MAX_BYTES)
+    mime: str = Field(max_length=20)
 
 
 class PerfilIn(BaseModel):
