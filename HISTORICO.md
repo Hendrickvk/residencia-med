@@ -25,9 +25,11 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   suposto. **Os quatro itens foram escritos em 2026-09-23 e a suíte passa (122
   testes).** Os itens 1 e 3 estão **no ar** desde 2026-09-23 (conferidos com
   `curl`: os cinco cabeçalhos no app, `401 + WWW-Authenticate: Basic` no
-  admin). Os itens 2 e 4 são código de API e front, e só valem depois do
-  deploy (`DEPLOY.md` §8) — **atenção à ordem: quando a API nova subir, todas
-  as sessões abertas caem de uma vez**, inclusive a do próprio admin.
+  admin). Os itens 2 e 4 subiram no mesmo dia (commit `9bc380a`, `git pull` +
+  `systemctl restart residencia-api` + troca atômica do `dist`): conferido que
+  `usuarios.token_version` e a tabela `cota_pratica` existem no Neon e que o
+  bundle servido é o construído aqui. **Esse deploy derrubou todas as sessões
+  abertas, uma vez** — é o preço único do `token_version` e estava previsto.
 
   **Armadilha do reload, custou o primeiro reload (2026-09-23).** O
   `admin-auth.conf` foi instalado `root:root 600` e o `systemctl reload caddy`
@@ -121,17 +123,53 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
      respostas na fila, então ela volta de onde parou). `/auth/*` fica de fora
      porque senha errada também é 401, e ali não há sessão a derrubar.
 
-  **Decisão do usuário, pendente:** o cadastro é **aberto e sem limite**
-  (`POST /auth/signup` não passa pelo limitador do login). Qualquer pessoa cria
-  contas à vontade, e cada conta pode fazer o item 2. Para uma plataforma que
-  hoje é de duas pessoas, lista de e-mails autorizados resolveria os dois de
-  uma vez; aberto-com-limite mantém a porta para crescer. Enquanto não houver
-  decisão, o item 2 é o que segura o estrago.
+  **Decisão do usuário, tomada em 2026-09-23: o cadastro continua aberto.**
+  Não restringir quem cria conta, e ao mesmo tempo não deixar barato para quem
+  quer abusar. Lista de e-mails autorizados foi recusada por isso. Entrou o
+  limite por IP no `POST /auth/signup` — 5 contas por IP por hora
+  (`MAX_SIGNUPS_IP`/`JANELA_SIGNUP_S`), reaproveitando o mesmo contador do
+  login. Sem ele o item 2 não valia nada: o teto é por conta, e conta era
+  grátis e ilimitada, então 3 cadastros levavam o banco inteiro. Conta a
+  tentativa **antes** de saber se deu certo, senão o 409 de e-mail repetido
+  sairia de graça. `tests/test_login_limite.py` prende os dois casos.
+
+  **Medido, não suposto (2026-09-23): o limitador não é falsificável por
+  `X-Forwarded-For`.** Importa porque o limite é por IP e a API só vê o Caddy.
+  O `uvicorn` roda sem flag de proxy e, no padrão dele, confia no cabeçalho
+  vindo de 127.0.0.1 e lê o **último** item da cadeia; o Caddy **anexa** o IP
+  real no fim. Conferido contra a produção: 10 logins errados com um
+  `X-Forwarded-For` forjado dão 429, e o 11º com outro forjado continua 429 —
+  a chave não mudou. Se algum dia o uvicorn subir com `--forwarded-allow-ips`
+  diferente, ou o Caddy passar a sobrescrever em vez de anexar, refazer esta
+  medição: é ela que sustenta os dois limitadores.
+
+  **O que ainda não está resolvido, e é o único caminho que sobra:** quem tem
+  muitos IPs. O limite por IP encarece o script ingênuo e não impede um pool de
+  proxies — cada conta nova custa só um IP. O que fecharia de verdade é
+  **confirmação de e-mail** antes de liberar o conteúdo: mantém o cadastro
+  aberto a qualquer pessoa (não é lista de convidados) e faz cada conta custar
+  uma caixa de e-mail que funcione. A infraestrutura já existe e está provada
+  pelo fluxo de senha: Brevo com domínio autenticado, `api/email.py`, e o
+  padrão de token com hash em tabela. Custa uma coluna
+  (`usuarios.email_confirmado_em`), um endpoint, uma tela e a decisão de o que
+  bloquear enquanto não confirma (o razoável é só o `/praticar/sessao`, que é
+  onde o conteúdo sai; deixar o resto funcionar). Contas existentes entram
+  como já confirmadas. Não feito: é mudança de produto, não de configuração.
 
   Nota lateral, baixa gravidade e conhecida: o signup devolve 409 "Já existe
   uma conta com esse e-mail", o que é um oráculo de quem tem conta aqui — o
   `/senha/esqueci` foi desenhado para não vazar isso. Trocar por mensagem
   genérica piora a usabilidade do cadastro; fica registrado como aceito.
+- **O backup semanal nunca rodou (medido em 2026-09-23).** Não existe
+  `backups/backup_semanal.log`, e o dump mais recente é o
+  `conduta_20260922_175310.dump`, feito à mão. A tarefa agendada do Windows que
+  chamaria o `scripts/backup_semanal.cmd` continua por criar. Isto não é defesa
+  contra invasão — é a metade que decide se um ataque destrutivo, ou um clique
+  errado numa área (`questoes.area_id` é `ON DELETE CASCADE`), é incidente ou é
+  a perda das 1074 questões e das 79 imagens recortadas à mão, que não existem
+  em outro lugar. Restaurar um dump também nunca foi testado: o backup que
+  ninguém restaurou é uma suposição, não um backup.
+
 - Se o shape ARM `VM.Standard.A1.Flex` (1 OCPU/6 GB, Always Free) aparecer em
   São Paulo e 1 GB apertar, recriar a instância nele.
 - Tema escuro do Triagem só existe por tokens, sem protótipo próprio.
