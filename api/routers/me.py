@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Response, status
 
 import db
 from api.deps import eh_admin, usuario_atual
-from api.schemas import MeOut, MetaRevisaoIn, TemaIn
+from api.schemas import MeOut, MetaRevisaoIn, NovidadesIn, TemaIn
 
 router = APIRouter(prefix="/me", tags=["me"])
 
@@ -22,6 +22,7 @@ def obter_me(usuario=Depends(usuario_atual)):
         respondidas_hoje=db.contar_respondidas_hoje(usuario_id=usuario["id"]),
         total_questoes=db.contar_questoes(),
         meta_revisao_diaria=usuario["meta_revisao_diaria"],
+        novidades_vistas=usuario["novidades_vistas"],
     )
 
 
@@ -29,6 +30,15 @@ def obter_me(usuario=Depends(usuario_atual)):
 def atualizar_tema(dados: TemaIn, usuario=Depends(usuario_atual)):
     db.atualizar_tema_usuario(usuario["id"], dados.tema)
     return {"tema": dados.tema}
+
+
+@router.patch("/novidades")
+def marcar_novidades(dados: NovidadesIn, usuario=Depends(usuario_atual)):
+    """Guarda até onde esta conta já leu as novidades. O id vem do front, que
+    é onde a lista mora — o servidor não precisa conhecer as entradas para
+    lembrar qual foi a última vista."""
+    db.marcar_novidades_vistas(usuario["id"], dados.visto)
+    return {"novidades_vistas": dados.visto}
 
 
 @router.patch("/meta-revisao")

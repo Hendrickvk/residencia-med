@@ -1,4 +1,4 @@
-import { Flame, LogOut, Menu, Moon, Sun, Terminal, X } from "lucide-react";
+import { Flame, LogOut, Menu, Moon, Sparkles, Sun, Terminal, X } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { PRESSAO } from "../../lib/estilos";
@@ -16,6 +16,8 @@ interface TopbarProps {
   me?: Me;
   revisoesHoje?: number;
   onSair: () => void;
+  onNovidades: () => void;
+  temNovidade: boolean;
   // Só a convidada da brincadeira recebe esta opção; para todo mundo vem
   // `undefined` e o item não existe.
   onRever?: () => void;
@@ -69,7 +71,7 @@ function useIndicadorAba(ativo: boolean) {
 
 // DESIGN_TRIAGEM.md §5: barra superior com abas no lugar do rail lateral. Em
 // modo foco (sessão em andamento) as abas dão lugar à barra da sessão.
-export function Topbar({ tema, onAlternarTema, me, revisoesHoje, onSair, onRever }: TopbarProps) {
+export function Topbar({ tema, onAlternarTema, me, revisoesHoje, onSair, onRever, onNovidades, temNovidade }: TopbarProps) {
   const { ativo: emFoco, setSlot } = useFoco();
   const [gavetaAberta, setGavetaAberta] = useState(false);
   const [contaAberta, setContaAberta] = useState(false);
@@ -234,6 +236,24 @@ export function Topbar({ tema, onAlternarTema, me, revisoesHoje, onSair, onRever
                         ))}
                       </div>
                     )}
+
+                    <div className="border-t border-line-soft pt-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setContaAberta(false);
+                          onNovidades();
+                        }}
+                        className="flex w-full items-center gap-2.5 rounded-btn px-2.5 py-2 text-corpo text-ink-2 transition duration-hover hover:bg-ground hover:text-ink"
+                      >
+                        <Sparkles size={16} strokeWidth={2} />
+                        O que mudou
+                        {/* Ponto de pendência, não etiqueta colorida: a escala
+                            de triagem só codifica nível (DESIGN_TRIAGEM.md §2),
+                            então aqui é tinta. */}
+                        {temNovidade && <span className="ml-auto h-2 w-2 rounded-pill bg-ink" aria-label="novidade não lida" />}
+                      </button>
+                    </div>
 
                     {onRever && (
                       <div className="border-t border-line-soft pt-1">

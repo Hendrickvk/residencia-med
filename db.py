@@ -835,6 +835,14 @@ def init_db():
         if "email_confirmado_em" not in colunas_usuarios:
             c.execute("ALTER TABLE usuarios ADD COLUMN email_confirmado_em TIMESTAMP")
             c.execute("UPDATE usuarios SET email_confirmado_em = NOW()")
+        # Novidades da plataforma: guarda o id da última entrada que a conta já
+        # viu (`frontend/src/lib/novidades.ts`). No banco e não no
+        # `localStorage` porque ela estuda no celular e no computador, e o
+        # aviso apareceria duas vezes. NULL = nunca viu nenhuma, e aí a tela
+        # mostra a mais recente — inclusive para quem acabou de se cadastrar,
+        # que é o comportamento normal de "o que há de novo".
+        if "novidades_vistas" not in colunas_usuarios:
+            c.execute("ALTER TABLE usuarios ADD COLUMN novidades_vistas TEXT")
 
         # Migração leve: calibração de confiança ("acertei com segurança" /
         # "acertei no chute"), usada para ajustar a qualidade informada ao
@@ -1399,6 +1407,11 @@ def definir_prova_alvo(usuario_id, data_iso: str | None):
 def atualizar_tema_usuario(usuario_id, tema: str):
     with get_conn() as conn:
         conn.execute("UPDATE usuarios SET tema = ? WHERE id = ?", (tema, usuario_id))
+
+
+def marcar_novidades_vistas(usuario_id, id_entrada: str):
+    with get_conn() as conn:
+        conn.execute("UPDATE usuarios SET novidades_vistas = ? WHERE id = ?", (id_entrada, usuario_id))
 
 
 def atualizar_meta_revisao(usuario_id, meta: int):

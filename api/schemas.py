@@ -61,10 +61,17 @@ class MeOut(BaseModel):
     respondidas_hoje: int
     total_questoes: int
     meta_revisao_diaria: int
+    novidades_vistas: Optional[str] = None
 
 
 class TemaIn(BaseModel):
     tema: str = Field(pattern="^(light|dark)$")
+
+
+class NovidadesIn(BaseModel):
+    # O id da entrada, não um booleano: "já viu" só faz sentido em relação a
+    # uma versão, senão a próxima novidade nunca apareceria.
+    visto: str = Field(max_length=40)
 
 
 class MetaRevisaoIn(BaseModel):

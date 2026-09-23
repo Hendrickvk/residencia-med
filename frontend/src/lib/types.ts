@@ -315,6 +315,7 @@ export interface Me {
   email: string;
   is_admin: boolean;
   email_confirmado: boolean;
+  novidades_vistas: string | null;
   tema: "light" | "dark";
   prova_alvo: string | null;
   ofensiva_dias: number;

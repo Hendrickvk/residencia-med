@@ -203,6 +203,36 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   uma conta com esse e-mail", o que é um oráculo de quem tem conta aqui — o
   `/senha/esqueci` foi desenhado para não vazar isso. Trocar por mensagem
   genérica piora a usabilidade do cadastro; fica registrado como aceito.
+- **"O que mudou" — a caixa de novidades (2026-09-23).** Pedido do usuário: um
+  jeito de mostrar à aluna o que foi acrescentado ou corrigido, "não muito
+  denso em informação". Decisões que valem daqui para a frente:
+  - **A lista mora no front** (`frontend/src/lib/novidades.ts`), não no banco, e
+    o servidor não conhece as entradas — ele só guarda o id da última lida
+    (`usuarios.novidades_vistas`). Uma tabela e uma tela de admin para escrever
+    novidade seria construir um CMS para duas pessoas: a entrada é escrita no
+    mesmo commit que entrega a mudança, que é justamente quando se sabe o que
+    ela ganhou.
+  - **No banco e não no `localStorage`**, porque ela estuda no celular e no
+    computador e a caixa apareceria duas vezes. É o mesmo precedente do
+    `RelatoResolvidoAviso`, que já avisa "uma vez" por coluna no banco.
+  - **`id` de entrada publicada nunca muda** — é a chave do "já viu", então
+    mudar reabre a caixa para todo mundo. Id desconhecido (entrada removida, ou
+    conta que viu uma versão anterior do arquivo) cai como "nunca viu": o outro
+    lado esconderia uma novidade para sempre.
+  - **Abre sozinha uma vez, e só no Painel.** Uma caixa por cima de um caso no
+    meio da sessão seria a plataforma atrapalhando o estudo, que é contra o
+    MIGRACAO.md §0. Um `ref` garante uma abertura automática por carga: sem
+    ele, voltar ao Painel antes de o `PATCH` chegar reabria a caixa recém
+    fechada. Fecha primeiro e grava depois — a caixa não espera a rede, e se a
+    gravação falhar o pior caso é ela aparecer de novo na próxima visita.
+  - **Primeira vez mostra só a entrada mais recente**, não o histórico inteiro:
+    a estreia não pode ser um muro de texto. Depois disso, mostra tudo o que
+    entrou desde a última leitura.
+  - Sem cor de triagem em nada disso (DESIGN_TRIAGEM.md §2: a escala só
+    codifica nível de aproveitamento). "Novo"/"Corrigido" são rótulo em caixa
+    alta, e o ponto de pendência no menu é tinta.
+  - `tests/test_novidades.py` cobre a metade do servidor; a lista é do front.
+
 - **O backup semanal nunca rodou (medido em 2026-09-23).** Não existe
   `backups/backup_semanal.log`, e o dump mais recente é o
   `conduta_20260922_175310.dump`, feito à mão. A tarefa agendada do Windows que

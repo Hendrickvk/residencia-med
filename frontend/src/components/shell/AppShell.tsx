@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { BrincadeiraBoasVindas } from "../BrincadeiraBoasVindas";
 import { jaViu, useEhConvidada } from "../../lib/brincadeira";
 import { ConfirmeSeuEmail } from "../ConfirmeSeuEmail";
 import { FilaPendenteAviso } from "../FilaPendenteAviso";
+import { Novidades } from "../Novidades";
+import { NOVIDADES, novidadesNaoVistas } from "../../lib/novidades";
 import { api } from "../../lib/api";
 import { useAuthActions, useMe } from "../../lib/auth";
 import { FocoProvider } from "../../lib/foco";
@@ -31,6 +33,14 @@ export function AppShell() {
   const convidada = useEhConvidada(me?.email);
   // Cada pedido de reprise remonta a sessão com estado limpo.
   const [reprise, setReprise] = useState(0);
+  // "O que mudou": abre sozinha uma vez, no Painel, e fica no menu da conta
+  // para reler. Fora do Painel ela não aparece — ninguém quer uma caixa por
+  // cima de um caso no meio da sessão.
+  const [novidadesAbertas, setNovidadesAbertas] = useState(false);
+  const naoVistas = novidadesNaoVistas(me?.novidades_vistas);
+  // Uma abertura automática por carga da página: sem isto, voltar ao Painel
+  // antes de o `PATCH` chegar reabriria a caixa que ela acabou de fechar.
+  const jaAbriuSozinha = useRef(false);
 
   // Rede de segurança: se a verificação não responder (conta sem `/me`,
   // navegador sem `crypto.subtle`), a página aparece de todo jeito.
@@ -43,6 +53,13 @@ export function AppShell() {
   useEffect(() => {
     aplicarTema(tema);
   }, [tema]);
+
+  useEffect(() => {
+    if (jaAbriuSozinha.current || brincadeira !== "off") return;
+    if (location.pathname !== "/painel" || naoVistas.length === 0) return;
+    jaAbriuSozinha.current = true;
+    setNovidadesAbertas(true);
+  }, [brincadeira, location.pathname, naoVistas.length]);
 
   // Tela nova começa do topo: sem isso, sair de uma lista rolada abria o
   // Painel no meio.
@@ -116,6 +133,8 @@ export function AppShell() {
               revisoesHoje={painel?.revisoes_hoje}
               onSair={onSair}
               onRever={convidada ? () => setReprise((n) => n + 1) : undefined}
+              onNovidades={() => setNovidadesAbertas(true)}
+              temNovidade={naoVistas.length > 0}
             />
             <main className="px-4 py-6 md:px-10 md:py-9">
               {/* A chave por caminho remonta o invólucro a cada troca de tela e a
@@ -129,6 +148,13 @@ export function AppShell() {
               </div>
             </main>
             <FilaPendenteAviso />
+            <Novidades
+              aberto={novidadesAbertas}
+              // Fechada a pendência, reler pelo menu mostra a entrada mais
+              // recente em vez de uma caixa vazia.
+              entradas={naoVistas.length ? naoVistas : NOVIDADES.slice(0, 1)}
+              onFechar={() => setNovidadesAbertas(false)}
+            />
           </>
         )}
         <BrincadeiraBoasVindas
