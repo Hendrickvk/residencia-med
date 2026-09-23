@@ -94,8 +94,7 @@ def _enviar_confirmacao(usuario) -> None:
         "endereço. Confirme para liberar as questões:\n\n"
         f"{url}\n\n"
         f"O link vale {db.CONFIRMACAO_VALIDA_HORAS} horas e serve uma vez só. "
-        "Se não foi você quem criou a conta, pode ignorar este e-mail: sem a "
-        "confirmação, ela não abre nada.\n",
+        "Se não foi você quem criou a conta, pode ignorar este e-mail.\n",
         html=montar_html(
             titulo="Confirme o seu e-mail",
             # Duas linhas e o botão. O e-mail não explica por que a
@@ -112,8 +111,7 @@ def _enviar_confirmacao(usuario) -> None:
             botao_url=url,
             rodape=(
                 f"O link vale {db.CONFIRMACAO_VALIDA_HORAS} horas e serve uma vez só. "
-                "Se não foi você quem criou a conta, pode ignorar esta mensagem: "
-                "sem a confirmação, ela não abre nada."
+                "Se não foi você quem criou a conta, pode ignorar esta mensagem."
             ),
         ),
     )
