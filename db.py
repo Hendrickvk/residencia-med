@@ -843,6 +843,13 @@ def init_db():
         # que é o comportamento normal de "o que há de novo".
         if "novidades_vistas" not in colunas_usuarios:
             c.execute("ALTER TABLE usuarios ADD COLUMN novidades_vistas TEXT")
+        # Identidade da conta: nome e cor do avatar. Antes disto a plataforma
+        # não sabia o nome de ninguém — o avatar era a primeira letra do
+        # e-mail e o menu mostrava o endereço inteiro.
+        if "nome" not in colunas_usuarios:
+            c.execute("ALTER TABLE usuarios ADD COLUMN nome TEXT")
+        if "cor_perfil" not in colunas_usuarios:
+            c.execute("ALTER TABLE usuarios ADD COLUMN cor_perfil TEXT")
 
         # Migração leve: calibração de confiança ("acertei com segurança" /
         # "acertei no chute"), usada para ajustar a qualidade informada ao
@@ -1407,6 +1414,28 @@ def definir_prova_alvo(usuario_id, data_iso: str | None):
 def atualizar_tema_usuario(usuario_id, tema: str):
     with get_conn() as conn:
         conn.execute("UPDATE usuarios SET tema = ? WHERE id = ?", (tema, usuario_id))
+
+
+# Cores do avatar. **Nenhuma delas pode ser confundida com a escala de
+# triagem** (DESIGN_TRIAGEM.md §2): t1–t5 significam nível de aproveitamento,
+# e um avatar verde leria como "vai bem". Por isso a paleta evita os matizes da
+# escala (vermelho, laranja, amarelo, verde, azul) e fica em neutros, roxo,
+# rosa, turquesa e marrom. O banco guarda a **chave**, não o hex: cor é
+# apresentação e o valor mora no tema do front.
+CORES_PERFIL = ("grafite", "ardosia", "ameixa", "rosa", "turquesa", "cafe")
+COR_PERFIL_PADRAO = "grafite"
+LIMITE_NOME = 40
+
+
+def atualizar_perfil(usuario_id, nome: str | None, cor: str):
+    """Nome vazio volta a NULL — a tela então mostra o e-mail de novo, em vez
+    de um avatar em branco."""
+    nome = (nome or "").strip()[:LIMITE_NOME] or None
+    if cor not in CORES_PERFIL:
+        cor = COR_PERFIL_PADRAO
+    with get_conn() as conn:
+        conn.execute("UPDATE usuarios SET nome = ?, cor_perfil = ? WHERE id = ?", (nome, cor, usuario_id))
+    return nome, cor
 
 
 def marcar_novidades_vistas(usuario_id, id_entrada: str):

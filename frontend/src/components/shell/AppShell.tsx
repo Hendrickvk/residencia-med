@@ -6,6 +6,7 @@ import { jaViu, useEhConvidada } from "../../lib/brincadeira";
 import { ConfirmeSeuEmail } from "../ConfirmeSeuEmail";
 import { FilaPendenteAviso } from "../FilaPendenteAviso";
 import { Novidades } from "../Novidades";
+import { Perfil } from "../Perfil";
 import { NOVIDADES, novidadesNaoVistas } from "../../lib/novidades";
 import { api } from "../../lib/api";
 import { useAuthActions, useMe } from "../../lib/auth";
@@ -37,6 +38,7 @@ export function AppShell() {
   // para reler. Fora do Painel ela não aparece — ninguém quer uma caixa por
   // cima de um caso no meio da sessão.
   const [novidadesAbertas, setNovidadesAbertas] = useState(false);
+  const [perfilAberto, setPerfilAberto] = useState(false);
   const naoVistas = novidadesNaoVistas(me?.novidades_vistas);
   // Uma abertura automática por carga da página: sem isto, voltar ao Painel
   // antes de o `PATCH` chegar reabriria a caixa que ela acabou de fechar.
@@ -134,6 +136,7 @@ export function AppShell() {
               onSair={onSair}
               onRever={convidada ? () => setReprise((n) => n + 1) : undefined}
               onNovidades={() => setNovidadesAbertas(true)}
+              onPerfil={() => setPerfilAberto(true)}
               temNovidade={naoVistas.length > 0}
             />
             <main className="px-4 py-6 md:px-10 md:py-9">
@@ -148,6 +151,9 @@ export function AppShell() {
               </div>
             </main>
             <FilaPendenteAviso />
+            {/* A chave por abertura remonta o formulário com o valor que
+                está salvo: fechar sem salvar descarta o rascunho. */}
+            <Perfil key={String(perfilAberto)} aberto={perfilAberto} onFechar={() => setPerfilAberto(false)} />
             <Novidades
               aberto={novidadesAbertas}
               // Fechada a pendência, reler pelo menu mostra a entrada mais

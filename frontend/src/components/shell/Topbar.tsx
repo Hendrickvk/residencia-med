@@ -1,4 +1,5 @@
-import { Flame, LogOut, Menu, Moon, Sparkles, Sun, Terminal, X } from "lucide-react";
+import { Flame, LogOut, Menu, Moon, Sparkles, Sun, Terminal, UserRound, X } from "lucide-react";
+import { fundoDaCor, inicial, nomeExibido } from "../../lib/perfil";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { PRESSAO } from "../../lib/estilos";
@@ -17,6 +18,7 @@ interface TopbarProps {
   revisoesHoje?: number;
   onSair: () => void;
   onNovidades: () => void;
+  onPerfil: () => void;
   temNovidade: boolean;
   // Só a convidada da brincadeira recebe esta opção; para todo mundo vem
   // `undefined` e o item não existe.
@@ -71,13 +73,13 @@ function useIndicadorAba(ativo: boolean) {
 
 // DESIGN_TRIAGEM.md §5: barra superior com abas no lugar do rail lateral. Em
 // modo foco (sessão em andamento) as abas dão lugar à barra da sessão.
-export function Topbar({ tema, onAlternarTema, me, revisoesHoje, onSair, onRever, onNovidades, temNovidade }: TopbarProps) {
+export function Topbar({ tema, onAlternarTema, me, revisoesHoje, onSair, onRever, onNovidades, onPerfil, temNovidade }: TopbarProps) {
   const { ativo: emFoco, setSlot } = useFoco();
   const [gavetaAberta, setGavetaAberta] = useState(false);
   const [contaAberta, setContaAberta] = useState(false);
   const menuConta = usePresenca(contaAberta);
   const { navRef, posicao: posicaoAba, pronto: indicadorPronto } = useIndicadorAba(!emFoco);
-  const inicial = me?.email ? me.email[0].toUpperCase() : "?";
+  const letra = inicial(me);
   const prova = textoProva(me?.prova_alvo ?? null);
 
   useEffect(() => {
@@ -201,11 +203,11 @@ export function Topbar({ tema, onAlternarTema, me, revisoesHoje, onSair, onRever
                 <button
                   type="button"
                   onClick={() => setContaAberta((v) => !v)}
-                  className={`flex h-9 w-9 items-center justify-center rounded-pill bg-ink text-[13px] font-bold text-onink transition duration-hover hover:opacity-90 ${PRESSAO}`}
+                  className={`flex h-9 w-9 items-center justify-center rounded-pill text-[13px] font-bold text-white transition duration-hover hover:opacity-90 ${fundoDaCor(me?.cor_perfil)} ${PRESSAO}`}
                   aria-label="Abrir menu da conta"
                   aria-expanded={contaAberta}
                 >
-                  {inicial}
+                  {letra}
                 </button>
                 {contaAberta && <div className="fixed inset-0 z-40" onClick={() => setContaAberta(false)} />}
                 {menuConta.montado && (
@@ -216,7 +218,10 @@ export function Topbar({ tema, onAlternarTema, me, revisoesHoje, onSair, onRever
                   >
                     <div className="px-2.5 py-2">
                       <div className="rotulo text-muted">Conta</div>
-                      <div className="mt-1 break-all text-apoio text-ink-2">{me?.email}</div>
+                      <div className="mt-1 break-all text-corpo font-semibold text-ink">{nomeExibido(me)}</div>
+                      {/* O e-mail vira apoio quando já existe um nome; sem
+                          nome ele já é a linha de cima e não se repete. */}
+                      {me?.nome && <div className="break-all text-apoio text-muted">{me.email}</div>}
                       {prova && <div className="mt-0.5 text-apoio text-muted">{prova}</div>}
                     </div>
 
@@ -236,6 +241,20 @@ export function Topbar({ tema, onAlternarTema, me, revisoesHoje, onSair, onRever
                         ))}
                       </div>
                     )}
+
+                    <div className="border-t border-line-soft pt-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setContaAberta(false);
+                          onPerfil();
+                        }}
+                        className="flex w-full items-center gap-2.5 rounded-btn px-2.5 py-2 text-corpo text-ink-2 transition duration-hover hover:bg-ground hover:text-ink"
+                      >
+                        <UserRound size={16} strokeWidth={2} />
+                        Seu perfil
+                      </button>
+                    </div>
 
                     <div className="border-t border-line-soft pt-1">
                       <button

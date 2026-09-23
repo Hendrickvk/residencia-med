@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Response, status
 
 import db
 from api.deps import eh_admin, usuario_atual
-from api.schemas import MeOut, MetaRevisaoIn, NovidadesIn, TemaIn
+from api.schemas import MeOut, MetaRevisaoIn, NovidadesIn, PerfilIn, TemaIn
 
 router = APIRouter(prefix="/me", tags=["me"])
 
@@ -23,6 +23,8 @@ def obter_me(usuario=Depends(usuario_atual)):
         total_questoes=db.contar_questoes(),
         meta_revisao_diaria=usuario["meta_revisao_diaria"],
         novidades_vistas=usuario["novidades_vistas"],
+        nome=usuario["nome"],
+        cor_perfil=usuario["cor_perfil"] or db.COR_PERFIL_PADRAO,
     )
 
 
@@ -30,6 +32,12 @@ def obter_me(usuario=Depends(usuario_atual)):
 def atualizar_tema(dados: TemaIn, usuario=Depends(usuario_atual)):
     db.atualizar_tema_usuario(usuario["id"], dados.tema)
     return {"tema": dados.tema}
+
+
+@router.patch("/perfil")
+def atualizar_perfil(dados: PerfilIn, usuario=Depends(usuario_atual)):
+    nome, cor = db.atualizar_perfil(usuario["id"], dados.nome, dados.cor)
+    return {"nome": nome, "cor_perfil": cor}
 
 
 @router.patch("/novidades")

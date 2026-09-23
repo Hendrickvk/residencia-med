@@ -2,6 +2,8 @@ from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator
 
+import db
+
 
 # --- Auth / usuário -----------------------------------------------------
 
@@ -62,10 +64,20 @@ class MeOut(BaseModel):
     total_questoes: int
     meta_revisao_diaria: int
     novidades_vistas: Optional[str] = None
+    nome: Optional[str] = None
+    cor_perfil: str
 
 
 class TemaIn(BaseModel):
     tema: str = Field(pattern="^(light|dark)$")
+
+
+class PerfilIn(BaseModel):
+    # Nome vazio é permitido: é como a pessoa volta a não ter nome.
+    nome: str = Field(default="", max_length=db.LIMITE_NOME)
+    # A cor é validada contra a lista do `db` (e não um hex livre): valor de
+    # fora da lista viraria CSS arbitrário vindo do cliente.
+    cor: str = Field(default=db.COR_PERFIL_PADRAO, max_length=20)
 
 
 class NovidadesIn(BaseModel):

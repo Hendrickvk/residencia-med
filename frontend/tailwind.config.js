@@ -28,6 +28,14 @@ export default {
         t3: nivel(3),
         t4: nivel(4),
         t5: nivel(5),
+        perfil: {
+          grafite: "var(--perfil-grafite)",
+          ardosia: "var(--perfil-ardosia)",
+          ameixa: "var(--perfil-ameixa)",
+          rosa: "var(--perfil-rosa)",
+          turquesa: "var(--perfil-turquesa)",
+          cafe: "var(--perfil-cafe)",
+        },
       },
       fontFamily: {
         sans: ["Archivo", "Arial Narrow", "Arial", "sans-serif"],

@@ -36,6 +36,17 @@
   --t5-on: #ffffff;
 
   --focus: #2d6cd2;
+
+  /* Cores de perfil (avatar). Não mudam com o tema: é a cor da pessoa, e ela
+     não deveria virar outra quando ela alterna claro/escuro. Nenhuma sai da
+     escala de triagem — os matizes da escala (vermelho, laranja, amarelo,
+     verde, azul) ficam de fora, senão um avatar verde leria como "vai bem". */
+  --perfil-grafite: #3e4247;
+  --perfil-ardosia: #4a5568;
+  --perfil-ameixa: #6b4e8c;
+  --perfil-rosa: #a8437a;
+  --perfil-turquesa: #2a7f85;
+  --perfil-cafe: #6b4f3a;
 }
 
 .dark {

@@ -91,6 +91,13 @@ capping it would make the Configurador's live count lie about the bank.
 - Layout is a top bar with tabs (no side rail). Session screens (Praticar session, Simulado in progress, Revisão) render `<BarraFoco>` (`src/lib/foco.tsx`), which portals the session's own bar into the top bar and hides the tabs, so the shell never needs to know which session is running.
 - TanStack Query (React Query) for server state. **Known pitfall already hit twice**: a hook with `staleTime: Infinity` reused across two different screens under the *same* queryKey leaks stale data from one screen's phase into another's (happened with `useItensSimulado` between "em andamento" and "resultado"). Before setting a long/infinite `staleTime`, confirm the queryKey is exclusive to one screen/phase, or invalidate explicitly before navigating (see `EmAndamento.tsx`).
 - React Router paths are stable keys, deliberately decoupled from the nav label shown in the menu (same lesson learned the hard way on the Streamlit side, where the label used to double as the routing key).
+- **Profile identity** (`src/lib/perfil.ts`, `components/Perfil.tsx`): a display name and an avatar
+  colour, per account. The six colours are a **separate palette from the triage scale** and must stay
+  that way — t1–t5 encode performance, so a green avatar would read as "doing well"; they also do not
+  change with the theme, because it is the person's colour. The DB stores the **key**, validated
+  against `db.CORES_PERFIL` (a colour arriving from the client becomes CSS), and the Tailwind classes
+  are written out literally, never built as `bg-perfil-${cor}`. An empty name goes back to NULL and the
+  UI falls back to the e-mail. Photo upload is a deliberate phase 2 — see `HISTORICO.md`.
 - **"O que mudou"** (`src/lib/novidades.ts` + `components/Novidades.tsx`). The changelog the student
   sees: entries live in the **front-end list**, newest first, and the server deliberately doesn't know
   them — it only remembers the id of the last entry each account read (`usuarios.novidades_vistas`,

@@ -203,6 +203,31 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   uma conta com esse e-mail", o que é um oráculo de quem tem conta aqui — o
   `/senha/esqueci` foi desenhado para não vazar isso. Trocar por mensagem
   genérica piora a usabilidade do cadastro; fica registrado como aceito.
+- **Perfil: nome e cor do avatar (2026-09-23, fase 1 de 2).** O usuário mandou
+  a plataforma para amigas e a primeira reação delas foi querer "uma fotinho ou
+  mudar a cor do meu perfil". Decisões:
+  - **Nome antes de foto.** A plataforma não guardava nome nenhum: o avatar era
+    a primeira letra do **e-mail** e o menu mostrava o endereço inteiro. Nome
+    próprio resolve metade do "quero que seja meu" com uma fração do trabalho
+    de um upload. Foto fica para a fase 2 (redimensionar no navegador, BYTEA e
+    o mesmo padrão de ETag do `/questoes/{id}/imagem`, só jpeg/png/webp — SVG
+    é script disfarçado de imagem).
+  - **A paleta do perfil não pode sair da escala de triagem**
+    (DESIGN_TRIAGEM.md §2): t1–t5 significam nível de aproveitamento, e um
+    avatar verde leria como "vai bem". As seis cores evitam os matizes da
+    escala (vermelho, laranja, amarelo, verde, azul) e ficam em neutros, roxo,
+    rosa, turquesa e marrom. **A cor não muda com o tema** — é a cor da pessoa,
+    não deveria virar outra quando ela alterna claro/escuro.
+  - **Só no avatar**, decisão do usuário: o Painel é onde a cor tem significado
+    clínico, e competir com ele seria confundir a leitura.
+  - **O banco guarda a chave (`ameixa`), não o hex**, e `db.CORES_PERFIL`
+    valida: cor vinda do cliente vira CSS na tela, então valor fora da lista
+    cai no padrão. As classes do Tailwind ficam escritas por extenso em
+    `lib/perfil.ts` — `bg-perfil-${cor}` montado em tempo de execução não
+    existiria no CSS (mesma armadilha do `CLASSES_NIVEL`).
+  - Nome vazio volta a NULL e a tela mostra o e-mail de novo, em vez de um
+    avatar em branco. `tests/test_perfil.py`.
+
 - **"O que mudou" — a caixa de novidades (2026-09-23).** Pedido do usuário: um
   jeito de mostrar à aluna o que foi acrescentado ou corrigido, "não muito
   denso em informação". Decisões que valem daqui para a frente:
