@@ -449,6 +449,11 @@ TEMAS = {
 # Diagnóstico. Segundo eixo do desempenho, ao lado do tema.
 TIPOS_PERGUNTA = ("Diagnóstico", "Exames", "Conduta", "Conceitos")
 
+# Casos que uma conta pode receber do /praticar/sessao por dia. 500 é muito
+# mais do que um dia de estudo real (a meta padrão de revisão é 30) e menos
+# do que metade do banco, então atrapalha quem raspa e não quem estuda.
+TETO_DIARIO_PRATICA = 500
+
 # Padrões procurados no nome normalizado (minúsculo, sem acento), do mais
 # específico para o mais geral: "cirurgia vascular" precisa vencer "cirurg",
 # e "ginecologia e obstetricia" precisa vencer "gineco". Especialidade None =
@@ -691,6 +696,20 @@ def init_db():
         """)
         c.execute("CREATE INDEX IF NOT EXISTS idx_senha_tokens_usuario ON senha_tokens(usuario_id)")
 
+        # Teto diário de casos entregues pelo /praticar/sessao (HISTORICO.md,
+        # item 2 do plano de endurecimento). Conta no banco, não em memória:
+        # em memória o contador zera a cada `systemctl restart` da API, que é
+        # exatamente o que alguém faria para continuar baixando o banco.
+        c.execute("""
+        CREATE TABLE IF NOT EXISTS cota_pratica (
+            usuario_id INTEGER NOT NULL,
+            dia DATE NOT NULL,
+            entregues INTEGER NOT NULL DEFAULT 0,
+            PRIMARY KEY (usuario_id, dia),
+            FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+        )
+        """)
+
         # explicação, imagem, outro) e é o que torna a correção dirigida.
         c.execute("""
         CREATE TABLE IF NOT EXISTS relatos_questao (
@@ -783,6 +802,12 @@ def init_db():
         # casos a tela de Revisão oferece por dia; o resto espera, por prioridade.
         if "meta_revisao_diaria" not in colunas_usuarios:
             c.execute("ALTER TABLE usuarios ADD COLUMN meta_revisao_diaria INTEGER NOT NULL DEFAULT 20")
+        # Revogação de sessão (HISTORICO.md, item 4): o JWT é stateless e vale
+        # 12 h, então apagar o cookie no logout não derrubava um token já
+        # roubado. Esta versão vai dentro do token e é comparada a cada
+        # requisição; incrementá-la mata todas as sessões abertas da conta.
+        if "token_version" not in colunas_usuarios:
+            c.execute("ALTER TABLE usuarios ADD COLUMN token_version INTEGER NOT NULL DEFAULT 0")
 
         # Migração leve: calibração de confiança ("acertei com segurança" /
         # "acertei no chute"), usada para ajustar a qualidade informada ao
@@ -1281,6 +1306,37 @@ def contar_respondidas_hoje(*, usuario_id):
             WHERE usuario_id = ? AND respondida_em::date = CURRENT_DATE
         """, (usuario_id,)).fetchone()
         return row["total"] if row else 0
+
+
+def consumir_cota_pratica(*, usuario_id, quantidade, teto=TETO_DIARIO_PRATICA):
+    """Reserva até `quantidade` casos da cota do dia e devolve quantos foram
+    liberados (0 = cota esgotada).
+
+    O /praticar/sessao entrega gabarito e explicação embutidos, por decisão de
+    arquitetura: sem teto, 1 074 questões cabem em 6 requisições de qualquer
+    conta válida. O teto é por caso entregue, e não por requisição, porque é
+    o caso que é o conteúdo.
+    """
+    with get_conn() as conn:
+        conn.execute("""
+            INSERT INTO cota_pratica (usuario_id, dia, entregues)
+            VALUES (?, CURRENT_DATE, 0)
+            ON CONFLICT (usuario_id, dia) DO NOTHING
+        """, (usuario_id,))
+        # FOR UPDATE porque duas abas da mesma conta pedindo sessão ao mesmo
+        # tempo leriam o mesmo saldo e gastariam duas vezes.
+        row = conn.execute("""
+            SELECT entregues FROM cota_pratica
+            WHERE usuario_id = ? AND dia = CURRENT_DATE
+            FOR UPDATE
+        """, (usuario_id,)).fetchone()
+        liberados = max(0, min(quantidade, teto - row["entregues"]))
+        if liberados:
+            conn.execute("""
+                UPDATE cota_pratica SET entregues = entregues + ?
+                WHERE usuario_id = ? AND dia = CURRENT_DATE
+            """, (liberados, usuario_id))
+        return liberados
 
 
 def calcular_ofensiva(*, usuario_id):
@@ -2129,6 +2185,20 @@ def contar_tokens_recentes(usuario_id, minutos=15):
     return row["n"]
 
 
+def invalidar_sessoes(usuario_id, conn=None):
+    """Derruba todas as sessões abertas da conta, incrementando a versão que
+    vai assinada dentro do token. Aceita uma conexão de fora para rodar dentro
+    de uma transação já aberta (é o caso da redefinição de senha: trocar a
+    senha e não derrubar a sessão de quem entrou com a antiga seria metade do
+    conserto)."""
+    sql = "UPDATE usuarios SET token_version = token_version + 1 WHERE id = ?"
+    if conn is not None:
+        conn.execute(sql, (usuario_id,))
+        return
+    with get_conn() as c:
+        c.execute(sql, (usuario_id,))
+
+
 def redefinir_senha(usuario_id, senha_hash, token_id):
     """Troca a senha e queima **todos** os tokens da conta na mesma transação:
     usar um link não pode deixar os outros pendentes valendo."""
@@ -2139,4 +2209,7 @@ def redefinir_senha(usuario_id, senha_hash, token_id):
             "UPDATE senha_tokens SET usado_em = ? WHERE usuario_id = ? AND usado_em IS NULL",
             (agora, usuario_id),
         )
+        # Quem redefine a senha costuma estar fazendo isso porque desconfia de
+        # alguém: a sessão desse alguém morre aqui, na mesma transação.
+        invalidar_sessoes(usuario_id, conn)
         return token_id

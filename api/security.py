@@ -55,14 +55,25 @@ def verificar_senha(senha: str, hash_armazenado: str) -> bool:
     return bcrypt.checkpw(senha.encode("utf-8"), hash_armazenado.encode("utf-8"))
 
 
-def criar_token(usuario_id: int) -> str:
+def criar_token(usuario_id: int, token_version: int) -> str:
+    """`tv` é a versão de sessão da conta (`usuarios.token_version`), conferida
+    a cada requisição em `deps.usuario_atual`. É o que torna o logout uma
+    revogação de verdade: o JWT é stateless e vale 12 h, então sem isso apagar
+    o cookie não faz nada contra um token já copiado."""
     expira_em = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=JWT_EXPIRA_HORAS)
-    return jwt.encode({"sub": str(usuario_id), "exp": expira_em}, JWT_SECRET, algorithm=JWT_ALGORITHM)
+    return jwt.encode(
+        {"sub": str(usuario_id), "tv": int(token_version), "exp": expira_em},
+        JWT_SECRET, algorithm=JWT_ALGORITHM,
+    )
 
 
-def decodificar_token(token: str) -> int | None:
+def decodificar_token(token: str) -> tuple[int, int] | None:
+    """Devolve (usuario_id, token_version) ou None. Token sem `tv` é token de
+    antes desta mudança: cai como inválido, de propósito — o lado seguro é
+    todo mundo refazer o login uma vez, não uma sessão antiga passar sem
+    conferência."""
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-        return int(payload["sub"])
-    except jwt.PyJWTError:
+        return int(payload["sub"]), int(payload["tv"])
+    except (jwt.PyJWTError, KeyError, TypeError, ValueError):
         return None

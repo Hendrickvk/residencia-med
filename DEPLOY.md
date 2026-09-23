@@ -184,8 +184,22 @@ sudo systemctl reload caddy
 
 O `deploy/Caddyfile` é a configuração de verdade: os dois subdomínios do
 DuckDNS com HTTPS automático, a API em `/api` no mesmo host do front (same-origin,
-sem CORS entre eles) e o redirect do IP antigo. A versão que servia por IP puro
-ficou em `/etc/caddy/Caddyfile.antes-do-https` no servidor, para rollback.
+sem CORS entre eles) e o redirect do IP antigo. Desde 2026-09-23 ele também
+traz os cabeçalhos de segurança (HSTS, CSP e companhia) e, no admin, um
+`import admin-auth.conf` — o `basic_auth`, que **não está no repositório**:
+`/etc/caddy/admin-auth.conf`, criado à mão no servidor. Sem esse arquivo o
+Caddy recusa a config inteira, então **num servidor novo ele tem que ser
+recriado antes do primeiro reload** (`caddy hash-password` gera o hash).
+**Permissão: `root:caddy 640`** — o `ExecReload` do unit roda como o usuário
+`caddy`, e com um `600` do root o reload morre em `permission denied`
+(aconteceu em 23/09). Valide como ele antes de recarregar:
+`sudo -u caddy caddy validate --config /etc/caddy/Caddyfile --adapter
+caddyfile`. Um reload com config inválida falha e mantém a antiga no ar — é
+por isso que o site não saiu do ar naquele erro.
+
+A versão que servia por IP puro ficou em
+`/etc/caddy/Caddyfile.antes-do-https` no servidor, para rollback; a de antes
+dos cabeçalhos, em `/etc/caddy/Caddyfile.antes-headers`.
 
 **Armadilha encontrada na troca (2026-09-22).** A ideia era aplicar primeiro uma
 versão com `auto_https disable_redirects`, para a porta 80 continuar servindo o

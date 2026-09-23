@@ -1,3 +1,5 @@
+import { queryClient } from "./queryClient";
+
 export const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
 export class ApiError extends Error {
@@ -15,6 +17,16 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     ...init,
   });
   if (!res.ok) {
+    // Sessão revogada ou expirada em QUALQUER requisição, não só no /me: antes
+    // disto o `/me` era a única porta de autenticação, e um 401 no meio de uma
+    // sessão de estudo aparecia como "pode ser a conexão", com um "Tentar de
+    // novo" que ia falhar para sempre. Invalidar o ["me"] faz o `RequireAuth`
+    // reperguntar e mandar para o login. Fora do React de propósito — é o
+    // mesmo caminho que o `respostasQueue` já usa. `/auth/*` fica de fora:
+    // senha errada no login é 401 e não tem sessão nenhuma a derrubar.
+    if (res.status === 401 && !path.startsWith("/auth/")) {
+      void queryClient.invalidateQueries({ queryKey: ["me"] });
+    }
     const corpo = await res.json().catch(() => ({}));
     const detalhe = Array.isArray(corpo.detail)
       ? corpo.detail.map((d: { msg?: string }) => d.msg).join("; ")

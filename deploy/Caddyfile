@@ -11,8 +11,31 @@
 # Pressupõe portas 80 e 443 abertas (iptables do host + Security List da
 # Oracle) — o Caddy precisa das duas: 80 para a validação ACME, 443 para servir.
 
+# Cabeçalhos de segurança comuns aos dois sites (HISTORICO.md, item 1 do plano
+# de endurecimento). O HSTS só passou a fazer sentido com o HTTPS de 22/09:
+# impede que a próxima visita seja rebaixada para http por um link antigo ou
+# por quem estiver no meio do caminho. Sem `preload` de propósito — entrar na
+# lista dos navegadores é fácil, sair leva meses.
+(seguranca) {
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "geolocation=(), microphone=(), camera=(), payment=(), usb=()"
+	}
+}
+
 qualaconduta.com.br {
 	encode gzip
+	import seguranca
+
+	# O app carrega só a si mesmo e o Google Fonts: o CSS vem do
+	# `fonts.googleapis.com` e os arquivos da fonte do `fonts.gstatic.com` —
+	# faltando um dos dois a tipografia quebra. `unsafe-inline` em `style-src`
+	# porque o React escreve atributos `style=` (barras da marca, animações);
+	# `script-src` fica sem ele, que é onde importa. `data:` em `img-src`
+	# porque o Vite embute imagem pequena como data URI no build.
+	header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'"
 
 	# Front-end e API no MESMO host (MIGRACAO.md §1) — elimina CORS entre
 	# eles, porque viram same-origin de verdade.
@@ -34,6 +57,23 @@ qualaconduta.com.br {
 # motivo da antiga restrição de IP na porta 8080.
 admin.qualaconduta.com.br {
 	encode gzip
+	import seguranca
+
+	# Aqui o CSP é só o `frame-ancestors`, não a política inteira: é daqui que
+	# se apaga questão (e `questoes.area_id` é ON DELETE CASCADE), então
+	# clickjacking é o risco real; e o Streamlit injeta script e estilo inline
+	# à vontade, de modo que um CSP completo quebraria a tela sem ganho.
+	header Content-Security-Policy "frame-ancestors 'none'"
+
+	# Segundo fator do admin (HISTORICO.md, item 3): daqui se apaga questão, e
+	# `questoes.area_id` é ON DELETE CASCADE — a senha da conta era a única
+	# tranca de uma tela aberta à internet. O `basic_auth` vive em
+	# `/etc/caddy/admin-auth.conf`, modo 600, fora do repositório: este é
+	# público, e um hash bcrypt de senha curta se quebra offline. Sem o
+	# arquivo o Caddy recusa a config inteira — daí o `caddy validate` antes
+	# de qualquer reload (o reload, se falhar, mantém a config antiga no ar).
+	import admin-auth.conf
+
 	reverse_proxy 127.0.0.1:8501
 }
 

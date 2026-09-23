@@ -8,7 +8,7 @@ import { TemaDoCaso } from "../../components/TemaDoCaso";
 import { ImagemQuestao } from "../../components/ImagemQuestao";
 import { RelatarErro } from "../../components/RelatarErro";
 import { TextoDiscussao } from "../../components/TextoDiscussao";
-import { api } from "../../lib/api";
+import { api, ApiError } from "../../lib/api";
 import { BOTAO_PRIMARIO, BOTAO_SECUNDARIO, PRESSAO } from "../../lib/estilos";
 import { BarraFoco } from "../../lib/foco";
 import { formatarMMSS } from "../../lib/format";
@@ -34,7 +34,7 @@ interface Props {
 const LETRAS = ["A", "B", "C", "D", "E"];
 
 export default function Sessao({ filtros, nonce, salva, email, onFinalizar, onVoltar }: Props) {
-  const { data, isLoading, isError, isPaused, refetch } = useQuery({
+  const { data, error, isLoading, isError, isPaused, refetch } = useQuery({
     queryKey: ["sessao-pratica", nonce],
     queryFn: () =>
       api.get<{ questoes: Questao[] }>("/praticar/sessao", {
@@ -215,6 +215,18 @@ export default function Sessao({ filtros, nonce, salva, email, onFinalizar, onVo
           <div className="h-[520px] animate-pulse rounded-caso bg-line-soft" />
         </div>
       </>
+    );
+  }
+
+  // Teto diário de casos (HISTORICO.md, item 2): não é falha de rede nem
+  // recorte vazio, e "Tentar de novo" aqui seria um botão que mente — a
+  // resposta seria a mesma até amanhã. A frase vem do servidor, que é quem
+  // sabe o teto.
+  if (error instanceof ApiError && error.status === 429 && fila.length === 0) {
+    return (
+      <div className="mx-auto max-w-[680px] animate-entrar">
+        <EstadoVazio mensagem={error.message} cta={{ label: "Voltar", onClick: onVoltar }} />
+      </div>
     );
   }
 

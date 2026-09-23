@@ -22,7 +22,24 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
 - **Endurecimento de segurança, em fases (plano de 2026-09-22).** A auditoria
   de 20/09 e o deploy de 22/09 fecharam o que era urgente; o que sobrou está
   abaixo, em ordem de proporção entre risco e custo. Medido em produção, não
-  suposto. **O que já está feito e não precisa ser refeito:** limite de
+  suposto. **Os quatro itens foram escritos em 2026-09-23 e a suíte passa (122
+  testes).** Os itens 1 e 3 estão **no ar** desde 2026-09-23 (conferidos com
+  `curl`: os cinco cabeçalhos no app, `401 + WWW-Authenticate: Basic` no
+  admin). Os itens 2 e 4 são código de API e front, e só valem depois do
+  deploy (`DEPLOY.md` §8) — **atenção à ordem: quando a API nova subir, todas
+  as sessões abertas caem de uma vez**, inclusive a do próprio admin.
+
+  **Armadilha do reload, custou o primeiro reload (2026-09-23).** O
+  `admin-auth.conf` foi instalado `root:root 600` e o `systemctl reload caddy`
+  falhou com `permission denied`: o `ExecReload` do unit roda como **usuário
+  `caddy`**, não como root, e ele não lê um arquivo 600 do root. O certo é
+  `root:caddy 640` — o grupo do serviço lê, o mundo não. O Caddy se comportou
+  como devia: reload inválido falha e mantém a config antiga no ar, então o
+  site nunca saiu do ar. Diagnóstico rápido para a próxima:
+  `journalctl -u caddy` mostra a linha exata, e
+  `curl -s localhost:2019/config/ | grep -c basic_auth` diz se o que está
+  rodando é mesmo o que está no disco (o arquivo pode estar novo e a config
+  velha). **O que já está feito e não precisa ser refeito:** limite de
   tentativas no login (10 por IP+e-mail em 5 min, contando conta inexistente —
   `api/routers/auth.py`, `tests/test_login_limite.py`), senha mínima de 8,
   segredos e e-mail de admin fora do código, HTTPS com cookie
@@ -33,36 +50,76 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   `SameSite=lax` + corpo JSON, `comentario` de relato limitado a 1000
   caracteres, e `npm audit --omit=dev` com **0 vulnerabilidades**.
 
-  1. **Cabeçalhos de segurança no `deploy/Caddyfile`** — hoje não existe
-     nenhum, conferido com `curl -I https://qualaconduta.com.br/`. Entram:
-     `Strict-Transport-Security` (importa agora que o HTTPS existe: impede
-     rebaixar para http depois da primeira visita), `X-Content-Type-Options`,
-     `Referrer-Policy`, `Permissions-Policy` e um CSP com `frame-ancestors`
-     (o admin é onde estão as ações destrutivas, e clickjacking é a via óbvia).
-     O CSP dá para apertar porque o app carrega só a si mesmo e o Google Fonts
-     — conferir `fonts.googleapis.com` (CSS) **e** `fonts.gstatic.com` (fontes)
-     no `style-src`/`font-src`, senão a tipografia quebra. Verificar depois com
-     o mesmo `curl -I` e um carregamento real no navegador.
-  2. **Teto diário por usuário no `/praticar/sessao`** — este é o item que não
-     é de checklist, é do produto. O endpoint aceita `quantidade=200`
-     (`Query(default=20, ge=1, le=200)`) e devolve gabarito e explicação
-     embutidos, por decisão de arquitetura (MIGRACAO.md §0/§2, é o que dá o
-     feedback instantâneo). Conta: **1074 ÷ 200 = 6 requisições** para levar o
-     banco inteiro, com qualquer conta válida. Um teto diário por usuário
-     (ex.: 500 casos/dia, contados no banco e não em memória, para valer entre
-     reinícios) mata o roubo em massa sem atrapalhar quem estuda — 500 casos é
-     muito mais do que um dia de estudo real. Precisa de teste.
-  3. **Segundo fator no admin** — `admin.qualaconduta.com.br` está aberto à
-     internet protegido só pela senha da conta, e é de lá que se apaga questão
-     (e `questoes.area_id` é `ON DELETE CASCADE`). `basic_auth` do Caddy são 3
-     linhas e eliminam a categoria "alguém descobriu a senha". A senha do
-     basic_auth vai para o `.env.production`/Caddyfile do servidor, nunca para
-     o repositório.
-  4. **Revogação de sessão de verdade** (menor prioridade, maior custo). O JWT
-     é stateless com 12 h: `POST /auth/logout` limpa o cookie, mas um token
-     roubado vale até expirar. Conserto honesto é um `token_version` por
-     usuário, checado no `usuario_atual` — uma coluna, uma comparação, e o
-     logout passa a invalidar de fato.
+  1. **Cabeçalhos de segurança no `deploy/Caddyfile`** — *escrito em
+     2026-09-23, falta instalar no servidor.* Um snippet `(seguranca)`
+     importado pelos dois sites com `Strict-Transport-Security` (sem
+     `preload`: entrar na lista dos navegadores é fácil, sair leva meses),
+     `X-Content-Type-Options`, `Referrer-Policy` e `Permissions-Policy`. O CSP
+     é por site: o app tem a política inteira (`fonts.googleapis.com` no
+     `style-src` e `fonts.gstatic.com` no `font-src`, senão a tipografia
+     quebra; `unsafe-inline` só em `style-src`, porque o React escreve
+     atributos `style=`; `data:` em `img-src`, porque o Vite embute imagem
+     pequena no build), e o admin leva **só** `frame-ancestors 'none'` —
+     clickjacking é o risco real lá, e o Streamlit injeta script e estilo
+     inline à vontade, então um CSP completo quebraria a tela sem ganho.
+     **No ar desde 2026-09-23**, conferido com
+     `curl -I https://qualaconduta.com.br/`: os cinco cabeçalhos aparecem e o
+     CSS do Google Fonts continua carregando (é a tipografia que quebra se o
+     CSP estiver errado). O backup é `/etc/caddy/Caddyfile.antes-headers`.
+  2. **Teto diário por usuário no `/praticar/sessao`** — **feito em
+     2026-09-23.** Era o item que não é de checklist, é do produto: o endpoint
+     devolve gabarito e explicação embutidos por decisão de arquitetura
+     (MIGRACAO.md §0/§2, é o que dá o feedback instantâneo) e aceitava
+     `quantidade=200`, ou seja **1074 ÷ 200 = 6 requisições** para levar o
+     banco inteiro com qualquer conta válida. Entrou `db.TETO_DIARIO_PRATICA`
+     = 500 casos/dia, tabela `cota_pratica (usuario_id, dia, entregues)` e
+     `db.consumir_cota_pratica`. Três decisões que não são estilo: conta **no
+     banco**, porque em memória o contador zeraria no `systemctl restart` que
+     é justamente o que alguém faria para continuar baixando; cobra **por caso
+     entregue e depois do corte**, para que um recorte de 12 casos gaste 12 e
+     não os 20 pedidos; e lê o saldo com `FOR UPDATE`, senão duas abas da mesma
+     conta gastariam o mesmo saldo duas vezes. Estourado, o endpoint devolve
+     429 e a tela mostra a frase do servidor **sem** "Tentar de novo" — até
+     amanhã a resposta é a mesma, e o botão mentiria (mesma regra do
+     `EstadoFalha`). De quebra, o `queryClient` parou de repetir 4xx: nenhum
+     deles melhora na segunda tentativa. `tests/test_cota_pratica.py` prende o
+     teto, o 429 e o gasto proporcional ao recorte.
+  3. **Segundo fator no admin** — **no ar desde 2026-09-23.** O `admin.qualaconduta.com.br` estava
+     aberto à internet protegido só pela senha da conta, e é de lá que se
+     apaga questão (e `questoes.area_id` é `ON DELETE CASCADE`). Entrou o
+     `basic_auth` do Caddy, usuário `admin`, senha escolhida pelo usuário em
+     2026-09-23. **O hash não está no repositório**: mora em
+     `/etc/caddy/admin-auth.conf` (`root:caddy 640` — ver a armadilha do
+     reload acima), e o `deploy/Caddyfile` o puxa com
+     `import admin-auth.conf` — caminho relativo ao próprio Caddyfile. O
+     motivo de nem o hash entrar aqui é que o repositório é público e bcrypt de
+     senha curta se quebra offline. Efeito colateral a conferir no navegador:
+     o Streamlit fala por websocket, e é o navegador que reenvia a credencial
+     no upgrade. Conferido: sem credencial o admin devolve `401` com
+     `WWW-Authenticate: Basic`, e com ela o `/_stcore/stream` ainda negocia
+     `101 Switching Protocols`. Sem o arquivo o Caddy recusa a config inteira,
+     e um `reload` que falhe mantém a config antiga no ar.
+     Trocar a senha depois: `caddy hash-password`, editar o arquivo, reload.
+  4. **Revogação de sessão de verdade** — **feita em 2026-09-23.** O JWT é
+     stateless com 12 h: `POST /auth/logout` limpava o cookie, mas um token já
+     copiado valia até expirar. Entrou `usuarios.token_version`, que vai
+     assinada no JWT como `tv` e é comparada em `deps.usuario_atual` — sem
+     consulta nova, o usuário já era lido ali. Incrementam a versão o
+     **logout** e a **redefinição de senha** (esta na mesma transação que
+     troca a senha, via `db.invalidar_sessoes(usuario_id, conn)`: quem redefine
+     costuma estar desconfiando de alguém, e trocar a senha sem derrubar a
+     sessão desse alguém seria metade do conserto). Token **sem** o `tv` é
+     recusado de propósito, e não tratado como versão 0 — por isso **o deploy
+     desta mudança desloga todas as sessões abertas, uma vez**, o que o usuário
+     aceitou em 2026-09-23. `tests/test_sessao_revogada.py` prende os três
+     casos. No mesmo dia caiu também o que sobrava disto: o
+     `/me` era a **única** porta de autenticação da interface, então um 401 no
+     meio de uma sessão de estudo aparecia como "pode ser a conexão", com um
+     "Tentar de novo" que falharia para sempre. Agora qualquer 401 fora de
+     `/auth/*` invalida o `["me"]` dentro do `lib/api.ts`, e o `RequireAuth`
+     manda para o login (a sessão de prática fica no `localStorage` e as
+     respostas na fila, então ela volta de onde parou). `/auth/*` fica de fora
+     porque senha errada também é 401, e ali não há sessão a derrubar.
 
   **Decisão do usuário, pendente:** o cadastro é **aberto e sem limite**
   (`POST /auth/signup` não passa pelo limitador do login). Qualquer pessoa cria

@@ -10,12 +10,19 @@ from api.security import COOKIE_NOME, decodificar_token
 
 def usuario_atual(request: Request):
     token = request.cookies.get(COOKIE_NOME)
-    usuario_id = decodificar_token(token) if token else None
-    if usuario_id is None:
+    dados = decodificar_token(token) if token else None
+    if dados is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Sessão inválida ou expirada.")
+    usuario_id, versao = dados
     usuario = db.obter_usuario(usuario_id)
     if usuario is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Sessão inválida ou expirada.")
+    # Revogação de sessão (HISTORICO.md, item 4): o logout e a redefinição de
+    # senha incrementam `token_version`, e é esta comparação que faz o token
+    # antigo parar de valer antes das 12 h dele. Não custa consulta nenhuma —
+    # o usuário já era lido aqui.
+    if usuario["token_version"] != versao:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Sessão encerrada. Entre de novo.")
     return usuario
 
 

@@ -22,6 +22,17 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import db  # noqa: E402
 
 
+@pytest.fixture(autouse=True)
+def _zera_limitadores():
+    """Os limitadores de login e de cadastro contam na memória do processo, e a
+    suíte inteira chega ao servidor como um IP só: sem isto, o sexto `signup`
+    de qualquer teste levaria 429 por causa dos cinco anteriores, de outros
+    testes. Zera antes de cada um; quem testa o limitador conta do zero."""
+    from api.routers import auth
+    auth._TENTATIVAS_LOGIN.clear()
+    yield
+
+
 @pytest.fixture()
 def usuario_teste():
     email = f"pytest_{uuid.uuid4().hex[:12]}@teste.local"

@@ -36,6 +36,19 @@ def obter_sessao_pratica(
     )
     random.shuffle(ids)
     ids = ids[:quantidade]
+    if ids:
+        # Teto diário por conta (HISTORICO.md, item 2): como este endpoint
+        # entrega gabarito e explicação embutidos, sem teto o banco inteiro
+        # cabe em 6 requisições. Cobra-se depois do corte, para que um recorte
+        # de 12 casos gaste 12 e não os 20 pedidos.
+        liberados = db.consumir_cota_pratica(usuario_id=usuario["id"], quantidade=len(ids))
+        if liberados == 0:
+            raise HTTPException(
+                status.HTTP_429_TOO_MANY_REQUESTS,
+                f"Você já recebeu {db.TETO_DIARIO_PRATICA} casos hoje. "
+                "A prática volta amanhã — a revisão espaçada continua disponível.",
+            )
+        ids = ids[:liberados]
     questoes = db.obter_questoes_por_ids(ids, usuario_id=usuario["id"])
     return {"questoes": questoes_publicas(questoes)}
 
