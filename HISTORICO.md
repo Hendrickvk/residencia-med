@@ -143,8 +143,11 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   diferente, ou o Caddy passar a sobrescrever em vez de anexar, refazer esta
   medição: é ela que sustenta os dois limitadores.
 
-  **Confirmação de e-mail — feita em 2026-09-23**, a pedido do usuário, logo
-  depois de o limite por IP entrar. É o que fecha o buraco descrito abaixo sem
+  **Confirmação de e-mail — feita e no ar em 2026-09-23** (commit `afb701d`),
+  a pedido do usuário, logo depois de o limite por IP entrar. Conferido em
+  produção: a tabela existe, as 6 contas reais seguem confirmadas, a rota
+  `/confirmar/:token` é servida pelo SPA, e o Brevo aceitou o `htmlContent`
+  num disparo real para o e-mail do usuário antes do deploy. É o que fecha o buraco descrito abaixo sem
   fechar o cadastro: qualquer pessoa continua criando conta, e cada conta passa
   a custar uma caixa de e-mail que funcione. Como foi:
 
