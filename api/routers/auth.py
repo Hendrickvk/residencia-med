@@ -90,19 +90,23 @@ def _enviar_confirmacao(usuario) -> None:
     enviar_email(
         usuario["email"],
         "Confirme o seu e-mail na Conduta",
-        "Falta um passo para começar a estudar: confirme que este e-mail é seu.\n\n"
+        "Alguém (esperamos que você) criou uma conta na Conduta com este "
+        "endereço. Confirme para liberar as questões:\n\n"
         f"{url}\n\n"
         f"O link vale {db.CONFIRMACAO_VALIDA_HORAS} horas e serve uma vez só. "
-        "Se não foi você quem criou a conta, ignore este e-mail — sem esta "
-        "confirmação ela não abre nada.\n",
+        "Se não foi você quem criou a conta, pode ignorar este e-mail: sem a "
+        "confirmação, ela não abre nada.\n",
         html=montar_html(
             titulo="Confirme o seu e-mail",
+            # Duas linhas e o botão. O e-mail não explica por que a
+            # confirmação existe: quem recebeu quer entrar, não entender a
+            # política de cadastro. O aparte entre parênteses é o mesmo do
+            # e-mail de senha, aprovado pelo usuário em 2026-09-23 — é leve
+            # porque é honesto: a plataforma de fato não sabe se foi ela.
             paragrafos=[
-                "Falta um passo para começar a estudar: confirme que este "
-                "endereço é seu.",
-                "É isto que mantém o cadastro aberto sem deixar barato criar "
-                "contas em série — e é o que garante que o link de recuperação "
-                "de senha chegue a você, e não a outra pessoa.",
+                "Alguém (esperamos que você) criou uma conta na Conduta com "
+                "este endereço.",
+                "Confirme para liberar as questões.",
             ],
             botao_texto="Confirmar meu e-mail",
             botao_url=url,
