@@ -54,6 +54,24 @@ logout and password reset revoke a *stolen* token, since the JWT itself is state
 Anything that should end a session bumps the column (`db.invalidar_sessoes`); a token with no `tv` is
 rejected, so shipping a change to this logs everyone out once, by design. `COOKIE_SECURE` is env-controlled and defaults to `false` (must be `true` once served over real HTTPS — see Deployment below).
 - Password reset (`POST /auth/senha/esqueci` → e-mail → `POST /auth/senha/redefinir`, table `senha_tokens`, page `/senha/:token`). Three rules that are security, not style, and must not be "simplified": **the request endpoint always answers `200 {"ok": true}`** whether or not the account exists (anything else turns it into an oracle for who has an account here, so nothing in it raises — not a missing account, not a failed send, not the rate limit); **the DB stores only the token's SHA-256**, so read access to Postgres redeems nothing; and redeeming **burns every outstanding token of that user** in the same transaction. Tokens last 60 min, are single use, and a user gets 3 requests per 15 min (`db.contar_tokens_recentes`). Invalid, expired and already-used tokens all return the same 400 message. Sending goes through `api/email.py` (Brevo's HTTP API — `httpx` was already a dependency, and Brevo verifies a *sender address*, which the project can have without a domain); with no `BREVO_API_KEY` it logs the would-be e-mail (link included) and returns False, which is the dev path for copying the link out of the server log. Since 2026-09-22 the domain is authenticated at Brevo (DKIM + DMARC on `qualaconduta.com.br`), so mail goes out as `acesso@qualaconduta.com.br`; before that Brevo rewrote the `From:` of a freemail address to `@…brevosend.com`, because an unauthenticated freemail sender fails the recipient's DMARC check. `tests/test_senha.py` pins the three rules above.
+- **Confirmation of e-mail** (since 2026-09-23). Signup is open to anyone on purpose; what makes an
+  account cost something is having to receive an e-mail. `usuarios.email_confirmado_em` + table
+  `confirmacao_tokens` — **a separate table from `senha_tokens`, never a `tipo` column on it**: one
+  forgotten filter would make a confirmation token work as a password-reset token. Same rules as the
+  password flow (SHA-256 only, single use, redeeming burns the siblings, one message for
+  missing/expired/used), 48 h instead of 60 min. What it gates is the *content*, not the door:
+  `api.deps.usuario_confirmado` (403, not 401 — she is logged in, something else is missing) guards
+  `/praticar/sessao` and simulado creation only, so someone who never got the e-mail can still log in
+  and ask for another link. Confirming does not create a session — that would make the link a magic
+  link. Accounts that predate the migration were backfilled as confirmed. Any new test that creates an
+  account through `/auth/signup` and then asks for content must call `confirmar_email()` from
+  `tests/conftest.py`, and must draw its e-mail *before* the call so the teardown can delete by e-mail
+  (an endpoint that raises after inserting the row leaks an account into production otherwise — it did).
+- `api/email_modelo.py` — the HTML e-mail, table-based and inline-styled, in the Triagem system
+  (paper `--ground`, card with a 1px border, ink button, the five triage bars as the brand mark). Both
+  transactional e-mails go through it; `enviar_email` sends text **and** HTML, because a text-only
+  client and the spam filter both need the text part. E-mail clients don't load Google Fonts, so
+  Archivo is only the first entry of a stack ending in Arial.
 - `deps.py` — `usuario_atual`, `eh_admin` (reads `db.emails_admin()`: `ADMIN_EMAILS` from `.streamlit/secrets.toml` or the env var, comma-separated). **No admin e-mail and no JWT secret belongs in the code** — both were hardcoded until 2026-09-20 in a public repo. With no config, nobody is admin and `security.py` signs sessions with a random per-process secret (loud warning in the log, sessions die on restart); that is the safe side of the failure, and the old fixed default meant anyone could forge a session cookie for any account if the variable were missing in production. `/auth/login` allows `MAX_TENTATIVAS_LOGIN` failures per (IP, e-mail) in a 5-minute window, counted for accounts that do not exist too (otherwise the limit itself tells you who has an account); `tests/test_login_limite.py` pins it.
 - `schemas.py` — Pydantic models. `CredenciaisIn.email` is plain `str` + a custom validator, not `EmailStr`, because `email-validator` rejects `.local`/reserved TLDs used by test fixtures.
 - `serialize.py` — `questao_publica()` must wrap every question row returned by any endpoint: strips `imagem`/`imagem_mime` (Postgres BYTEA, not JSON-serializable) into a `tem_imagem` bool, and parses the `alternativas` column (stored as a TEXT/JSON string) into an object.

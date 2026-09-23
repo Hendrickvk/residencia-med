@@ -14,6 +14,7 @@ def obter_me(usuario=Depends(usuario_atual)):
         id=usuario["id"],
         email=usuario["email"],
         is_admin=eh_admin(usuario),
+        email_confirmado=usuario["email_confirmado_em"] is not None,
         tema=usuario["tema"],
         prova_alvo=usuario["data_prova_alvo"],
         ofensiva_dias=ofensiva_dias,

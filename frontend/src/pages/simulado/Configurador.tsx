@@ -1,5 +1,6 @@
 import { AlertTriangle, ArrowRight } from "lucide-react";
 import { useState } from "react";
+import { ApiError } from "../../lib/api";
 import { Dialog } from "../../components/Dialog";
 import { EtiquetaPct } from "../../components/EtiquetaPct";
 import { useAreas, useBancas } from "../../lib/catalogo";
@@ -173,8 +174,15 @@ function ProvasOficiais({
     try {
       const r = await criarSimuladoOficial(escolhida.banca, escolhida.edicao);
       onIniciado(r.id);
-    } catch {
-      setErro("Não foi possível começar a prova. Tente de novo.");
+    } catch (e) {
+      // 403 = e-mail ainda não confirmado. Aqui "tente de novo" seria mentira:
+      // a resposta só muda quando ela confirmar, e quem explica isso é a frase
+      // do servidor, com a faixa do topo logo acima.
+      setErro(
+        e instanceof ApiError && e.status === 403
+          ? e.message
+          : "Não foi possível começar a prova. Tente de novo.",
+      );
       setCriando(false);
     }
   }
@@ -302,8 +310,12 @@ function MontarSimulado({ onIniciado }: { onIniciado: (id: number) => void }) {
     try {
       const r = await criarSimulado({ area_id: areaId, banca, num_questoes: numQuestoes, tempo_limite_min: tempoLimite });
       onIniciado(r.id);
-    } catch {
-      setErro("Não foi possível iniciar o simulado. Tente de novo.");
+    } catch (e) {
+      setErro(
+        e instanceof ApiError && e.status === 403
+          ? e.message
+          : "Não foi possível iniciar o simulado. Tente de novo.",
+      );
     } finally {
       setCriando(false);
     }

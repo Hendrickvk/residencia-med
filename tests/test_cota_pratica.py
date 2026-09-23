@@ -13,6 +13,7 @@ from fastapi.testclient import TestClient
 from api.main import app
 
 import db
+from tests.conftest import confirmar_email
 
 
 @pytest.fixture(autouse=True, scope="module")
@@ -42,6 +43,7 @@ def test_sessao_devolve_429_com_a_cota_estourada(quatro_questoes, area_teste):
     try:
         with TestClient(app) as client:
             usuario_id = client.post("/auth/signup", json={"email": email, "senha": "senha123"}).json()["id"]
+            confirmar_email(usuario_id)
 
             r = client.get("/praticar/sessao", params={"area_id": area_teste, "quantidade": 2})
             assert r.status_code == 200
@@ -66,6 +68,7 @@ def test_recorte_menor_que_o_pedido_gasta_so_o_que_entregou(quatro_questoes, are
     try:
         with TestClient(app) as client:
             usuario_id = client.post("/auth/signup", json={"email": email, "senha": "senha123"}).json()["id"]
+            confirmar_email(usuario_id)
             r = client.get("/praticar/sessao", params={"area_id": area_teste, "quantidade": 20})
             assert r.status_code == 200
             assert len(r.json()["questoes"]) == 4

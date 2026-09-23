@@ -314,6 +314,7 @@ export interface Me {
   id: number;
   email: string;
   is_admin: boolean;
+  email_confirmado: boolean;
   tema: "light" | "dark";
   prova_alvo: string | null;
   ofensiva_dias: number;

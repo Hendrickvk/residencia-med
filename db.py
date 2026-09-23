@@ -696,6 +696,25 @@ def init_db():
         """)
         c.execute("CREATE INDEX IF NOT EXISTS idx_senha_tokens_usuario ON senha_tokens(usuario_id)")
 
+        # Tabela separada da `senha_tokens`, e não uma coluna `tipo` nela: com
+        # uma coluna só, esquecer o filtro em UMA consulta faria um token de
+        # confirmação valer como token de redefinição de senha. Duas tabelas
+        # tornam essa confusão impossível em vez de improvável, ao preço de
+        # três funções parecidas. Mesmas regras da outra: guarda só o SHA-256,
+        # uso único, e a confirmação queima todos os pendentes da conta.
+        c.execute("""
+        CREATE TABLE IF NOT EXISTS confirmacao_tokens (
+            id SERIAL PRIMARY KEY,
+            usuario_id INTEGER NOT NULL,
+            token_hash TEXT NOT NULL UNIQUE,
+            criado_em TIMESTAMP NOT NULL,
+            expira_em TIMESTAMP NOT NULL,
+            usado_em TIMESTAMP,
+            FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+        )
+        """)
+        c.execute("CREATE INDEX IF NOT EXISTS idx_confirmacao_tokens_usuario ON confirmacao_tokens(usuario_id)")
+
         # Teto diário de casos entregues pelo /praticar/sessao (HISTORICO.md,
         # item 2 do plano de endurecimento). Conta no banco, não em memória:
         # em memória o contador zera a cada `systemctl restart` da API, que é
@@ -808,6 +827,14 @@ def init_db():
         # requisição; incrementá-la mata todas as sessões abertas da conta.
         if "token_version" not in colunas_usuarios:
             c.execute("ALTER TABLE usuarios ADD COLUMN token_version INTEGER NOT NULL DEFAULT 0")
+        # Confirmação de e-mail: o cadastro continua aberto a qualquer pessoa
+        # (decisão de 2026-09-23), e o que faz uma conta custar alguma coisa é
+        # ter de receber um e-mail. NULL = não confirmada. As contas que já
+        # existiam entram confirmadas — elas são anteriores à regra, e trancar
+        # a aluna fora do estudo para provar um ponto seria absurdo.
+        if "email_confirmado_em" not in colunas_usuarios:
+            c.execute("ALTER TABLE usuarios ADD COLUMN email_confirmado_em TIMESTAMP")
+            c.execute("UPDATE usuarios SET email_confirmado_em = NOW()")
 
         # Migração leve: calibração de confiança ("acertei com segurança" /
         # "acertei no chute"), usada para ajustar a qualidade informada ao
@@ -2183,6 +2210,69 @@ def contar_tokens_recentes(usuario_id, minutos=15):
             (usuario_id, desde),
         ).fetchone()
     return row["n"]
+
+
+# --- Confirmação de e-mail ------------------------------------------------
+# Espelha o fluxo de senha de propósito (hash do token no banco, validade
+# curta, uso único, limite de pedidos): é o mesmo desenho já revisado, e
+# desenhar um segundo diferente só criaria uma segunda superfície para errar.
+
+CONFIRMACAO_VALIDA_HORAS = 48
+
+
+def criar_token_confirmacao(usuario_id, token_hash, horas_validade=CONFIRMACAO_VALIDA_HORAS):
+    """48 h, e não os 60 min da redefinição: o link de senha é uma reação a um
+    pedido que a pessoa acabou de fazer; este chega junto com o cadastro e pode
+    esperar ela voltar do plantão."""
+    agora = datetime.datetime.now()
+    with get_conn() as conn:
+        conn.execute("""
+            INSERT INTO confirmacao_tokens (usuario_id, token_hash, criado_em, expira_em)
+            VALUES (?, ?, ?, ?)
+        """, (usuario_id, token_hash, agora, agora + datetime.timedelta(hours=horas_validade)))
+    return agora + datetime.timedelta(hours=horas_validade)
+
+
+def obter_token_confirmacao(token_hash):
+    """Só o que ainda vale: não usado e não expirado. Token inexistente,
+    queimado e vencido saem iguais (None), e quem chama devolve a mesma
+    mensagem para os três."""
+    with get_conn() as conn:
+        return conn.execute("""
+            SELECT * FROM confirmacao_tokens
+            WHERE token_hash = ? AND usado_em IS NULL AND expira_em > NOW()
+        """, (token_hash,)).fetchone()
+
+
+def contar_confirmacoes_recentes(usuario_id, minutos=15):
+    """O corte sai em Python e vai como parâmetro, igual ao
+    `contar_tokens_recentes`: `NOW() - (%s * INTERVAL '1 minute')` com o número
+    parametrizado devolve zero sempre — o psycopg2 não dá ao parâmetro o tipo
+    que o operador de intervalo espera, e a contagem passa a não limitar nada."""
+    desde = datetime.datetime.now() - datetime.timedelta(minutes=minutos)
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT COUNT(*) AS n FROM confirmacao_tokens WHERE usuario_id = ? AND criado_em > ?",
+            (usuario_id, desde),
+        ).fetchone()
+    return row["n"]
+
+
+def confirmar_email(usuario_id, token_id):
+    """Marca a conta como confirmada e queima todos os tokens pendentes dela na
+    mesma transação — inclusive os de um reenvio, que senão continuariam
+    valendo como link de confirmação de uma conta já confirmada."""
+    agora = datetime.datetime.now()
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE usuarios SET email_confirmado_em = ? WHERE id = ? AND email_confirmado_em IS NULL",
+            (agora, usuario_id),
+        )
+        conn.execute(
+            "UPDATE confirmacao_tokens SET usado_em = ? WHERE usuario_id = ? AND usado_em IS NULL",
+            (agora, usuario_id),
+        )
+        return token_id
 
 
 def invalidar_sessoes(usuario_id, conn=None):

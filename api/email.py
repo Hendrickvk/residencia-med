@@ -1,5 +1,8 @@
 """
-Envio de e-mail transacional (só a redefinição de senha, por enquanto).
+Envio de e-mail transacional: redefinição de senha e confirmação de conta.
+
+O corpo vai em texto e, quando quem chama monta (`email_modelo.py`), também em
+HTML com a cara da plataforma.
 
 Usa a API HTTP do Brevo em vez de SMTP por dois motivos: `httpx` já está no
 `requirements.txt` (SMTP exigiria abrir porta e lidar com TLS na mão) e o
@@ -40,7 +43,7 @@ def destinatario_real(email: str) -> bool:
     return not email.strip().lower().endswith(DOMINIOS_DE_TESTE)
 
 
-def enviar_email(para: str, assunto: str, texto: str) -> bool:
+def enviar_email(para: str, assunto: str, texto: str, html: str | None = None) -> bool:
     """Devolve True só quando o provedor aceitou a mensagem.
 
     Nunca levanta: quem chama está sempre num fluxo em que falhar em enviar
@@ -52,6 +55,8 @@ def enviar_email(para: str, assunto: str, texto: str) -> bool:
         logger.info("Destinatário de domínio reservado (%s): envio ignorado.", para)
         return False
     if not envio_configurado():
+        # Só a versão em texto vai para o log: é dela que se copia o link no
+        # terminal em desenvolvimento, e o HTML só encheria a tela.
         logger.warning(
             "Envio de e-mail não configurado (BREVO_API_KEY/EMAIL_REMETENTE). "
             "Mensagem que seria enviada para %s:\n%s\n%s", para, assunto, texto,
@@ -65,7 +70,11 @@ def enviar_email(para: str, assunto: str, texto: str) -> bool:
                 "sender": {"email": REMETENTE, "name": REMETENTE_NOME},
                 "to": [{"email": para}],
                 "subject": assunto,
+                # Os dois juntos: o cliente escolhe. Sem a versão em texto, o
+                # filtro de spam desconfia de mensagem só-HTML, e quem lê em
+                # terminal ou leitor de tela fica sem nada.
                 "textContent": texto,
+                **({"htmlContent": html} if html else {}),
             },
             timeout=TIMEOUT_S,
         )

@@ -37,6 +37,10 @@ class EsqueciSenhaIn(BaseModel):
         return v.strip().lower()
 
 
+class ConfirmarEmailIn(BaseModel):
+    token: str
+
+
 class RedefinirSenhaIn(BaseModel):
     # Mesmo mínimo do cadastro (CredenciaisIn): trocar a senha não pode ser
     # uma porta para uma senha mais fraca do que a que o signup aceita.
@@ -48,6 +52,8 @@ class MeOut(BaseModel):
     id: int
     email: str
     is_admin: bool
+    # NULL no banco vira False aqui: a tela só precisa saber se libera ou não.
+    email_confirmado: bool
     tema: str
     prova_alvo: Optional[str] = None
     ofensiva_dias: int

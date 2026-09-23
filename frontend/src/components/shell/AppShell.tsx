@@ -3,6 +3,7 @@ import { flushSync } from "react-dom";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { BrincadeiraBoasVindas } from "../BrincadeiraBoasVindas";
 import { jaViu, useEhConvidada } from "../../lib/brincadeira";
+import { ConfirmeSeuEmail } from "../ConfirmeSeuEmail";
 import { FilaPendenteAviso } from "../FilaPendenteAviso";
 import { api } from "../../lib/api";
 import { useAuthActions, useMe } from "../../lib/auth";
@@ -120,6 +121,10 @@ export function AppShell() {
               {/* A chave por caminho remonta o invólucro a cada troca de tela e a
                   tela nova entra subindo (DESIGN_TRIAGEM.md §3). */}
               <div key={location.pathname} className="mx-auto w-full max-w-[1360px] animate-entrar">
+                {/* Fora da tela e acima dela: o que a faixa explica é por que
+                    Praticar e Simulado não abrem, então ela não pode morar só
+                    no Painel. Some sozinha quando a conta confirma. */}
+                <ConfirmeSeuEmail />
                 <Outlet />
               </div>
             </main>

@@ -33,6 +33,18 @@ def _zera_limitadores():
     yield
 
 
+def confirmar_email(usuario_id):
+    """Marca a conta como confirmada, sem passar pelo link.
+
+    Desde 2026-09-23 conta nova nasce sem confirmar e o `/praticar/sessao` e a
+    criação de simulado respondem 403 — então todo teste que cria conta pelo
+    `/auth/signup` e vai buscar conteúdo precisa chamar isto. Quem testa a
+    própria confirmação (`test_confirmacao_email.py`) usa o token de verdade.
+    """
+    with db.get_conn() as conn:
+        conn.execute("UPDATE usuarios SET email_confirmado_em = NOW() WHERE id = ?", (usuario_id,))
+
+
 @pytest.fixture()
 def usuario_teste():
     email = f"pytest_{uuid.uuid4().hex[:12]}@teste.local"

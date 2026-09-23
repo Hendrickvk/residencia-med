@@ -3,6 +3,7 @@ import { RequireAuth } from "./components/RequireAuth";
 import { AppShell } from "./components/shell/AppShell";
 import { ACERVO } from "./lib/nav";
 import Login from "./pages/Login";
+import Confirmar from "./pages/Confirmar";
 import Senha from "./pages/Senha";
 import Painel from "./pages/painel";
 import { PermaneceNoStreamlit } from "./pages/PermaneceNoStreamlit";
@@ -17,6 +18,9 @@ export default function App() {
       {/* Link do e-mail de redefinição: público, porque quem chega aqui é
           exatamente quem não consegue entrar. */}
       <Route path="/senha/:token" element={<Senha />} />
+      {/* Link de confirmação: também público, e pelo mesmo motivo — ele costuma
+          ser aberto no celular, não no navegador onde a conta foi criada. */}
+      <Route path="/confirmar/:token" element={<Confirmar />} />
 
       <Route element={<RequireAuth />}>
         <Route element={<AppShell />}>

@@ -218,11 +218,11 @@ export default function Sessao({ filtros, nonce, salva, email, onFinalizar, onVo
     );
   }
 
-  // Teto diário de casos (HISTORICO.md, item 2): não é falha de rede nem
-  // recorte vazio, e "Tentar de novo" aqui seria um botão que mente — a
-  // resposta seria a mesma até amanhã. A frase vem do servidor, que é quem
-  // sabe o teto.
-  if (error instanceof ApiError && error.status === 429 && fila.length === 0) {
+  // Teto diário de casos (429) e e-mail não confirmado (403): nenhum dos dois
+  // é falha de rede ou recorte vazio, e "Tentar de novo" seria um botão que
+  // mente — a resposta só muda amanhã, num caso, e depois da confirmação, no
+  // outro. A frase vem do servidor, que é quem sabe qual dos dois é.
+  if (error instanceof ApiError && [403, 429].includes(error.status) && fila.length === 0) {
     return (
       <div className="mx-auto max-w-[680px] animate-entrar">
         <EstadoVazio mensagem={error.message} cta={{ label: "Voltar", onClick: onVoltar }} />

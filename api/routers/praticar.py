@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 import db
 import repeticao_espacada as sr
-from api.deps import usuario_atual
+from api.deps import usuario_atual, usuario_confirmado
 from api.schemas import RespostaIn
 from api.serialize import questoes_publicas
 
@@ -22,7 +22,7 @@ def obter_sessao_pratica(
     apenas_erros: bool = False,
     excluir_respondidas: bool = False,
     quantidade: int = Query(default=20, ge=1, le=200),
-    usuario=Depends(usuario_atual),
+    usuario=Depends(usuario_confirmado),
 ):
     """O endpoint que define o sucesso da migração (MIGRACAO.md §0/§2):
     devolve o lote inteiro de questões já com gabarito, comentário e estado

@@ -13,6 +13,7 @@ from fastapi.testclient import TestClient
 from api.main import app
 
 import db
+from tests.conftest import confirmar_email
 
 
 def test_fluxo_signup_sessao_e_resposta(area_teste, questao_teste):
@@ -23,6 +24,9 @@ def test_fluxo_signup_sessao_e_resposta(area_teste, questao_teste):
             r = client.post("/auth/signup", json={"email": email, "senha": "senha123"})
             assert r.status_code == 201, r.text
             usuario_id = r.json()["id"]
+            # Conta nova nasce sem confirmar, e sem confirmação o conteúdo não
+            # sai (403). O que este teste mede é o fluxo depois disso.
+            confirmar_email(usuario_id)
 
             r = client.get("/me")
             assert r.status_code == 200, r.text
@@ -74,6 +78,9 @@ def test_contagem_bate_com_a_sessao_e_reage_aos_filtros(area_teste, quatro_quest
             r = client.post("/auth/signup", json={"email": email, "senha": "senha123"})
             assert r.status_code == 201, r.text
             usuario_id = r.json()["id"]
+            # Conta nova nasce sem confirmar, e sem confirmação o conteúdo não
+            # sai (403). O que este teste mede é o fluxo depois disso.
+            confirmar_email(usuario_id)
 
             recorte = {"area_id": area_teste}
             r = client.get("/praticar/contagem", params=recorte)

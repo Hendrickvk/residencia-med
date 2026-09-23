@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 import db
 import repeticao_espacada as sr
-from api.deps import usuario_atual
+from api.deps import usuario_atual, usuario_confirmado
 from api.schemas import RespostaSimuladoIn, SimuladoIn, SimuladoOficialIn, TempoSimuladoIn
 from api.serialize import questoes_publicas
 
@@ -51,7 +51,7 @@ def em_andamento(usuario=Depends(usuario_atual)):
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
-def criar(dados: SimuladoIn, usuario=Depends(usuario_atual)):
+def criar(dados: SimuladoIn, usuario=Depends(usuario_confirmado)):
     disponiveis = db.contar_questoes_disponiveis(dados.area_id, dados.banca)
     if disponiveis < dados.num_questoes:
         raise HTTPException(
@@ -67,7 +67,7 @@ def criar(dados: SimuladoIn, usuario=Depends(usuario_atual)):
 
 
 @router.post("/oficial", status_code=status.HTTP_201_CREATED)
-def criar_oficial(dados: SimuladoOficialIn, usuario=Depends(usuario_atual)):
+def criar_oficial(dados: SimuladoOficialIn, usuario=Depends(usuario_confirmado)):
     """Prova de uma edição oficial inteira, na ordem do caderno e com o tempo
     no ritmo oficial — quantidade e tempo não são escolhidos pelo aluno."""
     ids = db.ids_questoes_da_edicao(dados.banca, dados.edicao)

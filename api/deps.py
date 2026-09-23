@@ -1,4 +1,4 @@
-from fastapi import HTTPException, Request, status
+from fastapi import Depends, HTTPException, Request, status
 
 import db
 from api.security import COOKIE_NOME, decodificar_token
@@ -23,6 +23,21 @@ def usuario_atual(request: Request):
     # o usuário já era lido aqui.
     if usuario["token_version"] != versao:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Sessão encerrada. Entre de novo.")
+    return usuario
+
+
+def usuario_confirmado(usuario=Depends(usuario_atual)):
+    """Sessão **e** e-mail confirmado. Fica nos endpoints que entregam
+    conteúdo (a sessão de prática e a criação de simulado), não na sessão
+    inteira: quem acabou de se cadastrar precisa poder entrar, ver o aviso e
+    pedir outro link. 403 e não 401 de propósito — 401 mandaria a tela para o
+    login, e ela está logada; o que falta é outra coisa."""
+    if usuario["email_confirmado_em"] is None:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "Confirme o seu e-mail para liberar as questões. "
+            "O link está na sua caixa de entrada — dá para pedir outro no Painel.",
+        )
     return usuario
 
 

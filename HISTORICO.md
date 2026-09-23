@@ -143,18 +143,58 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   diferente, ou o Caddy passar a sobrescrever em vez de anexar, refazer esta
   medição: é ela que sustenta os dois limitadores.
 
-  **O que ainda não está resolvido, e é o único caminho que sobra:** quem tem
+  **Confirmação de e-mail — feita em 2026-09-23**, a pedido do usuário, logo
+  depois de o limite por IP entrar. É o que fecha o buraco descrito abaixo sem
+  fechar o cadastro: qualquer pessoa continua criando conta, e cada conta passa
+  a custar uma caixa de e-mail que funcione. Como foi:
+
+  - `usuarios.email_confirmado_em` (NULL = pendente) e a tabela
+    `confirmacao_tokens`. **Tabela separada da `senha_tokens`, não uma coluna
+    `tipo` nela**: com uma coluna só, esquecer o filtro em UMA consulta faria
+    um token de confirmação valer como token de redefinição de senha. Duas
+    tabelas tornam a confusão impossível em vez de improvável, ao preço de três
+    funções parecidas. Mesmas regras do fluxo de senha, que já foi revisado:
+    guarda só o SHA-256, uso único, confirmar queima todos os pendentes da
+    conta, e token inexistente, vencido ou já usado devolvem a mesma mensagem.
+    Validade de 48 h, e não os 60 min da senha: o link de senha responde a um
+    pedido que a pessoa acabou de fazer; este chega junto com o cadastro e pode
+    esperar ela voltar do plantão.
+  - **As contas que já existiam entraram confirmadas**, por um UPDATE único
+    dentro do `init_db` — trancar quem já estudava aqui para provar um ponto
+    seria absurdo. Conferido à mão: as 6 contas reais estão confirmadas.
+  - **O que a confirmação tranca é o conteúdo, não a porta.** Quem se cadastra
+    entra, vê o Painel e a faixa com o botão de reenviar; o 403 está só no
+    `/praticar/sessao` e na criação de simulado (`api/deps.usuario_confirmado`).
+    Trancar no login faria quem não recebeu o e-mail não ter nem onde pedir
+    outro. A Revisão não precisa de trava: ela só devolve questão que a conta
+    já respondeu. É **403 e não 401** de propósito: 401 mandaria a tela para o
+    login, e ela está logada — o que falta é outra coisa.
+  - Confirmar **não** cria sessão. O link viraria um link mágico, e esse poder
+    o e-mail não precisa ter (quem tem a caixa já pode redefinir a senha).
+  - Reenvio exige sessão, então não é oráculo de quem tem conta — ao contrário
+    do `/senha/esqueci`. Limite de 3 por 15 min, o mesmo `LIMITE_PEDIDOS`.
+  - **Armadilha encontrada:** `criado_em > NOW() - (%s * INTERVAL '1 minute')`
+    com o número parametrizado **devolve zero sempre** — o psycopg2 não dá ao
+    parâmetro o tipo que o operador de intervalo espera, e a contagem passa a
+    não limitar nada. O `contar_tokens_recentes` da senha já calculava o corte
+    em Python; agora os dois fazem igual. Um limite que silenciosamente não
+    limita é pior que não ter limite, porque ninguém vai conferir de novo.
+  - **Segunda armadilha, esta de teste:** um teste que cria conta pelo
+    `/auth/signup` e guarda o id só depois da resposta deixa a conta para trás
+    quando o endpoint quebra **depois** de inserir a linha — foi o que
+    aconteceu, e 6 contas `pytest_conf_*` ficaram no banco de produção até
+    serem apagadas à mão. A fixture agora sorteia o e-mail **antes** da chamada
+    e apaga por e-mail no teardown. Vale para qualquer teste novo que crie
+    conta pela API.
+  - `tests/test_confirmacao_email.py` (6 casos) e o `confirmar_email()` do
+    `conftest.py`, que todo teste que busca conteúdo precisa chamar.
+
+  **O que ainda não está resolvido, e é o único caminho que sobrava:** quem tem
   muitos IPs. O limite por IP encarece o script ingênuo e não impede um pool de
   proxies — cada conta nova custa só um IP. O que fecharia de verdade é
   **confirmação de e-mail** antes de liberar o conteúdo: mantém o cadastro
   aberto a qualquer pessoa (não é lista de convidados) e faz cada conta custar
-  uma caixa de e-mail que funcione. A infraestrutura já existe e está provada
-  pelo fluxo de senha: Brevo com domínio autenticado, `api/email.py`, e o
-  padrão de token com hash em tabela. Custa uma coluna
-  (`usuarios.email_confirmado_em`), um endpoint, uma tela e a decisão de o que
-  bloquear enquanto não confirma (o razoável é só o `/praticar/sessao`, que é
-  onde o conteúdo sai; deixar o resto funcionar). Contas existentes entram
-  como já confirmadas. Não feito: é mudança de produto, não de configuração.
+  uma caixa de e-mail que funcione. **Foi feito no mesmo dia — ver acima.**
 
   Nota lateral, baixa gravidade e conhecida: o signup devolve 409 "Já existe
   uma conta com esse e-mail", o que é um oráculo de quem tem conta aqui — o
