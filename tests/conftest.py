@@ -6,7 +6,8 @@ apontado por `.streamlit/secrets.toml`) — por isso todo dado criado aqui é
 marcado com um sufixo `uuid4` (e-mails `pytest_*@teste.local`, áreas
 `__pytest_area_*`) e removido no teardown de cada fixture via `ON DELETE
 CASCADE`. Nunca reaproveite dados de produção nem deixe uma fixture sem
-teardown.
+teardown — e todo dado de teste precisa cair num desses dois padrões, que é o
+que a varredura do início da suíte sabe apagar.
 """
 
 import datetime
@@ -20,6 +21,24 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import db  # noqa: E402
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _apaga_sobras_de_rodadas_interrompidas():
+    """Teardown só roda se o pytest chegar ao fim. Uma rodada morta no meio —
+    Ctrl+C, ou o limite de tempo de quem chamou, e a suíte leva uns 7 minutos —
+    deixa as fixtures em produção: foi assim que uma `__pytest_area_*` apareceu
+    no filtro de Áreas do Praticar e quatro questões de teste ficaram no
+    sorteio das sessões dos alunos (HISTORICO.md, 2026-09-24). Por isso a suíte
+    começa apagando o que sobrou das anteriores; a área leva as questões dela
+    por CASCADE, e a conta leva tudo que é dela.
+
+    ponytail: supõe uma suíte por vez — duas rodadas simultâneas apagariam os
+    dados uma da outra."""
+    with db.get_conn() as conn:
+        conn.execute(r"DELETE FROM areas WHERE nome LIKE '\_\_pytest\_area\_%'")
+        conn.execute(r"DELETE FROM usuarios WHERE email LIKE 'pytest\_%@teste.local'")
+    yield
 
 
 @pytest.fixture(autouse=True)

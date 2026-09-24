@@ -1654,9 +1654,10 @@ governa as telas admin do Streamlit.
     o dump de 22/09 sem commit, e o primeiro disparo da tarefa resolveu: no
     mesmo dia, às 22h34, espelhou o dump novo e o empurrou para o remoto
     (resultado 0 no agendador; o registro fica em `backups/backup_semanal.log`).
-  - Medido no mesmo dia: o dump tem **23,9 MB** e o banco já está em 1078
-    questões. Imagem no cartão de flashcard multiplicaria isso — foi por
-    causa disto que o backup veio antes dela.
+  - Medido no mesmo dia: o dump tem **23,9 MB** e o banco estava em 1078
+    questões — 4 delas eram sobra de teste, apagadas em 24/09. Imagem no
+    cartão de flashcard multiplicaria isso — foi por causa disto que o backup
+    veio antes dela.
 
 ### 2026-09-24
 - **O roteiro da brincadeira saiu do código.** Só o e-mail da convidada estava
@@ -1689,7 +1690,9 @@ governa as telas admin do Streamlit.
   - `tests/test_brincadeira.py` prende que outra conta recebe `null`, e o
     bundle construído foi varrido atrás do texto antigo: nada.
   - **No ar no mesmo dia.** API reiniciada e bundle trocado; conferido que o
-    `index-*.js` servido é o construído aqui e não tem o texto.
+    `index-*.js` servido é o construído aqui e não tem o texto. Depois disso o
+    `dist.antigo` do servidor, que guardava o bundle anterior com o texto, foi
+    apagado; a próxima subida recria a cópia de rollback.
 - **Histórico do git reescrito, a pedido do usuário.** Com `git filter-repo`,
   numa cópia recém-clonada e conferida antes do envio: as três versões antigas
   do `brincadeira.ts` saíram de todos os commits, a lista de detalhes das duas
@@ -1709,6 +1712,20 @@ governa as telas admin do Streamlit.
     apaga isso (ver Pendências). E qualquer clone feito antes guarda a história
     velha: nele, nunca `pull` com merge, que traria tudo de volta — é `fetch` +
     `reset --hard origin/main`, ou clonar de novo.
+- **Uma área de teste aparecia para os alunos**, no filtro de Áreas do
+  Praticar: `__pytest_area_…`, o ".py" que o usuário viu. Era sobra de uma
+  rodada da suíte interrompida — teardown só roda se o pytest chega ao fim, e
+  o provável é uma rodada cortada pelo limite de tempo de quem chamou (a suíte
+  leva uns 7 minutos). A sobra era pior que o nome no filtro: a área tinha 4
+  questões de teste (banca `PYTEST`), que entravam no sorteio de qualquer
+  sessão sem filtro de área; ninguém chegou a respondê-las. Com ela ficaram uma
+  especialidade de teste e 3 contas de teste. Tudo apagado por id, depois de um
+  backup completo, numa transação que só gravava se apagasse exatamente o
+  conferido; o banco voltou a 1 074 questões. **O conserto de raiz** está no
+  `tests/conftest.py`: a suíte começa apagando o que casa com os dois padrões
+  de dado de teste (`__pytest_area_*` e `pytest_*@teste.local`) — conferido
+  plantando uma sobra falsa e rodando um arquivo de teste. Por isso todo dado
+  de teste novo precisa cair num desses padrões.
 
 ## Armadilhas das telas admin (Streamlit)
 
