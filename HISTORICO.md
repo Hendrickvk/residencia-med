@@ -424,15 +424,30 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
     alta, e o ponto de pendência no menu é tinta.
   - `tests/test_novidades.py` cobre a metade do servidor; a lista é do front.
 
-- **O backup semanal nunca rodou (medido em 2026-09-23).** Não existe
-  `backups/backup_semanal.log`, e o dump mais recente é o
-  `conduta_20260922_175310.dump`, feito à mão. A tarefa agendada do Windows que
-  chamaria o `scripts/backup_semanal.cmd` continua por criar. Isto não é defesa
-  contra invasão — é a metade que decide se um ataque destrutivo, ou um clique
-  errado numa área (`questoes.area_id` é `ON DELETE CASCADE`), é incidente ou é
-  a perda das 1074 questões e das 79 imagens recortadas à mão, que não existem
-  em outro lugar. Restaurar um dump também nunca foi testado: o backup que
-  ninguém restaurou é uma suposição, não um backup.
+- **Backup semanal agendado e restauração testada (2026-09-23).** Era a
+  pendência mais antiga da lista, e a única que não era melhoria: é o que
+  decide se um acidente é incidente ou é a perda das 79 figuras recortadas à
+  mão.
+  - **Tarefa do Windows "Conduta - backup semanal"**, domingo às 20h,
+    chamando `scripts/backup_semanal.cmd`. Criada com `-StartWhenAvailable`:
+    num notebook que passa domingo à noite desligado, sem isso a semana
+    inteira é pulada em silêncio, que é exatamente como o backup deixa de
+    acontecer sem ninguém perceber. Roda como o usuário, em sessão
+    interativa, então não guarda senha nenhuma e enxerga o `BACKUP_ESPELHO`.
+  - **A restauração foi testada de ponta a ponta, pela primeira vez.** Um
+    `CREATE DATABASE restauracao_teste` no próprio Neon (banco separado,
+    conexão **direta**, sem o `-pooler`, porque `CREATE DATABASE` não passa
+    pelo pooler nem dentro de transação), `pg_restore --no-owner
+    --no-privileges` do dump mais recente, e contagem lado a lado com a
+    produção: 13 tabelas, **nenhuma divergência**, e as 79 figuras chegaram
+    inteiras (19,5 MB). Levou 25 segundos. O banco de teste foi apagado.
+  - **O `--empurrar` continua sendo ato do usuário.** O dump tem e-mail e
+    hash de senha de todas as contas; a tarefa agendada roda na conta dele e
+    faz o envio, o que é diferente de eu empurrar. O espelho local estava com
+    o dump de 22/09 sem commit: o primeiro disparo da tarefa resolve.
+  - Medido no mesmo dia: o dump tem **23,9 MB** e o banco já está em 1078
+    questões. Imagem no cartão de flashcard multiplicaria isso — foi por
+    causa disto que o backup veio antes dela.
 
 - Se o shape ARM `VM.Standard.A1.Flex` (1 OCPU/6 GB, Always Free) aparecer em
   São Paulo e 1 GB apertar, recriar a instância nele.
