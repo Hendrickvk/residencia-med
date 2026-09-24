@@ -337,6 +337,7 @@ export interface Me {
   nome: string | null;
   cor_perfil: string;
   foto_versao: string | null;
+  cartoes_hoje: number;
   tema: "light" | "dark";
   prova_alvo: string | null;
   ofensiva_dias: number;

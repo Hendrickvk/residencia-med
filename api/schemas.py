@@ -69,10 +69,41 @@ class MeOut(BaseModel):
     # Muda quando a foto muda: é o que entra na URL da imagem e faz a nova
     # aparecer na hora, sem esperar o cache vencer. NULL = sem foto.
     foto_versao: Optional[str] = None
+    # Cartões vencidos somando todos os baralhos: o número da aba, como o da
+    # Revisão. Sem ele, a aluna só descobre que tem cartões esperando se
+    # lembrar de entrar lá.
+    cartoes_hoje: int = 0
 
 
 class TemaIn(BaseModel):
     tema: str = Field(pattern="^(light|dark)$")
+
+
+class PastaIn(BaseModel):
+    nome: str = Field(default="", max_length=db.LIMITE_NOME_PASTA)
+    # Validada contra `db.CORES_PASTA` lá dentro: valor de fora da lista vira
+    # CSS na tela, então cai no padrão em vez de passar.
+    cor: str = Field(default=db.COR_PASTA_PADRAO, max_length=20)
+
+
+class BaralhoIn(BaseModel):
+    nome: str = Field(default="", max_length=db.LIMITE_NOME_PASTA)
+    # Na criação é a pasta onde nasce; no PATCH, para onde vai (mover).
+    pasta_id: Optional[int] = None
+
+
+class CartaoIn(BaseModel):
+    frente: str = Field(default="", max_length=db.LIMITE_TEXTO_CARTAO)
+    verso: str = Field(default="", max_length=db.LIMITE_TEXTO_CARTAO)
+    baralho_id: Optional[int] = None
+    # De qual caso o cartão nasceu, quando veio da discussão de um.
+    questao_id: Optional[int] = None
+
+
+class NotaCartaoIn(BaseModel):
+    # 1 = errei; 3, 4, 5 = com esforço, lembrei, fácil. A mesma escala da
+    # Revisão de casos (repeticao_espacada.NOTAS_ACERTO).
+    qualidade: int = Field(ge=0, le=5)
 
 
 class ProvaAlvoIn(BaseModel):

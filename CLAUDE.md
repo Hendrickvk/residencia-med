@@ -91,6 +91,24 @@ capping it would make the Configurador's live count lie about the bank.
 - Layout is a top bar with tabs (no side rail). Session screens (Praticar session, Simulado in progress, Revisão) render `<BarraFoco>` (`src/lib/foco.tsx`), which portals the session's own bar into the top bar and hides the tabs, so the shell never needs to know which session is running.
 - TanStack Query (React Query) for server state. **Known pitfall already hit twice**: a hook with `staleTime: Infinity` reused across two different screens under the *same* queryKey leaks stale data from one screen's phase into another's (happened with `useItensSimulado` between "em andamento" and "resultado"). Before setting a long/infinite `staleTime`, confirm the queryKey is exclusive to one screen/phase, or invalidate explicitly before navigating (see `EmAndamento.tsx`).
 - React Router paths are stable keys, deliberately decoupled from the nav label shown in the menu (same lesson learned the hard way on the Streamlit side, where the label used to double as the routing key).
+- **Flashcards** (`/baralhos`, `api/routers/cartoes.py`, `lib/cartoes.ts`): the student's own cards,
+  pasta > baralho > cartão. They run on **the same SM-2 as the questions** —
+  `repeticao_espacada.calcular_proximo_estado` is pure, so `avaliar_cartao` reuses it and only picks
+  where the state lives (`revisao_cartao`, a separate table because `revisao` is FK'd to `questoes`).
+  Never write a second scheduling algorithm. The two review queues are deliberately separate for now
+  (merging is a UNION, not a new algorithm). `usuario_id` is denormalised onto baralho and cartão so
+  every query scopes by owner in the WHERE — that is what stops someone fetching another account's
+  deck by id, and `tests/test_cartoes.py` pins it endpoint by endpoint. The 12 folder colours are
+  **another palette outside the triage scale**, for the same reason as the avatar colour, and each has
+  a `-soft` veil (deck band) and a `-on` text colour, measured at 4.5:1 for the folder banner, which is
+  filled with the full colour — a hardcoded white fails on cyan, rose, lavender, orchid and turquoise.
+  Retiring a colour key requires a migration in `init_db` (green and gold were dropped in 2026-09-23
+  because vivid versions would read as triage levels), or existing folders silently fall back to the
+  default. Visually the decks follow the "real deck" direction the
+  user picked from three prototypes: the edges of the cards behind show above the tile, and **that stack
+  is only drawn when the deck has more than one card** — the metaphor has to be honest. Grade buttons are
+  coloured pills that must use `bg-tN text-tN-on`; a hardcoded white breaks contrast on t2/t3 in light
+  mode. Counting cards goes through `plural()` in `lib/cartoes.ts`: naive interpolation writes "cartãos".
 - **`/perfil`** (`pages/perfil/`) — the account page: identity, exam date, marked questions. It is
   deliberately outside `NAV` (the account is not a study tab; the way in is the account menu). The
   **marked list returns no gabarito, alternativas or explicação** (`db.resumo_questoes_marcadas`) and

@@ -7,6 +7,7 @@ import { EstadoVazio } from "../../components/EstadoVazio";
 import { Kbd } from "../../components/Kbd";
 import { TemaDoCaso } from "../../components/TemaDoCaso";
 import { ImagemQuestao } from "../../components/ImagemQuestao";
+import { CriarCartao } from "../../components/CriarCartao";
 import { RelatarErro } from "../../components/RelatarErro";
 import { TextoDiscussao } from "../../components/TextoDiscussao";
 import { BOTAO_PRIMARIO, PRESSAO } from "../../lib/estilos";
@@ -344,7 +345,13 @@ export default function Revisao() {
                   <span className="text-subtitulo">Resposta correta: {q.resposta_correta}</span>
                   <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
                     <TemaDoCaso tema={q.subtopico} />
-                    <RelatarErro questaoId={q.id} />
+                    <div className="flex flex-wrap items-center gap-4">
+                      <CriarCartao
+                        questaoId={q.id}
+                        respostaCorreta={q.alternativas[q.resposta_correta]}
+                      />
+                      <RelatarErro questaoId={q.id} />
+                    </div>
                   </div>
                   {q.explicacao && <TextoDiscussao texto={q.explicacao} />}
                 </div>

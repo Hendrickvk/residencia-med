@@ -26,6 +26,8 @@ import itertools
 import statistics
 
 from db import get_conn, listar_questoes_marcadas, obter_questao, questao_esta_marcada, desmarcar_questao
+from db import estado_revisao_cartao as db_estado_cartao
+from db import gravar_revisao_cartao as db_gravar_cartao
 
 # Nota abaixo de 3 (errou): a questão volta ainda na mesma sessão de estudo.
 MINUTOS_APOS_ERRO = 10
@@ -581,3 +583,31 @@ def proxima_leva_revisao(*, usuario_id):
             FROM revisao WHERE usuario_id = ? AND proxima_revisao > ?
             GROUP BY (proxima_revisao::date) ORDER BY dia ASC LIMIT 1
         """, (usuario_id, _agora())).fetchone()
+
+
+# --- Flashcards da aluna ---------------------------------------------------
+# Os cartões usam o MESMO SM-2 das questões: `calcular_proximo_estado` acima é
+# pura e não sabe o que está agendando. O que muda é só onde o estado mora
+# (`revisao_cartao` em vez de `revisao`), porque cartão não é questão e aquela
+# tabela tem chave estrangeira para `questoes`.
+#
+# Se um dia as duas filas virarem uma só (decisão adiada em 2026-09-23), é a
+# união das duas consultas — não um segundo algoritmo.
+
+def avaliar_cartao(cartao_id, qualidade: int, *, usuario_id):
+    """Aplica a nota no cartão e devolve o estado novo, ou None se o cartão
+    não for da conta que pediu."""
+    agora = _agora()
+    antes = db_estado_cartao(cartao_id, usuario_id=usuario_id)
+    depois = calcular_proximo_estado(antes, qualidade, agora)
+    gravou = db_gravar_cartao(
+        cartao_id, usuario_id=usuario_id, qualidade=qualidade,
+        estado_antes=antes, estado_depois=depois, agora=agora,
+    )
+    return depois if gravou else None
+
+
+def prazos_do_cartao(cartao_id, *, usuario_id):
+    """O que cada botão de nota agendaria, para a tela mostrar antes do
+    clique — mesma conta que a Revisão de casos já usa."""
+    return prever_prazos(db_estado_cartao(cartao_id, usuario_id=usuario_id))

@@ -8,6 +8,7 @@ ficam centralizadas aqui, para manter a interface (app.py) enxuta.
 
 import hashlib
 import os
+import random
 import re
 import json
 import math
@@ -568,8 +569,23 @@ def resolver_area_especialidade(nome, especialidade=None):
         return _ids_taxonomia(conn.cursor(), *classe)
 
 
-def init_db():
-    """Cria as tabelas caso ainda não existam e semeia a TAXONOMIA."""
+_ja_inicializado = False
+
+
+def init_db(forcar=False):
+    """Cria as tabelas caso ainda não existam e semeia a TAXONOMIA.
+
+    **Roda uma vez por processo.** Cada `TestClient(app)` dispara o lifespan e
+    chamava isto de novo, e o DDL (`CREATE TABLE`, `ALTER`, `CREATE INDEX`)
+    pede `AccessExclusiveLock`: com a suíte inteira criando e apagando contas
+    ao mesmo tempo, uma conexão do pool travava contra a outra e o teardown
+    morria em `deadlock detected` — num teste diferente a cada rodada. Um
+    banco só precisa ser criado uma vez; repetir era desperdício que virou
+    corrida.
+    """
+    global _ja_inicializado
+    if _ja_inicializado and not forcar:
+        return
     with get_conn() as conn:
         c = conn.cursor()
 
@@ -860,6 +876,112 @@ def init_db():
         # `obter_usuario` faz `SELECT *` e roda em **toda** requisição
         # autenticada — um BYTEA ali seria a foto descendo do Postgres a cada
         # chamada de API, para nada.
+        # Flashcards da própria aluna: pasta > baralho > cartão. É conteúdo
+        # dela, não do banco de questões — por isso tabelas próprias e tudo
+        # preso ao `usuario_id`.
+        #
+        # `usuario_id` repetido em baralho e cartão é desnormalização
+        # deliberada: sem ele, conferir dono exigiria um JOIN em toda consulta,
+        # e é justamente essa conferência que impede alguém pedir o baralho de
+        # outra pessoa pelo id. Com a coluna, o dono entra no WHERE sempre.
+        c.execute("""
+        CREATE TABLE IF NOT EXISTS pastas_cartoes (
+            id SERIAL PRIMARY KEY,
+            usuario_id INTEGER NOT NULL,
+            nome TEXT NOT NULL,
+            cor TEXT NOT NULL,
+            criada_em TIMESTAMP NOT NULL,
+            FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+        )
+        """)
+        c.execute("CREATE INDEX IF NOT EXISTS idx_pastas_cartoes_usuario ON pastas_cartoes(usuario_id)")
+
+        # Migração leve: o verde e o dourado saíram da paleta em 2026-09-23
+        # (eram os dois tons que a escala de triagem já usa). A pasta que
+        # estava neles vai para o vizinho mais próximo que sobrou, em vez de
+        # cair no padrão e perder a escolha de quem criou.
+        c.execute("UPDATE pastas_cartoes SET cor = 'ciano' WHERE cor = 'musgo'")
+        c.execute("UPDATE pastas_cartoes SET cor = 'lavanda' WHERE cor = 'areia'")
+
+        c.execute("""
+        CREATE TABLE IF NOT EXISTS baralhos (
+            id SERIAL PRIMARY KEY,
+            usuario_id INTEGER NOT NULL,
+            pasta_id INTEGER NOT NULL,
+            nome TEXT NOT NULL,
+            criado_em TIMESTAMP NOT NULL,
+            FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+            FOREIGN KEY (pasta_id) REFERENCES pastas_cartoes(id) ON DELETE CASCADE
+        )
+        """)
+        c.execute("CREATE INDEX IF NOT EXISTS idx_baralhos_pasta ON baralhos(pasta_id)")
+
+        c.execute("""
+        CREATE TABLE IF NOT EXISTS cartoes (
+            id SERIAL PRIMARY KEY,
+            usuario_id INTEGER NOT NULL,
+            baralho_id INTEGER NOT NULL,
+            frente TEXT NOT NULL,
+            verso TEXT NOT NULL,
+            criado_em TIMESTAMP NOT NULL,
+            -- De qual caso o cartão nasceu, quando nasceu de um. Guardado
+            -- desde já porque procedência não se recupera depois: ninguém vai
+            -- lembrar de onde veio um cartão escrito há seis meses. Ainda sem
+            -- leitor na tela.
+            questao_id INTEGER,
+            FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+            FOREIGN KEY (baralho_id) REFERENCES baralhos(id) ON DELETE CASCADE,
+            FOREIGN KEY (questao_id) REFERENCES questoes(id) ON DELETE SET NULL
+        )
+        """)
+        c.execute("CREATE INDEX IF NOT EXISTS idx_cartoes_baralho ON cartoes(baralho_id)")
+        c.execute("SELECT column_name FROM information_schema.columns WHERE table_name = 'cartoes'")
+        if "questao_id" not in {row["column_name"] for row in c.fetchall()}:
+            c.execute("ALTER TABLE cartoes ADD COLUMN questao_id INTEGER REFERENCES questoes(id) ON DELETE SET NULL")
+
+        # Agendamento do cartão: as mesmas colunas de `revisao`, porque é o
+        # mesmo SM-2 — o cálculo continua num lugar só
+        # (`repeticao_espacada.calcular_proximo_estado`). Tabela separada, e
+        # não uma coluna a mais em `revisao`, porque aquela tem chave
+        # estrangeira para `questoes` e cartão não é questão.
+        c.execute("""
+        CREATE TABLE IF NOT EXISTS revisao_cartao (
+            usuario_id INTEGER NOT NULL,
+            cartao_id INTEGER NOT NULL,
+            facilidade REAL NOT NULL DEFAULT 2.5,
+            intervalo_dias INTEGER NOT NULL DEFAULT 1,
+            repeticoes INTEGER NOT NULL DEFAULT 0,
+            proxima_revisao TIMESTAMP NOT NULL,
+            PRIMARY KEY (usuario_id, cartao_id),
+            FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+            FOREIGN KEY (cartao_id) REFERENCES cartoes(id) ON DELETE CASCADE
+        )
+        """)
+
+        # Histórico, pelo mesmo motivo do `revisao_eventos`: `revisao_cartao`
+        # só guarda o estado atual, e retenção ao longo do tempo não se
+        # reconstrói depois. Um log que não foi gravado não volta.
+        c.execute("""
+        CREATE TABLE IF NOT EXISTS revisao_cartao_eventos (
+            id SERIAL PRIMARY KEY,
+            usuario_id INTEGER NOT NULL,
+            cartao_id INTEGER NOT NULL,
+            qualidade INTEGER NOT NULL,
+            intervalo_antes INTEGER,
+            facilidade_depois REAL NOT NULL,
+            intervalo_depois INTEGER NOT NULL,
+            repeticoes_depois INTEGER NOT NULL,
+            proxima_revisao TIMESTAMP NOT NULL,
+            registrado_em TIMESTAMP NOT NULL,
+            FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+            FOREIGN KEY (cartao_id) REFERENCES cartoes(id) ON DELETE CASCADE
+        )
+        """)
+        c.execute(
+            "CREATE INDEX IF NOT EXISTS idx_revisao_cartao_eventos_usuario "
+            "ON revisao_cartao_eventos(usuario_id, registrado_em)"
+        )
+
         c.execute("""
         CREATE TABLE IF NOT EXISTS fotos_perfil (
             usuario_id INTEGER PRIMARY KEY,
@@ -1021,6 +1143,7 @@ def init_db():
             ON CONFLICT (area_id, nome) DO NOTHING
         """, [valor for linha in temas for valor in linha])
         conn.commit()
+    _ja_inicializado = True
 
 
 # ---------------------------------------------------------------------------
@@ -1463,6 +1586,332 @@ def atualizar_perfil(usuario_id, nome: str | None, cor: str):
     with get_conn() as conn:
         conn.execute("UPDATE usuarios SET nome = ?, cor_perfil = ? WHERE id = ?", (nome, cor, usuario_id))
     return nome, cor
+
+
+# Cores das pastas de flashcards. São vivas de propósito (pedido do usuário) e
+# ainda assim **nenhuma entra na escala de triagem** (DESIGN_TRIAGEM.md §2):
+# vermelho, laranja, amarelo, verde e azul significam aproveitamento, e uma
+# pasta verde ao lado de uma vermelha seria lida como "vou bem nesta, mal
+# naquela" por quem o Painel já treinou. Por isso a paleta fica no arco
+# índigo → ciano, com dois neutros e um marrom.
+#
+# A chave é o que o banco guarda; o hex mora no tema do front. `musgo` e
+# `areia` saíram em 2026-09-23 (eram o verde e o dourado, justamente os dois
+# que a escala já usa) e viraram `ciano` e `lavanda`.
+CORES_PASTA = (
+    "carvao", "grafite", "ardosia", "indigo", "lavanda",
+    "lilas", "purpura", "ameixa", "orquidea", "vinho",
+    "framboesa", "rosa", "algodao", "ciano", "gelo",
+    "turquesa", "petroleo", "oceano", "cafe", "chocolate",
+)
+COR_PASTA_PADRAO = "ardosia"
+LIMITE_NOME_PASTA = 60
+LIMITE_TEXTO_CARTAO = 2000
+
+
+def _texto(valor, limite):
+    return (valor or "").strip()[:limite]
+
+
+def criar_pasta(*, usuario_id, nome, cor):
+    nome = _texto(nome, LIMITE_NOME_PASTA) or "Sem nome"
+    if cor not in CORES_PASTA:
+        cor = COR_PASTA_PADRAO
+    with get_conn() as conn:
+        c = conn.cursor()
+        c.execute(
+            "INSERT INTO pastas_cartoes (usuario_id, nome, cor, criada_em) VALUES (?, ?, ?, ?)",
+            (usuario_id, nome, cor, datetime.datetime.now()),
+        )
+        return c.lastrowid
+
+
+def atualizar_pasta(pasta_id, *, usuario_id, nome, cor):
+    """O `usuario_id` no WHERE é o que impede editar a pasta de outra pessoa
+    mandando o id dela. Vale para todas as funções daqui."""
+    nome = _texto(nome, LIMITE_NOME_PASTA) or "Sem nome"
+    if cor not in CORES_PASTA:
+        cor = COR_PASTA_PADRAO
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE pastas_cartoes SET nome = ?, cor = ? WHERE id = ? AND usuario_id = ?",
+            (nome, cor, pasta_id, usuario_id),
+        )
+
+
+def excluir_pasta(pasta_id, *, usuario_id):
+    """Leva junto os baralhos e os cartões (ON DELETE CASCADE). Quem chama tem
+    de avisar disso na tela — é o mesmo perigo do `areas`."""
+    with get_conn() as conn:
+        conn.execute("DELETE FROM pastas_cartoes WHERE id = ? AND usuario_id = ?", (pasta_id, usuario_id))
+
+
+def criar_baralho(*, usuario_id, pasta_id, nome):
+    nome = _texto(nome, LIMITE_NOME_PASTA) or "Sem nome"
+    with get_conn() as conn:
+        dono = conn.execute(
+            "SELECT 1 FROM pastas_cartoes WHERE id = ? AND usuario_id = ?", (pasta_id, usuario_id)
+        ).fetchone()
+        if dono is None:
+            return None
+        c = conn.cursor()
+        c.execute(
+            "INSERT INTO baralhos (usuario_id, pasta_id, nome, criado_em) VALUES (?, ?, ?, ?)",
+            (usuario_id, pasta_id, nome, datetime.datetime.now()),
+        )
+        return c.lastrowid
+
+
+def atualizar_baralho(baralho_id, *, usuario_id, nome, pasta_id=None):
+    nome = _texto(nome, LIMITE_NOME_PASTA) or "Sem nome"
+    with get_conn() as conn:
+        if pasta_id is not None:
+            # Mover: a pasta de destino também tem de ser dela.
+            destino = conn.execute(
+                "SELECT 1 FROM pastas_cartoes WHERE id = ? AND usuario_id = ?", (pasta_id, usuario_id)
+            ).fetchone()
+            if destino is None:
+                return
+            conn.execute(
+                "UPDATE baralhos SET nome = ?, pasta_id = ? WHERE id = ? AND usuario_id = ?",
+                (nome, pasta_id, baralho_id, usuario_id),
+            )
+        else:
+            conn.execute(
+                "UPDATE baralhos SET nome = ? WHERE id = ? AND usuario_id = ?",
+                (nome, baralho_id, usuario_id),
+            )
+
+
+def excluir_baralho(baralho_id, *, usuario_id):
+    with get_conn() as conn:
+        conn.execute("DELETE FROM baralhos WHERE id = ? AND usuario_id = ?", (baralho_id, usuario_id))
+
+
+def listar_pastas(*, usuario_id):
+    """As pastas com os baralhos dentro, cada baralho já com quantos cartões
+    tem e quantos estão vencidos. Uma consulta por nível em vez de uma por
+    baralho: a tela mostra tudo de uma vez."""
+    with get_conn() as conn:
+        pastas = conn.execute(
+            "SELECT * FROM pastas_cartoes WHERE usuario_id = ? ORDER BY nome", (usuario_id,)
+        ).fetchall()
+        # Os estágios usam a mesma régua da Revisão de casos (21 dias =
+        # consolidado, o corte "mature" do Anki). Repetido aqui como literal
+        # porque `repeticao_espacada` importa o `db`, e não o contrário.
+        baralhos = conn.execute("""
+            SELECT b.id, b.pasta_id, b.nome, b.criado_em,
+                   COUNT(c.id) AS cartoes,
+                   COUNT(c.id) FILTER (
+                       WHERE r.cartao_id IS NULL OR r.proxima_revisao <= NOW()
+                   ) AS vencidos,
+                   COUNT(c.id) FILTER (WHERE r.cartao_id IS NULL) AS novos,
+                   COUNT(c.id) FILTER (
+                       WHERE r.cartao_id IS NOT NULL AND r.intervalo_dias < 21
+                   ) AS aprendendo,
+                   COUNT(c.id) FILTER (
+                       WHERE r.cartao_id IS NOT NULL AND r.intervalo_dias >= 21
+                   ) AS consolidados
+            FROM baralhos b
+            LEFT JOIN cartoes c ON c.baralho_id = b.id
+            LEFT JOIN revisao_cartao r ON r.cartao_id = c.id AND r.usuario_id = b.usuario_id
+            WHERE b.usuario_id = ?
+            GROUP BY b.id, b.pasta_id, b.nome, b.criado_em
+            ORDER BY b.nome
+        """, (usuario_id,)).fetchall()
+    por_pasta = {}
+    for b in baralhos:
+        por_pasta.setdefault(b["pasta_id"], []).append(dict(b))
+    return [dict(p, baralhos=por_pasta.get(p["id"], [])) for p in pastas]
+
+
+def obter_baralho(baralho_id, *, usuario_id):
+    with get_conn() as conn:
+        return conn.execute("""
+            SELECT b.*, p.nome AS pasta, p.cor AS cor
+            FROM baralhos b JOIN pastas_cartoes p ON p.id = b.pasta_id
+            WHERE b.id = ? AND b.usuario_id = ?
+        """, (baralho_id, usuario_id)).fetchone()
+
+
+def listar_cartoes(baralho_id, *, usuario_id):
+    with get_conn() as conn:
+        return conn.execute("""
+            SELECT c.*, r.proxima_revisao, r.repeticoes
+            FROM cartoes c
+            LEFT JOIN revisao_cartao r ON r.cartao_id = c.id AND r.usuario_id = c.usuario_id
+            WHERE c.baralho_id = ? AND c.usuario_id = ?
+            ORDER BY c.id
+        """, (baralho_id, usuario_id)).fetchall()
+
+
+def criar_cartao(*, usuario_id, baralho_id, frente, verso, questao_id=None):
+    frente, verso = _texto(frente, LIMITE_TEXTO_CARTAO), _texto(verso, LIMITE_TEXTO_CARTAO)
+    if not frente or not verso:
+        return None
+    with get_conn() as conn:
+        dono = conn.execute(
+            "SELECT 1 FROM baralhos WHERE id = ? AND usuario_id = ?", (baralho_id, usuario_id)
+        ).fetchone()
+        if dono is None:
+            return None
+        c = conn.cursor()
+        c.execute(
+            "INSERT INTO cartoes (usuario_id, baralho_id, frente, verso, criado_em, questao_id) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (usuario_id, baralho_id, frente, verso, datetime.datetime.now(), questao_id),
+        )
+        return c.lastrowid
+
+
+def atualizar_cartao(cartao_id, *, usuario_id, frente, verso):
+    frente, verso = _texto(frente, LIMITE_TEXTO_CARTAO), _texto(verso, LIMITE_TEXTO_CARTAO)
+    if not frente or not verso:
+        return
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE cartoes SET frente = ?, verso = ? WHERE id = ? AND usuario_id = ?",
+            (frente, verso, cartao_id, usuario_id),
+        )
+
+
+def excluir_cartao(cartao_id, *, usuario_id):
+    with get_conn() as conn:
+        conn.execute("DELETE FROM cartoes WHERE id = ? AND usuario_id = ?", (cartao_id, usuario_id))
+
+
+def cartoes_para_estudar(baralho_id, *, usuario_id, limite=40):
+    """A fila do dia. `baralho_id=None` atravessa todos os baralhos — é o
+    "estudar tudo", que evita abrir oito sessões quando oito baralhos vencem.
+
+    Um cartão sem linha em `revisao_cartao` é novo, e novo conta como vencido:
+    senão um baralho recém-escrito não teria o que estudar.
+
+    **A ordem do SELECT é por vencimento e a embaralhada vem depois**, no
+    Python: o `LIMIT` precisa pegar os mais atrasados, mas apresentar sempre na
+    mesma sequência ensina a ordem em vez do conteúdo.
+    """
+    condicao = "c.baralho_id = ? AND c.usuario_id = ?"
+    params = [baralho_id, usuario_id]
+    if baralho_id is None:
+        condicao = "c.usuario_id = ?"
+        params = [usuario_id]
+    with get_conn() as conn:
+        linhas = conn.execute(f"""
+            SELECT c.id, c.frente, c.verso, r.proxima_revisao,
+                   b.nome AS baralho, b.id AS baralho_id, p.cor AS cor
+            FROM cartoes c
+            JOIN baralhos b ON b.id = c.baralho_id
+            JOIN pastas_cartoes p ON p.id = b.pasta_id
+            LEFT JOIN revisao_cartao r ON r.cartao_id = c.id AND r.usuario_id = c.usuario_id
+            WHERE {condicao}
+              AND (r.cartao_id IS NULL OR r.proxima_revisao <= NOW())
+            ORDER BY r.proxima_revisao NULLS LAST, c.id
+            LIMIT ?
+        """, params + [limite]).fetchall()
+    linhas = list(linhas)
+    random.shuffle(linhas)
+    return linhas
+
+
+def desfazer_revisao_cartao(cartao_id, *, usuario_id):
+    """Desfaz a última nota dada a um cartão.
+
+    É para isto que o `revisao_cartao_eventos` existe desde o primeiro dia: o
+    estado ANTERIOR está no `*_depois` do evento anterior. Apaga o último
+    evento e restaura a partir do que sobrou; sem evento nenhum antes, o cartão
+    volta a ser novo (a linha de agendamento some).
+
+    Devolve True se havia o que desfazer. Com atalho de 1 a 4, apertar a tecla
+    errada é questão de tempo — sem isto, a nota errada fica.
+    """
+    with get_conn() as conn:
+        ultimo = conn.execute("""
+            SELECT id FROM revisao_cartao_eventos
+            WHERE cartao_id = ? AND usuario_id = ?
+            ORDER BY registrado_em DESC, id DESC LIMIT 1
+        """, (cartao_id, usuario_id)).fetchone()
+        if ultimo is None:
+            return False
+        conn.execute("DELETE FROM revisao_cartao_eventos WHERE id = ?", (ultimo["id"],))
+        anterior = conn.execute("""
+            SELECT facilidade_depois, intervalo_depois, repeticoes_depois, proxima_revisao
+            FROM revisao_cartao_eventos
+            WHERE cartao_id = ? AND usuario_id = ?
+            ORDER BY registrado_em DESC, id DESC LIMIT 1
+        """, (cartao_id, usuario_id)).fetchone()
+        if anterior is None:
+            conn.execute(
+                "DELETE FROM revisao_cartao WHERE cartao_id = ? AND usuario_id = ?",
+                (cartao_id, usuario_id),
+            )
+        else:
+            conn.execute("""
+                UPDATE revisao_cartao
+                SET facilidade = ?, intervalo_dias = ?, repeticoes = ?, proxima_revisao = ?
+                WHERE cartao_id = ? AND usuario_id = ?
+            """, (
+                anterior["facilidade_depois"], anterior["intervalo_depois"],
+                anterior["repeticoes_depois"], anterior["proxima_revisao"],
+                cartao_id, usuario_id,
+            ))
+        return True
+
+
+def estado_revisao_cartao(cartao_id, *, usuario_id):
+    with get_conn() as conn:
+        return conn.execute(
+            "SELECT * FROM revisao_cartao WHERE cartao_id = ? AND usuario_id = ?",
+            (cartao_id, usuario_id),
+        ).fetchone()
+
+
+def gravar_revisao_cartao(cartao_id, *, usuario_id, qualidade, estado_antes, estado_depois, agora):
+    """Grava o estado novo e o evento na mesma transação. Quem calcula o
+    estado é o `repeticao_espacada` — esta função só escreve."""
+    with get_conn() as conn:
+        dono = conn.execute(
+            "SELECT 1 FROM cartoes WHERE id = ? AND usuario_id = ?", (cartao_id, usuario_id)
+        ).fetchone()
+        if dono is None:
+            return False
+        conn.execute("""
+            INSERT INTO revisao_cartao
+                (usuario_id, cartao_id, facilidade, intervalo_dias, repeticoes, proxima_revisao)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT (usuario_id, cartao_id) DO UPDATE SET
+                facilidade = excluded.facilidade,
+                intervalo_dias = excluded.intervalo_dias,
+                repeticoes = excluded.repeticoes,
+                proxima_revisao = excluded.proxima_revisao
+        """, (
+            usuario_id, cartao_id, estado_depois["facilidade"], estado_depois["intervalo_dias"],
+            estado_depois["repeticoes"], estado_depois["proxima_revisao"],
+        ))
+        conn.execute("""
+            INSERT INTO revisao_cartao_eventos
+                (usuario_id, cartao_id, qualidade, intervalo_antes, facilidade_depois,
+                 intervalo_depois, repeticoes_depois, proxima_revisao, registrado_em)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            usuario_id, cartao_id, qualidade,
+            estado_antes["intervalo_dias"] if estado_antes else None,
+            estado_depois["facilidade"], estado_depois["intervalo_dias"],
+            estado_depois["repeticoes"], estado_depois["proxima_revisao"], agora,
+        ))
+        return True
+
+
+def contar_cartoes_vencidos(*, usuario_id):
+    """Quantos cartões esperam hoje, somando todos os baralhos — o número que
+    a aba mostra."""
+    with get_conn() as conn:
+        row = conn.execute("""
+            SELECT COUNT(*) AS n FROM cartoes c
+            LEFT JOIN revisao_cartao r ON r.cartao_id = c.id AND r.usuario_id = c.usuario_id
+            WHERE c.usuario_id = ? AND (r.cartao_id IS NULL OR r.proxima_revisao <= NOW())
+        """, (usuario_id,)).fetchone()
+    return row["n"]
 
 
 # Tipos aceitos na foto de perfil. **SVG fica de fora de propósito**: é XML

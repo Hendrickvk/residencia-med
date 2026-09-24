@@ -83,11 +83,15 @@ export function Topbar({ tema, onAlternarTema, me, revisoesHoje, onSair, onRever
     return () => document.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  function contagemRevisao(path: string) {
-    if (path !== "/revisao" || !revisoesHoje) return null;
+  // Mesma etiqueta para as duas abas que têm fila vencida: é a mesma
+  // pergunta ("o que me espera hoje?"), e dois tratamentos diferentes para a
+  // mesma coisa fariam a aluna achar que significam coisas diferentes.
+  function contagemDaAba(path: string) {
+    const total = path === "/revisao" ? revisoesHoje : path === "/baralhos" ? me?.cartoes_hoje : 0;
+    if (!total) return null;
     return (
       <span className="animate-surgir rounded-etq bg-t1 px-1.5 py-px text-[12px] font-bold tabular-nums text-t1-on">
-        {revisoesHoje}
+        {total}
       </span>
     );
   }
@@ -141,7 +145,7 @@ export function Topbar({ tema, onAlternarTema, me, revisoesHoje, onSair, onRever
                   }
                 >
                   {item.curto ?? item.label}
-                  {contagemRevisao(item.path)}
+                  {contagemDaAba(item.path)}
                 </NavLink>
               ))}
               <span
@@ -321,7 +325,7 @@ export function Topbar({ tema, onAlternarTema, me, revisoesHoje, onSair, onRever
                   }
                 >
                   {item.label}
-                  {contagemRevisao(item.path)}
+                  {contagemDaAba(item.path)}
                 </NavLink>
               ))}
             </nav>

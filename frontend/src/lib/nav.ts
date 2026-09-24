@@ -3,6 +3,7 @@ import {
   Database,
   FilePlus2,
   LayoutDashboard,
+  Layers,
   type LucideIcon,
   PencilLine,
   Timer,
@@ -24,6 +25,7 @@ export const NAV: ItemNav[] = [
   { label: "Praticar", path: "/praticar", icon: PencilLine },
   { label: "Simulado", path: "/simulado", icon: Timer },
   { label: "Revisão espaçada", curto: "Revisão", path: "/revisao", icon: Brain },
+  { label: "Baralhos", path: "/baralhos", icon: Layers },
 ];
 
 // Telas administrativas que ficam no Streamlit (MIGRACAO.md §5). Aparecem só

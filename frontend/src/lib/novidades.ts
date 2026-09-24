@@ -37,6 +37,17 @@ export const ROTULO_TIPO: Record<TipoNovidade, string> = {
 
 export const NOVIDADES: Novidade[] = [
   {
+    id: "2026-09-23c",
+    data: "23 de setembro de 2026",
+    titulo: "Baralhos de cartões",
+    itens: [
+      { tipo: "novo", texto: "Agora dá para escrever seus próprios flashcards, em pastas e baralhos." },
+      { tipo: "novo", texto: "Os cartões voltam nos intervalos certos, com a mesma repetição espaçada dos casos." },
+      { tipo: "novo", texto: "Na discussão de um caso, \"Virar cartão\" já traz a conduta correta no verso." },
+      { tipo: "novo", texto: "Dá para estudar todos os baralhos de uma vez, corrigir o cartão no meio do estudo e desfazer a última nota." },
+    ],
+  },
+  {
     id: "2026-09-23b",
     data: "23 de setembro de 2026",
     titulo: "Seu perfil",

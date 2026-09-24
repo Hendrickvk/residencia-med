@@ -249,6 +249,125 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   - Nome vazio volta a NULL e a tela mostra o e-mail de novo, em vez de um
     avatar em branco. `tests/test_perfil.py`.
 
+- **Flashcards da aluna: pasta > baralho > cartão (2026-09-23, fase 1).**
+  Sugestão do usuário depois do retorno das amigas. Decisões que valem daqui
+  para a frente:
+  - **Um SM-2 só no projeto.** `repeticao_espacada.calcular_proximo_estado` é
+    pura e não sabe o que está agendando, então o cartão usa exatamente a
+    mesma conta das questões — `avaliar_cartao` só escolhe onde o estado mora.
+    Um segundo algoritmo seria duas verdades sobre o mesmo aluno.
+  - **Tabela `revisao_cartao` separada de `revisao`**, porque aquela tem chave
+    estrangeira para `questoes` e cartão não é questão. Com `revisao_cartao_eventos`
+    desde o primeiro dia, pelo mesmo motivo do `revisao_eventos`: retenção ao
+    longo do tempo não se reconstrói depois, e log que não foi gravado não volta.
+  - **As filas continuam separadas** (decisão do usuário): a Revisão de casos
+    tem meta diária calibrada para questões e o Painel mede memória de
+    questões — misturar no primeiro dia mudaria esses números sem aviso.
+    Juntar depois é a união de duas consultas, não um algoritmo novo.
+  - **`usuario_id` repetido em baralho e cartão** é desnormalização
+    deliberada: sem ela, conferir dono exigiria um JOIN em toda consulta, e é
+    essa conferência que impede pedir o baralho de outra pessoa pelo id. Com a
+    coluna, o dono entra no WHERE sempre.
+    `tests/test_cartoes.py::test_cartoes_de_outra_conta_nao_sao_alcancaveis`
+    prende isso endpoint por endpoint.
+  - **As 12 cores de pasta não saem da escala de triagem**
+    (DESIGN_TRIAGEM.md §2), pela mesma razão da cor do avatar: vermelho,
+    laranja, amarelo, verde e azul significam aproveitamento, e uma pasta
+    verde ao lado de uma vermelha seria lida como "vou bem nesta, mal
+    naquela". Sobra gama em roxos, rosas, turquesas, terrosos e neutros. A cor
+    aparece como **faixa**, não como fundo do cartão — fundo colorido
+    competiria com a leitura do resto da tela.
+  - Aba própria no topo, e não dentro do perfil: perfil é onde se configura a
+    conta, baralho é onde se estuda todo dia. O usuário tinha sugerido o
+    perfil ("é algo mais seu"); a coleção é dela, mas a frequência de uso é
+    que decide onde fica.
+  - O estudo herda o que o Praticar já provou: lote inteiro numa requisição
+    (MIGRACAO.md §0), avaliação fire-and-forget, `BarraFoco` e atalhos de
+    teclado (espaço vira, 1–4 dão a nota).
+
+  **Fase 2 (mesmo dia):**
+  - **"Virar cartão" na discussão do caso**, ao lado de "Relatar erro" e pelo
+    mesmo critério de lugar: só onde o gabarito já apareceu (Praticar, Revisão
+    e resultado do Simulado), **nunca durante a prova**. O verso já vem com a
+    alternativa correta — que é o fato — e a frente fica vazia, porque a pista
+    é ela quem inventa e um enunciado de 900 caracteres seria um cartão
+    impossível de responder. O último baralho usado fica no `localStorage`
+    (conveniência por navegador) e o valor é **derivado no render**, não posto
+    por efeito.
+  - **`cartoes.questao_id`**, nullable, gravado quando o cartão nasce de um
+    caso. Ainda **sem leitor na tela**, de propósito: procedência não se
+    recupera depois, e ninguém vai lembrar de onde veio um cartão escrito há
+    seis meses.
+  - **Mover baralho de pasta** pelo botão "Ajustar" (nome e pasta no mesmo
+    PATCH, que é o caso real de "reorganizei isto"). A pasta de destino
+    também é conferida contra o dono — mandar o id de uma pasta alheia não
+    move nada, e o teste cobre isso.
+
+  **Visual, direção "baralho de verdade" (escolhida pelo usuário em
+  2026-09-23, entre três protótipos).** A primeira versão ficou crua — lista de
+  linhas, cor só numa listra fina. Montei três direções num HTML com os tokens
+  reais (ficha sóbria · baralho tátil · painel denso estilo Anki) e ele
+  escolheu a tátil. O que isso fixou:
+  - **O baralho é um maço**: as bordas dos cartões de trás aparecem acima do
+    bloco, e a pilha **só é desenhada quando há mais de um cartão** — um maço
+    de um cartão só seria mentira, e a tela depende de a metáfora ser honesta.
+    Na tela de estudo a pilha encolhe conforme a fila anda.
+  - **Cor cheia no banner da pasta** e tom suave na faixa de cada baralho —
+    três níveis: cor forte (pasta) → véu (baralho) → papel (conteúdo).
+  - **Paleta viva, e ainda fora da triagem.** O usuário pediu cores mais vivas
+    duas vezes; na segunda, o verde (`musgo`) e o dourado (`areia`) **saíram**:
+    apagados dava para conviver, vivos iam gritar "vai bem" e "atenção" na tela
+    errada. Entraram `ciano` e `lavanda`, e a paleta passou a cobrir o arco
+    índigo → ciano com dois neutros e um marrom. As **chaves do banco não
+    mudaram de significado sem migração**: o `init_db` move `musgo`→`ciano` e
+    `areia`→`lavanda`, para a pasta de quem já escolheu não cair no padrão.
+  - **`--pasta-*-on`, um texto por cor**, medido contra 4,5:1 — o mesmo
+    mecanismo do `--tN-on`. Branco fixo sobre a cor cheia falharia no ciano, no
+    rosa, na lavanda, na orquídea e na turquesa; o magenta teve de escurecer de
+    `#c026d3` para `#a21caf` para o branco passar. O título da pasta é
+    17px/700, que **não** conta como "texto grande" pela WCAG, então vale 4,5 e
+    não 3.
+  - **Notas em pílula colorida** com `bg-tN text-tN-on`. O `-on` não é detalhe:
+    no tema claro o laranja e o amarelo pedem tinta e o resto pede branco, no
+    escuro todos pedem tinta (DESIGN_TRIAGEM.md §2). Branco fixo quebraria o
+    contraste em metade dos casos.
+  - O cartão vira em 3D (`rotateY`), com as duas faces no mesmo lugar.
+  - Barra de estágios por baralho — novo · aprendendo · consolidado, a mesma
+    régua de 21 dias da Revisão de casos.
+
+  **Três defeitos que só apareceram olhando a tela, e que os testes não
+  pegariam:** o Tailwind não gera classe nova sem reiniciar o dev server (as
+  cores subiriam invisíveis para produção); os tons suaves precisaram ser
+  refeitos duas vezes, porque sumiam no escuro e encostavam no papel no claro;
+  e o plural de "cartão" saía "cartãos" — agora existe um `plural()` só, no
+  `lib/cartoes.ts`, porque a interpolação ingênua erra sempre.
+
+  **Quatro ajustes de uso, depois de eu usar a feature como aluna
+  (2026-09-23).** Nenhum é enfeite; todos vieram de atrito real:
+  - **Estudar tudo numa sessão só** (`GET /cartoes/estudar`, sem baralho).
+    Oito baralhos vencidos custavam oito sessões — era o maior atrito diário
+    que tinha sobrado. Cada cartão traz o nome e a cor do baralho, que é o que
+    a barra de foco mostra quando a fila atravessa baralhos.
+  - **Editar o cartão durante o estudo.** O momento em que ela vê que o cartão
+    está mal escrito é o de respondê-lo; tendo de sair para achar o baralho,
+    ela não corrige. O texto reescrito fica num estado local da sessão, porque
+    o lote tem `staleTime: Infinity` e não vai ser refeito.
+  - **Desfazer a última nota** (`POST /cartoes/{id}/desfazer`, atalho
+    Ctrl/Cmd+Z). Com atalho de 1 a 4, tecla errada é questão de tempo. **É
+    para isto que o `revisao_cartao_eventos` existe desde o primeiro dia**: o
+    estado anterior está no `*_depois` do evento anterior, então desfazer é
+    apagar o último evento e restaurar do que sobrou; sem evento nenhum antes,
+    a linha de agendamento some e o cartão volta a ser novo. Guardar só o
+    estado atual teria tornado isto impossível.
+  - **Fila embaralhada.** A ordem do SELECT continua por vencimento, porque o
+    `LIMIT` precisa pegar os mais atrasados; **a embaralhada vem depois**, no
+    Python. Apresentar sempre na mesma sequência ensina a ordem, não o
+    conteúdo.
+
+  **O que continua fora:** juntar as duas filas de revisão (decisão adiada),
+  imagem no cartão e busca nos cartões — os dois últimos ficaram para depois
+  de uma semana de uso, que é quem vai dizer qual importa mais.
+
 - **Página de perfil (2026-09-23).** O diálogo virou tela (`/perfil`), fora do
   `NAV` — conta não é aba de estudo, e o caminho é o menu da conta, agora no
   topo dele. **Dois lugares para editar a mesma coisa é pior que um**, então o

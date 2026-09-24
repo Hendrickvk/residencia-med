@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { NumeroAnimado } from "../../components/NumeroAnimado";
 import { TemaDoCaso } from "../../components/TemaDoCaso";
 import { ImagemQuestao } from "../../components/ImagemQuestao";
+import { CriarCartao } from "../../components/CriarCartao";
 import { RelatarErro } from "../../components/RelatarErro";
 import { TextoDiscussao } from "../../components/TextoDiscussao";
 import { BOTAO_PRIMARIO, BOTAO_SECUNDARIO } from "../../lib/estilos";
@@ -266,7 +267,15 @@ export default function Resultado({ simuladoId, onNovoSimulado }: Props) {
                         <span className="rotulo text-muted">Comentário</span>
                         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
                           <TemaDoCaso tema={item.subtopico} />
-                          <RelatarErro questaoId={item.id} />
+                          <div className="flex flex-wrap items-center gap-4">
+                            <CriarCartao
+                              questaoId={item.id}
+                              respostaCorreta={
+                                item.resposta_correta ? item.alternativas[item.resposta_correta] : undefined
+                              }
+                            />
+                            <RelatarErro questaoId={item.id} />
+                          </div>
                         </div>
                         <TextoDiscussao texto={item.explicacao} />
                       </div>

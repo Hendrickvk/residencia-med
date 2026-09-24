@@ -5,7 +5,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 import db
-from api.routers import areas, auth, busca, me, painel, praticar, questoes, revisao, simulados
+from api.routers import (
+    areas, auth, busca, cartoes, me, painel, praticar, questoes, revisao, simulados,
+)
 
 
 @asynccontextmanager
@@ -27,7 +29,8 @@ app.add_middleware(
 
 
 for router in (auth.router, me.router, painel.router, praticar.router, questoes.router,
-               revisao.router, areas.router, simulados.router, busca.router):
+               revisao.router, areas.router, simulados.router, busca.router,
+               cartoes.router):
     app.include_router(router)
 
 
