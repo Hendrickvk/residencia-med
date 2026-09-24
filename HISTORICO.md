@@ -8,6 +8,15 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
 
 ## Pendências
 
+- **Pedir ao suporte do GitHub que apague os commits antigos do
+  `residencia-med`.** A reescrita de 24/09 tirou o roteiro da brincadeira do
+  histórico, mas o GitHub continua servindo os commits antigos por link direto
+  (conferido: um commit antigo e o arquivo bruto dele respondem 200), e os
+  hashes deles aparecem nos eventos públicos de push. O pedido é em
+  support.github.com, como remoção de dados sensíveis ("cached views" dos
+  commits antigos); a lista dos 35 hashes antigos está em
+  `backups/shas_antigos_reescrita.txt`, fora do git. Só o dono da conta pode
+  pedir.
 - **Regra de ingresso da porta 8080 na Security List da Oracle**, a última
   sobra do deploy de 22/09 e a única que não depende de código. Não expõe
   nada, porque nada escuta lá e o iptables do host já a fechou, mas ficou para
@@ -1102,8 +1111,8 @@ governa as telas admin do Streamlit.
      lado, adivinhar o e-mail e confirmar pelo hash é trivial. Esconder do
      repositório não bastaria, porque o bundle servido também é público; o
      conserto de verdade era mover o roteiro para trás de autenticação.
-     **Feito em 2026-09-24** (ver lá); o histórico do git continua com o texto
-     antigo.
+     **Feito em 2026-09-24**, e o histórico do git foi reescrito no mesmo dia
+     (ver lá).
 - **O que a auditoria conferiu e estava correto:** SQL todo parametrizado (as
   f-strings do `db.py` interpolam só `?, ?, ?` e nomes de coluna de tupla fixa);
   nenhum IDOR — todo endpoint de simulado passa `usuario_id` para dentro do
@@ -1136,7 +1145,7 @@ governa as telas admin do Streamlit.
   serviu de controle). Num repositório público, isso teria vazado os hashes.
 
 ### 2026-09-22
-- **Deploy feito: 60 commits de uma vez** (`bf5798d`, de 12/09, → `04ffc5b`), e
+- **Deploy feito: 60 commits de uma vez** (`bf5798d`, de 12/09, → `c36550a`), e
   o HTTPS saiu do papel depois de nove dias parado. O desbloqueio foi o usuário
   trazer a chave original da instância do outro computador: com ela entrei uma
   vez, anexei a chave **deste** notebook ao `authorized_keys` e o acesso passou
@@ -1224,7 +1233,7 @@ governa as telas admin do Streamlit.
   suposto. **Os quatro itens foram escritos em 2026-09-23 e a suíte passa (122
   testes).** Os itens 1 e 3 estão **no ar** desde 2026-09-23 (conferidos com
   `curl`: os cinco cabeçalhos no app, `401 + WWW-Authenticate: Basic` no
-  admin). Os itens 2 e 4 subiram no mesmo dia (commit `9bc380a`, `git pull` +
+  admin). Os itens 2 e 4 subiram no mesmo dia (commit `848ede3`, `git pull` +
   `systemctl restart residencia-api` + troca atômica do `dist`): conferido que
   `usuarios.token_version` e a tabela `cota_pratica` existem no Neon e que o
   bundle servido é o construído aqui. **Esse deploy derrubou todas as sessões
@@ -1349,7 +1358,7 @@ governa as telas admin do Streamlit.
   IP. O que fecha de verdade é confirmar o e-mail antes de liberar o conteúdo,
   e foi o que entrou em seguida.
 
-  **Confirmação de e-mail — feita e no ar em 2026-09-23** (commit `afb701d`),
+  **Confirmação de e-mail — feita e no ar em 2026-09-23** (commit `ab08571`),
   a pedido do usuário, logo depois de o limite por IP entrar. Conferido em
   produção: a tabela existe, as 6 contas reais seguem confirmadas, a rota
   `/confirmar/:token` é servida pelo SPA, e o Brevo aceitou o `htmlContent`
@@ -1679,9 +1688,27 @@ governa as telas admin do Streamlit.
     backup semanal leva.
   - `tests/test_brincadeira.py` prende que outra conta recebe `null`, e o
     bundle construído foi varrido atrás do texto antigo: nada.
-  - **O histórico do git continua com o texto antigo**, e é público para
-    sempre. Reescrevê-lo é decisão do usuário, e não foi tomada.
-  - **Falta subir.** Até o deploy, o bundle em produção continua com o texto.
+  - **No ar no mesmo dia.** API reiniciada e bundle trocado; conferido que o
+    `index-*.js` servido é o construído aqui e não tem o texto.
+- **Histórico do git reescrito, a pedido do usuário.** Com `git filter-repo`,
+  numa cópia recém-clonada e conferida antes do envio: as três versões antigas
+  do `brincadeira.ts` saíram de todos os commits, a lista de detalhes das duas
+  versões antigas deste arquivo virou "gostos pessoais", o nome de exemplo do
+  `tests/test_perfil.py` foi trocado e uma mensagem de commit perdeu o detalhe
+  pessoal. Na história nova, a varredura não acha nenhuma das marcas, nem em
+  arquivo nem em mensagem. Consequências:
+  - **Todo commit desde 15/09 mudou de hash** (35 de 98), porque a árvore de
+    cada um mudou; os de antes ficaram iguais. Os três hashes citados aqui e no
+    `DEPLOY.md` foram atualizados.
+  - O envio foi com `--force-with-lease` preso ao hash antigo, para não
+    atropelar nada que tivesse chegado ao GitHub no meio. O servidor e esta
+    máquina foram para a história nova com `fetch` + `reset --hard` e tiveram
+    os objetos antigos apagados (`reflog expire` + `gc --prune=now`).
+  - **O que a reescrita não alcança.** O GitHub continua servindo os commits
+    antigos por link direto até a coleta de lixo dele, e só o suporte do GitHub
+    apaga isso (ver Pendências). E qualquer clone feito antes guarda a história
+    velha: nele, nunca `pull` com merge, que traria tudo de volta — é `fetch` +
+    `reset --hard origin/main`, ou clonar de novo.
 
 ## Armadilhas das telas admin (Streamlit)
 

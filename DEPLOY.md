@@ -232,7 +232,7 @@ local (gitignorado), em `SENHA_DEMO`, que é de onde o script a lê.
 ## 8. Checklist final antes de compartilhar qualquer link
 
 Conferido em 2026-09-22, no deploy que trouxe os 60 commits parados desde
-12/09 (`bf5798d` → `04ffc5b`):
+12/09 (`bf5798d` → `c36550a`):
 
 - [x] `https://qualaconduta.com.br` → 200, com certificado Let's Encrypt
 - [x] `http://` → 308 para o https; DuckDNS, `www` e IP antigo → 302
