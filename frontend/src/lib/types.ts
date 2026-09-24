@@ -1,3 +1,5 @@
+import type { Brincadeira } from "./brincadeira";
+
 // Caderno oficial em que a questão caiu (db.provas_das_questoes). A mesma questão
 // pode estar em mais de um: o Revalida 2025/2 e o ENAMED 2025 dividem 43 delas.
 export interface ProvaDaQuestao {
@@ -345,4 +347,6 @@ export interface Me {
   respondidas_hoje: number;
   total_questoes: number;
   meta_revisao_diaria: number;
+  // Só a conta da convidada recebe o roteiro (lib/brincadeira.ts).
+  brincadeira: Brincadeira | null;
 }

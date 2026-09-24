@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ALERTA, ROTEIRO, ROTEIRO_REPRISE, jaViu, marcarComoVista, normalizarNome } from "../lib/brincadeira";
+import { ALERTA, jaViu, marcarComoVista, normalizarNome, roteiroDaReprise, type Brincadeira } from "../lib/brincadeira";
 import { BOTAO_PRIMARIO } from "../lib/estilos";
 import { prefereMenosMovimento } from "../lib/movimento";
 
@@ -36,14 +36,14 @@ interface Entrada {
 // verdade — o que ela responde vira linha dela, e é isso que faz a coisa
 // parecer conversa em vez de slideshow.
 export function BrincadeiraBoasVindas({
-  convidada,
+  brincadeira,
   reprise = false,
   onEstado,
   onEfeito,
 }: {
-  // Já verificado pelo invólucro (useEhConvidada): `undefined` enquanto o
-  // SHA-256 não respondeu.
-  convidada: boolean | undefined;
+  // Vem no `/me`, pelo invólucro: `undefined` enquanto ele não chegou, `null`
+  // para qualquer outra conta.
+  brincadeira: Brincadeira | null | undefined;
   // Reprise pedida no menu da conta: o prelúdio muda e a sessão roda de novo,
   // mesmo já tendo sido vista neste navegador.
   reprise?: boolean;
@@ -52,7 +52,11 @@ export function BrincadeiraBoasVindas({
   // O que a sessão faz no app de verdade (por ora, escurecer o tema).
   onEfeito?: (efeito: "tema-escuro") => void;
 }) {
-  const roteiro = reprise ? ROTEIRO_REPRISE : ROTEIRO;
+  const convidada = brincadeira === undefined ? undefined : brincadeira !== null;
+  const roteiro = useMemo(
+    () => (!brincadeira ? [] : reprise ? roteiroDaReprise(brincadeira) : brincadeira.roteiro),
+    [brincadeira, reprise],
+  );
   const [aberto, setAberto] = useState(false);
   const [passo, setPasso] = useState(0);
   const [historico, setHistorico] = useState<Entrada[]>([]);
@@ -78,8 +82,10 @@ export function BrincadeiraBoasVindas({
     } else {
       onEstado?.("off");
     }
-    // Só o veredito da verificação de propósito: `onEstado` costuma vir como
-    // função nova a cada render do invólucro, e incluí-la reabriria a sessão.
+    // Só o veredito de propósito: `onEstado` costuma vir como função nova a
+    // cada render do invólucro, e incluí-la reabriria a sessão. É o booleano, e
+    // não o roteiro, porque o `/me` é refeito a cada resposta enviada: um objeto
+    // novo reabriria a reprise que ela acabou de fechar.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [convidada]);
 

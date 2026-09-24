@@ -991,6 +991,18 @@ def init_db(forcar=False):
         )
         """)
 
+        # Roteiro da brincadeira de boas-vindas, por conta. Mora no banco e não
+        # no front porque o texto é pessoal, e o bundle vai inteiro para o
+        # navegador de qualquer visitante: a API só o entrega à própria conta.
+        c.execute("""
+        CREATE TABLE IF NOT EXISTS brincadeiras (
+            usuario_id INTEGER PRIMARY KEY,
+            roteiro JSONB NOT NULL,
+            reprise JSONB NOT NULL,
+            FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+        )
+        """)
+
         # Migração leve: calibração de confiança ("acertei com segurança" /
         # "acertei no chute"), usada para ajustar a qualidade informada ao
         # SM-2 além do simples certo/errado.
@@ -1952,6 +1964,29 @@ def obter_foto_perfil(usuario_id):
         return conn.execute(
             "SELECT imagem, mime FROM fotos_perfil WHERE usuario_id = ?", (usuario_id,)
         ).fetchone()
+
+
+def obter_brincadeira(usuario_id):
+    """Roteiro da brincadeira desta conta, ou None — a resposta de toda conta
+    menos uma. O dono no WHERE é o que impede o texto de chegar a outro
+    navegador."""
+    with get_conn() as conn:
+        linha = conn.execute(
+            "SELECT roteiro, reprise FROM brincadeiras WHERE usuario_id = ?", (usuario_id,)
+        ).fetchone()
+    return dict(linha) if linha else None
+
+
+def gravar_brincadeira(usuario_id, roteiro, reprise):
+    with get_conn() as conn:
+        conn.execute(
+            """
+            INSERT INTO brincadeiras (usuario_id, roteiro, reprise) VALUES (?, ?, ?)
+            ON CONFLICT (usuario_id) DO UPDATE
+                SET roteiro = EXCLUDED.roteiro, reprise = EXCLUDED.reprise
+            """,
+            (usuario_id, json.dumps(roteiro, ensure_ascii=False), json.dumps(reprise, ensure_ascii=False)),
+        )
 
 
 def marcar_novidades_vistas(usuario_id, id_entrada: str):

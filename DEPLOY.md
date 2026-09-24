@@ -251,7 +251,8 @@ Conferido em 2026-09-22, no deploy que trouxe os 60 commits parados desde
 - [x] 8080 fechada e a mudança persistida
 - [x] Senha do `demo@residenciamed.com` rotacionada em 22/09 (ver seção 7): a
       publicada devolve 401 no site, a nova vive só no `.env` local
-- [ ] Login real no navegador, pelo https (o resto foi verificado por curl)
+- [x] Login real no navegador, pelo https (o resto foi verificado por curl):
+      feito na prática — as contas reais entram por ele desde 23/09
 - [x] E-mail saindo de `acesso@qualaconduta.com.br` (conferido na API do Brevo)
 - [ ] Limpar a regra de ingresso da 8080 na Security List da Oracle
 

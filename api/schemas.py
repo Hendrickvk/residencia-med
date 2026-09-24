@@ -73,6 +73,11 @@ class MeOut(BaseModel):
     # Revisão. Sem ele, a aluna só descobre que tem cartões esperando se
     # lembrar de entrar lá.
     cartoes_hoje: int = 0
+    # Roteiro da brincadeira de boas-vindas: só a conta que tem um recebe, as
+    # outras recebem None. Vem no /me, que a tela já espera antes de aparecer;
+    # numa rota à parte, seria uma ida a mais ao servidor antes de qualquer
+    # tela abrir, para todo mundo.
+    brincadeira: Optional[dict] = None
 
 
 class TemaIn(BaseModel):

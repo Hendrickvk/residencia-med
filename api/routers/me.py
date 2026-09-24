@@ -33,6 +33,7 @@ def obter_me(usuario=Depends(usuario_atual)):
         cor_perfil=usuario["cor_perfil"] or db.COR_PERFIL_PADRAO,
         foto_versao=usuario["foto_versao"],
         cartoes_hoje=db.contar_cartoes_vencidos(usuario_id=usuario["id"]),
+        brincadeira=db.obter_brincadeira(usuario["id"]),
     )
 
 

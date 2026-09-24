@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { BrincadeiraBoasVindas } from "../BrincadeiraBoasVindas";
-import { jaViu, useEhConvidada } from "../../lib/brincadeira";
+import { jaViu } from "../../lib/brincadeira";
 import { ConfirmeSeuEmail } from "../ConfirmeSeuEmail";
 import { FilaPendenteAviso } from "../FilaPendenteAviso";
 import { Novidades } from "../Novidades";
@@ -30,7 +30,8 @@ export function AppShell() {
   const [brincadeira, setBrincadeira] = useState<"verificando" | "rodando" | "off">(() =>
     jaViu() ? "off" : "verificando",
   );
-  const convidada = useEhConvidada(me?.email);
+  // `undefined` enquanto o `/me` não chegou; `null` para toda conta menos uma.
+  const roteiro = me ? (me.brincadeira ?? null) : undefined;
   // Cada pedido de reprise remonta a sessão com estado limpo.
   const [reprise, setReprise] = useState(0);
   // "O que mudou": abre sozinha uma vez, no Painel, e fica no menu da conta
@@ -43,7 +44,7 @@ export function AppShell() {
   const jaAbriuSozinha = useRef(false);
 
   // Rede de segurança: se a verificação não responder (conta sem `/me`,
-  // navegador sem `crypto.subtle`), a página aparece de todo jeito.
+  // servidor fora do ar), a página aparece de todo jeito.
   useEffect(() => {
     if (brincadeira !== "verificando") return;
     const timer = setTimeout(() => setBrincadeira("off"), 2500);
@@ -132,7 +133,7 @@ export function AppShell() {
               me={me}
               revisoesHoje={painel?.revisoes_hoje}
               onSair={onSair}
-              onRever={convidada ? () => setReprise((n) => n + 1) : undefined}
+              onRever={roteiro ? () => setReprise((n) => n + 1) : undefined}
               onNovidades={() => setNovidadesAbertas(true)}
               temNovidade={naoVistas.length > 0}
             />
@@ -159,7 +160,7 @@ export function AppShell() {
         )}
         <BrincadeiraBoasVindas
           key={reprise}
-          convidada={convidada}
+          brincadeira={roteiro}
           reprise={reprise > 0}
           onEstado={setBrincadeira}
           onEfeito={(efeito) => {
