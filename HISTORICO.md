@@ -8,15 +8,6 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
 
 ## Pendências
 
-- **Subir a revisão das animações de 2026-09-25** (ver a data). Está feita,
-  conferida e sem commit: só front (`tailwind.config.js`, `theme.css`,
-  `AppShell`, `Topbar`, `lib/nav.ts`, os dois avisos, `Estudo.tsx`) e docs. O
-  deploy é commit + push + troca do bundle (DEPLOY.md §8), sem reiniciar a API.
-  **O teste pelo celular na rede de casa parece lento, e não é o código:** a
-  API local fala com o Neon pela internet de casa a ~260ms por consulta, e o
-  Painel faz várias em sequência; em produção a API fica ao lado do banco.
-  Para testar animação, o site no ar é o ambiente certo.
-
 - **Pedir ao suporte do GitHub que apague os commits antigos do
   `residencia-med`.** A reescrita de 24/09 tirou o roteiro da brincadeira do
   histórico, mas o GitHub continua servindo os commits antigos por link direto
@@ -1845,6 +1836,11 @@ governa as telas admin do Streamlit.
     lateral. Para medir animação ali, amostrar por `setTimeout`: o
     `requestAnimationFrame` não roda na aba sem janela.
   - A `review-animations` do Emil só roda chamada pelo usuário (`/review-animations`).
+  - **No ar no mesmo dia** (commit `1f173df`), só front: conferido que o site
+    serve a entrada de lado em 200ms e o aviso por transição. O teste pelo
+    celular na rede de casa parecia lento, e não era o código: a API local
+    fala com o Neon pela internet de casa a ~260ms por consulta, e o Painel
+    faz várias em sequência; em produção a API fica ao lado do banco.
 
 ## Armadilhas das telas admin (Streamlit)
 
