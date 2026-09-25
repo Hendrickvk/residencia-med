@@ -98,13 +98,9 @@ capping it would make the Configurador's live count lie about the bank.
   Never write a second scheduling algorithm. The two review queues are deliberately separate for now
   (merging is a UNION, not a new algorithm). `usuario_id` is denormalised onto baralho and cartão so
   every query scopes by owner in the WHERE — that is what stops someone fetching another account's
-  deck by id, and `tests/test_cartoes.py` pins it endpoint by endpoint. The 12 folder colours are
-  **another palette outside the triage scale**, for the same reason as the avatar colour, and each has
-  a `-soft` veil (deck band) and a `-on` text colour, measured at 4.5:1 for the folder banner, which is
-  filled with the full colour — a hardcoded white fails on cyan, rose, lavender, orchid and turquoise.
-  Retiring a colour key requires a migration in `init_db` (green and gold were dropped in 2026-09-23
-  because vivid versions would read as triage levels), or existing folders silently fall back to the
-  default. Visually the decks follow the "real deck" direction the
+  deck by id, and `tests/test_cartoes.py` pins it endpoint by endpoint. Folder colours come from the
+  shared palette described under Profile identity; the banner is the full colour with the tone's `on`
+  text, the deck band a veil (`veuDaPasta`). Visually the decks follow the "real deck" direction the
   user picked from three prototypes: the edges of the cards behind show above the tile, and **that stack
   is only drawn when the deck has more than one card** — the metaphor has to be honest. Grade buttons are
   coloured pills that must use `bg-tN text-tN-on`; a hardcoded white breaks contrast on t2/t3 in light
@@ -117,11 +113,18 @@ capping it would make the Configurador's live count lie about the bank.
   them goes through the `apenas_marcadas` filter on that same capped endpoint.
   `tests/test_pagina_perfil.py` fails if the list ever starts returning answers.
 - **Profile identity** (`src/lib/perfil.ts`, `components/Perfil.tsx`): a display name and an avatar
-  colour, per account. The six colours are a **separate palette from the triage scale** and must stay
-  that way — t1–t5 encode performance, so a green avatar would read as "doing well"; they also do not
-  change with the theme, because it is the person's colour. The DB stores the **key**, validated
-  against `db.CORES_PERFIL` (a colour arriving from the client becomes CSS), and the Tailwind classes
-  are written out literally, never built as `bg-perfil-${cor}`. An empty name goes back to NULL and the
+  colour, per account. **Avatar and folder colours share one palette**, `frontend/src/lib/paleta.json`:
+  10 families × 8 tones (Tailwind 200–900, brown built in OKLCH), each tone with the text colour that
+  passes 4.5:1 on it (`tests/test_paleta.py`). The same JSON feeds the front (`lib/paleta.ts`, inline
+  styles — 80 colours are too many for literal Tailwind classes) and the back (`db.normalizar_cor`,
+  which validates, since a colour arriving from the client becomes CSS). The DB stores the **key**
+  (`azul-3`). Since 2026-09-24 it includes red, orange, yellow, green and blue by user decision; the
+  rule that stays is that the **t1–t5 tokens** only ever mean a triage level. Keys from the old
+  palettes (`ameixa`, `ardosia`…) are translated by the JSON's `legado` table on read and on write — no
+  DB migration, on purpose: `init_db` runs first in the local test suite, against production, while the
+  old front is still live. The picker is the radial `components/SeletorCor.tsx`. Colours do not change
+  with the theme (it is the person's colour); only the deck veil mixes with the surface, per theme
+  (`--veu-pasta`). An empty name goes back to NULL and the
   UI falls back to the e-mail. The **photo** lives in `fotos_perfil`, a table of its own and never a
   column on `usuarios` — `obter_usuario` does `SELECT *` on every authenticated request, so a BYTEA
   there would ship the photo from Postgres on every API call. `usuarios.foto_versao` (the content sha)

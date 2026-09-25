@@ -1,0 +1,420 @@
+{
+  "familias": [
+    {
+      "chave": "vermelho",
+      "nome": "Vermelho",
+      "tons": [
+        {
+          "hex": "#fecaca",
+          "on": "#111315"
+        },
+        {
+          "hex": "#fca5a5",
+          "on": "#111315"
+        },
+        {
+          "hex": "#f87171",
+          "on": "#111315"
+        },
+        {
+          "hex": "#ef4444",
+          "on": "#111315"
+        },
+        {
+          "hex": "#dc2626",
+          "on": "#ffffff"
+        },
+        {
+          "hex": "#b91c1c",
+          "on": "#ffffff"
+        },
+        {
+          "hex": "#991b1b",
+          "on": "#ffffff"
+        },
+        {
+          "hex": "#7f1d1d",
+          "on": "#ffffff"
+        }
+      ]
+    },
+    {
+      "chave": "laranja",
+      "nome": "Laranja",
+      "tons": [
+        {
+          "hex": "#fed7aa",
+          "on": "#111315"
+        },
+        {
+          "hex": "#fdba74",
+          "on": "#111315"
+        },
+        {
+          "hex": "#fb923c",
+          "on": "#111315"
+        },
+        {
+          "hex": "#f97316",
+          "on": "#111315"
+        },
+        {
+          "hex": "#ea580c",
+          "on": "#111315"
+        },
+        {
+          "hex": "#c2410c",
+          "on": "#ffffff"
+        },
+        {
+          "hex": "#9a3412",
+          "on": "#ffffff"
+        },
+        {
+          "hex": "#7c2d12",
+          "on": "#ffffff"
+        }
+      ]
+    },
+    {
+      "chave": "amarelo",
+      "nome": "Amarelo",
+      "tons": [
+        {
+          "hex": "#fef08a",
+          "on": "#111315"
+        },
+        {
+          "hex": "#fde047",
+          "on": "#111315"
+        },
+        {
+          "hex": "#facc15",
+          "on": "#111315"
+        },
+        {
+          "hex": "#eab308",
+          "on": "#111315"
+        },
+        {
+          "hex": "#ca8a04",
+          "on": "#111315"
+        },
+        {
+          "hex": "#a16207",
+          "on": "#ffffff"
+        },
+        {
+          "hex": "#854d0e",
+          "on": "#ffffff"
+        },
+        {
+          "hex": "#713f12",
+          "on": "#ffffff"
+        }
+      ]
+    },
+    {
+      "chave": "verde",
+      "nome": "Verde",
+      "tons": [
+        {
+          "hex": "#bbf7d0",
+          "on": "#111315"
+        },
+        {
+          "hex": "#86efac",
+          "on": "#111315"
+        },
+        {
+          "hex": "#4ade80",
+          "on": "#111315"
+        },
+        {
+          "hex": "#22c55e",
+          "on": "#111315"
+        },
+        {
+          "hex": "#16a34a",
+          "on": "#111315"
+        },
+        {
+          "hex": "#15803d",
+          "on": "#ffffff"
+        },
+        {
+          "hex": "#166534",
+          "on": "#ffffff"
+        },
+        {
+          "hex": "#14532d",
+          "on": "#ffffff"
+        }
+      ]
+    },
+    {
+      "chave": "turquesa",
+      "nome": "Turquesa",
+      "tons": [
+        {
+          "hex": "#99f6e4",
+          "on": "#111315"
+        },
+        {
+          "hex": "#5eead4",
+          "on": "#111315"
+        },
+        {
+          "hex": "#2dd4bf",
+          "on": "#111315"
+        },
+        {
+          "hex": "#14b8a6",
+          "on": "#111315"
+        },
+        {
+          "hex": "#0d9488",
+          "on": "#111315"
+        },
+        {
+          "hex": "#0f766e",
+          "on": "#ffffff"
+        },
+        {
+          "hex": "#115e59",
+          "on": "#ffffff"
+        },
+        {
+          "hex": "#134e4a",
+          "on": "#ffffff"
+        }
+      ]
+    },
+    {
+      "chave": "azul",
+      "nome": "Azul",
+      "tons": [
+        {
+          "hex": "#bfdbfe",
+          "on": "#111315"
+        },
+        {
+          "hex": "#93c5fd",
+          "on": "#111315"
+        },
+        {
+          "hex": "#60a5fa",
+          "on": "#111315"
+        },
+        {
+          "hex": "#3b82f6",
+          "on": "#111315"
+        },
+        {
+          "hex": "#2563eb",
+          "on": "#ffffff"
+        },
+        {
+          "hex": "#1d4ed8",
+          "on": "#ffffff"
+        },
+        {
+          "hex": "#1e40af",
+          "on": "#ffffff"
+        },
+        {
+          "hex": "#1e3a8a",
+          "on": "#ffffff"
+        }
+      ]
+    },
+    {
+      "chave": "roxo",
+      "nome": "Roxo",
+      "tons": [
+        {
+          "hex": "#e9d5ff",
+          "on": "#111315"
+        },
+        {
+          "hex": "#d8b4fe",
+          "on": "#111315"
+        },
+        {
+          "hex": "#c084fc",
+          "on": "#111315"
+        },
+        {
+          "hex": "#a855f7",
+          "on": "#111315"
+        },
+        {
+          "hex": "#9333ea",
+          "on": "#ffffff"
+        },
+        {
+          "hex": "#7e22ce",
+          "on": "#ffffff"
+        },
+        {
+          "hex": "#6b21a8",
+          "on": "#ffffff"
+        },
+        {
+          "hex": "#581c87",
+          "on": "#ffffff"
+        }
+      ]
+    },
+    {
+      "chave": "rosa",
+      "nome": "Rosa",
+      "tons": [
+        {
+          "hex": "#fbcfe8",
+          "on": "#111315"
+        },
+        {
+          "hex": "#f9a8d4",
+          "on": "#111315"
+        },
+        {
+          "hex": "#f472b6",
+          "on": "#111315"
+        },
+        {
+          "hex": "#ec4899",
+          "on": "#111315"
+        },
+        {
+          "hex": "#db2777",
+          "on": "#ffffff"
+        },
+        {
+          "hex": "#be185d",
+          "on": "#ffffff"
+        },
+        {
+          "hex": "#9d174d",
+          "on": "#ffffff"
+        },
+        {
+          "hex": "#831843",
+          "on": "#ffffff"
+        }
+      ]
+    },
+    {
+      "chave": "marrom",
+      "nome": "Marrom",
+      "tons": [
+        {
+          "hex": "#eedacb",
+          "on": "#111315"
+        },
+        {
+          "hex": "#ddbda6",
+          "on": "#111315"
+        },
+        {
+          "hex": "#c69a7a",
+          "on": "#111315"
+        },
+        {
+          "hex": "#ac7a53",
+          "on": "#111315"
+        },
+        {
+          "hex": "#905f37",
+          "on": "#ffffff"
+        },
+        {
+          "hex": "#744a28",
+          "on": "#ffffff"
+        },
+        {
+          "hex": "#57371e",
+          "on": "#ffffff"
+        },
+        {
+          "hex": "#3c2514",
+          "on": "#ffffff"
+        }
+      ]
+    },
+    {
+      "chave": "cinza",
+      "nome": "Cinza",
+      "tons": [
+        {
+          "hex": "#e5e7eb",
+          "on": "#111315"
+        },
+        {
+          "hex": "#d1d5db",
+          "on": "#111315"
+        },
+        {
+          "hex": "#9ca3af",
+          "on": "#111315"
+        },
+        {
+          "hex": "#6b7280",
+          "on": "#ffffff"
+        },
+        {
+          "hex": "#4b5563",
+          "on": "#ffffff"
+        },
+        {
+          "hex": "#374151",
+          "on": "#ffffff"
+        },
+        {
+          "hex": "#1f2937",
+          "on": "#ffffff"
+        },
+        {
+          "hex": "#111827",
+          "on": "#ffffff"
+        }
+      ]
+    }
+  ],
+  "padrao": {
+    "perfil": "cinza-6",
+    "pasta": "cinza-4"
+  },
+  "legado": {
+    "perfil": {
+      "grafite": "cinza-6",
+      "ardosia": "cinza-5",
+      "ameixa": "roxo-7",
+      "rosa": "rosa-6",
+      "turquesa": "turquesa-6",
+      "cafe": "marrom-6"
+    },
+    "pasta": {
+      "carvao": "cinza-7",
+      "grafite": "cinza-5",
+      "ardosia": "cinza-4",
+      "indigo": "azul-6",
+      "lavanda": "azul-3",
+      "lilas": "roxo-2",
+      "purpura": "roxo-7",
+      "ameixa": "roxo-5",
+      "orquidea": "roxo-4",
+      "vinho": "roxo-6",
+      "framboesa": "rosa-7",
+      "rosa": "rosa-4",
+      "algodao": "rosa-2",
+      "ciano": "turquesa-4",
+      "gelo": "turquesa-1",
+      "turquesa": "turquesa-4",
+      "petroleo": "turquesa-6",
+      "oceano": "turquesa-7",
+      "cafe": "laranja-7",
+      "chocolate": "marrom-7"
+    }
+  }
+}

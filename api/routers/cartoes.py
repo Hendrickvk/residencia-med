@@ -18,7 +18,7 @@ router = APIRouter(prefix="/cartoes", tags=["cartoes"])
 
 @router.get("/pastas")
 def listar_pastas(usuario=Depends(usuario_atual)):
-    return {"pastas": db.listar_pastas(usuario_id=usuario["id"]), "cores": list(db.CORES_PASTA)}
+    return {"pastas": db.listar_pastas(usuario_id=usuario["id"])}
 
 
 @router.post("/pastas", status_code=status.HTTP_201_CREATED)

@@ -1578,14 +1578,32 @@ def atualizar_tema_usuario(usuario_id, tema: str):
         conn.execute("UPDATE usuarios SET tema = ? WHERE id = ?", (tema, usuario_id))
 
 
-# Cores do avatar. **Nenhuma delas pode ser confundida com a escala de
-# triagem** (DESIGN_TRIAGEM.md §2): t1–t5 significam nível de aproveitamento,
-# e um avatar verde leria como "vai bem". Por isso a paleta evita os matizes da
-# escala (vermelho, laranja, amarelo, verde, azul) e fica em neutros, roxo,
-# rosa, turquesa e marrom. O banco guarda a **chave**, não o hex: cor é
-# apresentação e o valor mora no tema do front.
-CORES_PERFIL = ("grafite", "ardosia", "ameixa", "rosa", "turquesa", "cafe")
-COR_PERFIL_PADRAO = "grafite"
+# Paleta do avatar e das pastas (DESIGN_TRIAGEM.md §2): dez famílias de oito
+# tons, lidas do mesmo JSON que o front desenha — as duas listas não têm como
+# divergir. O banco guarda a **chave** (`azul-3`), nunca o hex: cor vinda do
+# cliente vira CSS na tela. Desde 2026-09-24 entram vermelho, laranja, amarelo,
+# verde e azul (decisão do usuário); o que continua só da triagem são os tokens
+# t1–t5 do front.
+#
+# As chaves de antes (`ameixa`, `ardosia`...) valem pela tabela `legado`, que as
+# traduz para o tom mais próximo. É o que evita migrar o banco: uma migração
+# rodaria no primeiro `init_db` — o da suíte local, que usa o banco de produção
+# — e o front no ar ainda não conheceria as chaves novas.
+with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "frontend", "src", "lib", "paleta.json"),
+          encoding="utf-8") as _arquivo_paleta:
+    PALETA = json.load(_arquivo_paleta)
+CORES = frozenset(f"{f['chave']}-{i}" for f in PALETA["familias"] for i in range(1, len(f["tons"]) + 1))
+COR_PERFIL_PADRAO = PALETA["padrao"]["perfil"]
+COR_PASTA_PADRAO = PALETA["padrao"]["pasta"]
+
+
+def normalizar_cor(cor, contexto: str) -> str:
+    """A chave que vale: a nova, a antiga traduzida, ou o padrão do contexto
+    ("perfil" ou "pasta")."""
+    cor = PALETA["legado"][contexto].get(cor, cor)
+    return cor if cor in CORES else PALETA["padrao"][contexto]
+
+
 LIMITE_NOME = 40
 
 
@@ -1593,30 +1611,13 @@ def atualizar_perfil(usuario_id, nome: str | None, cor: str):
     """Nome vazio volta a NULL — a tela então mostra o e-mail de novo, em vez
     de um avatar em branco."""
     nome = (nome or "").strip()[:LIMITE_NOME] or None
-    if cor not in CORES_PERFIL:
-        cor = COR_PERFIL_PADRAO
+    cor = normalizar_cor(cor, "perfil")
     with get_conn() as conn:
         conn.execute("UPDATE usuarios SET nome = ?, cor_perfil = ? WHERE id = ?", (nome, cor, usuario_id))
     return nome, cor
 
 
-# Cores das pastas de flashcards. São vivas de propósito (pedido do usuário) e
-# ainda assim **nenhuma entra na escala de triagem** (DESIGN_TRIAGEM.md §2):
-# vermelho, laranja, amarelo, verde e azul significam aproveitamento, e uma
-# pasta verde ao lado de uma vermelha seria lida como "vou bem nesta, mal
-# naquela" por quem o Painel já treinou. Por isso a paleta fica no arco
-# índigo → ciano, com dois neutros e um marrom.
-#
-# A chave é o que o banco guarda; o hex mora no tema do front. `musgo` e
-# `areia` saíram em 2026-09-23 (eram o verde e o dourado, justamente os dois
-# que a escala já usa) e viraram `ciano` e `lavanda`.
-CORES_PASTA = (
-    "carvao", "grafite", "ardosia", "indigo", "lavanda",
-    "lilas", "purpura", "ameixa", "orquidea", "vinho",
-    "framboesa", "rosa", "algodao", "ciano", "gelo",
-    "turquesa", "petroleo", "oceano", "cafe", "chocolate",
-)
-COR_PASTA_PADRAO = "ardosia"
+# As cores das pastas saem da mesma PALETA do avatar, lá em cima.
 LIMITE_NOME_PASTA = 60
 LIMITE_TEXTO_CARTAO = 2000
 
@@ -1627,8 +1628,7 @@ def _texto(valor, limite):
 
 def criar_pasta(*, usuario_id, nome, cor):
     nome = _texto(nome, LIMITE_NOME_PASTA) or "Sem nome"
-    if cor not in CORES_PASTA:
-        cor = COR_PASTA_PADRAO
+    cor = normalizar_cor(cor, "pasta")
     with get_conn() as conn:
         c = conn.cursor()
         c.execute(
@@ -1642,8 +1642,7 @@ def atualizar_pasta(pasta_id, *, usuario_id, nome, cor):
     """O `usuario_id` no WHERE é o que impede editar a pasta de outra pessoa
     mandando o id dela. Vale para todas as funções daqui."""
     nome = _texto(nome, LIMITE_NOME_PASTA) or "Sem nome"
-    if cor not in CORES_PASTA:
-        cor = COR_PASTA_PADRAO
+    cor = normalizar_cor(cor, "pasta")
     with get_conn() as conn:
         conn.execute(
             "UPDATE pastas_cartoes SET nome = ?, cor = ? WHERE id = ? AND usuario_id = ?",

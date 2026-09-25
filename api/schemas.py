@@ -86,8 +86,8 @@ class TemaIn(BaseModel):
 
 class PastaIn(BaseModel):
     nome: str = Field(default="", max_length=db.LIMITE_NOME_PASTA)
-    # Validada contra `db.CORES_PASTA` lá dentro: valor de fora da lista vira
-    # CSS na tela, então cai no padrão em vez de passar.
+    # Passa por `db.normalizar_cor` lá dentro: valor de fora da paleta vira CSS
+    # na tela, então cai no padrão em vez de passar.
     cor: str = Field(default=db.COR_PASTA_PADRAO, max_length=20)
 
 

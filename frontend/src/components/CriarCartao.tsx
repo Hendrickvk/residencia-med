@@ -1,7 +1,8 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Layers } from "lucide-react";
 import { useState } from "react";
-import { criarBaralho, criarCartao, criarPasta, fundoDaPasta, listarPastas } from "../lib/cartoes";
+import { criarBaralho, criarCartao, criarPasta, listarPastas } from "../lib/cartoes";
+import { corDeFundo } from "../lib/paleta";
 import { BOTAO_PRIMARIO, CAMPO, PRESSAO } from "../lib/estilos";
 import { Dialog } from "./Dialog";
 
@@ -113,9 +114,8 @@ export function CriarCartao({ questaoId, respostaCorreta }: Props) {
               <span className="rotulo text-muted">Baralho</span>
               <div className="flex items-center gap-2">
                 <span
-                  className={`h-8 w-1.5 shrink-0 rounded-pill ${fundoDaPasta(
-                    baralhos.find((b) => b.id === baralhoId)?.cor,
-                  )}`}
+                  className="h-8 w-1.5 shrink-0 rounded-pill"
+                  style={corDeFundo(baralhos.find((b) => b.id === baralhoId)?.cor, "pasta")}
                   aria-hidden="true"
                 />
                 <select

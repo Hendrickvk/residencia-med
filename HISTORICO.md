@@ -1736,6 +1736,60 @@ governa as telas admin do Streamlit.
   sem janela: ele não desce de ~500px de largura, então é uma caixa de 393px
   dentro dele que faz o papel do celular — com a janela "de 393", a foto sai
   cortada e parece defeito que não existe.
+- **Mais cores: uma paleta só para avatar e pastas, e um seletor radial.** O
+  retorno das alunas foi que as cores eram poucas e não variavam. A causa era a
+  regra de deixar de fora os cinco matizes da triagem: sobravam roxos, rosas,
+  cianos e marrons. Perguntado, **o usuário decidiu que vermelho, laranja,
+  amarelo, verde e azul entram em tudo** (avatar e pastas), e que o seletor novo
+  vale para os dois. O que continua valendo é a regra dos *tokens*: `t1`–`t5`
+  só significam nível (DESIGN_TRIAGEM.md §1 ganhou a exceção por escrito).
+  Decisões:
+  - **Um JSON para o front e o banco** (`frontend/src/lib/paleta.json`): dez
+    famílias de oito tons, do claro ao escuro, com o texto que passa 4,5:1 por
+    cima de cada tom. Nove famílias são os degraus 200–900 do próprio Tailwind;
+    o marrom, que o Tailwind não tem, foi montado em OKLCH, com o croma caindo
+    perto do branco e do preto. Nenhum tom precisou de ajuste para passar
+    4,5:1 com branco ou tinta, e `tests/test_paleta.py` prende isso. No front
+    as cores vão por estilo inline: 80 classes escritas por extenso seriam o
+    `CLASSES_NIVEL` multiplicado por vinte.
+  - **Sem migração do banco**, e de propósito: a suíte local roda o `init_db`
+    contra a produção, então uma migração ali trocaria as chaves antes de o
+    front novo estar no ar, e o front velho mostraria o padrão para todo mundo.
+    As 26 chaves antigas viram o tom mais próximo pela tabela `legado` do JSON,
+    na leitura e na escrita; a chave nova só é gravada no próximo "Salvar".
+  - **A tradução não é só distância de cor.** Pela distância pura em OKLab, a
+    `ameixa` apagada do avatar virava cinza, porque os roxos do Tailwind são
+    mais saturados que ela. Um corte só por saturação não resolve: o chocolate
+    (croma 0,039) e a ardósia (0,041) empatam, e só o matiz diz que um é marrom
+    e a outra, cinza. Ficou: distância em OKLab, mas cor com croma acima de 0,08
+    nunca cai no cinza. Os 26 casos foram conferidos um a um.
+  - **O véu do baralho** é o tom do meio da família misturado ao papel
+    (`color-mix`), 20% no claro e 30% no escuro (`--veu-pasta`). Do meio, e não
+    do tom escolhido: amarelo quase branco sumiria no papel claro.
+  - **O seletor** (`components/SeletorCor.tsx`) mostra as dez famílias; tocar
+    numa abre um disco com os oito tons em volta dela, o mais claro no alto,
+    escurecendo em sentido horário, e o disco se desloca para caber na janela
+    quando a cor está na borda. Setas andam pelo anel, Esc fecha sem fechar o
+    diálogo da pasta em volta, e toque fora fecha por `pointerdown`, porque o
+    Safari não dá foco a botão tocado.
+  - **Movimento pelas skills do Emil Kowalski e do Impeccable** (pedido do
+    usuário, instaladas em `~/.claude/skills`, fora do repositório): os tons
+    saem de trás da cor tocada, 180ms `suave` com 30ms entre eles, e voltam em
+    120ms `brand`; transição e não keyframe, para reabrir no meio retomar de onde
+    está. **Entrada por `@starting-style`, e não por dois quadros de
+    `requestAnimationFrame`**: a primeira versão esperava quadros, e na aba que
+    se declara escondida (a do navegador automatizado, e a de quem troca de aba)
+    o disco ficava montado e invisível. Do Impeccable entraram só os textos; o
+    `settings.json` dele instala ganchos que rodam um binário baixado da
+    internet a cada edição de arquivo, e isso ficou de fora.
+  - **Tons extremos ganharam contorno**: o amarelo mais claro sumia no papel e o
+    cinza mais escuro no disco escuro, coisa que a paleta antiga não tinha. Uma
+    borda de 15% de preto (ou de branco, no escuro) nos círculos e no avatar.
+  - **Armadilhas da foto sem janela, para a próxima:** com
+    `--virtual-time-budget` o relógio é simulado e não há quadro, então o que
+    depende de `requestAnimationFrame` não acontece; o `--timeout` não segurou a
+    foto até o clique da página; e o `--dump-dom` chamado pelo `&` do
+    PowerShell sai vazio — é pelo `Start-Process -RedirectStandardOutput`.
 
 ## Armadilhas das telas admin (Streamlit)
 

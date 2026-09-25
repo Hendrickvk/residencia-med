@@ -1,6 +1,7 @@
 import { Play, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { type BaralhoResumo, fundoDaPasta, plural, veuDaPasta } from "../../lib/cartoes";
+import { type BaralhoResumo, plural } from "../../lib/cartoes";
+import { corDeFundo, veuDaPasta } from "../../lib/paleta";
 
 interface Props {
   baralho: BaralhoResumo;
@@ -41,8 +42,8 @@ export function CartaoBaralho({ baralho: b, cor, onApagar }: Props) {
       )}
 
       <div className="group relative flex flex-col overflow-hidden rounded-caso border border-line bg-surface transition duration-hover ease-brand hover:border-muted">
-        <div className={`flex items-center gap-2.5 border-b border-line px-4 py-3 ${veuDaPasta(cor)}`}>
-          <span className={`h-2.5 w-2.5 shrink-0 rounded-pill ${fundoDaPasta(cor)}`} aria-hidden="true" />
+        <div className="flex items-center gap-2.5 border-b border-line px-4 py-3" style={veuDaPasta(cor)}>
+          <span className="h-2.5 w-2.5 shrink-0 rounded-pill" style={corDeFundo(cor, "pasta")} aria-hidden="true" />
           {/* O link cobre o cartão inteiro (`after:inset-0`): mirar só o texto
               num toque de celular é pedir precisão que ninguém tem. */}
           <Link

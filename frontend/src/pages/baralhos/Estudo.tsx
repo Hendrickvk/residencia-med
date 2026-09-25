@@ -6,9 +6,10 @@ import { EstadoFalha } from "../../components/EstadoFalha";
 import { EstadoVazio } from "../../components/EstadoVazio";
 import { BarraFoco } from "../../lib/foco";
 import {
-  atualizarCartao, avaliarCartao, cartoesParaEstudar, desfazerCartao, fundoDaPasta, plural,
+  atualizarCartao, avaliarCartao, cartoesParaEstudar, desfazerCartao, plural,
   textoPrazo,
 } from "../../lib/cartoes";
+import { corCheia, corDeFundo } from "../../lib/paleta";
 import { BOTAO_PRIMARIO, BOTAO_SECUNDARIO, CAMPO } from "../../lib/estilos";
 
 // As mesmas notas da Revisão de casos (repeticao_espacada.NOTAS_ACERTO): 1
@@ -131,7 +132,8 @@ export default function Estudo({ baralhoId, nome, cor, onSair }: Props) {
           {/* Numa sessão que atravessa baralhos, o nome e a cor são do cartão
               da vez — é o que diz onde ela está. */}
           <span
-            className={`h-5 w-1.5 shrink-0 rounded-pill ${fundoDaPasta(atual?.cor ?? cor)}`}
+            className="h-5 w-1.5 shrink-0 rounded-pill"
+            style={corDeFundo(atual?.cor ?? cor, "pasta")}
             aria-hidden="true"
           />
           <span className="truncate text-corpo font-semibold text-ink">
@@ -357,7 +359,7 @@ function FaceCartao({
       }`}
     >
       <div className="flex items-center gap-2">
-        <span className={`h-3 w-1 rounded-pill ${fundoDaPasta(cor)}`} aria-hidden="true" />
+        <span className="h-3 w-1 rounded-pill" style={corDeFundo(cor, "pasta")} aria-hidden="true" />
         <span className="rotulo text-muted">{rotulo}</span>
       </div>
       <p className="flex flex-1 items-center justify-center whitespace-pre-wrap text-center text-enunciado text-ink">
@@ -378,8 +380,9 @@ function ResumoSessao({
   const pct = total ? Math.round((acertos / total) * 100) : 0;
   return (
     <div className="flex animate-entrar flex-col items-center gap-5 rounded-caso border border-line bg-surface px-6 py-10 text-center">
-      <span className={`flex h-12 w-12 items-center justify-center rounded-pill ${fundoDaPasta(cor)}`}>
-        <Check size={22} strokeWidth={2.5} className="text-white" />
+      {/* O visto na cor `on` do tom: branco fixo sumia nos tons claros. */}
+      <span className="flex h-12 w-12 items-center justify-center rounded-pill" style={corCheia(cor, "pasta")}>
+        <Check size={22} strokeWidth={2.5} />
       </span>
       <div>
         <p className="text-subtitulo text-ink">

@@ -4,7 +4,8 @@ import { Avatar } from "../../components/Avatar";
 import { api, ApiError } from "../../lib/api";
 import { BOTAO_PRIMARIO, BOTAO_SECUNDARIO, CAMPO } from "../../lib/estilos";
 import { FotoInvalida, MIME_SAIDA, prepararFoto } from "../../lib/foto";
-import { CORES_PERFIL, COR_PADRAO } from "../../lib/perfil";
+import { SeletorCor } from "../../components/SeletorCor";
+import { COR_PADRAO, normalizarCor } from "../../lib/paleta";
 import type { Me } from "../../lib/types";
 
 // Foto, nome e cor. A foto salva na hora (é uma escrita de verdade e ver o
@@ -12,7 +13,7 @@ import type { Me } from "../../lib/types";
 export function Identidade({ me }: { me: Me | undefined }) {
   const queryClient = useQueryClient();
   const [nome, setNome] = useState("");
-  const [cor, setCor] = useState(COR_PADRAO);
+  const [cor, setCor] = useState(COR_PADRAO.perfil);
   const [salvo, setSalvo] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [foto, setFoto] = useState<"parado" | "enviando">("parado");
@@ -27,7 +28,8 @@ export function Identidade({ me }: { me: Me | undefined }) {
     if (!me || carregado.current) return;
     carregado.current = true;
     setNome(me.nome ?? "");
-    setCor(me.cor_perfil);
+    // Chave antiga (`ameixa`...) vira o tom novo aqui; o próximo "Salvar" grava a nova.
+    setCor(normalizarCor(me.cor_perfil, "perfil"));
   }, [me]);
 
   async function trocarFoto(arquivo: File | undefined) {
@@ -121,23 +123,10 @@ export function Identidade({ me }: { me: Me | undefined }) {
 
         <fieldset className="flex flex-col gap-2">
           <legend className="rotulo mb-1 text-muted">Cor do avatar</legend>
-          <div className="flex flex-wrap gap-2.5">
-            {CORES_PERFIL.map((opcao) => (
-              <button
-                key={opcao.chave}
-                type="button"
-                onClick={() => setCor(opcao.chave)}
-                aria-label={opcao.nome}
-                aria-pressed={cor === opcao.chave}
-                // A escolhida ganha anel de tinta, não borda colorida: a cor
-                // do botão já é a informação, e um segundo tom competiria.
-                className={`h-9 w-9 rounded-pill transition duration-hover ease-brand active:scale-[0.94] ${opcao.fundo} ${
-                  cor === opcao.chave ? "ring-2 ring-ink ring-offset-2 ring-offset-surface" : ""
-                }`}
-              />
-            ))}
-          </div>
-          <span className="text-apoio text-muted">Aparece atrás da inicial, e enquanto a foto carrega.</span>
+          <SeletorCor valor={cor} onChange={setCor} tamanho={36} />
+          <span className="text-apoio text-muted">
+            Toque numa cor para ver os tons. Aparece atrás da inicial, e enquanto a foto carrega.
+          </span>
         </fieldset>
 
         {erro && (

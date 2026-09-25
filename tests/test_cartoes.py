@@ -35,7 +35,7 @@ def test_ciclo_completo_pasta_baralho_cartao_e_estudo():
         with TestClient(app) as client:
             email, _ = _conta(client)
 
-            pasta = client.post("/cartoes/pastas", json={"nome": "Ginecologia", "cor": "ameixa"}).json()["id"]
+            pasta = client.post("/cartoes/pastas", json={"nome": "Ginecologia", "cor": "roxo-5"}).json()["id"]
             baralho = client.post(
                 "/cartoes/baralhos", json={"pasta_id": pasta, "nome": "Vulvovaginites"}
             ).json()["id"]
@@ -47,7 +47,7 @@ def test_ciclo_completo_pasta_baralho_cartao_e_estudo():
 
             # A árvore aparece inteira, com o que está vencido.
             pastas = client.get("/cartoes/pastas").json()["pastas"]
-            assert len(pastas) == 1 and pastas[0]["cor"] == "ameixa"
+            assert len(pastas) == 1 and pastas[0]["cor"] == "roxo-5"
             assert pastas[0]["baralhos"][0]["cartoes"] == 1
             # Cartão nunca visto conta como vencido, senão um baralho recém
             # escrito não teria o que estudar.
@@ -120,7 +120,7 @@ def test_cor_fora_da_lista_cai_no_padrao():
     try:
         with TestClient(app) as client:
             email, _ = _conta(client)
-            # "verde" é da escala de triagem e não está na lista das pastas.
+            # "verde" sem o tom não é chave da paleta.
             client.post("/cartoes/pastas", json={"nome": "X", "cor": "verde"})
             assert client.get("/cartoes/pastas").json()["pastas"][0]["cor"] == db.COR_PASTA_PADRAO
     finally:
@@ -196,7 +196,7 @@ def test_estudar_tudo_atravessa_os_baralhos():
     try:
         with TestClient(app) as client:
             email, _ = _conta(client)
-            pasta = client.post("/cartoes/pastas", json={"nome": "P", "cor": "ciano"}).json()["id"]
+            pasta = client.post("/cartoes/pastas", json={"nome": "P", "cor": "turquesa-4"}).json()["id"]
             a = client.post("/cartoes/baralhos", json={"pasta_id": pasta, "nome": "A"}).json()["id"]
             b = client.post("/cartoes/baralhos", json={"pasta_id": pasta, "nome": "B"}).json()["id"]
             for baralho in (a, b):
@@ -208,7 +208,7 @@ def test_estudar_tudo_atravessa_os_baralhos():
             # Cada cartão diz de qual baralho veio — é o que a tela mostra
             # quando a sessão atravessa baralhos.
             assert {c["baralho"] for c in fila} == {"A", "B"}
-            assert all(c["cor"] == "ciano" for c in fila)
+            assert all(c["cor"] == "turquesa-4" for c in fila)
 
             # O baralho sozinho continua trazendo só os dele.
             assert len(client.get(f"/cartoes/baralhos/{a}/estudar").json()["cartoes"]) == 2

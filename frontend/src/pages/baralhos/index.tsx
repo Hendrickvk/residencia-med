@@ -5,9 +5,11 @@ import { Dialog } from "../../components/Dialog";
 import { EstadoFalha } from "../../components/EstadoFalha";
 import { EstadoVazio } from "../../components/EstadoVazio";
 import {
-  atualizarPasta, COR_PASTA_PADRAO, CORES_PASTA, criarBaralho, criarPasta, excluirBaralho,
-  excluirPasta, fundoDaPasta, listarPastas, type Pasta, plural, textoDaPasta,
+  atualizarPasta, criarBaralho, criarPasta, excluirBaralho,
+  excluirPasta, listarPastas, type Pasta, plural,
 } from "../../lib/cartoes";
+import { SeletorCor } from "../../components/SeletorCor";
+import { COR_PADRAO, corCheia, normalizarCor } from "../../lib/paleta";
 import { CartaoBaralho } from "./CartaoBaralho";
 import { BOTAO_PRIMARIO, BOTAO_SECUNDARIO, CAMPO } from "../../lib/estilos";
 import Estudo from "./Estudo";
@@ -97,16 +99,11 @@ export default function Baralhos() {
             {/* Cabeçalho no tom suave da cor: é o que faz cada pasta parecer
                 um objeto seu, e não mais uma linha de lista. A cor cheia fica
                 só na faixa, para o texto continuar sendo tinta sobre papel. */}
-            {/* A faixa inteira na cor da pasta. O texto sobre ela vem de
-                `textoDaPasta`, medido por cor contra 4,5:1 — branco fixo
-                falharia no ciano, no rosa e nos outros tons claros. Os
-                secundários usam opacidade em cima dessa mesma cor, em vez de
-                `text-muted`, que é tinta e sumiria aqui. */}
-            <header
-              className={`flex flex-wrap items-center gap-3 px-5 py-4 ${fundoDaPasta(pasta.cor)} ${textoDaPasta(
-                pasta.cor,
-              )}`}
-            >
+            {/* A faixa inteira na cor da pasta. O texto sobre ela é o `on` do
+                tom, medido contra 4,5:1 (tests/test_paleta.py) — branco fixo
+                falharia nos tons claros. Os secundários usam opacidade em cima
+                dessa mesma cor, em vez de `text-muted`, que é tinta e sumiria aqui. */}
+            <header className="flex flex-wrap items-center gap-3 px-5 py-4" style={corCheia(pasta.cor, "pasta")}>
               <div className="min-w-0 flex-1 basis-full sm:basis-auto">
                 <h2 className="truncate text-bloco">{pasta.nome}</h2>
                 <p className="text-apoio opacity-75">
@@ -206,7 +203,7 @@ function FormularioPasta({
   onSalvo: () => void;
 }) {
   const [nome, setNome] = useState("");
-  const [cor, setCor] = useState<string>(COR_PASTA_PADRAO);
+  const [cor, setCor] = useState<string>(COR_PADRAO.pasta);
   const [salvando, setSalvando] = useState(false);
   // Remonta o formulário a cada abertura, com os valores da pasta em edição.
   const chave = `${aberto}-${pasta?.id ?? "nova"}`;
@@ -214,7 +211,7 @@ function FormularioPasta({
   if (chave !== ultimaChave) {
     setUltimaChave(chave);
     setNome(pasta?.nome ?? "");
-    setCor(pasta?.cor ?? COR_PASTA_PADRAO);
+    setCor(normalizarCor(pasta?.cor, "pasta"));
   }
 
   async function salvar(e: React.FormEvent) {
@@ -248,20 +245,8 @@ function FormularioPasta({
 
         <fieldset className="flex flex-col gap-2">
           <legend className="rotulo mb-1 text-muted">Cor</legend>
-          <div className="flex flex-wrap gap-2.5">
-            {CORES_PASTA.map((opcao) => (
-              <button
-                key={opcao.chave}
-                type="button"
-                onClick={() => setCor(opcao.chave)}
-                aria-label={opcao.nome}
-                aria-pressed={cor === opcao.chave}
-                className={`h-8 w-8 rounded-pill transition duration-hover ease-brand active:scale-[0.94] ${opcao.fundo} ${
-                  cor === opcao.chave ? "ring-2 ring-ink ring-offset-2 ring-offset-surface" : ""
-                }`}
-              />
-            ))}
-          </div>
+          <SeletorCor valor={cor} onChange={setCor} tamanho={32} />
+          <span className="text-apoio text-muted">Toque numa cor para ver os tons.</span>
         </fieldset>
 
         <button type="submit" disabled={salvando} className={`${BOTAO_PRIMARIO} w-full`}>

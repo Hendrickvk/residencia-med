@@ -23,12 +23,16 @@ def test_nome_e_cor_gravam_e_cor_invalida_cai_no_padrao():
             assert me["nome"] is None
             assert me["cor_perfil"] == db.COR_PERFIL_PADRAO
 
-            client.patch("/me/perfil", json={"nome": "  Beatriz  ", "cor": "ameixa"})
+            client.patch("/me/perfil", json={"nome": "  Beatriz  ", "cor": "roxo-5"})
             me = client.get("/me").json()
             assert me["nome"] == "Beatriz", "o nome tem que chegar sem os espaços das pontas"
-            assert me["cor_perfil"] == "ameixa"
+            assert me["cor_perfil"] == "roxo-5"
 
-            # Cor fora da lista não vira CSS: volta ao padrão.
+            # Chave de antes da paleta nova é gravada já traduzida.
+            client.patch("/me/perfil", json={"nome": "Beatriz", "cor": "ameixa"})
+            assert client.get("/me").json()["cor_perfil"] == "roxo-7"
+
+            # Cor fora da paleta (família sem tom) não vira CSS: volta ao padrão.
             client.patch("/me/perfil", json={"nome": "Beatriz", "cor": "roxo"})
             assert client.get("/me").json()["cor_perfil"] == db.COR_PERFIL_PADRAO
 
@@ -37,10 +41,10 @@ def test_nome_e_cor_gravam_e_cor_invalida_cai_no_padrao():
             assert r.status_code == 422
 
             # Nome em branco volta a NULL, e a tela mostra o e-mail de novo.
-            client.patch("/me/perfil", json={"nome": "   ", "cor": "rosa"})
+            client.patch("/me/perfil", json={"nome": "   ", "cor": "rosa-3"})
             me = client.get("/me").json()
             assert me["nome"] is None
-            assert me["cor_perfil"] == "rosa"
+            assert me["cor_perfil"] == "rosa-3"
 
             # Nome comprido é cortado, não recusado.
             client.patch("/me/perfil", json={"nome": "G" * db.LIMITE_NOME, "cor": "rosa"})

@@ -20,6 +20,13 @@ daí:
   nunca como decoração, nunca como "cor da seção".
 - Tudo o que não é nível é tinta sobre papel: preto, cinzas e branco. Botão
   primário é preto, não colorido.
+- **Exceção: a cor que a pessoa escolhe** — avatar e pastas de flashcards. Ela sai
+  de uma paleta própria (`frontend/src/lib/paleta.json`): dez famílias de oito
+  tons, que desde 2026-09-24 incluem vermelho, laranja, amarelo, verde e azul
+  (decisão do usuário, depois de as alunas acharem as cores poucas e parecidas).
+  São outros hex, não os tokens `t1`–`t5`, e não significam nível; o que continua
+  proibido é usar `t1`–`t5` fora do nível. O seletor é um disco radial
+  (`components/SeletorCor.tsx`), e cada tom traz o texto que passa 4,5:1 por cima.
 - No Praticar e na Revisão, cada questão é um **caso** ("Caso 07", "Discussão do
   caso", "Conduta correta"). No Simulado continua "Questão", porque ali o aluno
   está reproduzindo a prova.
@@ -141,6 +148,11 @@ rótulo      13px / largura 70% / 700 / CAIXA ALTA / tracking 0.06em, cor --mute
     anterior ao atual (só reanima se mudou) e a linha de 14 dias se desenhando.
   - Revelação da resposta: letra escolhida "carimba", etiquetas de conduta e
     discussão entram em sequência.
+  - Seletor de cor: os oito tons saem de trás da cor tocada até o anel do disco
+    (180ms `suave`, 30ms entre um e outro, o disco crescendo a partir dela) e
+    voltam para ela ao fechar (120ms `brand`, todos juntos). Entrada por
+    `@starting-style` e não por quadro de animação: aba que se declara escondida
+    não roda `requestAnimationFrame`. A cor escolhida "carimba" na fileira.
   - Nada se desloca durante uma animação: números contam sobre a largura final
     reservada, percentuais entram em coluna já reservada.
   - `prefers-reduced-motion` zera durações e atrasos; contagens pulam direto ao valor.

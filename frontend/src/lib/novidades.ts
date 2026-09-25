@@ -37,6 +37,16 @@ export const ROTULO_TIPO: Record<TipoNovidade, string> = {
 
 export const NOVIDADES: Novidade[] = [
   {
+    id: "2026-09-25",
+    data: "25 de setembro de 2026",
+    titulo: "Mais cores",
+    itens: [
+      { tipo: "novo", texto: "Dez cores para o avatar e as pastas, e cada uma abre oito tons quando você toca nela." },
+      { tipo: "corrigido", texto: "No celular, a alternativa respondida não fica mais uma palavra por linha." },
+      { tipo: "corrigido", texto: "Sumiu do filtro de áreas uma área que não era de verdade." },
+    ],
+  },
+  {
     id: "2026-09-23c",
     data: "23 de setembro de 2026",
     titulo: "Baralhos de cartões",

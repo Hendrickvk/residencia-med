@@ -1,6 +1,7 @@
 import { API_URL } from "../lib/api";
 import type { Me } from "../lib/types";
-import { fundoDaCor, inicial } from "../lib/perfil";
+import { corCheia } from "../lib/paleta";
+import { inicial } from "../lib/perfil";
 
 interface Props {
   me: Me | undefined;
@@ -16,13 +17,18 @@ interface Props {
 // trocar a foto troca a URL — o servidor pode mandar cachear por um ano sem
 // que a nova demore a aparecer.
 export function Avatar({ me, tamanho = 36, className = "" }: Props) {
-  const estilo = { width: tamanho, height: tamanho, fontSize: Math.round(tamanho * 0.36) };
+  // A letra vai na cor `on` do tom, e não em branco fixo: nos tons claros da
+  // paleta o branco some.
+  const estilo = {
+    width: tamanho,
+    height: tamanho,
+    fontSize: Math.round(tamanho * 0.36),
+    ...corCheia(me?.cor_perfil, "perfil"),
+  };
 
   return (
     <span
-      className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-pill font-bold text-white ${fundoDaCor(
-        me?.cor_perfil,
-      )} ${className}`}
+      className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-pill border border-black/15 dark:border-white/15 font-bold ${className}`}
       style={estilo}
     >
       {me?.foto_versao ? (

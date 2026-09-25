@@ -5,6 +5,8 @@
 /*
  * Tokens do DESIGN_TRIAGEM.md §3. Nenhum hex solto deve aparecer fora daqui —
  * componentes consomem só as classes Tailwind mapeadas em tailwind.config.js.
+ * A única exceção é a paleta do avatar e das pastas (lib/paleta.json): são 80
+ * cores escolhidas pela pessoa, aplicadas por estilo inline.
  */
 :root {
   --ground: #f2f3ef;
@@ -37,87 +39,9 @@
 
   --focus: #2d6cd2;
 
-  /* Cores de perfil (avatar). Não mudam com o tema: é a cor da pessoa, e ela
-     não deveria virar outra quando ela alterna claro/escuro. Nenhuma sai da
-     escala de triagem — os matizes da escala (vermelho, laranja, amarelo,
-     verde, azul) ficam de fora, senão um avatar verde leria como "vai bem". */
-  --perfil-grafite: #3e4247;
-  --perfil-ardosia: #4a5568;
-  --perfil-ameixa: #6b4e8c;
-  --perfil-rosa: #a8437a;
-  --perfil-turquesa: #2a7f85;
-  --perfil-cafe: #6b4f3a;
-
-  /* Pastas de flashcards. Mesma regra: nada que possa ser lido como nível de
-     triagem. Doze tons em roxos, rosas, turquesas, terrosos e neutros. */
-  --pasta-carvao: #1f2937;
-  --pasta-grafite: #4a5058;
-  --pasta-ardosia: #64748b;
-  --pasta-indigo: #4f46e5;
-  --pasta-lavanda: #818cf8;
-  --pasta-lilas: #c4b5fd;
-  --pasta-purpura: #5b21b6;
-  --pasta-ameixa: #7c3aed;
-  --pasta-orquidea: #a855f7;
-  --pasta-vinho: #a21caf;
-  --pasta-framboesa: #9d174d;
-  --pasta-rosa: #ec4899;
-  --pasta-algodao: #f9a8d4;
-  --pasta-ciano: #06b6d4;
-  --pasta-gelo: #a5f3fc;
-  --pasta-turquesa: #14b8a6;
-  --pasta-petroleo: #0e7490;
-  --pasta-oceano: #155e75;
-  --pasta-cafe: #92400e;
-  --pasta-chocolate: #4e342e;
-
-  /* Texto sobre a cor cheia, medido contra 4,5:1 — o mesmo que a escala de
-     triagem faz com `--tN-on`. Não muda com o tema: a faixa é a cor da pasta
-     nos dois, então o que é legível nela é legível sempre. */
-  --pasta-carvao-on: #ffffff;
-  --pasta-grafite-on: #ffffff;
-  --pasta-ardosia-on: #ffffff;
-  --pasta-indigo-on: #ffffff;
-  --pasta-lavanda-on: #111315;
-  --pasta-lilas-on: #111315;
-  --pasta-purpura-on: #ffffff;
-  --pasta-ameixa-on: #ffffff;
-  --pasta-orquidea-on: #111315;
-  --pasta-vinho-on: #ffffff;
-  --pasta-framboesa-on: #ffffff;
-  --pasta-rosa-on: #111315;
-  --pasta-algodao-on: #111315;
-  --pasta-ciano-on: #111315;
-  --pasta-gelo-on: #111315;
-  --pasta-turquesa-on: #111315;
-  --pasta-petroleo-on: #ffffff;
-  --pasta-oceano-on: #ffffff;
-  --pasta-cafe-on: #ffffff;
-  --pasta-chocolate-on: #ffffff;
-
-  /* Tom suave de cada cor, para o cabeçalho da pasta e o fundo do cartão de
-     baralho. É o que dá cor à área sem transformar a tela num semáforo: a cor
-     cheia fica na faixa e no ponto, e o fundo é só um véu. */
-  --pasta-carvao-soft: #e4e9f2;
-  --pasta-grafite-soft: #e9eaec;
-  --pasta-ardosia-soft: #e4e9f2;
-  --pasta-indigo-soft: #dddbfa;
-  --pasta-lavanda-soft: #d9dcfc;
-  --pasta-lilas-soft: #e0d9fc;
-  --pasta-purpura-soft: #e7dcf9;
-  --pasta-ameixa-soft: #e6dafc;
-  --pasta-orquidea-soft: #ebd9fc;
-  --pasta-vinho-soft: #f7dcf9;
-  --pasta-framboesa-soft: #fadbe8;
-  --pasta-rosa-soft: #fbdaea;
-  --pasta-algodao-soft: #fcd9ec;
-  --pasta-ciano-soft: #d9f7fc;
-  --pasta-gelo-soft: #d9f8fc;
-  --pasta-turquesa-soft: #dafbf7;
-  --pasta-petroleo-soft: #daf4fb;
-  --pasta-oceano-soft: #dcf2f9;
-  --pasta-cafe-soft: #fbe7da;
-  --pasta-chocolate-soft: #f2e6e4;
+  /* Véu do baralho (lib/paleta.ts): quanto do tom do meio da família entra
+     misturado ao papel. Por tema, porque a mesma proporção some no escuro. */
+  --veu-pasta: 20%;
 }
 
 .dark {
@@ -147,26 +71,7 @@
   --t4-on: #0e1012;
   --t5-on: #0e1012;
 
-  --pasta-carvao-soft: #223044;
-  --pasta-grafite-soft: #2f3237;
-  --pasta-ardosia-soft: #223044;
-  --pasta-indigo-soft: #110d59;
-  --pasta-lavanda-soft: #08105e;
-  --pasta-lilas-soft: #1a085e;
-  --pasta-purpura-soft: #2b1056;
-  --pasta-ameixa-soft: #28095d;
-  --pasta-orquidea-soft: #34085e;
-  --pasta-vinho-soft: #510e58;
-  --pasta-framboesa-soft: #590d2c;
-  --pasta-rosa-soft: #5c0a32;
-  --pasta-algodao-soft: #5e0837;
-  --pasta-ciano-soft: #08525e;
-  --pasta-gelo-soft: #08555e;
-  --pasta-turquesa-soft: #0a5c53;
-  --pasta-petroleo-soft: #094b5d;
-  --pasta-oceano-soft: #104556;
-  --pasta-cafe-soft: #5d2909;
-  --pasta-chocolate-soft: #442822;
+  --veu-pasta: 30%;
 
   --focus: #5b8fea;
 }
@@ -292,5 +197,38 @@
     font-weight: 800;
     font-stretch: 115%;
     letter-spacing: -0.03em;
+  }
+}
+
+/* Seletor de cor (components/SeletorCor.tsx). Aberto é o estado normal; a
+   entrada parte do @starting-style e a saída do [data-saindo], as duas por
+   transição (duração, curva e escalonamento vêm do componente). A posição de
+   cada tom chega por variável: transform inline venceria o @starting-style.
+   Navegador sem @starting-style abre sem a entrada, e só. Fora das @layer de
+   propósito: o Tailwind não precisa (nem deveria) reprocessar isto. */
+.disco-cor {
+  opacity: 1;
+  transform: none;
+}
+.tom-cor {
+  opacity: 1;
+  transform: var(--lugar);
+}
+.disco-cor[data-saindo] {
+  opacity: 0;
+  transform: scale(0.96);
+}
+.disco-cor[data-saindo] .tom-cor {
+  opacity: 0;
+  transform: var(--recolhido);
+}
+@starting-style {
+  .disco-cor {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  .tom-cor {
+    opacity: 0;
+    transform: var(--recolhido);
   }
 }

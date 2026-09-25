@@ -6,9 +6,10 @@ import { Dialog } from "../../components/Dialog";
 import { EstadoFalha } from "../../components/EstadoFalha";
 import { EstadoVazio } from "../../components/EstadoVazio";
 import {
-  atualizarCartao, type Cartao, criarCartao, excluirCartao, fundoDaPasta, listarPastas,
+  atualizarCartao, type Cartao, criarCartao, excluirCartao, listarPastas,
   moverBaralho, obterBaralho,
 } from "../../lib/cartoes";
+import { corDeFundo } from "../../lib/paleta";
 import { BOTAO_PRIMARIO, BOTAO_SECUNDARIO, CAMPO } from "../../lib/estilos";
 import Estudo from "./Estudo";
 
@@ -72,7 +73,8 @@ export default function Baralho() {
         <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
           <div className="flex items-center gap-3">
             <span
-              className={`h-9 w-1.5 shrink-0 rounded-pill ${fundoDaPasta(data?.baralho.cor)}`}
+              className="h-9 w-1.5 shrink-0 rounded-pill"
+              style={corDeFundo(data?.baralho.cor, "pasta")}
               aria-hidden="true"
             />
             <div>
@@ -315,9 +317,8 @@ function AjustarBaralho({
           <span className="rotulo text-muted">Pasta</span>
           <div className="flex items-center gap-2">
             <span
-              className={`h-8 w-1.5 shrink-0 rounded-pill ${fundoDaPasta(
-                data?.pastas.find((p) => p.id === pastaId)?.cor,
-              )}`}
+              className="h-8 w-1.5 shrink-0 rounded-pill"
+              style={corDeFundo(data?.pastas.find((p) => p.id === pastaId)?.cor, "pasta")}
               aria-hidden="true"
             />
             <select
