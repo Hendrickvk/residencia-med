@@ -1785,6 +1785,14 @@ governa as telas admin do Streamlit.
   - **Tons extremos ganharam contorno**: o amarelo mais claro sumia no papel e o
     cinza mais escuro no disco escuro, coisa que a paleta antiga não tinha. Uma
     borda de 15% de preto (ou de branco, no escuro) nos círculos e no avatar.
+  - **No ar em 2026-09-25** (commit `a53d288`), depois de o usuário testar no
+    próprio celular: API reiniciada e bundle trocado, conferido que o site serve
+    o seletor, a paleta e o `@starting-style`. Antes disso, o toque foi testado
+    num celular emulado pelo protocolo do DevTools (393px, toque, Android): o
+    disco cabe nas bordas, o toque escolhe e fecha, tocar fora fecha e não sobra
+    anel de foco. Para abrir o dev server no celular pela rede de casa:
+    `npm run dev -- --host` e `http://<ip do computador>:5173` — no celular,
+    `localhost` é o próprio celular, e a conexão é recusada.
   - **Armadilhas da foto sem janela, para a próxima:** com
     `--virtual-time-budget` o relógio é simulado e não há quadro, então o que
     depende de `requestAnimationFrame` não acontece; o `--timeout` não segurou a
