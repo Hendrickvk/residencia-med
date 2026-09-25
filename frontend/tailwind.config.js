@@ -63,13 +63,15 @@ export default {
           from: { opacity: "0", transform: "translateY(8px)" },
           to: { opacity: "1", transform: "none" },
         },
-        // Troca de caso/questão: desliza no sentido da navegação.
+        // Troca de caso/questão e de aba: desliza no sentido da navegação. 12px e
+        // não 20: numa sessão longa isto roda centenas de vezes, muitas pela
+        // tecla, e aí o movimento tem de ser quase imperceptível (2026-09-25).
         "entrar-frente": {
-          from: { opacity: "0", transform: "translateX(20px)" },
+          from: { opacity: "0", transform: "translateX(12px)" },
           to: { opacity: "1", transform: "none" },
         },
         "entrar-tras": {
-          from: { opacity: "0", transform: "translateX(-20px)" },
+          from: { opacity: "0", transform: "translateX(-12px)" },
           to: { opacity: "1", transform: "none" },
         },
         desvanecer: { from: { opacity: "0" }, to: { opacity: "1" } },
@@ -102,9 +104,9 @@ export default {
       // não deixa transform preso no elemento depois — um transform residual
       // viraria bloco de contenção para os `fixed` de dentro (diálogos).
       animation: {
-        entrar: `entrar 360ms ${SUAVE} backwards`,
-        "entrar-frente": `entrar-frente 340ms ${SUAVE} backwards`,
-        "entrar-tras": `entrar-tras 340ms ${SUAVE} backwards`,
+        entrar: `entrar 240ms ${SUAVE} backwards`,
+        "entrar-frente": `entrar-frente 200ms ${SUAVE} backwards`,
+        "entrar-tras": `entrar-tras 200ms ${SUAVE} backwards`,
         desvanecer: `desvanecer 220ms ${BRAND} backwards`,
         "desvanecer-saida": `desvanecer-saida 160ms ${BRAND} forwards`,
         surgir: `surgir 200ms ${SUAVE} backwards`,

@@ -134,20 +134,37 @@ rótulo      13px / largura 70% / 700 / CAIXA ALTA / tracking 0.06em, cor --mute
   movimento curto, sem quique e sem nada que atrase o aluno.
   - Curvas: `brand` `cubic-bezier(0.2, 0, 0.2, 1)` para troca de estado; `suave`
     `cubic-bezier(0.16, 1, 0.3, 1)` para o que entra, desliza ou cresce.
-  - Durações: 120ms hover · 180ms revelação/troca de cor · 320ms deslizamentos
+  - Durações: 120ms hover · 180ms revelação/troca de cor · 200ms caso ou tela
+    entrando de lado · 240ms tela ou bloco subindo · 320ms deslizamentos
     (sublinhado da aba, gaveta, fundo de aba segmentada) · 700–1100ms só para
-    barras enchendo, números contando e a linha do gráfico.
-  - Tela nova sobe 8px enquanto aparece (`animate-entrar`, no AppShell por
-    caminho e nas trocas de fase de Praticar/Simulado). Caso ou questão nova
-    desliza no sentido da navegação (`animate-entrar-frente`/`-tras`) e a página
-    volta ao topo.
+    barras enchendo, números contando e a linha do gráfico. Interface fica
+    abaixo de 300ms (revisão das animações de 2026-09-25, pelas skills do Emil
+    Kowalski).
+  - Troca de tela entra pelo lado de onde vem: entre abas, pela ordem delas
+    (Painel → Praticar → Simulado → Revisão → Baralhos); dentro de uma aba, pela
+    profundidade do caminho (entrar num baralho vem da direita, voltar vem da
+    esquerda) — `direcaoDaNavegacao`, em `lib/nav.ts`. Sem lado (perfil,
+    primeira carga), sobe 8px (`animate-entrar`, também nas trocas de fase de
+    Praticar/Simulado). O `main` tem `overflow-x-clip` para a entrada de lado
+    não criar rolagem lateral.
+  - Caso ou questão nova desliza no sentido da navegação
+    (`animate-entrar-frente`/`-tras`, 12px em 200ms) e a página volta ao topo.
+    É curto de propósito: numa sessão longa roda centenas de vezes, muitas pela
+    tecla, e aí o movimento tem de ser quase imperceptível.
   - Menus, busca e diálogos crescem de 97% e saem encolhendo (`usePresenca`
     mantém montado durante a saída). Botões cedem ao clique (`active:scale`).
+  - Avisos saem pelo caminho por onde entraram: o de respostas pendentes desce
+    (`.presenca`, por transição, que retoma do meio se ele voltar), e o de
+    relato resolvido, que é o primeiro bloco do Painel, encolhe junto com o
+    vão, para a tela não pular quando ele some.
+  - Só `transform` e `opacity` animam: o sublinhado da aba e a barra de
+    progresso do estudo de cartões esticam por `scaleX`, não por `width`.
   - Painel é o único momento com coreografia: quadro em cascata (coluna mais
     grave primeiro), barras enchendo, aproveitamento e fila contando do valor
     anterior ao atual (só reanima se mudou) e a linha de 14 dias se desenhando.
   - Revelação da resposta: letra escolhida "carimba", etiquetas de conduta e
-    discussão entram em sequência.
+    discussão entram em sequência. O visto do fim de uma sessão de cartões
+    carimba também: é raro, e é onde o movimento pode comemorar um pouco.
   - Seletor de cor: os oito tons saem de trás da cor tocada até o anel do disco
     (180ms `suave`, 30ms entre um e outro, o disco crescendo a partir dela) e
     voltam para ela ao fechar (120ms `brand`, todos juntos). Entrada por

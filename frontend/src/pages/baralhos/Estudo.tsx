@@ -142,9 +142,10 @@ export default function Estudo({ baralhoId, nome, cor, onSair }: Props) {
           {/* Trilho de progresso em vez de só "3 de 8": a barra enchendo é o
               que dá a sensação de que a pilha está acabando. */}
           <div className="ml-auto hidden h-1.5 w-40 overflow-hidden rounded-pill bg-line-soft sm:block">
+            {/* `scaleX` e não `width`: anima só transform, sem refazer layout. */}
             <span
-              className="block h-full bg-ink transition-[width] duration-desliza ease-suave"
-              style={{ width: `${progresso}%` }}
+              className="block h-full origin-left bg-ink transition-transform duration-desliza ease-suave"
+              style={{ transform: `scaleX(${progresso / 100})` }}
             />
           </div>
           <span className="shrink-0 text-apoio tabular-nums text-muted">
@@ -380,8 +381,13 @@ function ResumoSessao({
   const pct = total ? Math.round((acertos / total) * 100) : 0;
   return (
     <div className="flex animate-entrar flex-col items-center gap-5 rounded-caso border border-line bg-surface px-6 py-10 text-center">
-      {/* O visto na cor `on` do tom: branco fixo sumia nos tons claros. */}
-      <span className="flex h-12 w-12 items-center justify-center rounded-pill" style={corCheia(cor, "pasta")}>
+      {/* O visto na cor `on` do tom: branco fixo sumia nos tons claros. Carimba
+          ao chegar, como a letra da alternativa escolhida: fim de sessão é
+          raro, e é onde o movimento pode comemorar um pouco. */}
+      <span
+        className="flex h-12 w-12 animate-marcar items-center justify-center rounded-pill"
+        style={corCheia(cor, "pasta")}
+      >
         <Check size={22} strokeWidth={2.5} />
       </span>
       <div>

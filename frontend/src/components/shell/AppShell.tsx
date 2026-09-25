@@ -6,6 +6,7 @@ import { jaViu } from "../../lib/brincadeira";
 import { ConfirmeSeuEmail } from "../ConfirmeSeuEmail";
 import { FilaPendenteAviso } from "../FilaPendenteAviso";
 import { Novidades } from "../Novidades";
+import { direcaoDaNavegacao } from "../../lib/nav";
 import { NOVIDADES, novidadesNaoVistas } from "../../lib/novidades";
 import { api } from "../../lib/api";
 import { useAuthActions, useMe } from "../../lib/auth";
@@ -34,6 +35,17 @@ export function AppShell() {
   const roteiro = me ? (me.brincadeira ?? null) : undefined;
   // Cada pedido de reprise remonta a sessão com estado limpo.
   const [reprise, setReprise] = useState(0);
+  // De que lado a tela nova entra. Guarda o caminho anterior e decide durante
+  // o render, pelo padrão de estado derivado — sem ref lida no render e sem
+  // efeito, que atrasaria a classe um quadro.
+  const [tela, setTela] = useState({ caminho: location.pathname, entrada: "animate-entrar" });
+  if (tela.caminho !== location.pathname) {
+    const lado = direcaoDaNavegacao(tela.caminho, location.pathname);
+    setTela({
+      caminho: location.pathname,
+      entrada: lado === "frente" ? "animate-entrar-frente" : lado === "tras" ? "animate-entrar-tras" : "animate-entrar",
+    });
+  }
   // "O que mudou": abre sozinha uma vez, no Painel, e fica no menu da conta
   // para reler. Fora do Painel ela não aparece — ninguém quer uma caixa por
   // cima de um caso no meio da sessão.
@@ -137,10 +149,15 @@ export function AppShell() {
               onNovidades={() => setNovidadesAbertas(true)}
               temNovidade={naoVistas.length > 0}
             />
-            <main className="px-4 py-6 md:px-10 md:py-9">
-              {/* A chave por caminho remonta o invólucro a cada troca de tela e a
-                  tela nova entra subindo (DESIGN_TRIAGEM.md §3). */}
-              <div key={location.pathname} className="mx-auto w-full max-w-[1360px] animate-entrar">
+            {/* `overflow-x-clip`: a tela que entra de lado passa 12px da borda
+                durante a entrada, e sem isto o celular ganhava rolagem lateral
+                por 200ms. `clip`, e não `hidden`, para não virar contêiner de
+                rolagem (quebraria o `sticky` de dentro). */}
+            <main className="overflow-x-clip px-4 py-6 md:px-10 md:py-9">
+              {/* A chave por caminho remonta o invólucro a cada troca de tela; a
+                  nova entra pelo lado de onde vem, ou sobe quando não há lado
+                  (DESIGN_TRIAGEM.md §3). */}
+              <div key={location.pathname} className={`mx-auto w-full max-w-[1360px] ${tela.entrada}`}>
                 {/* Fora da tela e acima dela: o que a faixa explica é por que
                     Praticar e Simulado não abrem, então ela não pode morar só
                     no Painel. Some sozinha quando a conta confirma. */}

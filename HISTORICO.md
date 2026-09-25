@@ -8,6 +8,15 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
 
 ## Pendências
 
+- **Subir a revisão das animações de 2026-09-25** (ver a data). Está feita,
+  conferida e sem commit: só front (`tailwind.config.js`, `theme.css`,
+  `AppShell`, `Topbar`, `lib/nav.ts`, os dois avisos, `Estudo.tsx`) e docs. O
+  deploy é commit + push + troca do bundle (DEPLOY.md §8), sem reiniciar a API.
+  **O teste pelo celular na rede de casa parece lento, e não é o código:** a
+  API local fala com o Neon pela internet de casa a ~260ms por consulta, e o
+  Painel faz várias em sequência; em produção a API fica ao lado do banco.
+  Para testar animação, o site no ar é o ambiente certo.
+
 - **Pedir ao suporte do GitHub que apague os commits antigos do
   `residencia-med`.** A reescrita de 24/09 tirou o roteiro da brincadeira do
   histórico, mas o GitHub continua servindo os commits antigos por link direto
@@ -1798,6 +1807,44 @@ governa as telas admin do Streamlit.
     depende de `requestAnimationFrame` não acontece; o `--timeout` não segurou a
     foto até o clique da página; e o `--dump-dom` chamado pelo `&` do
     PowerShell sai vazio — é pelo `Start-Process -RedirectStandardOutput`.
+
+### 2026-09-25
+- **Revisão das animações, pelas skills do Emil Kowalski** (pedido do usuário:
+  melhorar o movimento e trazê-lo para troca de página, de aba e features).
+  A auditoria (`improve-animations`) achou o movimento já bem cuidado — nada
+  de hover que mexe no toque, nenhum `transition-all` ou `ease-in`, botões que
+  cedem, abas segmentadas deslizando, números contando nos resultados — e
+  quatro correções mais duas lacunas, todas feitas (`animate`). O que ficou
+  de fora de propósito, por ser decisão já tomada: casos deslizarem (só o
+  ritmo mudou), Painel em cascata, marca animada, cartão virando em 3D e o
+  "menos movimento" zerando tudo. Detalhe dos tempos no DESIGN_TRIAGEM.md §3.
+  - **Caso novo desliza 12px em 200ms** (eram 20px em 340ms). Pela régua das
+    skills, ação de teclado repetida centenas de vezes não deveria animar;
+    ficou porque o usuário escolheu, mas no mínimo perceptível.
+  - **Entrada padrão em 240ms** (eram 360ms, acima do teto de 300ms para
+    interface): vale para telas, blocos e a discussão depois de cada resposta.
+  - **Troca de tela com direção**: entre abas pela ordem delas, dentro de uma
+    aba pela profundidade do caminho (`direcaoDaNavegacao`, `lib/nav.ts`),
+    decidida por estado derivado no AppShell. O `main` ganhou `overflow-x-clip`
+    — sem ele, a tela entrando de lado dava rolagem lateral no celular.
+  - **Sublinhado da aba e barra do estudo de cartões por `scaleX`**, não por
+    `width`, que refazia o layout a cada quadro.
+  - **Avisos com saída.** O de respostas pendentes desce por transição
+    (`.presenca`, com `@starting-style`; a skill veta keyframe em toast). O de
+    relato resolvido, primeiro bloco do Painel, encolhe junto com o vão
+    (`-mb-7` anulando o `gap-7` e `pb-7` devolvendo por dentro), e o Painel
+    sobe sem salto no fim. **A medição mudou a curva**: com `suave` o Painel
+    andava 87px no primeiro quadro, o que ainda parece salto; com `brand`
+    (entra e sai devagar), que é a curva para o que se move na tela, o
+    movimento se espalha pelos 120ms.
+  - **O visto do fim de uma sessão de cartões carimba** — momento raro, onde o
+    movimento pode comemorar.
+  - **Conferido num navegador controlado pelo protocolo do DevTools**, logado
+    com uma conta de teste criada pela API e apagada depois: as cinco trocas
+    de aba entram do lado certo, no computador e no celular, e sem rolagem
+    lateral. Para medir animação ali, amostrar por `setTimeout`: o
+    `requestAnimationFrame` não roda na aba sem janela.
+  - A `review-animations` do Emil só roda chamada pelo usuário (`/review-animations`).
 
 ## Armadilhas das telas admin (Streamlit)
 

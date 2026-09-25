@@ -232,3 +232,22 @@
     transform: var(--recolhido);
   }
 }
+
+/* Aviso flutuante (FilaPendenteAviso): entra subindo 8px pelo @starting-style e
+   sai descendo pelo mesmo caminho ([data-saindo]), as duas por transição —
+   aviso que volta no meio da saída retoma de onde está, e keyframe
+   recomeçaria do zero. Duração e curva vêm das classes do elemento. */
+.presenca {
+  opacity: 1;
+  transform: none;
+}
+.presenca[data-saindo] {
+  opacity: 0;
+  transform: translateY(8px);
+}
+@starting-style {
+  .presenca {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}

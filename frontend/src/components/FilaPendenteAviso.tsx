@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { usePresenca } from "../lib/movimento";
 import { useRespostasPendentes } from "../lib/respostasQueue";
 
 const ATRASO_PARA_AVISAR_MS = 4000;
@@ -19,15 +20,26 @@ export function FilaPendenteAviso() {
     return () => clearTimeout(timer);
   }, [pendentes]);
 
-  if (!mostrar || pendentes === 0) return null;
+  const visivel = mostrar && pendentes > 0;
+  const { montado, saindo } = usePresenca(visivel);
+  // Durante a saída a fila já está vazia: sem guardar o último número, o aviso
+  // sairia escrito "0 respostas aguardando envio".
+  const [ultimo, setUltimo] = useState(pendentes);
+  if (visivel && pendentes !== ultimo) setUltimo(pendentes);
+
+  if (!montado) return null;
 
   return (
     <div
       role="status"
-      className="fixed bottom-4 right-4 z-50 flex animate-entrar items-center gap-2.5 rounded-card border border-line bg-surface px-4 py-3 text-apoio text-ink-2"
+      data-saindo={saindo || undefined}
+      // Sobe ao entrar e desce ao sair, pelo mesmo caminho (`.presenca`, no theme.css).
+      className={`presenca fixed bottom-4 right-4 z-50 flex items-center gap-2.5 rounded-card border border-line bg-surface px-4 py-3 text-apoio text-ink-2 transition-[opacity,transform] ${
+        saindo ? "duration-hover ease-brand" : "duration-toggle ease-suave"
+      }`}
     >
       <span className="h-2 w-2 animate-pulse rounded-pill bg-t2" aria-hidden="true" />
-      {pendentes} resposta{pendentes !== 1 && "s"} aguardando envio…
+      {ultimo} resposta{ultimo !== 1 && "s"} aguardando envio…
     </div>
   );
 }

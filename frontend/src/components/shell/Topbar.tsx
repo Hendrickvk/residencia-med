@@ -148,14 +148,15 @@ export function Topbar({ tema, onAlternarTema, me, revisoesHoje, onSair, onRever
                   {contagemDaAba(item.path)}
                 </NavLink>
               ))}
+              {/* 1px de largura esticado por `scaleX`: só transform anima, sem
+                  refazer o layout a cada quadro, como acontecia com `width`. */}
               <span
                 aria-hidden="true"
-                className={`pointer-events-none absolute bottom-0 left-0 h-0.5 bg-ink ${
-                  indicadorPronto ? "transition-[transform,width] duration-desliza ease-suave" : ""
+                className={`pointer-events-none absolute bottom-0 left-0 h-0.5 w-px origin-left bg-ink ${
+                  indicadorPronto ? "transition-transform duration-desliza ease-suave" : ""
                 } ${posicaoAba ? "" : "opacity-0"}`}
                 style={{
-                  width: posicaoAba?.largura ?? 0,
-                  transform: `translateX(${posicaoAba?.x ?? 0}px)`,
+                  transform: `translateX(${posicaoAba?.x ?? 0}px) scaleX(${posicaoAba?.largura ?? 0})`,
                 }}
               />
             </nav>
