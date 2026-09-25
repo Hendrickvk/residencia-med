@@ -1842,6 +1842,13 @@ governa as telas admin do Streamlit.
     fala com o Neon pela internet de casa a ~260ms por consulta, e o Painel
     faz várias em sequência; em produção a API fica ao lado do banco.
 
+- **Verso comprido vazava do cartão** (achado pelo usuário no iPhone): as duas
+  faces ficavam uma sobre a outra com o verso em `absolute inset-0`, então o
+  cartão tinha a altura da frente e um verso longo (critérios de CAD e EHH)
+  passava por cima do "Editar" e dos botões de nota. Agora as faces dividem a
+  mesma célula de uma grade (`col-start-1 row-start-1`), e o cartão tem a
+  altura da face mais longa; o giro em 3D não mudou.
+
 ## Armadilhas das telas admin (Streamlit)
 
 - `st.markdown('<div>')` … `st.markdown('</div>')` não envolve nada: cada

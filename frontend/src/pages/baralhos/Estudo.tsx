@@ -212,10 +212,13 @@ export default function Estudo({ baralhoId, nome, cor, onSair }: Props) {
                 />
               )}
               <div className="[perspective:1600px]">
-                {/* O cartão vira de verdade: as duas faces ocupam o mesmo
-                    lugar e o bloco gira em Y. */}
+                {/* O cartão vira de verdade: as duas faces ocupam a mesma
+                    célula da grade e o bloco gira em Y. Grade, e não o verso em
+                    `absolute inset-0`: assim o cartão tem a altura da face mais
+                    longa — com o absoluto ele tinha a da frente, e um verso
+                    comprido vazava por cima dos botões de nota. */}
                 <div
-                  className={`relative transition-transform duration-desliza ease-suave [transform-style:preserve-3d] ${
+                  className={`grid transition-transform duration-desliza ease-suave [transform-style:preserve-3d] ${
                     virado ? "[transform:rotateY(180deg)]" : ""
                   }`}
                 >
@@ -355,8 +358,8 @@ function FaceCartao({
 }) {
   return (
     <div
-      className={`flex min-h-[260px] flex-col gap-4 rounded-caso border border-line bg-surface p-7 [backface-visibility:hidden] ${
-        verso ? "absolute inset-0 [transform:rotateY(180deg)]" : ""
+      className={`col-start-1 row-start-1 flex min-h-[260px] flex-col gap-4 rounded-caso border border-line bg-surface p-7 [backface-visibility:hidden] ${
+        verso ? "[transform:rotateY(180deg)]" : ""
       }`}
     >
       <div className="flex items-center gap-2">
