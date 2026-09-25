@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { BrincadeiraBoasVindas } from "../BrincadeiraBoasVindas";
@@ -11,10 +11,32 @@ import { NOVIDADES, novidadesNaoVistas } from "../../lib/novidades";
 import { api } from "../../lib/api";
 import { useAuthActions, useMe } from "../../lib/auth";
 import { FocoProvider } from "../../lib/foco";
+import { useFoco } from "../../lib/focoContexto";
 import { prefereMenosMovimento } from "../../lib/movimento";
 import { usePainel } from "../../lib/painel";
 import { aplicarTema, persistirTema, temaInicial, temaJaTemPreferencia, type Tema } from "../../lib/theme";
 import { Topbar } from "./Topbar";
+
+// `overflow-x-clip`: a tela que entra de lado passa 12px da borda durante a
+// entrada, e sem isto o celular ganhava rolagem lateral por 200ms. `clip`, e
+// não `hidden`, para não virar contêiner de rolagem (quebraria o `sticky` de
+// dentro). Abaixo de 1024px o fim da página reserva a barra de abas do rodapé
+// (56px e a área segura), menos no modo foco, em que ela some. Componente à
+// parte porque o modo foco só se lê de dentro do `FocoProvider`.
+function Principal({ children }: { children: ReactNode }) {
+  const { ativo: emFoco } = useFoco();
+  return (
+    <main
+      className={`overflow-x-clip px-4 pt-6 md:px-10 md:pt-9 lg:pb-9 ${
+        emFoco
+          ? "pb-6 md:pb-9"
+          : "pb-[calc(5rem_+_env(safe-area-inset-bottom))] md:pb-[calc(5.75rem_+_env(safe-area-inset-bottom))]"
+      }`}
+    >
+      {children}
+    </main>
+  );
+}
 
 export function AppShell() {
   const navigate = useNavigate();
@@ -149,11 +171,7 @@ export function AppShell() {
               onNovidades={() => setNovidadesAbertas(true)}
               temNovidade={naoVistas.length > 0}
             />
-            {/* `overflow-x-clip`: a tela que entra de lado passa 12px da borda
-                durante a entrada, e sem isto o celular ganhava rolagem lateral
-                por 200ms. `clip`, e não `hidden`, para não virar contêiner de
-                rolagem (quebraria o `sticky` de dentro). */}
-            <main className="overflow-x-clip px-4 py-6 md:px-10 md:py-9">
+            <Principal>
               {/* A chave por caminho remonta o invólucro a cada troca de tela; a
                   nova entra pelo lado de onde vem, ou sobe quando não há lado
                   (DESIGN_TRIAGEM.md §3). */}
@@ -164,7 +182,7 @@ export function AppShell() {
                 <ConfirmeSeuEmail />
                 <Outlet />
               </div>
-            </main>
+            </Principal>
             <FilaPendenteAviso />
             <Novidades
               aberto={novidadesAbertas}

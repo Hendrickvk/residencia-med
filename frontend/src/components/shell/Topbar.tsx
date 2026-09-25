@@ -1,4 +1,4 @@
-import { Flame, LogOut, Menu, Moon, Sparkles, Sun, Terminal, UserRound, X } from "lucide-react";
+import { Flame, LogOut, Moon, Sparkles, Sun, Terminal, UserRound } from "lucide-react";
 import { textoProva } from "../../lib/format";
 import { nomeExibido } from "../../lib/perfil";
 import { Avatar } from "../Avatar";
@@ -7,7 +7,7 @@ import { Link, NavLink, useLocation } from "react-router-dom";
 import { PRESSAO } from "../../lib/estilos";
 import { useFoco } from "../../lib/focoContexto";
 import { usePresenca } from "../../lib/movimento";
-import { ACERVO, NAV } from "../../lib/nav";
+import { ACERVO, indiceDaAba, NAV } from "../../lib/nav";
 import type { Tema } from "../../lib/theme";
 import type { Me } from "../../lib/types";
 import { BuscaGlobal } from "./BuscaGlobal";
@@ -66,18 +66,19 @@ function useIndicadorAba(ativo: boolean) {
 // modo foco (sessão em andamento) as abas dão lugar à barra da sessão.
 export function Topbar({ tema, onAlternarTema, me, revisoesHoje, onSair, onRever, onNovidades, temNovidade }: TopbarProps) {
   const { ativo: emFoco, setSlot } = useFoco();
-  const [gavetaAberta, setGavetaAberta] = useState(false);
   const [contaAberta, setContaAberta] = useState(false);
   const menuConta = usePresenca(contaAberta);
   const { navRef, posicao: posicaoAba, pronto: indicadorPronto } = useIndicadorAba(!emFoco);
   const prova = textoProva(me?.prova_alvo ?? null);
+  const abaAtual = indiceDaAba(useLocation().pathname);
+  // Fora das abas (perfil) o traço do rodapé some, mas guarda a posição: ao
+  // voltar ele sai de onde estava, e não do canto da tela.
+  const [ultimaAba, setUltimaAba] = useState(Math.max(abaAtual, 0));
+  if (abaAtual >= 0 && abaAtual !== ultimaAba) setUltimaAba(abaAtual);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        setGavetaAberta(false);
-        setContaAberta(false);
-      }
+      if (e.key === "Escape") setContaAberta(false);
     }
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
@@ -85,12 +86,21 @@ export function Topbar({ tema, onAlternarTema, me, revisoesHoje, onSair, onRever
 
   // Mesma etiqueta para as duas abas que têm fila vencida: é a mesma
   // pergunta ("o que me espera hoje?"), e dois tratamentos diferentes para a
-  // mesma coisa fariam a aluna achar que significam coisas diferentes.
-  function contagemDaAba(path: string) {
+  // mesma coisa fariam a aluna achar que significam coisas diferentes. No
+  // rodapé ela vai no canto do ícone, com um anel da cor da barra para
+  // recortar o traço do ícone.
+  function contagemDaAba(path: string, noIcone = false) {
     const total = path === "/revisao" ? revisoesHoje : path === "/baralhos" ? me?.cartoes_hoje : 0;
     if (!total) return null;
+    const base = "animate-surgir rounded-etq bg-t1 font-bold tabular-nums text-t1-on";
     return (
-      <span className="animate-surgir rounded-etq bg-t1 px-1.5 py-px text-[12px] font-bold tabular-nums text-t1-on">
+      <span
+        className={
+          noIcone
+            ? `${base} absolute -top-1.5 left-3 px-1 text-[11px] leading-4 ring-2 ring-surface`
+            : `${base} px-1.5 py-px text-[12px]`
+        }
+      >
         {total}
       </span>
     );
@@ -99,26 +109,11 @@ export function Topbar({ tema, onAlternarTema, me, revisoesHoje, onSair, onRever
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-surface">
       <div className="flex h-16 items-center gap-4 px-4 md:px-6 xl:gap-6 xl:px-10">
-        {!emFoco && (
-          <button
-            type="button"
-            onClick={() => setGavetaAberta((v) => !v)}
-            className={`-ml-1.5 rounded-btn p-1.5 text-ink-2 transition duration-hover hover:bg-ground lg:hidden ${PRESSAO}`}
-            aria-label={gavetaAberta ? "Fechar menu" : "Abrir menu"}
-            aria-expanded={gavetaAberta}
-          >
-            <span key={gavetaAberta ? "fechar" : "abrir"} className="flex animate-girar">
-              {gavetaAberta ? <X size={20} strokeWidth={2} /> : <Menu size={20} strokeWidth={2} />}
-            </span>
-          </button>
-        )}
-
         {/* Saída universal: vale também no modo foco, em que as abas somem.
             Nada se perde ao sair — respostas e avaliações são gravadas na hora
             e o simulado em andamento pode ser retomado. */}
         <Link
           to="/painel"
-          onClick={() => setGavetaAberta(false)}
           aria-label="Conduta, ir para o Painel"
           title="Ir para o Painel"
           className="group/marca shrink-0 rounded-btn transition-opacity duration-hover hover:opacity-80"
@@ -302,36 +297,44 @@ export function Topbar({ tema, onAlternarTema, me, revisoesHoje, onSair, onRever
         )}
       </div>
 
-      {/* Gaveta sempre montada, com a altura animada de 0 ao conteúdo (truque
-          de grid-template-rows 0fr → 1fr). `inert` tira os links fechados do
-          teclado e dos leitores de tela. */}
+      {/* Abaixo de 1024px as abas moram no rodapé, ao alcance do polegar, com
+          as mesmas contagens. Antes ficavam num menu ☰, e a contagem de
+          revisões só aparecia com ele aberto: a aluna abria o app no celular
+          sem ver o que vencia hoje. Some no modo foco, em que o rodapé é da
+          ação da sessão. Fixa dentro do cabeçalho, que não tem transform, e
+          por isso fica acima do conteúdo pelo z-30 dele. */}
       {!emFoco && (
-        <div
-          inert={!gavetaAberta}
-          className={`grid transition-[grid-template-rows] duration-desliza ease-suave lg:hidden ${
-            gavetaAberta ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-          }`}
-        >
-          <div className="overflow-hidden">
-            <nav className="border-t border-line px-4 py-2">
-              {NAV.map((item) => (
-                <NavLink
-                  key={item.path}
-                  to={item.path}
-                  onClick={() => setGavetaAberta(false)}
-                  className={({ isActive }) =>
-                    `flex h-11 items-center justify-between rounded-btn px-3 text-corpo transition-colors duration-hover ${
-                      isActive ? "bg-ground font-semibold text-ink" : "text-ink-2 hover:bg-ground"
-                    }`
-                  }
-                >
-                  {item.label}
-                  {contagemDaAba(item.path)}
-                </NavLink>
-              ))}
-            </nav>
+        <nav className="fixed inset-x-0 bottom-0 animate-desvanecer border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden">
+          <div className="relative grid grid-cols-5">
+            {NAV.map((item) => (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                className={({ isActive }) =>
+                  `flex h-14 flex-col items-center justify-center gap-1 text-[12px] transition-colors duration-hover ${
+                    isActive ? "font-semibold text-ink" : "font-medium text-muted"
+                  }`
+                }
+              >
+                <span className="relative">
+                  <item.icon size={20} strokeWidth={2} />
+                  {contagemDaAba(item.path, true)}
+                </span>
+                {item.curto ?? item.label}
+              </NavLink>
+            ))}
+            {/* O traço de tinta do sublinhado das abas, na borda que dá para
+                o conteúdo. As colunas têm a mesma largura: a posição é o
+                índice, sem medir nada. */}
+            <span
+              aria-hidden="true"
+              className={`pointer-events-none absolute left-0 top-0 h-0.5 w-1/5 bg-ink transition-transform duration-desliza ease-suave ${
+                abaAtual < 0 ? "opacity-0" : ""
+              }`}
+              style={{ transform: `translateX(${ultimaAba * 100}%)` }}
+            />
           </div>
-        </div>
+        </nav>
       )}
     </header>
   );

@@ -44,7 +44,7 @@ export function RelatoResolvidoAviso() {
   return (
     // Some encolhendo, e não de uma vez: é o primeiro bloco do Painel, e sumir
     // de uma vez puxava a tela inteira para cima num salto. A altura vai por
-    // `grid-template-rows`, o mesmo truque da gaveta do Topbar. O `-mb-7`
+    // `grid-template-rows` (0fr → 1fr), que anima a altura sem medir. O `-mb-7`
     // anula o vão do Painel (`gap-7`) e o `pb-7` o devolve por dentro, para o
     // vão encolher junto e nada pular quando o aviso desmonta. Curva `brand`
     // (entra e sai devagar), e não `suave`: o que se move é o Painel inteiro

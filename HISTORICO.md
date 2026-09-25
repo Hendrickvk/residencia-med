@@ -8,6 +8,26 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
 
 ## Pendências
 
+- **Crítica de interface de 25/09** (skill Impeccable, 31/40). Ordem combinada
+  com o usuário, um item por vez, conferido no localhost e subido só com
+  autorização:
+  1. *Celular primeiro* — feito e conferido no localhost em 25/09 (ver a data),
+     esperando autorização para subir.
+  2. *Chute antes de confirmar* (decidido pelo usuário em 25/09): um "Estou
+     chutando" opcional antes de confirmar, tecla C, e o acerto seguro vira
+     Enter, Enter. Perguntado depois do gabarito, quase todo mundo lembra de
+     ter tido certeza — o dado sai inflado —, e todo acerto custa um toque.
+  3. Painel começando por "Hoje" (revisões vencidas, cartões do dia e a
+     prioridade nº 1, com um botão primário só); Evolução da memória, Por tipo
+     e 14 dias descem para uma seção recolhida.
+  4. Triagem de entrada para conta nova: prova e data, depois 25 casos, 5 por
+     grande área, que montam o quadro no primeiro dia.
+  5. Menores: a ofensiva contar a revisão de cartões (`db.calcular_ofensiva`
+     só lê `respostas`); uma meta diária só (o cabeçalho do Painel tem 20
+     fixo, e a fila tem a sua); o botão de tema no menu da conta; os
+     `window.confirm` dos baralhos pelo `Dialog`; modo metrô (service worker e
+     a fila de respostas no `localStorage`, que hoje vive só na memória); uma
+     página de entrada no `/login`; busca no celular.
 - **Pedir ao suporte do GitHub que apague os commits antigos do
   `residencia-med`.** A reescrita de 24/09 tirou o roteiro da brincadeira do
   histórico, mas o GitHub continua servindo os commits antigos por link direto
@@ -1858,6 +1878,38 @@ governa as telas admin do Streamlit.
   do cartão que vira tinha a mesma armadilha para uma palavra longa (uma URL
   colada no verso) e ganhou o mesmo `grid-cols-1` e `overflow-wrap: anywhere`.
   **Regra**: grade com coluna só no `sm:` precisa de `grid-cols-1` na base.
+
+- **Crítica de interface (skill Impeccable) e "celular primeiro".** A crítica
+  deu 31/40; o que pesou foi o celular, onde as alunas estudam. O usuário
+  escolheu começar por ele (resto da ordem nas Pendências).
+  - *Abas no rodapé* abaixo de 1024px (`Topbar.tsx`), no lugar do menu ☰:
+    cinco colunas iguais, ícone e rótulo, a contagem de revisões e de cartões
+    no canto do ícone e o traço de 2px `--ink` na borda de cima, deslizando
+    como o sublinhado das abas. Somem no modo foco. O `main` reserva 80px
+    (56 da barra + o respiro) fora do modo foco; o aviso de respostas
+    pendentes, que morava no canto de baixo, sobe para baixo da barra superior
+    nessa largura e entra de cima (`--presenca-y`). Sem `viewport-fit=cover`
+    no `index.html`, de propósito: com ele o iPhone deitado poria a marca
+    embaixo do entalhe, e sem ele o sistema já mantém a página fora da área do
+    indicador de início; o `env(safe-area-inset-bottom)` fica na barra para o
+    dia em que isso mudar.
+  - *A ação da vez no pé da tela* nas sessões de Praticar e Revisão
+    (`ACAO_DA_VEZ`, em `lib/estilos.ts`), abaixo de 640px: `sticky`, e não
+    `fixed`, porque o caso entra com `transform`; no fim do cartão ela volta ao
+    lugar, como rodapé dele. As teclas de atalho (`Kbd`) somem abaixo de 640px.
+    Medido a 393px: 69px de rodapé para Confirmar e para Próximo caso ("Volta
+    em 10 min" encurtado para caber na mesma linha), 121px para os dois
+    botões do acerto no Praticar (empilhados; somem com o item 2 das
+    Pendências) e 116px para as três notas da Revisão, numa linha só também a
+    360px porque cada botão tem a largura do rótulo, e não um terço da faixa.
+  - A lixeira do baralho, que só aparecia no hover, fica visível sem ponteiro
+    fino (`@media (hover: none)`): escondida, continuava tocável no canto do
+    bloco.
+  - Conferido no localhost com uma conta `pytest_…@teste.local` criada pelo
+    `/auth/signup` local (sem `BREVO_API_KEY` na máquina, nenhum e-mail sai) e
+    confirmada pelo banco como no `conftest.py`, com o cookie posto num Edge
+    headless por CDP; apagada no fim. No computador nada mudou: rodapé oculto,
+    `pb` de 36px, linha de ação no lugar com as teclas.
 
 ## Armadilhas das telas admin (Streamlit)
 

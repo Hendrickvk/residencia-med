@@ -241,13 +241,15 @@
   opacity: 1;
   transform: none;
 }
+/* O lado de onde vem é `--presenca-y`: de baixo por padrão; o aviso que mora no
+   topo entra de cima. */
 .presenca[data-saindo] {
   opacity: 0;
-  transform: translateY(8px);
+  transform: translateY(var(--presenca-y, 8px));
 }
 @starting-style {
   .presenca {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(var(--presenca-y, 8px));
   }
 }

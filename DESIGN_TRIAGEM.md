@@ -136,7 +136,7 @@ rótulo      13px / largura 70% / 700 / CAIXA ALTA / tracking 0.06em, cor --mute
     `cubic-bezier(0.16, 1, 0.3, 1)` para o que entra, desliza ou cresce.
   - Durações: 120ms hover · 180ms revelação/troca de cor · 200ms caso ou tela
     entrando de lado · 240ms tela ou bloco subindo · 320ms deslizamentos
-    (sublinhado da aba, gaveta, fundo de aba segmentada) · 700–1100ms só para
+    (sublinhado da aba, traço da barra do rodapé, fundo de aba segmentada) · 700–1100ms só para
     barras enchendo, números contando e a linha do gráfico. Interface fica
     abaixo de 300ms (revisão das animações de 2026-09-25, pelas skills do Emil
     Kowalski).
@@ -254,15 +254,22 @@ O ícone **é** o símbolo da marca (§3): as cinco barras da triagem, sem texto
 
 **Barra superior (64px, `--surface`, borda inferior)** substitui o rail lateral.
 Esquerda: marca. Centro-esquerda: abas Painel, Praticar, Simulado, Revisão (rótulo
-curto; o menu em gaveta mostra "Revisão espaçada"), com contagem numa etiqueta t1
-quando houver revisões vencidas — aba ativa com sublinhado de 2px
+curto de "Revisão espaçada") e Baralhos, com contagem numa etiqueta t1 quando
+houver revisões ou cartões vencidos — aba ativa com sublinhado de 2px
 `--ink`. Entre 1024 e 1279px a etiqueta de ofensiva mostra só o número. Direita: busca global (atalho
 `/`), etiqueta de ofensiva (t4-soft se já respondeu hoje, t2-soft se não), botão de
 tema e avatar. O menu do avatar tem e-mail, prova alvo, **Acervo** (links do
 Streamlit, só para `is_admin`) e Sair.
 
-Abaixo de 1024px as abas viram um menu em gaveta aberto pelo botão à esquerda da
-marca; abaixo de 640px a busca some da barra.
+Abaixo de 1024px as abas descem para uma **barra no rodapé** (56px, `--surface`,
+borda superior): cinco colunas iguais com ícone e rótulo curto, a contagem no
+canto do ícone (com anel `--surface` que recorta o traço) e o mesmo traço de 2px
+`--ink`, na borda de cima, deslizando até a aba ativa. Some no modo foco, e o
+`main` reserva a altura dela no fim da página. Até 25/09 era um menu em gaveta
+atrás de um botão ☰, e a contagem de revisões só aparecia com ele aberto — no
+aparelho em que as alunas mais estudam. O aviso de respostas pendentes, que fica
+no canto de baixo, sobe para baixo da barra superior nessa largura, para não
+cobrir o rodapé. Abaixo de 640px a busca some da barra.
 
 **Modo foco** (sessão de Praticar, Simulado em andamento, Revisão com fila): a barra
 superior troca as abas por "Sessão de prática · {área}", progresso, cronômetro,

@@ -10,7 +10,7 @@ import { CriarCartao } from "../../components/CriarCartao";
 import { RelatarErro } from "../../components/RelatarErro";
 import { TextoDiscussao } from "../../components/TextoDiscussao";
 import { api, ApiError } from "../../lib/api";
-import { BOTAO_PRIMARIO, BOTAO_SECUNDARIO, PRESSAO } from "../../lib/estilos";
+import { ACAO_DA_VEZ, BOTAO_PRIMARIO, BOTAO_SECUNDARIO, PRESSAO } from "../../lib/estilos";
 import { BarraFoco } from "../../lib/foco";
 import { formatarMMSS } from "../../lib/format";
 import { rolarParaTopo } from "../../lib/movimento";
@@ -392,7 +392,7 @@ export default function Sessao({ filtros, nonce, salva, email, onFinalizar, onVo
             </div>
 
             {!confirmado ? (
-              <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className={`flex flex-wrap items-center justify-between gap-4 ${ACAO_DA_VEZ}`}>
                 <div className="hidden items-center gap-4 text-apoio text-muted sm:flex">
                   <span className="flex items-center gap-1.5">
                     <Kbd>A–E</Kbd>selecionar
@@ -401,7 +401,12 @@ export default function Sessao({ filtros, nonce, salva, email, onFinalizar, onVo
                     <Kbd>M</Kbd>marcar
                   </span>
                 </div>
-                <button type="button" onClick={confirmar} disabled={!selecionada} className={`${BOTAO_PRIMARIO} ml-auto pr-2.5`}>
+                <button
+                  type="button"
+                  onClick={confirmar}
+                  disabled={!selecionada}
+                  className={`${BOTAO_PRIMARIO} ml-auto max-sm:w-full sm:pr-2.5`}
+                >
                   Confirmar resposta
                   <Kbd sobreTinta>Enter</Kbd>
                 </button>
@@ -433,12 +438,15 @@ export default function Sessao({ filtros, nonce, salva, email, onFinalizar, onVo
                 </div>
 
                 {correta ? (
+                  // No celular os dois botões não cabem lado a lado: empilham, o
+                  // primário embaixo, mais perto do polegar. A pergunta sai do
+                  // rodapé, porque os próprios botões já dizem o que perguntam.
                   <div
-                    className="flex animate-entrar flex-wrap items-center justify-between gap-3"
+                    className={`flex animate-entrar flex-wrap items-center justify-between gap-3 ${ACAO_DA_VEZ}`}
                     style={{ animationDelay: "90ms" }}
                   >
-                    <span className="text-apoio text-muted">Como você chegou nessa resposta?</span>
-                    <div className="flex flex-wrap gap-2">
+                    <span className="text-apoio text-muted max-sm:hidden">Como você chegou nessa resposta?</span>
+                    <div className="flex flex-wrap gap-2 max-sm:w-full max-sm:flex-col">
                       <button type="button" onClick={() => concluir("chute", true)} className={BOTAO_SECUNDARIO}>
                         Acertei no chute
                       </button>
@@ -449,14 +457,20 @@ export default function Sessao({ filtros, nonce, salva, email, onFinalizar, onVo
                   </div>
                 ) : (
                   <div
-                    className="flex animate-entrar flex-wrap items-center justify-between gap-3"
+                    className={`flex animate-entrar flex-wrap items-center justify-between gap-3 ${ACAO_DA_VEZ}`}
                     style={{ animationDelay: "90ms" }}
                   >
                     <span className="flex items-center gap-2 text-apoio text-ink-2">
                       <RefreshCw size={16} strokeWidth={2} />
-                      Volta na sua revisão em 10 min
+                      {/* A frase inteira não cabe ao lado do botão no celular. */}
+                      <span className="max-sm:hidden">Volta na sua revisão em 10 min</span>
+                      <span className="sm:hidden">Volta em 10 min</span>
                     </span>
-                    <button type="button" onClick={() => concluir(undefined, false)} className={`${BOTAO_PRIMARIO} pr-2.5`}>
+                    <button
+                      type="button"
+                      onClick={() => concluir(undefined, false)}
+                      className={`${BOTAO_PRIMARIO} sm:pr-2.5`}
+                    >
                       Próximo caso
                       <Kbd sobreTinta>Enter</Kbd>
                     </button>

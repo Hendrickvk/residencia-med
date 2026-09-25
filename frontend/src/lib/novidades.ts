@@ -37,6 +37,16 @@ export const ROTULO_TIPO: Record<TipoNovidade, string> = {
 
 export const NOVIDADES: Novidade[] = [
   {
+    id: "2026-09-25b",
+    data: "25 de setembro de 2026",
+    titulo: "Mais fácil no celular",
+    itens: [
+      { tipo: "novo", texto: "As abas foram para o pé da tela, ao alcance do polegar, com as revisões e os cartões de hoje à vista." },
+      { tipo: "novo", texto: "Numa sessão, confirmar e seguir para o próximo caso ficam sempre no pé da tela, sem rolar a discussão inteira." },
+      { tipo: "corrigido", texto: "Cartão com verso comprido não cobre mais os botões, e o baralho não fica cortado dentro da pasta." },
+    ],
+  },
+  {
     id: "2026-09-25",
     data: "25 de setembro de 2026",
     titulo: "Mais cores",

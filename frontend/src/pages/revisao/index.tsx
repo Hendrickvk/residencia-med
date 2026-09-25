@@ -10,7 +10,7 @@ import { ImagemQuestao } from "../../components/ImagemQuestao";
 import { CriarCartao } from "../../components/CriarCartao";
 import { RelatarErro } from "../../components/RelatarErro";
 import { TextoDiscussao } from "../../components/TextoDiscussao";
-import { BOTAO_PRIMARIO, PRESSAO } from "../../lib/estilos";
+import { ACAO_DA_VEZ, BOTAO_PRIMARIO, PRESSAO } from "../../lib/estilos";
 import { BarraFoco } from "../../lib/foco";
 import { rolarParaTopo } from "../../lib/movimento";
 import { estimarDuracao, formatarPrazo } from "../../lib/prazo";
@@ -322,7 +322,7 @@ export default function Revisao() {
             </div>
 
             {!confirmado ? (
-              <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className={`flex flex-wrap items-center justify-between gap-4 ${ACAO_DA_VEZ}`}>
                 <div className="hidden items-center gap-4 text-apoio text-muted sm:flex">
                   <span className="flex items-center gap-1.5">
                     <Kbd>A–E</Kbd>selecionar
@@ -332,7 +332,7 @@ export default function Revisao() {
                   type="button"
                   onClick={() => setConfirmado(true)}
                   disabled={!selecionada}
-                  className={`${BOTAO_PRIMARIO} ml-auto pr-2.5`}
+                  className={`${BOTAO_PRIMARIO} ml-auto max-sm:w-full sm:pr-2.5`}
                 >
                   Confirmar resposta
                   <Kbd sobreTinta>Enter</Kbd>
@@ -357,22 +357,26 @@ export default function Revisao() {
                 </div>
 
                 {acertou ? (
+                  // No celular as três notas ficam numa linha só, cada botão da
+                  // largura do rótulo (flex-auto): em três colunas iguais "Com
+                  // esforço" quebrava em duas linhas e o rodapé passava de 120px.
+                  // Sem "volta em" e sem a tecla, que não cabem nem servem ali.
                   <div
-                    className="flex animate-entrar flex-col gap-3 border-t border-line-soft pt-6"
+                    className={`flex animate-entrar flex-col gap-3 border-t border-line-soft pt-6 max-sm:gap-2 ${ACAO_DA_VEZ}`}
                     style={{ animationDelay: "90ms" }}
                   >
                     <span className="text-apoio text-muted">Você acertou. Como foi lembrar?</span>
-                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                    <div className="flex flex-wrap gap-1.5 sm:grid sm:grid-cols-3 sm:gap-2">
                       {NOTAS_ACERTO.map((op) => (
                         <button
                           key={op.nota}
                           type="button"
                           disabled={enviando}
                           onClick={() => void avaliar(op.nota)}
-                          className="group flex flex-col items-start gap-1 rounded-btn border border-line bg-surface px-3.5 py-2.5 text-left transition duration-hover ease-brand hover:border-muted active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100"
+                          className="group flex flex-auto flex-col items-start gap-1 rounded-btn border border-line bg-surface px-2.5 py-2 text-left transition duration-hover ease-brand hover:border-muted active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100 sm:px-3.5 sm:py-2.5"
                         >
                           <span className="flex w-full items-center justify-between gap-2">
-                            <span className="flex items-center gap-2 text-[15px] font-medium text-ink">
+                            <span className="flex items-center gap-1.5 whitespace-nowrap text-[14px] font-medium text-ink sm:gap-2 sm:text-[15px]">
                               <span
                                 className={`h-2.5 w-2.5 shrink-0 rounded-[2px] transition-transform duration-toggle ease-suave group-hover:scale-125 ${op.cor}`}
                                 aria-hidden="true"
@@ -381,25 +385,30 @@ export default function Revisao() {
                             </span>
                             <Kbd>{op.tecla}</Kbd>
                           </span>
-                          <span className="text-apoio tabular-nums text-muted">volta em {formatarPrazo(q.prazos[op.chave])}</span>
+                          <span className="text-apoio tabular-nums text-muted">
+                            <span className="max-sm:hidden">volta em </span>
+                            {formatarPrazo(q.prazos[op.chave])}
+                          </span>
                         </button>
                       ))}
                     </div>
                   </div>
                 ) : (
                   <div
-                    className="flex animate-entrar flex-wrap items-center justify-between gap-3"
+                    className={`flex animate-entrar flex-wrap items-center justify-between gap-3 ${ACAO_DA_VEZ}`}
                     style={{ animationDelay: "90ms" }}
                   >
                     <span className="flex items-center gap-2 text-apoio text-ink-2">
                       <RefreshCw size={16} strokeWidth={2} />
-                      Volta na sua revisão em {formatarPrazo(q.prazos["1"])}
+                      {/* A frase inteira não cabe ao lado do botão no celular. */}
+                      <span className="max-sm:hidden">Volta na sua revisão em {formatarPrazo(q.prazos["1"])}</span>
+                      <span className="sm:hidden">Volta em {formatarPrazo(q.prazos["1"])}</span>
                     </span>
                     <button
                       type="button"
                       disabled={enviando}
                       onClick={() => void avaliar(1)}
-                      className={`${BOTAO_PRIMARIO} pr-2.5`}
+                      className={`${BOTAO_PRIMARIO} sm:pr-2.5`}
                     >
                       Próximo caso
                       <Kbd sobreTinta>Enter</Kbd>

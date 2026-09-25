@@ -56,8 +56,10 @@ export function CartaoBaralho({ baralho: b, cor, onApagar }: Props) {
             type="button"
             onClick={onApagar}
             aria-label={`Apagar ${b.nome}`}
-            // z-10 para ficar acima da área clicável do link.
-            className="relative z-10 shrink-0 rounded-btn p-1 text-faint opacity-0 transition duration-hover hover:text-t1 focus-visible:opacity-100 group-hover:opacity-100"
+            // z-10 para ficar acima da área clicável do link. Sem ponteiro que
+            // passe por cima (toque), sempre visível: escondida, ela continuava
+            // tocável e um toque no canto do baralho abria o "Apagar".
+            className="relative z-10 shrink-0 rounded-btn p-1 text-faint opacity-0 transition duration-hover hover:text-t1 focus-visible:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100"
           >
             <Trash2 size={14} strokeWidth={2} />
           </button>
