@@ -12,9 +12,8 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   com o usuário, um item por vez, conferido no localhost e subido só com
   autorização:
   1. *Celular primeiro* — no ar desde 25/09 (commit `731bd06`; ver a data).
-     O próximo é o 2.
-  2. *Chute antes de confirmar* — feito e conferido no localhost em 25/09 (ver
-     a data), esperando autorização para subir.
+  2. *Chute antes de confirmar* — no ar desde 25/09 (commit `c014a57`; ver a
+     data). O próximo é o 3.
   3. Painel começando por "Hoje" (revisões vencidas, cartões do dia e a
      prioridade nº 1, com um botão primário só); Evolução da memória, Por tipo
      e 14 dias descem para uma seção recolhida.
@@ -1930,7 +1929,8 @@ governa as telas admin do Streamlit.
   resto para 3. No celular o rodapé do acerto caiu de 121px para 69px, o mesmo
   dos outros estados. A dica "M marcar" saiu da linha de ação para o
   interruptor caber ao lado do Confirmar no computador; o atalho continua no
-  título do botão Marcar da barra.
+  título do botão Marcar da barra. **No ar em 25/09** (commit `c014a57`),
+  depois de o usuário testar na janela que simula o celular.
 
 ## Armadilhas das telas admin (Streamlit)
 
