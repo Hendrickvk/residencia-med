@@ -1726,6 +1726,16 @@ governa as telas admin do Streamlit.
   de dado de teste (`__pytest_area_*` e `pytest_*@teste.local`) — conferido
   plantando uma sobra falsa e rodando um arquivo de teste. Por isso todo dado
   de teste novo precisa cair num desses padrões.
+- **No celular, a alternativa respondida ficava uma palavra por linha.** A
+  etiqueta "Conduta correta" (~140px) ia na coluna da direita, junto do
+  percentual, e sobravam ~30px para o texto; as palavras compridas passavam por
+  baixo dela. Abaixo de `sm` ela desce para baixo do texto (regra anotada na
+  Alternativa, no `DESIGN_TRIAGEM.md`). Achado pelo usuário no celular, de
+  novo a classe de defeito que o desktop esconde. Conferido com uma página de
+  teste com as classes do componente e o CSS do build, fotografada pelo Edge
+  sem janela: ele não desce de ~500px de largura, então é uma caixa de 393px
+  dentro dele que faz o papel do celular — com a janela "de 393", a foto sai
+  cortada e parece defeito que não existe.
 
 ## Armadilhas das telas admin (Streamlit)
 

@@ -36,6 +36,20 @@ const CARIMBA = new Set<EstadoAlternativa>(["selecionada", "correta", "errada"])
 
 export function AlternativaLinha({ letra, texto, estado, percentual, onClick, disabled }: Props) {
   const carimba = CARIMBA.has(estado);
+  // A etiqueta tem uns 140px. Na coluna da direita, num celular, sobravam ~30px
+  // para o texto — uma palavra por linha, e a etiqueta por cima das compridas.
+  // Abaixo de `sm` ela desce para baixo do texto. As duas cópias nunca aparecem
+  // juntas, e `hidden` também some para o leitor de tela.
+  const etiqueta =
+    percentual === undefined ? null : estado === "correta" ? (
+      <span className="rotulo animate-surgir whitespace-nowrap rounded-etq bg-t4 px-2 py-1 text-[12px] text-t4-on">
+        Conduta correta
+      </span>
+    ) : estado === "errada" ? (
+      <span className="rotulo animate-surgir whitespace-nowrap rounded-etq bg-t1 px-2 py-1 text-[12px] text-t1-on">
+        Sua conduta
+      </span>
+    ) : null;
   return (
     <button
       type="button"
@@ -54,19 +68,13 @@ export function AlternativaLinha({ letra, texto, estado, percentual, onClick, di
       >
         {letra}
       </span>
-      <span>{texto}</span>
+      <span>
+        {texto}
+        {etiqueta && <span className="mt-2 flex sm:hidden">{etiqueta}</span>}
+      </span>
       {percentual !== undefined ? (
         <span className="flex items-center gap-2.5">
-          {estado === "correta" && (
-            <span className="rotulo animate-surgir whitespace-nowrap rounded-etq bg-t4 px-2 py-1 text-[12px] text-t4-on">
-              Conduta correta
-            </span>
-          )}
-          {estado === "errada" && (
-            <span className="rotulo animate-surgir whitespace-nowrap rounded-etq bg-t1 px-2 py-1 text-[12px] text-t1-on">
-              Sua conduta
-            </span>
-          )}
+          {etiqueta && <span className="hidden sm:flex">{etiqueta}</span>}
           <span className="w-9 text-right text-apoio font-semibold tabular-nums text-muted">
             {percentual !== null && <span className="animate-desvanecer">{Math.round(percentual)}%</span>}
           </span>

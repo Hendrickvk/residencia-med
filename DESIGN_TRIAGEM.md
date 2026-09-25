@@ -190,6 +190,9 @@ O ícone **é** o símbolo da marca (§3): as cinco barras da triagem, sem texto
   - Correta: borda 2px t4, fundo t4-soft, letra t4, etiqueta "Conduta correta".
   - Errada escolhida: borda 2px t1, fundo t1-soft, letra t1, etiqueta "Sua conduta".
   - Demais após confirmar: texto `--muted`, percentual de escolha à direita.
+  - Abaixo de `sm` (640px) a etiqueta desce para baixo do texto e a coluna da
+    direita fica só com o percentual: com os ~140px da etiqueta ali, o celular
+    deixava ~30px para o texto, uma palavra por linha.
 - **Campo / select**: altura 40px, borda `--line`, raio 5; foco com borda `--ink` e
   anel `--focus`.
 - **kbd**: 11.5px, 600, padding 4/7, raio 4, fundo translúcido sobre o botão ou
