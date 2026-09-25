@@ -216,9 +216,10 @@ export default function Estudo({ baralhoId, nome, cor, onSair }: Props) {
                     célula da grade e o bloco gira em Y. Grade, e não o verso em
                     `absolute inset-0`: assim o cartão tem a altura da face mais
                     longa — com o absoluto ele tinha a da frente, e um verso
-                    comprido vazava por cima dos botões de nota. */}
+                    comprido vazava por cima dos botões de nota. `grid-cols-1`
+                    para a coluna não crescer além da tela com uma palavra longa. */}
                 <div
-                  className={`grid transition-transform duration-desliza ease-suave [transform-style:preserve-3d] ${
+                  className={`grid grid-cols-1 transition-transform duration-desliza ease-suave [transform-style:preserve-3d] ${
                     virado ? "[transform:rotateY(180deg)]" : ""
                   }`}
                 >
@@ -366,7 +367,7 @@ function FaceCartao({
         <span className="h-3 w-1 rounded-pill" style={corDeFundo(cor, "pasta")} aria-hidden="true" />
         <span className="rotulo text-muted">{rotulo}</span>
       </div>
-      <p className="flex flex-1 items-center justify-center whitespace-pre-wrap text-center text-enunciado text-ink">
+      <p className="flex flex-1 items-center justify-center whitespace-pre-wrap text-center [overflow-wrap:anywhere] text-enunciado text-ink">
         {texto}
       </p>
     </div>

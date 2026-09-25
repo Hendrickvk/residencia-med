@@ -1849,6 +1849,16 @@ governa as telas admin do Streamlit.
   mesma célula de uma grade (`col-start-1 row-start-1`), e o cartão tem a
   altura da face mais longa; o giro em 3D não mudou.
 
+- **O baralho vazava da pasta no celular** (também no iPhone): a grade dos
+  baralhos só declarava colunas a partir do `sm:`, e a coluna implícita do
+  celular cresce até a largura mínima do conteúdo — um nome com `truncate` não
+  quebra linha, então empurrava o bloco para fora, e o `overflow-hidden` da
+  pasta cortava o "Estudar". `grid-cols-1` (`minmax(0, 1fr)`) prende a coluna;
+  medido a 393px com o CSS compilado: vazava 83px, agora fica dentro. A grade
+  do cartão que vira tinha a mesma armadilha para uma palavra longa (uma URL
+  colada no verso) e ganhou o mesmo `grid-cols-1` e `overflow-wrap: anywhere`.
+  **Regra**: grade com coluna só no `sm:` precisa de `grid-cols-1` na base.
+
 ## Armadilhas das telas admin (Streamlit)
 
 - `st.markdown('<div>')` … `st.markdown('</div>')` não envolve nada: cada

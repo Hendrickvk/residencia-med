@@ -160,7 +160,10 @@ export default function Baralhos() {
                 Criar o primeiro baralho desta pasta
               </button>
             ) : (
-              <div className="grid gap-x-4 gap-y-5 bg-ground p-4 sm:grid-cols-2 lg:grid-cols-3">
+              // `grid-cols-1` (minmax(0, 1fr)) e não a coluna implícita: essa
+              // cresce até a largura mínima do conteúdo, e um nome longo com
+              // `truncate` empurrava o bloco para fora da pasta no celular.
+              <div className="grid grid-cols-1 gap-x-4 gap-y-5 bg-ground p-4 sm:grid-cols-2 lg:grid-cols-3">
                 {pasta.baralhos.map((b) => (
                   <CartaoBaralho
                     key={b.id}
