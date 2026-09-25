@@ -11,8 +11,8 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
 - **Crítica de interface de 25/09** (skill Impeccable, 31/40). Ordem combinada
   com o usuário, um item por vez, conferido no localhost e subido só com
   autorização:
-  1. *Celular primeiro* — feito e conferido no localhost em 25/09 (ver a data),
-     esperando autorização para subir.
+  1. *Celular primeiro* — no ar desde 25/09 (commit `731bd06`; ver a data).
+     O próximo é o 2.
   2. *Chute antes de confirmar* (decidido pelo usuário em 25/09): um "Estou
      chutando" opcional antes de confirmar, tecla C, e o acerto seguro vira
      Enter, Enter. Perguntado depois do gabarito, quase todo mundo lembra de
@@ -1910,6 +1910,12 @@ governa as telas admin do Streamlit.
     confirmada pelo banco como no `conftest.py`, com o cookie posto num Edge
     headless por CDP; apagada no fim. No computador nada mudou: rodapé oculto,
     `pb` de 36px, linha de ação no lugar com as teclas.
+  - **No ar em 25/09** (commit `731bd06`), depois de o usuário ver o resultado
+    numa janela do Edge simulando o celular no localhost (perfil próprio,
+    `setDeviceMetricsOverride` 393×852, toque no lugar do mouse, com o CDP
+    preso enquanto a janela vive). Fechar as abas extras que o Edge abre na
+    primeira execução de um perfil novo derruba a janela do app junto: abrir
+    de novo com o mesmo perfil, que já não abre nada além dela.
 
 ## Armadilhas das telas admin (Streamlit)
 
