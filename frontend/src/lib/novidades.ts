@@ -37,6 +37,17 @@ export const ROTULO_TIPO: Record<TipoNovidade, string> = {
 
 export const NOVIDADES: Novidade[] = [
   {
+    id: "2026-09-25c",
+    data: "25 de setembro de 2026",
+    titulo: "Chute antes de responder",
+    itens: [
+      {
+        tipo: "novo",
+        texto: "Em dúvida? Marque \"Estou chutando\" antes de confirmar. Quem sabe a resposta agora só confirma e segue, sem um toque a mais.",
+      },
+    ],
+  },
+  {
     id: "2026-09-25b",
     data: "25 de setembro de 2026",
     titulo: "Mais fácil no celular",

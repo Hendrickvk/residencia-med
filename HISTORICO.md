@@ -13,10 +13,8 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   autorização:
   1. *Celular primeiro* — no ar desde 25/09 (commit `731bd06`; ver a data).
      O próximo é o 2.
-  2. *Chute antes de confirmar* (decidido pelo usuário em 25/09): um "Estou
-     chutando" opcional antes de confirmar, tecla C, e o acerto seguro vira
-     Enter, Enter. Perguntado depois do gabarito, quase todo mundo lembra de
-     ter tido certeza — o dado sai inflado —, e todo acerto custa um toque.
+  2. *Chute antes de confirmar* — feito e conferido no localhost em 25/09 (ver
+     a data), esperando autorização para subir.
   3. Painel começando por "Hoje" (revisões vencidas, cartões do dia e a
      prioridade nº 1, com um botão primário só); Evolução da memória, Por tipo
      e 14 dias descem para uma seção recolhida.
@@ -1916,6 +1914,23 @@ governa as telas admin do Streamlit.
     preso enquanto a janela vive). Fechar as abas extras que o Edge abre na
     primeira execução de um perfil novo derruba a janela do app junto: abrir
     de novo com o mesmo perfil, que já não abre nada além dela.
+
+- **Chute antes de confirmar** (item 2 da crítica, decidido pelo usuário). O
+  "Acertei no chute / Acertei com segurança" era perguntado depois do
+  gabarito, quando quase todo mundo lembra de ter tido certeza, e custava um
+  toque a mais em todo acerto. Agora o interruptor "Estou chutando"
+  ("Chutando" no celular) fica ao lado do Confirmar, e depois de confirmar há
+  um "Próximo caso" só, com Enter ou →; o acerto chutado avisa "vale meio no
+  Painel". A tecla é `?`, e não o `C` que estava no plano: o C já seleciona a
+  alternativa C. O que vai para o servidor: acerto sem a marca = `seguro`
+  (qualidade 5), acerto chutado = `chute` (3), erro chutado = `chute`
+  (qualidade 1 de todo jeito, mas fica o registro de que era palpite), erro
+  sem a marca = nada, como antes — os quatro conferidos no banco com uma conta
+  de teste. Backend sem mudança: `praticar.py` já mapeava `seguro` para 5 e o
+  resto para 3. No celular o rodapé do acerto caiu de 121px para 69px, o mesmo
+  dos outros estados. A dica "M marcar" saiu da linha de ação para o
+  interruptor caber ao lado do Confirmar no computador; o atalho continua no
+  título do botão Marcar da barra.
 
 ## Armadilhas das telas admin (Streamlit)
 

@@ -373,9 +373,13 @@ Conteúdo das demais telas: largura máxima 1360px, padding 36/40px.
   (`db.provas_das_questoes`). O tema não entra aí: numa
   questão que pede o diagnóstico ele entregaria o gabarito, então só aparece
   depois de confirmar, na discussão (decisão do usuário). Cartão com enunciado, imagem,
-  pergunta, alternativas e, antes de confirmar, dicas de atalho + "Confirmar
-  resposta". Progresso na barra superior: um quadrado por caso (t4 acerto, t1 erro,
-  `--line` pendente).
+  pergunta, alternativas e, antes de confirmar, a dica "A–E selecionar", o
+  interruptor **"Estou chutando"** (tecla `?`; "Chutando" no celular) e
+  "Confirmar resposta". O chute se declara antes do gabarito, e não depois
+  (decisão do usuário, 25/09): perguntado depois, quase todo mundo lembra de ter
+  tido certeza e o dado sai inflado — e cada acerto custava um toque a mais. A
+  tecla é `?` porque o `C` é a alternativa C. Progresso na barra superior: um
+  quadrado por caso (t4 acerto, t1 erro, `--line` pendente).
 - **Após confirmar**: estados de alternativa (§4) com percentual de escolha;
   bloco "Discussão do caso" com "Resposta correta: {letra}", "Você marcou {letra},
   como {x}% dos outros alunos" (só quando a distribuição chegar; o espaço fica
@@ -383,10 +387,15 @@ Conteúdo das demais telas: largura máxima 1360px, padding 36/40px.
   ainda." e nenhum percentual nas alternativas), "Tema: {tema}" e a explicação em parágrafos (`src/lib/paragrafos.ts`: as explicações do banco
   são um bloco único, então a quebra é na exibição — um parágrafo para a resposta
   certa, um por alternativa discutida, alternativas curtas juntas, blocos longos
-  divididos por frase; quebras escritas no texto têm prioridade). Acertou: "Acertei com segurança" (primário) e "Acertei
-  no chute" (secundário; vale meio acerto no Painel). Errou: "Volta na sua revisão em 10 min" (é verdade: o SM-2
-  agenda qualidade abaixo de 3 para 10 minutos, `repeticao_espacada.py`) e "Próximo
-  caso" com `Enter`.
+  divididos por frase; quebras escritas no texto têm prioridade). Depois de
+  confirmar há um passo só, certo ou errado: "Próximo caso" com `Enter` ou `→`. Ao
+  lado dele, a consequência do que foi gravado: errou, "Volta na sua revisão em 10
+  min" (é verdade: o SM-2 agenda qualidade abaixo de 3 para 10 minutos,
+  `repeticao_espacada.py`); acertou chutando, "Acerto no chute: vale meio no
+  Painel"; acertou sem chutar, nada. O acerto sem a marca vai como `seguro`
+  (qualidade 5), o chutado como `chute` (3), e o erro chutando também grava
+  `chute`, para o dado dizer que era palpite (a qualidade do erro é 1 de todo
+  jeito).
 - **Resumo**: acertos em display, etiqueta de nível do aproveitamento da sessão,
   tempo médio por caso e desempenho por especialidade em linhas com barra de nível.
 

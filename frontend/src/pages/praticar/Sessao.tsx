@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { BadgeCheck, Clock, Flag, RefreshCw } from "lucide-react";
+import { BadgeCheck, Clock, Dices, Flag, RefreshCw } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { EstadoFalha } from "../../components/EstadoFalha";
 import { EstadoVazio } from "../../components/EstadoVazio";
@@ -10,7 +10,7 @@ import { CriarCartao } from "../../components/CriarCartao";
 import { RelatarErro } from "../../components/RelatarErro";
 import { TextoDiscussao } from "../../components/TextoDiscussao";
 import { api, ApiError } from "../../lib/api";
-import { ACAO_DA_VEZ, BOTAO_PRIMARIO, BOTAO_SECUNDARIO, PRESSAO } from "../../lib/estilos";
+import { ACAO_DA_VEZ, BOTAO_PRIMARIO, PRESSAO } from "../../lib/estilos";
 import { BarraFoco } from "../../lib/foco";
 import { formatarMMSS } from "../../lib/format";
 import { rolarParaTopo } from "../../lib/movimento";
@@ -61,6 +61,8 @@ export default function Sessao({ filtros, nonce, salva, email, onFinalizar, onVo
   const [idx, setIdx] = useState(salva?.idx ?? 0);
   const [selecionada, setSelecionada] = useState<string | null>(null);
   const [confirmado, setConfirmado] = useState(false);
+  // "Estou chutando", declarado antes de confirmar (DESIGN_TRIAGEM.md §6).
+  const [chutando, setChutando] = useState(false);
   const [distribuicao, setDistribuicao] = useState<Record<string, number> | null>(null);
   const [marcadas, setMarcadas] = useState<Set<number>>(() => new Set(salva?.marcadas ?? []));
   // Acerto/erro de cada caso já concluído, para o progresso na barra de foco.
@@ -121,24 +123,30 @@ export default function Sessao({ filtros, nonce, salva, email, onFinalizar, onVo
       setIdx((i) => i + 1);
       setSelecionada(null);
       setConfirmado(false);
+      setChutando(false);
       setDistribuicao(null);
       setAvancou(true);
       rolarParaTopo();
     }
   }
 
-  function concluir(confianca: "seguro" | "chute" | undefined, foiCorreta: boolean) {
+  // O chute é declarado antes do gabarito: perguntado depois, quase todo mundo
+  // lembrava de ter tido certeza, e o acerto no chute vale meio no Painel.
+  // Acerto sem a marca vai como "seguro"; erro com a marca vai como "chute" (a
+  // qualidade do SM-2 é 1 de todo jeito, mas fica registrado que era palpite).
+  function concluir() {
     if (!questaoAtual || !selecionada) return;
     const tempoMs = tempoDecorridoMs();
+    const confianca = chutando ? "chute" : correta ? "seguro" : undefined;
     enfileirarResposta({ questao_id: questaoAtual.id, alternativa: selecionada, confianca, tempo_ms: tempoMs });
     respondidasRef.current.push({
       id: questaoAtual.id,
-      correta: foiCorreta,
+      correta,
       area: questaoAtual.area,
       especialidade: questaoAtual.especialidade,
       tempoMs,
     });
-    setResultados((r) => [...r, foiCorreta]);
+    setResultados((r) => [...r, correta]);
     avancarOuFinalizar();
   }
 
@@ -169,10 +177,10 @@ export default function Sessao({ filtros, nonce, salva, email, onFinalizar, onVo
     finalizar();
   }
 
-  // A–E seleciona, Enter confirma, → avança, M marca (MIGRACAO.md §4, Fase 3).
-  // → só avança quando o próximo passo é inequívoco: resposta errada tem
-  // um único "Próximo caso", mas resposta certa exige escolher a calibração
-  // (duas opções) — uma seta não pode decidir isso no lugar do aluno.
+  // A–E seleciona, ? declara o chute, Enter confirma, Enter ou → avança, M
+  // marca (MIGRACAO.md §4, Fase 3). O chute é `?`, e não `C`, porque o C já é
+  // a alternativa C. Com o chute declarado antes, depois de confirmar há um
+  // passo só, certo ou errado, e a seta pode avançar sempre.
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       if (e.ctrlKey || e.metaKey || e.altKey) return;
@@ -186,14 +194,19 @@ export default function Sessao({ filtros, nonce, salva, email, onFinalizar, onVo
         setSelecionada(letra);
         return;
       }
+      if (e.key === "?" && !confirmado) {
+        e.preventDefault();
+        setChutando((v) => !v);
+        return;
+      }
       if (e.key === "Enter" && !confirmado && selecionada) {
         e.preventDefault();
         confirmar();
         return;
       }
-      if ((e.key === "Enter" || e.key === "ArrowRight") && confirmado && !correta) {
+      if ((e.key === "Enter" || e.key === "ArrowRight") && confirmado) {
         e.preventDefault();
-        concluir(undefined, false);
+        concluir();
         return;
       }
       if (letra === "M") {
@@ -204,7 +217,7 @@ export default function Sessao({ filtros, nonce, salva, email, onFinalizar, onVo
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [confirmado, selecionada, questaoAtual, correta]);
+  }, [confirmado, selecionada, questaoAtual, correta, chutando]);
 
   if (isLoading) {
     return (
@@ -392,24 +405,45 @@ export default function Sessao({ filtros, nonce, salva, email, onFinalizar, onVo
             </div>
 
             {!confirmado ? (
+              // A dica do M saiu daqui para caber o "Estou chutando" na mesma
+              // linha; ela continua no título do botão Marcar da barra.
               <div className={`flex flex-wrap items-center justify-between gap-4 ${ACAO_DA_VEZ}`}>
                 <div className="hidden items-center gap-4 text-apoio text-muted sm:flex">
                   <span className="flex items-center gap-1.5">
                     <Kbd>A–E</Kbd>selecionar
                   </span>
-                  <span className="flex items-center gap-1.5">
-                    <Kbd>M</Kbd>marcar
-                  </span>
                 </div>
-                <button
-                  type="button"
-                  onClick={confirmar}
-                  disabled={!selecionada}
-                  className={`${BOTAO_PRIMARIO} ml-auto max-sm:w-full sm:pr-2.5`}
-                >
-                  Confirmar resposta
-                  <Kbd sobreTinta>Enter</Kbd>
-                </button>
+                <div className="ml-auto flex items-center gap-2 max-sm:w-full">
+                  <button
+                    type="button"
+                    onClick={() => setChutando((v) => !v)}
+                    aria-pressed={chutando}
+                    title="Declarar que é chute (?): o acerto no chute vale meio no Painel"
+                    className={`inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-btn border px-4 text-[15px] font-medium transition duration-hover ease-brand active:scale-[0.97] sm:pr-2.5 ${
+                      chutando
+                        ? "border-ink bg-ground text-ink"
+                        : "border-line bg-surface text-ink-2 hover:border-muted hover:text-ink"
+                    }`}
+                  >
+                    <span key={chutando ? "sim" : "nao"} className={`flex ${chutando ? "animate-marcar" : ""}`}>
+                      <Dices size={16} strokeWidth={2} />
+                    </span>
+                    <span className="sm:hidden">Chutando</span>
+                    <span className="max-sm:hidden">Estou chutando</span>
+                    <Kbd>?</Kbd>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={confirmar}
+                    disabled={!selecionada}
+                    className={`${BOTAO_PRIMARIO} max-sm:flex-1 sm:pr-2.5`}
+                  >
+                    {/* "Confirmar resposta" não cabe ao lado do chute a 360px. */}
+                    <span className="max-sm:hidden">Confirmar resposta</span>
+                    <span className="sm:hidden">Confirmar</span>
+                    <Kbd sobreTinta>Enter</Kbd>
+                  </button>
+                </div>
               </div>
             ) : (
               <>
@@ -437,45 +471,33 @@ export default function Sessao({ filtros, nonce, salva, email, onFinalizar, onVo
                   )}
                 </div>
 
-                {correta ? (
-                  // No celular os dois botões não cabem lado a lado: empilham, o
-                  // primário embaixo, mais perto do polegar. A pergunta sai do
-                  // rodapé, porque os próprios botões já dizem o que perguntam.
-                  <div
-                    className={`flex animate-entrar flex-wrap items-center justify-between gap-3 ${ACAO_DA_VEZ}`}
-                    style={{ animationDelay: "90ms" }}
-                  >
-                    <span className="text-apoio text-muted max-sm:hidden">Como você chegou nessa resposta?</span>
-                    <div className="flex flex-wrap gap-2 max-sm:w-full max-sm:flex-col">
-                      <button type="button" onClick={() => concluir("chute", true)} className={BOTAO_SECUNDARIO}>
-                        Acertei no chute
-                      </button>
-                      <button type="button" onClick={() => concluir("seguro", true)} className={BOTAO_PRIMARIO}>
-                        Acertei com segurança
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div
-                    className={`flex animate-entrar flex-wrap items-center justify-between gap-3 ${ACAO_DA_VEZ}`}
-                    style={{ animationDelay: "90ms" }}
-                  >
+                {/* Um passo só depois de confirmar, certo ou errado: o chute já
+                    foi declarado. Ao lado, a consequência do que foi gravado. As
+                    frases inteiras não cabem ao lado do botão no celular. */}
+                <div
+                  className={`flex animate-entrar flex-wrap items-center justify-between gap-3 ${ACAO_DA_VEZ}`}
+                  style={{ animationDelay: "90ms" }}
+                >
+                  {!correta ? (
                     <span className="flex items-center gap-2 text-apoio text-ink-2">
                       <RefreshCw size={16} strokeWidth={2} />
-                      {/* A frase inteira não cabe ao lado do botão no celular. */}
                       <span className="max-sm:hidden">Volta na sua revisão em 10 min</span>
                       <span className="sm:hidden">Volta em 10 min</span>
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => concluir(undefined, false)}
-                      className={`${BOTAO_PRIMARIO} sm:pr-2.5`}
-                    >
-                      Próximo caso
-                      <Kbd sobreTinta>Enter</Kbd>
-                    </button>
-                  </div>
-                )}
+                  ) : (
+                    chutando && (
+                      <span className="flex items-center gap-2 text-apoio text-ink-2">
+                        <Dices size={16} strokeWidth={2} />
+                        <span className="max-sm:hidden">Acerto no chute: vale meio no Painel</span>
+                        <span className="sm:hidden">Vale meio acerto</span>
+                      </span>
+                    )
+                  )}
+                  <button type="button" onClick={concluir} className={`${BOTAO_PRIMARIO} ml-auto sm:pr-2.5`}>
+                    Próximo caso
+                    <Kbd sobreTinta>Enter</Kbd>
+                  </button>
+                </div>
               </>
             )}
           </div>

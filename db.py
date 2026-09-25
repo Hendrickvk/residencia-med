@@ -1473,9 +1473,11 @@ def remover_imagem_questao(questao_id):
 # ---------------------------------------------------------------------------
 
 def registrar_resposta(questao_id, resposta_dada, correta: bool, *, usuario_id, confianca=None, tempo_ms=None):
-    """`confianca`: None (não perguntado), 'seguro' ou 'chute' — calibração
-    exibida só quando o aluno acerta, usada para ajustar a qualidade
-    enviada ao SM-2 além do simples certo/errado."""
+    """`confianca`: None, 'seguro' ou 'chute' — calibração usada para ajustar a
+    qualidade enviada ao SM-2 além do simples certo/errado. Desde 25/09 o
+    chute é declarado antes de confirmar (DESIGN_TRIAGEM.md §6): acerto sem a
+    marca chega como 'seguro', erro com a marca como 'chute' (a qualidade do
+    erro é 1 de todo jeito) e erro sem ela como None, como sempre foi."""
     with get_conn() as conn:
         conn.execute("""
             INSERT INTO respostas (usuario_id, questao_id, resposta_dada, correta, respondida_em, confianca, tempo_ms)
