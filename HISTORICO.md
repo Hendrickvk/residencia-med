@@ -9,8 +9,12 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
 ## Pendências
 
 - **Operação e métricas** (pedido de 25/09, itens 4 e 5 da avaliação "a
-  plataforma peca em algum aspecto?"). Feito e conferido no localhost,
-  esperando autorização para subir: (4a) monitor pelo GitHub Actions a cada
+  plataforma peca em algum aspecto?"). **No ar em 26/09** (commit `c859558`;
+  produção conferida: `/health` 200, `POST /me/erros` sem sessão 401, pacote
+  novo servido, API e admin de pé; o workflow Monitor aparece `active` na API
+  do GitHub, e a primeira execução agendada ainda não tinha saído dez minutos
+  depois — o GitHub demora a disparar o primeiro agendamento; o `gh` não está
+  instalado aqui para disparar à mão). Feito: (4a) monitor pelo GitHub Actions a cada
   15 min contra o `/health` — que já existia e não toca o banco; acordar o
   Neon a cada 15 min gastaria a cota gratuita — e contra o site (DEPLOY.md,
   Monitor); (4b) erros do front vão para a API (`POST /me/erros`, tabela
