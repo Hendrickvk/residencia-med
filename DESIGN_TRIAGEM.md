@@ -189,6 +189,12 @@ O ícone **é** o símbolo da marca (§3): as cinco barras da triagem, sem texto
   tema em vigor, senão a barra fica branca por cima do app escuro.
 - Para refazer os PNGs: cinco retângulos de 4×{20,16,12,8,4} com vão de 2, raio 1,
   nas cores t1–t5 do tema escuro, centrados sobre `#0e1012`.
+- O app instalado abre em `/painel` (`start_url`), porque `/` é a página pública.
+- **Imagem de compartilhamento** (`public/compartilhar.png`, 1200×630, a prévia do
+  link no WhatsApp e nas redes, pelas tags `og:*` do `index.html`): fundo escuro,
+  símbolo e nome, a promessa da página pública e a escala de triagem com as faixas
+  reais (0–39%, 40–54%...). A fonte é `frontend/marca/compartilhar.html`; manter
+  abaixo de 300 KB, senão o WhatsApp não mostra.
 
 ## 4. Componentes
 
@@ -487,9 +493,42 @@ Conteúdo das demais telas: largura máxima 1360px, padding 36/40px.
 - Fila vazia: estado vazio com a próxima leva ("As próximas 8 vencem na quinta.") e
   "Praticar casos novos".
 
+### Página pública (`/`)
+Desde 26/09 (`pages/Inicio.tsx`). É a única tela de persuasão: quem chega por um
+link sem ter conta. Decisões do usuário: **nenhuma promessa de preço** ("Criar
+conta", nunca "grátis" — o modelo de negócio não está decidido), abrir com "As
+provas oficiais da Revalida e do ENAMED, comentadas." e quatro blocos:
+1. Promessa, "Criar conta" (tinta) e "Já tenho conta", as bancas em caixa alta
+   condensada como selo e, ao lado, o **painel de exemplo**: "Clínica Médica é a sua maior lacuna." e as
+   cinco áreas, uma em cada nível, para a escala inteira aparecer de uma vez.
+2. Como funciona, em três linhas que alternam texto e demonstração: o caso
+   comentado (uma **questão real** do banco, Revalida 2022/1 Q46, com o começo da
+   discussão que está no banco), a revisão ("Como foi lembrar?") e o simulado
+   (cronômetro e a grade de 97 questões).
+3. "Provas oficiais, revisadas questão por questão.", com as quatro bancas em
+   blocos de nome grande (Revalida e ENAMED do INEP, USP da FUVEST, UNICAMP da
+   COMVEST).
+4. Convite final ("Descubra onde você perde pontos.") numa faixa `--surface`.
+- Demonstração sempre com etiqueta: "Exemplo" no que é ilustrativo, "Questão real"
+  no que veio do banco. É figura (`aria-hidden`), com a legenda para leitor de
+  tela no `figcaption`.
+- **Nenhuma contagem do banco** ("13 provas", "1.163 questões"): decisão do
+  usuário, pelo olhar comercial — perto dos concorrentes, número pequeno diminui
+  a plataforma. O que vende é a qualidade (provas oficiais, revisadas,
+  comentadas) e o peso das bancas; número só entra se impressionar. Os números
+  dentro das demonstrações são da aluna de exemplo, não do banco.
+- Sem rótulo acima de título (é uma página de persuasão, não uma tela de
+  operação), sem cartões iguais de ícone + título + texto.
+- Movimento só no painel de exemplo, que repete a coreografia do Painel: as
+  linhas entram em cascata e as barras enchem. O resto é parado.
+- Quem já tem sessão vai ao Painel; a página espera o `/me` no máximo 800 ms
+  antes de aparecer, para não piscar na frente de quem estuda.
+
 ### Login
 - Marca grande com o símbolo, frase "Sua plataforma de estudos para residência
   médica", cartão com abas Entrar / Criar conta. Fundo `--ground`.
+- `/login?criar` abre na aba Criar conta (é para onde vão os botões da página
+  pública), e "Conheça o Conduta", abaixo do cartão, leva a ela.
 - O tema é aplicado no `main.tsx`, antes do primeiro quadro, e não no `AppShell`:
   o login e a redefinição de senha ficam fora dele e apareciam sempre claros para
   quem usa o escuro.

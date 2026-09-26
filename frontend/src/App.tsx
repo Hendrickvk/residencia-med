@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { RequireAuth } from "./components/RequireAuth";
 import { AppShell } from "./components/shell/AppShell";
 import { ACERVO } from "./lib/nav";
+import Inicio from "./pages/Inicio";
 import Login from "./pages/Login";
 import Confirmar from "./pages/Confirmar";
 import Senha from "./pages/Senha";
@@ -17,6 +18,8 @@ import Simulado from "./pages/simulado";
 export default function App() {
   return (
     <Routes>
+      {/* Página pública: quem tem sessão é mandado ao Painel lá dentro. */}
+      <Route path="/" element={<Inicio />} />
       <Route path="/login" element={<Login />} />
       {/* Link do e-mail de redefinição: público, porque quem chega aqui é
           exatamente quem não consegue entrar. */}
@@ -27,7 +30,6 @@ export default function App() {
 
       <Route element={<RequireAuth />}>
         <Route element={<AppShell />}>
-          <Route index element={<Navigate to="/painel" replace />} />
           <Route path="/painel" element={<Painel />} />
           <Route path="/praticar" element={<Praticar />} />
           <Route path="/revisao" element={<Revisao />} />

@@ -1,12 +1,16 @@
 import { useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Marca } from "../components/shell/Marca";
 import { ApiError } from "../lib/api";
 import { useAuthActions } from "../lib/auth";
 import { BOTAO_PRIMARIO, CAMPO } from "../lib/estilos";
 
 export default function Login() {
-  const [aba, setAba] = useState<"entrar" | "criar">("entrar");
+  const location = useLocation();
+  // "Criar conta" da página pública chega como /login?criar e já abre nessa aba.
+  const [aba, setAba] = useState<"entrar" | "criar">(() =>
+    new URLSearchParams(location.search).has("criar") ? "criar" : "entrar",
+  );
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [confirmar, setConfirmar] = useState("");
@@ -20,7 +24,7 @@ export default function Login() {
   const navigate = useNavigate();
   // Volta para onde ela ia antes de cair aqui (RequireAuth). Só caminho
   // interno: o endereço não pode servir de redirecionamento para fora.
-  const de = (useLocation().state as { de?: string } | null)?.de;
+  const de = (location.state as { de?: string } | null)?.de;
   const destino = de && de.startsWith("/") && !de.startsWith("//") && !de.startsWith("/login") ? de : "/painel";
 
   async function onSubmit(e: React.FormEvent) {
@@ -160,6 +164,14 @@ export default function Login() {
             )}
           </form>
         </div>
+
+        {/* Quem caiu direto aqui (link salvo, e-mail) acha o que é o Conduta. */}
+        <Link
+          to="/"
+          className="self-center text-apoio text-muted underline-offset-2 transition-colors duration-hover hover:text-ink hover:underline"
+        >
+          Conheça o Conduta
+        </Link>
       </div>
     </div>
   );

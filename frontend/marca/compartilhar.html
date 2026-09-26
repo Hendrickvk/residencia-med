@@ -1,0 +1,53 @@
+<!doctype html>
+<!-- Fonte da imagem de compartilhamento (public/compartilhar.png, 1200×630), a
+     que o WhatsApp e as redes mostram quando alguém cola o link. Para refazer:
+     abrir num navegador sem interface a 1200×630, escala 1, esperar
+     document.fonts.ready (a Archivo vem do Google Fonts) e capturar a tela.
+     Mantenha abaixo de 300 KB: acima disso o WhatsApp não mostra a imagem. -->
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=block" rel="stylesheet">
+<style>
+  :root { --ground:#0E1012; --surface:#16191C; --ink:#ECEDEA; --ink2:#C3C6C2; --muted:#8E949A; --line:#2A2E32;
+          --t1:#F0574C; --t2:#F58A34; --t3:#F2C94C; --t4:#3DB372; --t5:#5B8FEA; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html, body { width:1200px; height:630px; background:var(--ground); color:var(--ink); font-family:Archivo, Arial, sans-serif; }
+  .quadro { position:absolute; inset:0; padding:60px 72px 54px; display:grid; grid-template-columns: 1fr 340px; column-gap:72px; }
+  .texto { display:flex; flex-direction:column; }
+  .marca { display:flex; align-items:flex-end; gap:18px; }
+  .simbolo { display:flex; align-items:flex-end; gap:7px; }
+  .simbolo i { display:block; width:14px; border-radius:3px; }
+  .nome { font-size:58px; font-weight:800; font-stretch:115%; letter-spacing:-0.03em; line-height:.8; }
+  h1 { margin-top:52px; font-size:54px; line-height:1.02; font-weight:800; letter-spacing:-0.03em; }
+  p { margin-top:22px; font-size:24px; line-height:1.4; color:var(--ink2); font-stretch:104%; max-width:640px; }
+  .dominio { margin-top:auto; font-size:22px; font-weight:700; font-stretch:90%; color:var(--muted); letter-spacing:.01em; }
+  .escala { align-self:center; display:flex; flex-direction:column; gap:10px; margin-top:-10px; }
+  .nivel { height:62px; border-radius:6px; display:flex; align-items:center; justify-content:space-between; padding:0 20px;
+           color:#0E1012; font-size:21px; font-weight:800; font-stretch:72%; letter-spacing:.06em; text-transform:uppercase; }
+  .nivel b { font-size:24px; font-stretch:110%; letter-spacing:0; font-variant-numeric:tabular-nums; }
+</style>
+</head>
+<body>
+<div class="quadro">
+  <div class="texto">
+    <div class="marca">
+      <div class="simbolo">
+        <i style="height:70px;background:var(--t1)"></i><i style="height:56px;background:var(--t2)"></i><i style="height:42px;background:var(--t3)"></i><i style="height:28px;background:var(--t4)"></i><i style="height:14px;background:var(--t5)"></i>
+      </div>
+      <span class="nome">Conduta</span>
+    </div>
+    <h1>As provas oficiais da Revalida e do ENAMED, comentadas.</h1>
+    <p>Painel de triagem, revisão espaçada e simulados no tempo da prova.</p>
+    <div class="dominio">qualaconduta.com.br</div>
+  </div>
+  <div class="escala">
+    <div class="nivel" style="background:var(--t1)">Emergência <b>0–39%</b></div>
+    <div class="nivel" style="background:var(--t2)">Muito urgente <b>40–54%</b></div>
+    <div class="nivel" style="background:var(--t3)">Urgente <b>55–69%</b></div>
+    <div class="nivel" style="background:var(--t4)">Pouco urgente <b>70–84%</b></div>
+    <div class="nivel" style="background:var(--t5)">Não urgente <b>85%+</b></div>
+  </div>
+</div>
+</body>
+</html>

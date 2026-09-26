@@ -8,6 +8,30 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
 
 ## Pendências
 
+- **Página pública e prévia de link** (pedido de 26/09, a partir da crítica
+  comercial do mesmo dia), em fases, conferidas no localhost e subidas só com
+  autorização: (1) prévia de link — `og:*` no `index.html`, imagem
+  `public/compartilhar.png` (1200×630, fonte em `frontend/marca/`),
+  `robots.txt` e `sitemap.xml` — **feita e conferida no localhost**; (2) página
+  pública em `/` para quem não entrou — **feita e conferida no localhost**
+  (desktop e celular, claro e escuro; `/` com sessão cai no Painel; "Criar
+  conta" abre o login na aba certa). Na primeira versão a página mostrava "1.163
+  questões" e "13 provas oficiais", lidas de um endpoint público; o usuário
+  pediu para tirar: número pequeno diminui a plataforma, melhor "provas oficiais
+  revisadas" e um ar de mistério ("você precisa ter um olhar mais comercial").
+  Saíram as contagens e o endpoint, e as bancas viraram selo. **No ar em
+  26/09** (só o front; `dist.antigo` no servidor para voltar): conferidos em
+  produção os `og:*`, `robots.txt`, `sitemap.xml`, a imagem (70 KB) e o
+  `start_url` `/painel`. Falta o commit. Próximas fases da crítica: (3) e (4)
+  abaixo. Decisões do usuário para a (2): **não
+  prometer preço** ("Criar conta", sem "grátis"), promessa de abertura "As
+  provas oficiais da Revalida e do ENAMED, comentadas." e página **média, 4
+  blocos**: promessa com o painel de verdade, caso comentado + revisão +
+  simulado, lista das provas, convite final. Depois, na ordem da crítica:
+  (3) Simulado com histórico e blocos menores — atenção: a lista já mostra a
+  nota da última tentativa e o "Continuar prova" (DESIGN_TRIAGEM, Simulado);
+  a crítica não viu porque a conta de teste não tinha simulados; (4) nota
+  projetada contra a nota de aprovação de cada prova.
 - **Revalida 2020: travada no gabarito.** A aba de 2020 do INEP só tem
   `gabarito_caderno_1.pdf` e `_2`, os dois **preliminares**, e a área de
   resultados não traz o definitivo (procurado em 26/09). Sem o definitivo não
@@ -63,10 +87,8 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   do Neon quando `DATABASE_URL_TESTES` existe; (5) tela "Uso da plataforma"
   no admin, com a lógica em `db.metricas_uso` e checagem de `eh_admin`
   própria (lista e-mails) — conferida com o `AppTest` do Streamlit, como
-  admin e como não admin. **Falta o usuário**: criar o branch no Neon
-  (Console → Branches → Create branch a partir do main) e pôr a connection
-  string dele em `.streamlit/secrets.toml` como `DATABASE_URL_TESTES`; e
-  conferir que os e-mails de falha do Actions estão ligados.
+  admin e como não admin. O branch do Neon foi criado em 26/09 (ver a data);
+  **falta o usuário** conferir que os e-mails de falha do Actions estão ligados.
 - **O "dia" da plataforma vira às 21h de Brasília** (achado em 25/09, depois de
   subir a ofensiva nova). O servidor (`timedatectl`: Etc/UTC) e o banco (sessão
   em GMT) rodam em UTC, e tudo que é "hoje" sai de `datetime.now()`/
@@ -2145,6 +2167,21 @@ governa as telas admin do Streamlit.
   que toda hepatite B crônica recebe antiviral. A lição de sempre se repetiu: o
   erro estava num ponto de corte (o dia em que o IgM positiva), e foi a busca por
   irmãs no banco que o confirmou.
+
+- **Testes fora da produção: branch `testes` no Neon** (pedido do usuário). Criado
+  pelo `neonctl` com login OAuth no navegador (a janela é de 60 s — o usuário
+  precisa estar no navegador, já logado), a partir do `production` do projeto
+  `tiny-queen-54477165`; URL com pooler em `.streamlit/secrets.toml` como
+  `DATABASE_URL_TESTES`, sem passar pela saída de nenhum comando. A suíte
+  inteira passou nele: **159 testes em ~10 min** (~7 na produção — o compute
+  do branch é menor e começa frio). A sessão do CLI vale para a conta inteira
+  (cria e apaga projetos), então foi revogada (`neonctl profile remove DEFAULT
+  --yes`) e o `~/.config/neon/credentials.json` apagado. Armadilha achada no
+  caminho: **API local e pytest no mesmo branch ao mesmo tempo dão deadlock** —
+  o `init_db()` da API faz `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`, que pega
+  lock exclusivo mesmo quando a coluna já existe; rodar um de cada vez. O
+  branch também serve ao QA local: `CONDUTA_TESTES=1` no uvicorn põe a API no
+  branch, e as contas descartáveis deixam de ir para a produção.
 
 ## Armadilhas das telas admin (Streamlit)
 

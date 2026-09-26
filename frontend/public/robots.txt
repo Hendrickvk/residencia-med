@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /senha/
+Disallow: /confirmar/
+
+Sitemap: https://qualaconduta.com.br/sitemap.xml
