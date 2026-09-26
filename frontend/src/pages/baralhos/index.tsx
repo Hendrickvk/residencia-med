@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FolderPlus, Pencil, Play, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Dialog } from "../../components/Dialog";
 import { EstadoFalha } from "../../components/EstadoFalha";
 import { EstadoVazio } from "../../components/EstadoVazio";
@@ -26,7 +27,10 @@ export default function Baralhos() {
   });
   const [editando, setEditando] = useState<{ pasta?: Pasta } | null>(null);
   const [novoBaralhoEm, setNovoBaralhoEm] = useState<Pasta | null>(null);
-  const [estudandoTudo, setEstudandoTudo] = useState(false);
+  // `?estudar=tudo` vem do passo "Cartões" da Conduta de hoje, no Painel: quem
+  // clicou "Estudar" lá já disse o que quer (o mesmo `?estudar=1` do baralho).
+  const [params, setParams] = useSearchParams();
+  const [estudandoTudo, setEstudandoTudo] = useState(() => params.get("estudar") === "tudo");
 
   const recarregar = () => queryClient.invalidateQueries({ queryKey: ["pastas"] });
   const apagarPasta = useMutation({ mutationFn: excluirPasta, onSuccess: recarregar });
@@ -45,6 +49,8 @@ export default function Baralhos() {
         nome="Todos os baralhos"
         onSair={() => {
           setEstudandoTudo(false);
+          // Sem isto, recarregar depois de encerrar voltaria para o estudo.
+          if (params.get("estudar")) setParams({}, { replace: true });
           recarregar();
         }}
       />

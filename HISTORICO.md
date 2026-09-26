@@ -13,10 +13,9 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   autorização:
   1. *Celular primeiro* — no ar desde 25/09 (commit `731bd06`; ver a data).
   2. *Chute antes de confirmar* — no ar desde 25/09 (commit `c014a57`; ver a
-     data). O próximo é o 3.
-  3. Painel começando por "Hoje" (revisões vencidas, cartões do dia e a
-     prioridade nº 1, com um botão primário só); Evolução da memória, Por tipo
-     e 14 dias descem para uma seção recolhida.
+     data).
+  3. *Painel começando por "Hoje"* — feito e conferido no localhost em 25/09
+     (ver a data), esperando autorização para subir.
   4. Triagem de entrada para conta nova: prova e data, depois 25 casos, 5 por
      grande área, que montam o quadro no primeiro dia.
   5. Menores: a ofensiva contar a revisão de cartões (`db.calcular_ofensiva`
@@ -1931,6 +1930,27 @@ governa as telas admin do Streamlit.
   interruptor caber ao lado do Confirmar no computador; o atalho continua no
   título do botão Marcar da barra. **No ar em 25/09** (commit `c014a57`),
   depois de o usuário testar na janela que simula o celular.
+
+- **"Conduta de hoje" no Painel** (item 3 da crítica). O Painel tinha oito
+  blocos, mais de dez botões de praticar, e a fila de revisão era o sétimo.
+  Logo abaixo do título entrou a "Conduta de hoje" (`CondutaHoje.tsx`):
+  diagnóstico e depois conduta, a ordem do raciocínio clínico, e o nome é o
+  da marca. Até três passos — revisão, cartões (só quando há cartão vencido) e
+  o tema nº 1 das prioridades — com um botão primário só, o do primeiro
+  pendente. O seletor da meta de revisão veio junto, porque decide a primeira
+  linha. Ficou em segundo lugar, e não acima do título, para o h1 continuar
+  sendo o primeiro da página e a identidade abrir no diagnóstico; medido a
+  393px, ela cabe inteira na primeira tela (379–733px, acima da barra de
+  abas). "Onde você ganha mais pontos" perdeu o botão primário (o primeiro
+  tema já é o passo da conduta). O `FilaRevisao.tsx` saiu: a contagem, a
+  meta e o "Revisar" foram para a conduta, e a previsão de 7 dias foi para a
+  seção **Evolução**, recolhida por padrão, junto com Por tipo, os 14 dias e a
+  Evolução da memória; fechada ela não desenha nada, e aberta uma vez fica
+  aberta no aparelho (`localStorage`). O passo dos cartões abre o "Estudar
+  tudo" por `/baralhos?estudar=tudo`, o mesmo padrão do `?estudar=1` do
+  baralho. Conferido com uma conta de teste: um primário só na página,
+  Evolução fechada sem gráficos no DOM, aberta depois de recarregar, e o link
+  dos cartões caindo direto no estudo.
 
 ## Armadilhas das telas admin (Streamlit)
 

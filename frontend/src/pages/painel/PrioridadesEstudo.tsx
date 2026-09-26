@@ -1,5 +1,5 @@
 import { ArrowRight } from "lucide-react";
-import { BOTAO_PRIMARIO, BOTAO_SECUNDARIO } from "../../lib/estilos";
+import { BOTAO_SECUNDARIO } from "../../lib/estilos";
 import { formatarPctBR } from "../../lib/format";
 import { atraso } from "../../lib/movimento";
 import { CLASSES_NIVEL, MINIMO_AMOSTRA, nivelTriagem } from "../../lib/triagem";
@@ -60,11 +60,12 @@ export function PrioridadesEstudo({ prioridades, onPraticar }: Props) {
                   Caiu em {p.provas} das {p.total_provas} provas do INEP
                 </span>
               </div>
-              {/* Só o primeiro é primário, como o "Praticar 10" do quadro. */}
+              {/* Todos secundários: o primeiro tema já é o passo "Praticar" da
+                  Conduta de hoje, e o botão primário do Painel é o de lá. */}
               <button
                 type="button"
                 onClick={() => onPraticar(p, quantidade)}
-                className={`group mt-auto ${i === 0 ? BOTAO_PRIMARIO : BOTAO_SECUNDARIO}`}
+                className={`group mt-auto ${BOTAO_SECUNDARIO}`}
               >
                 Praticar {quantidade}
                 <ArrowRight
