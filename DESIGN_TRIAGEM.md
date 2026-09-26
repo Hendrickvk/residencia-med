@@ -418,6 +418,9 @@ Conteúdo das demais telas: largura máxima 1360px, padding 36/40px.
   jeito).
 - **Resumo**: acertos em display, etiqueta de nível do aproveitamento da sessão,
   tempo médio por caso e desempenho por especialidade em linhas com barra de nível.
+  No celular cada linha tem o nome em cima e a barra, o percentual e a fração
+  embaixo: numa linha só, a barra (`minmax` com teto fixo) crescia antes da coluna
+  `1fr` do nome, e a 393px o nome sumia inteiro (corrigido em 25/09).
 
 ### Simulado
 - Configurador com duas abas. **Prova oficial**: lista das edições com caderno

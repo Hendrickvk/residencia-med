@@ -37,6 +37,12 @@ export const ROTULO_TIPO: Record<TipoNovidade, string> = {
 
 export const NOVIDADES: Novidade[] = [
   {
+    id: "2026-09-25e",
+    data: "25 de setembro de 2026",
+    titulo: "Resumo da sessão",
+    itens: [{ tipo: "corrigido", texto: "No celular, o resumo da sessão mostra de novo o nome de cada especialidade." }],
+  },
+  {
     id: "2026-09-25d",
     data: "25 de setembro de 2026",
     titulo: "Painel mais direto",

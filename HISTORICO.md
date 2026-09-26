@@ -16,8 +16,8 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
      data).
   3. *Painel começando por "Hoje"* — no ar desde 25/09 (commit `8619822`; ver
      a data). O próximo é o 4.
-  4. Triagem de entrada para conta nova: prova e data, depois 25 casos, 5 por
-     grande área, que montam o quadro no primeiro dia.
+  4. *Triagem de entrada* — **descartada pelo usuário** em 25/09, depois de
+     testar (ver a data). Não repropor como caminho sugerido para a conta nova.
   5. Menores: a ofensiva contar a revisão de cartões (`db.calcular_ofensiva`
      só lê `respostas`); uma meta diária só (o cabeçalho do Painel tem 20
      fixo, e a fila tem a sua); o botão de tema no menu da conta; os
@@ -1953,6 +1953,23 @@ governa as telas admin do Streamlit.
   dos cartões caindo direto no estudo. **No ar em 25/09** (commit `8619822`),
   depois de o usuário ver na janela que simula o celular e manter a conduta
   abaixo do título.
+
+- **Triagem de entrada — descartada** (item 4 da crítica). Foi construída e
+  testada: o Painel sem respostas virava "Comece pela triagem.", com a data da
+  prova e uma sessão de 25 casos, 5 de cada grande área, para o quadro
+  classificar as cinco no primeiro dia. O usuário viu na janela que simula o
+  celular e não quis, por três motivos juntos: longa demais para quem acabou
+  de chegar (uns 40 min), a tela de entrada não agradou, e **empurrava para um
+  caminho** quando ele prefere que a pessoa escolha livremente o que praticar.
+  O código saiu inteiro (nada foi commitado); o Painel da conta nova continua
+  o estado vazio com "Praticar agora", que abre o Configurador. Não repropor
+  onboarding guiado sem o usuário pedir.
+  - Achado no caminho, e mantido: no celular o **resumo da sessão** escondia o
+    nome de cada especialidade. A linha era `minmax(0,1fr)` para o nome e
+    `minmax(80px,200px)` para a barra, e o algoritmo da grade faz a trilha de
+    teto fixo crescer até o teto antes de dar espaço à `1fr` — a 393px o
+    nome ficava com 0px. No celular o nome agora ocupa a linha de cima
+    (conferido: 319px de largura e a barra embaixo).
 
 ## Armadilhas das telas admin (Streamlit)
 

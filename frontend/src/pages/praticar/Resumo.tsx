@@ -75,12 +75,15 @@ export default function Resumo({ resumo, onNovaSessao }: Props) {
             {assuntos.map((a, i) => {
               const nv = nivelTriagem(a.pct);
               return (
+                // No celular o nome ganha a linha de cima: numa linha só, a
+                // barra (`minmax` com teto fixo) cresce antes da coluna `1fr`,
+                // e a 393px o nome da especialidade sumia inteiro.
                 <div
                   key={a.assunto}
-                  className="grid animate-entrar grid-cols-[minmax(0,1fr)_minmax(80px,200px)_52px_48px] items-center gap-4 border-b border-line-soft px-5 py-3 last:border-0"
+                  className="grid animate-entrar grid-cols-[minmax(0,1fr)_52px_48px] items-center gap-x-4 gap-y-1.5 border-b border-line-soft px-5 py-3 last:border-0 sm:grid-cols-[minmax(0,1fr)_minmax(80px,200px)_52px_48px]"
                   style={atraso(i + 2, 50)}
                 >
-                  <span className="truncate text-corpo">{a.assunto}</span>
+                  <span className="truncate text-corpo max-sm:col-span-3">{a.assunto}</span>
                   <div className="h-1 overflow-hidden rounded-[2px] bg-line-soft">
                     <div
                       className={`h-1 origin-left animate-crescer ${CLASSES_NIVEL[nv].cheio}`}
