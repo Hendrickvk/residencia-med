@@ -22,7 +22,7 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   Saíram as contagens e o endpoint, e as bancas viraram selo. **No ar em
   26/09** (só o front; `dist.antigo` no servidor para voltar): conferidos em
   produção os `og:*`, `robots.txt`, `sitemap.xml`, a imagem (70 KB) e o
-  `start_url` `/painel`. Falta o commit. Próximas fases da crítica: (3) e (4)
+  `start_url` `/painel` (commit `2518504`). Próximas fases da crítica: (3) e (4)
   abaixo. Decisões do usuário para a (2): **não
   prometer preço** ("Criar conta", sem "grátis"), promessa de abertura "As
   provas oficiais da Revalida e do ENAMED, comentadas." e página **média, 4
@@ -2182,6 +2182,17 @@ governa as telas admin do Streamlit.
   lock exclusivo mesmo quando a coluna já existe; rodar um de cada vez. O
   branch também serve ao QA local: `CONDUTA_TESTES=1` no uvicorn põe a API no
   branch, e as contas descartáveis deixam de ir para a produção.
+
+- **Acabamento da crítica de 26/09** (o usuário deixou a ordem comigo, e este
+  pacote veio antes do Simulado): percentual de outros alunos só com 10 respostas
+  ou mais (`db.MINIMO_RESPOSTAS_DISTRIBUICAO`; abaixo, "Poucos alunos
+  responderam este caso até agora."); ofensiva em 0 sem o laranja de atenção;
+  faixas vazias do quadro com só o contorno na tela larga e numa linha de texto
+  empilhadas; rodapé do Configurador grudado acima da barra de abas no
+  celular; Banca e Ano ativos enquanto carregam; ícone da prova oficial dentro
+  do texto (ficava solto quando o selo quebrava). Conferido no localhost, contra
+  o branch de testes, com medição: a barra do Configurador termina em 796px numa
+  tela de 852 (852 − 56 da barra de abas).
 
 ## Armadilhas das telas admin (Streamlit)
 

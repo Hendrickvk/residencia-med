@@ -161,12 +161,22 @@ export function Topbar({ tema, onAlternarTema, me, revisoesHoje, onSair, onRever
 
               {me && (
                 <span
-                  className={`rotulo flex h-9 items-center gap-1.5 whitespace-nowrap rounded-btn px-3 text-ink transition-colors duration-toggle ${
-                    me.respondeu_hoje ? "bg-t4-soft" : "bg-t2-soft"
+                  className={`rotulo flex h-9 items-center gap-1.5 whitespace-nowrap rounded-btn px-3 transition-colors duration-toggle ${
+                    me.respondeu_hoje
+                      ? "bg-t4-soft text-ink"
+                      : me.ofensiva_dias === 0
+                        ? // Sem ofensiva não há o que perder: o laranja de "atenção"
+                          // (DESIGN_TRIAGEM.md §2) só vale quando há dias em jogo.
+                          "border border-line text-muted"
+                        : "bg-t2-soft text-ink"
                   }`}
-                  title={`Ofensiva de ${me.ofensiva_dias} dia${me.ofensiva_dias !== 1 ? "s" : ""}${
-                    me.respondeu_hoje ? ", mantida hoje" : ": estude hoje para manter (casos, revisão ou cartões)"
-                  }`}
+                  title={
+                    me.ofensiva_dias === 0 && !me.respondeu_hoje
+                      ? "Estude hoje (casos, revisão ou cartões) para começar uma ofensiva"
+                      : `Ofensiva de ${me.ofensiva_dias} dia${me.ofensiva_dias !== 1 ? "s" : ""}${
+                          me.respondeu_hoje ? ", mantida hoje" : ": estude hoje para manter (casos, revisão ou cartões)"
+                        }`
+                  }
                 >
                   <Flame size={14} strokeWidth={2} />
                   {/* A chave faz o número pular quando a ofensiva sobe. */}

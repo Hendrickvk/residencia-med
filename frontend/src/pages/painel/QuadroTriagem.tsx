@@ -14,6 +14,11 @@ function listaNatural(itens: string[]): string {
   return itens.join(", ");
 }
 
+// Nomes de nível não têm "e" dentro, então aqui o "e" final lê melhor.
+function listaNiveis(itens: string[]): string {
+  return itens.length > 1 ? `${itens.slice(0, -1).join(", ")} e ${itens[itens.length - 1]}` : itens.join("");
+}
+
 // Cascata do quadro (DESIGN_TRIAGEM.md §3): colunas da mais grave para a mais
 // leve, cartões de cima para baixo dentro de cada coluna.
 function atrasoCartao(coluna: number, linha: number): number {
@@ -110,23 +115,31 @@ export function QuadroTriagem({ areas, onAbrir, onPraticar }: Props) {
   }));
   // A pior área do quadro inteiro, que é sempre o primeiro cartão da coluna mais grave.
   const idDestaque = suficientes[0]?.area_id;
+  // Com cinco áreas, quase sempre sobram faixas vazias. Na tela larga elas ficam
+  // só com o contorno (o nível continua legível, sem o bloco de cor pesar como
+  // as cheias); empilhadas, somem e viram uma linha de texto — eram três barras
+  // coloridas no celular dizendo "0".
+  const vazias = colunas.filter((c) => c.areas.length === 0);
 
   return (
     <section aria-label="Quadro de triagem" className="flex flex-col gap-3">
       <div className="grid grid-cols-1 items-start gap-3 sm:grid-cols-2 xl:grid-cols-5">
         {colunas.map((col, c) => (
-          <div key={col.nivel} className="flex flex-col gap-2.5">
+          <div key={col.nivel} className={`flex-col gap-2.5 ${col.areas.length === 0 ? "hidden xl:flex" : "flex"}`}>
             <div
-              className={`flex h-10 animate-entrar items-center justify-between rounded-col px-3 ${CLASSES_NIVEL[col.nivel].cheio} ${CLASSES_NIVEL[col.nivel].texto}`}
+              className={`flex h-10 animate-entrar items-center justify-between rounded-col px-3 ${
+                col.areas.length === 0
+                  ? `border-2 ${CLASSES_NIVEL[col.nivel].borda} text-ink-2`
+                  : `${CLASSES_NIVEL[col.nivel].cheio} ${CLASSES_NIVEL[col.nivel].texto}`
+              }`}
               style={{ animationDelay: `${atrasoCartao(c, 0)}ms` }}
             >
               <span className="rotulo text-[14px]">{col.nome}</span>
               <span className="text-[15px] font-bold tabular-nums">{col.areas.length}</span>
             </div>
             {col.areas.length === 0 ? (
-              // Só na tela larga (5 colunas lado a lado); empilhado, o cabeçalho com 0 já basta.
               <div
-                className="hidden animate-entrar rounded-card border border-dashed border-line px-3.5 py-4 text-apoio text-muted xl:block"
+                className="animate-entrar rounded-card border border-dashed border-line px-3.5 py-4 text-apoio text-muted"
                 style={{ animationDelay: `${atrasoCartao(c, 1)}ms` }}
               >
                 {col.nivel === 5 ? "Nenhuma área acima de 85% ainda." : "Nenhuma área nesta faixa."}
@@ -147,6 +160,12 @@ export function QuadroTriagem({ areas, onAbrir, onPraticar }: Props) {
           </div>
         ))}
       </div>
+
+      {vazias.length > 0 && (
+        <p className="text-apoio text-muted xl:hidden">
+          Nenhuma área em {listaNiveis(vazias.map((v) => v.nome.toLowerCase()))}.
+        </p>
+      )}
 
       <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-apoio text-muted">
         <span>Classificação pelo aproveitamento:</span>

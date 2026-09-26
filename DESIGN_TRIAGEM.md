@@ -264,7 +264,9 @@ curto de "Revisão espaçada") e Baralhos, com contagem numa etiqueta t1 quando
 houver revisões ou cartões vencidos — aba ativa com sublinhado de 2px
 `--ink`. Entre 1024 e 1279px a etiqueta de ofensiva mostra só o número. Direita: busca global (atalho
 `/`), etiqueta de ofensiva (t4-soft se já estudou hoje — caso, revisão ou cartão,
-`db.calcular_ofensiva` —, t2-soft se não), botão de
+`db.calcular_ofensiva` —, t2-soft se não e há dias em jogo; com a ofensiva em 0 não
+há o que perder, e ela fica só com o contorno `--line` e o número em `--muted`, sem
+o laranja de atenção), botão de
 tema e avatar. O menu do avatar tem e-mail, prova alvo, **Acervo** (links do
 Streamlit, só para `is_admin`) e Sair.
 
@@ -316,8 +318,11 @@ Conteúdo das demais telas: largura máxima 1360px, padding 36/40px.
    ofensiva cumprida, sem nada a fazer fica apagado. **Um botão primário só**: o
    do primeiro passo pendente; os outros são secundários.
 3. **Quadro de triagem**: 5 colunas, uma por nível, com cabeçalho e cartões de área
-   ordenados do pior para o melhor. Coluna vazia mostra estado vazio curto ("Nenhuma
-   área acima de 85% ainda."). O primeiro cartão da coluna mais grave já mostra o
+   ordenados do pior para o melhor. Coluna vazia: na tela larga, o cabeçalho fica só
+   com o contorno da cor do nível (o cheio pesava como as colunas com área) e o
+   estado vazio curto ("Nenhuma área acima de 85% ainda."); empilhadas, abaixo de
+   1280px, as faixas vazias somem e uma linha diz "Nenhuma área em urgente, pouco
+   urgente e não urgente." — antes eram três barras coloridas no celular dizendo 0. O primeiro cartão da coluna mais grave já mostra o
    botão "Praticar 10". Abaixo, legenda das faixas, a nota "Acerto no chute vale
    meio" e a linha "Amostra insuficiente". Em telas estreitas, as colunas viram
    grupos empilhados. Todo o Painel conta só a primeira resposta a cada questão, e
@@ -394,9 +399,13 @@ Conteúdo das demais telas: largura máxima 1360px, padding 36/40px.
   cada mudança de filtro (`GET /praticar/contagem`) e manda no botão: ele
   anuncia o menor entre a quantidade escolhida e o que existe, e desliga em
   "Nenhum caso nesse recorte" — antes o recorte vazio só aparecia depois de
-  começar a sessão.
+  começar a sessão. No celular esse rodapé gruda acima da barra de abas, com o
+  botão na largura toda: o formulário é longo, e o botão e a contagem ficavam
+  abaixo da dobra. Banca e ano só desligam quando não há opção nenhuma;
+  carregando, ficam ativos com "Todas"/"Todos".
 - **Sessão (modo foco)**: acima do cartão, "Caso" + número em display à esquerda,
-  área · especialidade e selo de prova oficial à direita, com todas as provas em que
+  área · especialidade e selo de prova oficial à direita (o ícone dentro do texto,
+  para acompanhar a primeira linha quando o selo quebra), com todas as provas em que
   o caso caiu ("Revalida 2025/2 · ENAMED 2025") e não só o caderno principal
   (`db.provas_das_questoes`). O tema não entra aí: numa
   questão que pede o diagnóstico ele entregaria o gabarito, então só aparece
@@ -411,8 +420,10 @@ Conteúdo das demais telas: largura máxima 1360px, padding 36/40px.
 - **Após confirmar**: estados de alternativa (§4) com percentual de escolha;
   bloco "Discussão do caso" com "Resposta correta: {letra}", "Você marcou {letra},
   como {x}% dos outros alunos" (só quando a distribuição chegar; o espaço fica
-  reservado; sem respostas de outros alunos: "Ninguém mais respondeu este caso
-  ainda." e nenhum percentual nas alternativas), "Tema: {tema}" e a explicação em parágrafos (`src/lib/paragrafos.ts`: as explicações do banco
+  reservado; com menos de 10 respostas de outros alunos
+  (`db.MINIMO_RESPOSTAS_DISTRIBUICAO`): "Poucos alunos responderam este caso até
+  agora." e nenhum percentual nas alternativas — "100% marcaram B" podia ser uma
+  pessoa só), "Tema: {tema}" e a explicação em parágrafos (`src/lib/paragrafos.ts`: as explicações do banco
   são um bloco único, então a quebra é na exibição — um parágrafo para a resposta
   certa, um por alternativa discutida, alternativas curtas juntas, blocos longos
   divididos por frase; quebras escritas no texto têm prioridade). Depois de

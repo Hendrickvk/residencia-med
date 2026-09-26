@@ -1561,6 +1561,9 @@ def registrar_resposta(questao_id, resposta_dada, correta: bool, *, usuario_id, 
         """, (usuario_id, questao_id, resposta_dada, int(correta), agora_br().isoformat(), confianca, tempo_ms))
 
 
+MINIMO_RESPOSTAS_DISTRIBUICAO = 10
+
+
 def distribuicao_respostas_questao(questao_id, *, excluir_usuario_id=None):
     """% de escolha de cada alternativa entre todas as respostas já dadas
     a essa questão (por qualquer usuário) — usado pra mostrar a barra fina
@@ -1576,7 +1579,10 @@ def distribuicao_respostas_questao(questao_id, *, excluir_usuario_id=None):
     with get_conn() as conn:
         linhas = conn.execute(query, params).fetchall()
     total = sum(r["total"] for r in linhas)
-    if not total:
+    # Com poucas respostas o percentual engana: "100% marcaram B" podia ser uma
+    # pessoa só. Abaixo do mínimo sai vazio, como se ninguém tivesse respondido,
+    # e a tela diz que ainda são poucas.
+    if total < MINIMO_RESPOSTAS_DISTRIBUICAO:
         return {}
     return {r["resposta_dada"]: round(100 * r["total"] / total, 1) for r in linhas}
 

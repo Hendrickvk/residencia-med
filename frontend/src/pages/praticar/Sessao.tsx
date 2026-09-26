@@ -287,13 +287,14 @@ export default function Sessao({ filtros, nonce, salva, email, onFinalizar, onVo
   const recorteCaso = [questaoAtual.area, questaoAtual.especialidade].filter(Boolean).join(" · ");
   // Todas as provas em que o caso caiu, não só o caderno principal.
   const prova = seloDasProvas(questaoAtual);
-  // `{}` = ninguém além do próprio aluno respondeu ainda (db.distribuicao_respostas_questao
-  // exclui o usuário atual). Sem esse caso, todas as alternativas apareciam com 0%.
+  // `{}` = menos de 10 respostas de outros alunos (db.MINIMO_RESPOSTAS_DISTRIBUICAO;
+  // o próprio aluno fica fora da conta). Abaixo disso o percentual engana — "100%"
+  // podia ser uma pessoa só —, então nenhuma alternativa mostra percentual.
   const distribuicaoVazia = distribuicao !== null && Object.keys(distribuicao).length === 0;
   const pctEscolha =
     selecionada && distribuicao && !distribuicaoVazia ? (distribuicao[selecionada] ?? 0) : undefined;
   const fraseDistribuicao = distribuicaoVazia
-    ? "Ninguém mais respondeu este caso ainda."
+    ? "Poucos alunos responderam este caso até agora."
     : pctEscolha === undefined
       ? null
       : pctEscolha === 0
@@ -364,8 +365,10 @@ export default function Sessao({ filtros, nonce, salva, email, onFinalizar, onVo
             <div className="flex min-w-0 flex-col items-end gap-1.5 text-right">
               {recorteCaso && <span className="text-[15px] font-semibold">{recorteCaso}</span>}
               {prova && (
-                <span className="flex items-center gap-1.5 text-apoio text-muted">
-                  <BadgeCheck size={16} strokeWidth={2} className="text-t4" />
+                // Ícone dentro do texto, e não num flex ao lado: com "Revalida 2025/2 ·
+                // ENAMED 2025" a linha quebra no celular, e o ícone ficava solto no meio.
+                <span className="text-apoio text-muted">
+                  <BadgeCheck size={16} strokeWidth={2} className="mr-1.5 inline-block align-[-3px] text-t4" />
                   Prova oficial · {prova}
                 </span>
               )}

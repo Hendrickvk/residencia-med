@@ -158,7 +158,9 @@ export default function Configurador({ onIniciar, areaInicial }: Props) {
               id="filtro-banca"
               className={CAMPO}
               value={banca ?? ""}
-              disabled={!bancas?.length}
+              // Desliga só quando não há banca nenhuma; carregando, fica ativo com
+              // "Todas" (desativado parecia defeito, e as opções chegam logo).
+              disabled={bancas !== undefined && bancas.length === 0}
               onChange={(e) => setBanca(e.target.value || undefined)}
             >
               <option value="">Todas</option>
@@ -176,7 +178,7 @@ export default function Configurador({ onIniciar, areaInicial }: Props) {
               id="filtro-ano"
               className={CAMPO}
               value={ano ?? ""}
-              disabled={!anos?.length}
+              disabled={anos !== undefined && anos.length === 0}
               onChange={(e) => setAno(e.target.value ? Number(e.target.value) : undefined)}
             >
               <option value="">Todos</option>
@@ -251,7 +253,11 @@ export default function Configurador({ onIniciar, areaInicial }: Props) {
           </div>
         )}
 
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line-soft pt-6">
+        {/* No celular o rodapé gruda acima da barra de abas (56px + área segura):
+            o formulário é longo, e o botão ficava abaixo da dobra — e a contagem,
+            que responde a cada filtro, fora de vista enquanto se mexia nele.
+            `-mx-6` estica a faixa até a borda do cartão (`p-6` no celular). */}
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line-soft pt-6 max-sm:sticky max-sm:bottom-[calc(56px_+_env(safe-area-inset-bottom))] max-sm:z-10 max-sm:-mx-6 max-sm:border-line max-sm:bg-surface max-sm:px-4 max-sm:py-3">
           {/* A contagem responde a cada filtro: antes só se descobria o tamanho
               do recorte depois de começar a sessão, ou no "nenhum caso". */}
           <span aria-live="polite" className="text-apoio tabular-nums text-muted">
@@ -277,7 +283,7 @@ export default function Configurador({ onIniciar, areaInicial }: Props) {
                 quantidade,
               })
             }
-            className={`group ${BOTAO_PRIMARIO}`}
+            className={`group ${BOTAO_PRIMARIO} max-sm:w-full`}
           >
             Iniciar sessão de {naFila} {naFila === 1 ? "caso" : "casos"}
             <ArrowRight size={18} strokeWidth={2} className="transition-transform duration-toggle ease-suave group-hover:translate-x-0.5" />

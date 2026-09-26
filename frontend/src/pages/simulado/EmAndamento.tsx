@@ -231,8 +231,10 @@ function Conteudo({
             <div className="flex min-w-0 flex-col items-end gap-1.5 text-right">
               {recorte && <span className="text-[15px] font-semibold">{recorte}</span>}
               {prova && (
-                <span className="flex items-center gap-1.5 text-apoio text-muted">
-                  <BadgeCheck size={16} strokeWidth={2} className="text-t4" />
+                // Ícone dentro do texto, e não num flex ao lado: com "Revalida 2025/2 ·
+                // ENAMED 2025" a linha quebra no celular, e o ícone ficava solto no meio.
+                <span className="text-apoio text-muted">
+                  <BadgeCheck size={16} strokeWidth={2} className="mr-1.5 inline-block align-[-3px] text-t4" />
                   Prova oficial · {prova}
                 </span>
               )}

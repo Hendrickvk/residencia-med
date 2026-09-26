@@ -37,6 +37,19 @@ export const ROTULO_TIPO: Record<TipoNovidade, string> = {
 
 export const NOVIDADES: Novidade[] = [
   {
+    id: "2026-09-26c",
+    data: "26 de setembro de 2026",
+    titulo: "Ajustes no celular",
+    itens: [
+      { tipo: "novo", texto: "No Praticar, o botão de começar e a contagem de casos ficam sempre à vista enquanto você escolhe os filtros." },
+      { tipo: "novo", texto: "O quadro de triagem ficou mais curto: as faixas sem nenhuma área viram uma linha só." },
+      {
+        tipo: "corrigido",
+        texto: "O percentual de outros alunos em cada alternativa só aparece quando já há respostas suficientes para ele dizer alguma coisa.",
+      },
+    ],
+  },
+  {
     id: "2026-09-26b",
     data: "26 de setembro de 2026",
     titulo: "Revalida 2022/1",
