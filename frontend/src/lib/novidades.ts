@@ -37,6 +37,15 @@ export const ROTULO_TIPO: Record<TipoNovidade, string> = {
 
 export const NOVIDADES: Novidade[] = [
   {
+    id: "2026-09-25f",
+    data: "25 de setembro de 2026",
+    titulo: "Ofensiva",
+    itens: [
+      { tipo: "corrigido", texto: "A ofensiva agora conta os dias em que você só revisou casos ou estudou cartões." },
+      { tipo: "novo", texto: "Apagar uma pasta ou um baralho pede confirmação dizendo o que vai junto." },
+    ],
+  },
+  {
     id: "2026-09-25e",
     data: "25 de setembro de 2026",
     titulo: "Resumo da sessão",

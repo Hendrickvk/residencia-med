@@ -257,7 +257,8 @@ Esquerda: marca. Centro-esquerda: abas Painel, Praticar, Simulado, Revisão (ró
 curto de "Revisão espaçada") e Baralhos, com contagem numa etiqueta t1 quando
 houver revisões ou cartões vencidos — aba ativa com sublinhado de 2px
 `--ink`. Entre 1024 e 1279px a etiqueta de ofensiva mostra só o número. Direita: busca global (atalho
-`/`), etiqueta de ofensiva (t4-soft se já respondeu hoje, t2-soft se não), botão de
+`/`), etiqueta de ofensiva (t4-soft se já estudou hoje — caso, revisão ou cartão,
+`db.calcular_ofensiva` —, t2-soft se não), botão de
 tema e avatar. O menu do avatar tem e-mail, prova alvo, **Acervo** (links do
 Streamlit, só para `is_admin`) e Sair.
 
@@ -290,8 +291,9 @@ Conteúdo das demais telas: largura máxima 1360px, padding 36/40px.
 1. **Cabeçalho**: rótulo "Triagem de hoje · {dia da semana, data}"; h1 "{Área} é a
    sua maior lacuna." (com menos de 50 respostas: "Volume ainda baixo para
    conclusões." e apoio "Responda mais {n} questões para a triagem ficar
-   confiável."); linha de apoio "{acertos} acertos em {total} questões · {hoje} de 20
-   questões hoje · prova em {n} dias"; à direita, rótulo "Aproveitamento geral" e o
+   confiável."); linha de apoio "{acertos} acertos em {total} questões · {hoje}
+   questões hoje · prova em {n} dias" (até 25/09 era "{hoje} de 20": uma meta fixa
+   que ninguém escolheu, ao lado da meta de revisão da Conduta de hoje); à direita, rótulo "Aproveitamento geral" e o
    percentual em display-xl.
 2. **Conduta de hoje** (`pages/painel/CondutaHoje.tsx`, desde 25/09): logo abaixo
    do título, porque o Painel era um relatório de oito blocos e a fila de revisão —

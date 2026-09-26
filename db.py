@@ -1546,15 +1546,23 @@ def consumir_cota_pratica(*, usuario_id, quantidade, teto=TETO_DIARIO_PRATICA):
 
 
 def calcular_ofensiva(*, usuario_id):
-    """Dias consecutivos com pelo menos 1 resposta registrada, contando pra
-    trás a partir de hoje (ou de ontem, se hoje ainda não tem resposta —
-    a ofensiva de ontem continua 'valendo' até o fim do dia de hoje).
-    Retorna (dias_consecutivos, respondeu_hoje)."""
+    """Dias consecutivos de estudo, contando pra trás a partir de hoje (ou de
+    ontem, se hoje ainda não teve estudo — a ofensiva de ontem continua
+    'valendo' até o fim do dia de hoje). Conta como estudo qualquer uma das
+    três: resposta no Praticar ou no Simulado (`respostas`), caso avaliado na
+    Revisão (`revisao_eventos` — a Revisão não passa por `respostas`) e cartão
+    avaliado (`revisao_cartao_eventos`). Até 25/09 só `respostas` contava, e
+    quem passava o dia só revisando, casos ou cartões, perdia a sequência.
+    Os três horários saem do mesmo relógio (`datetime.now()` no Python).
+    Retorna (dias_consecutivos, estudou_hoje)."""
     with get_conn() as conn:
         linhas = conn.execute("""
-            SELECT DISTINCT (respondida_em::date) AS dia
-            FROM respostas WHERE usuario_id = ?
-        """, (usuario_id,)).fetchall()
+            SELECT respondida_em::date AS dia FROM respostas WHERE usuario_id = ?
+            UNION
+            SELECT registrado_em::date FROM revisao_eventos WHERE usuario_id = ?
+            UNION
+            SELECT registrado_em::date FROM revisao_cartao_eventos WHERE usuario_id = ?
+        """, (usuario_id, usuario_id, usuario_id)).fetchall()
     dias = {r["dia"] for r in linhas}
     hoje = datetime.date.today()
     respondeu_hoje = hoje in dias

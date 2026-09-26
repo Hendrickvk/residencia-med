@@ -3,8 +3,6 @@ import { formatarPctBR } from "../../lib/format";
 import { MINIMO_AMOSTRA, VOLUME_CONFIAVEL } from "../../lib/triagem";
 import type { AreaDesempenho, PainelData } from "../../lib/types";
 
-const META_DIARIA = 20;
-
 const DIAS_SEMANA = ["domingo", "segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado"];
 const MESES = [
   "janeiro", "fevereiro", "março", "abril", "maio", "junho",
@@ -42,7 +40,9 @@ export function Cabecalho({ totais, porArea, respondidasHoje, provaAlvo }: Props
   const dias = diasAteProva(provaAlvo);
   const resumo = [
     `${totais.acertos.toLocaleString("pt-BR")} acertos em ${totais.respostas.toLocaleString("pt-BR")} questões`,
-    `${respondidasHoje} de ${META_DIARIA} questões hoje`,
+    // Sem "de 20": era uma meta fixa, que ninguém escolheu, ao lado da meta de
+    // revisão que ela escolhe na Conduta de hoje — duas metas para o mesmo dia.
+    `${respondidasHoje} ${respondidasHoje === 1 ? "questão" : "questões"} hoje`,
     dias !== null ? `prova em ${dias} dia${dias !== 1 ? "s" : ""}` : null,
   ]
     .filter(Boolean)

@@ -18,12 +18,15 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
      a data). O próximo é o 4.
   4. *Triagem de entrada* — **descartada pelo usuário** em 25/09, depois de
      testar (ver a data). Não repropor como caminho sugerido para a conta nova.
-  5. Menores: a ofensiva contar a revisão de cartões (`db.calcular_ofensiva`
-     só lê `respostas`); uma meta diária só (o cabeçalho do Painel tem 20
-     fixo, e a fila tem a sua); o botão de tema no menu da conta; os
-     `window.confirm` dos baralhos pelo `Dialog`; modo metrô (service worker e
-     a fila de respostas no `localStorage`, que hoje vive só na memória); uma
-     página de entrada no `/login`; busca no celular.
+  5. Menores. Feitos em 25/09 (ver a data), esperando autorização para subir:
+     a ofensiva contando a Revisão e os cartões, o fim da meta fixa de 20 no
+     cabeçalho e os `window.confirm` dos baralhos pelo `Dialog`. Em aberto, e
+     só se o usuário pedir: o botão de tema no menu da conta (é gosto, não
+     defeito); modo metrô (service worker e a fila de respostas no
+     `localStorage` — o service worker pode prender alunas numa versão velha
+     depois de um deploy, então precisa de plano de atualização antes);
+     página de entrada no `/login` (da mesma família da triagem de entrada
+     que ele descartou: perguntar antes); busca no celular.
 - **Pedir ao suporte do GitHub que apague os commits antigos do
   `residencia-med`.** A reescrita de 24/09 tirou o roteiro da brincadeira do
   histórico, mas o GitHub continua servindo os commits antigos por link direto
@@ -1969,7 +1972,26 @@ governa as telas admin do Streamlit.
     `minmax(80px,200px)` para a barra, e o algoritmo da grade faz a trilha de
     teto fixo crescer até o teto antes de dar espaço à `1fr` — a 393px o
     nome ficava com 0px. No celular o nome agora ocupa a linha de cima
-    (conferido: 319px de largura e a barra embaixo).
+    (conferido: 319px de largura e a barra embaixo). **No ar em 25/09**
+    (commit `169c321`).
+
+- **Itens menores da crítica** (o usuário deixou a escolha comigo).
+  - *Ofensiva*: `db.calcular_ofensiva` lia só `respostas`, e a **Revisão de
+    casos não passa por lá** (grava em `revisao_eventos`) — então não só os
+    cartões: quem passava o dia só revisando casos também perdia a sequência,
+    o que era pior do que a crítica tinha visto. Agora é a união das datas de
+    `respostas`, `revisao_eventos` e `revisao_cartao_eventos`, os três do
+    mesmo relógio (`datetime.now()`); dois testes novos em
+    `test_ofensiva.py`, um por fonte. O título da etiqueta diz "estude hoje
+    para manter (casos, revisão ou cartões)". O campo continua
+    `respondeu_hoje` no `/me`, para não quebrar cliente aberto.
+  - *Meta fixa de 20*: o cabeçalho dizia "{n} de 20 questões hoje", uma meta
+    que ninguém escolheu, ao lado da meta de revisão da Conduta de hoje.
+    Ficou "{n} questões hoje".
+  - *Apagar pasta e baralho*: o `window.confirm` virou o `Dialog` do app, com
+    o que vai junto ("Os 2 cartões dele vão junto. Não dá para desfazer.") e
+    o foco em "Cancelar" ao abrir. Conferido no localhost: cancelar não
+    apaga, "Apagar" apaga, pasta vazia diz que está vazia.
 
 ## Armadilhas das telas admin (Streamlit)
 

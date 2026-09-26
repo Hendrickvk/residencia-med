@@ -165,7 +165,7 @@ export function Topbar({ tema, onAlternarTema, me, revisoesHoje, onSair, onRever
                     me.respondeu_hoje ? "bg-t4-soft" : "bg-t2-soft"
                   }`}
                   title={`Ofensiva de ${me.ofensiva_dias} dia${me.ofensiva_dias !== 1 ? "s" : ""}${
-                    me.respondeu_hoje ? ", mantida hoje" : ": responda uma questão hoje para manter"
+                    me.respondeu_hoje ? ", mantida hoje" : ": estude hoje para manter (casos, revisão ou cartões)"
                   }`}
                 >
                   <Flame size={14} strokeWidth={2} />

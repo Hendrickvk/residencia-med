@@ -31,6 +31,10 @@ export default function Baralhos() {
   // clicou "Estudar" lá já disse o que quer (o mesmo `?estudar=1` do baralho).
   const [params, setParams] = useSearchParams();
   const [estudandoTudo, setEstudandoTudo] = useState(() => params.get("estudar") === "tudo");
+  // Apagar leva junto o que está dentro e não tem desfazer: a confirmação diz o
+  // que some, numa caixa do próprio app. O `window.confirm` de antes vinha com
+  // a cara e o endereço do navegador, fora do sistema visual.
+  const [apagando, setApagando] = useState<{ titulo: string; texto: string; confirmar: () => void } | null>(null);
 
   const recarregar = () => queryClient.invalidateQueries({ queryKey: ["pastas"] });
   const apagarPasta = useMutation({ mutationFn: excluirPasta, onSuccess: recarregar });
@@ -139,15 +143,15 @@ export default function Baralhos() {
               <button
                 type="button"
                 onClick={() => {
-                  // Confirmação em texto claro: apagar a pasta leva os
-                  // baralhos e os cartões junto, e não há desfazer.
-                  if (
-                    window.confirm(
-                      `Apagar "${pasta.nome}" e os ${pasta.baralhos.length} baralho(s) dentro dela? Os cartões vão junto.`,
-                    )
-                  ) {
-                    apagarPasta.mutate(pasta.id);
-                  }
+                  const n = pasta.baralhos.length;
+                  setApagando({
+                    titulo: `Apagar "${pasta.nome}"?`,
+                    texto:
+                      n === 0
+                        ? "A pasta está vazia."
+                        : `${n === 1 ? "O baralho dentro dela vai" : `Os ${n} baralhos dentro dela vão`} junto, com os cartões. Não dá para desfazer.`,
+                    confirmar: () => apagarPasta.mutate(pasta.id),
+                  });
                 }}
                 aria-label={`Apagar ${pasta.nome}`}
                 className="rounded-btn p-1.5 opacity-70 transition duration-hover hover:opacity-100"
@@ -175,11 +179,16 @@ export default function Baralhos() {
                     key={b.id}
                     baralho={b}
                     cor={pasta.cor}
-                    onApagar={() => {
-                      if (window.confirm(`Apagar o baralho "${b.nome}" e os seus ${b.cartoes} cartões?`)) {
-                        apagarBaralho.mutate(b.id);
-                      }
-                    }}
+                    onApagar={() =>
+                      setApagando({
+                        titulo: `Apagar "${b.nome}"?`,
+                        texto:
+                          b.cartoes === 0
+                            ? "O baralho está vazio."
+                            : `${b.cartoes === 1 ? "O cartão dele vai" : `Os ${plural(b.cartoes)} dele vão`} junto. Não dá para desfazer.`,
+                        confirmar: () => apagarBaralho.mutate(b.id),
+                      })
+                    }
                   />
                 ))}
               </div>
@@ -188,6 +197,27 @@ export default function Baralhos() {
         ))}
       </div>
 
+      <Dialog titulo={apagando?.titulo ?? ""} aberto={apagando !== null} onFechar={() => setApagando(null)}>
+        <div className="flex flex-col gap-5">
+          <p className="text-corpo text-ink-2">{apagando?.texto}</p>
+          {/* "Cancelar" primeiro: é nele que o foco cai ao abrir. */}
+          <div className="flex flex-wrap justify-end gap-2">
+            <button type="button" onClick={() => setApagando(null)} className={BOTAO_SECUNDARIO}>
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                apagando?.confirmar();
+                setApagando(null);
+              }}
+              className={BOTAO_PRIMARIO}
+            >
+              Apagar
+            </button>
+          </div>
+        </div>
+      </Dialog>
       <FormularioPasta
         aberto={editando !== null}
         pasta={editando?.pasta}
