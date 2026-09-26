@@ -8,6 +8,21 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
 
 ## Pendências
 
+- **Operação e métricas** (pedido de 25/09, itens 4 e 5 da avaliação "a
+  plataforma peca em algum aspecto?"). Feito e conferido no localhost,
+  esperando autorização para subir: (4a) monitor pelo GitHub Actions a cada
+  15 min contra o `/health` — que já existia e não toca o banco; acordar o
+  Neon a cada 15 min gastaria a cota gratuita — e contra o site (DEPLOY.md,
+  Monitor); (4b) erros do front vão para a API (`POST /me/erros`, tabela
+  `erros_front`, 30 por conta por hora, 30 dias) — conferido disparando um
+  erro e uma promessa rejeitada no navegador; (4c) os testes rodam num branch
+  do Neon quando `DATABASE_URL_TESTES` existe; (5) tela "Uso da plataforma"
+  no admin, com a lógica em `db.metricas_uso` e checagem de `eh_admin`
+  própria (lista e-mails) — conferida com o `AppTest` do Streamlit, como
+  admin e como não admin. **Falta o usuário**: criar o branch no Neon
+  (Console → Branches → Create branch a partir do main) e pôr a connection
+  string dele em `.streamlit/secrets.toml` como `DATABASE_URL_TESTES`; e
+  conferir que os e-mails de falha do Actions estão ligados.
 - **O "dia" da plataforma vira às 21h de Brasília** (achado em 25/09, depois de
   subir a ofensiva nova). O servidor (`timedatectl`: Etc/UTC) e o banco (sessão
   em GMT) rodam em UTC, e tudo que é "hoje" sai de `datetime.now()`/

@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "./App.tsx";
 import { BarreiraErro } from "./components/BarreiraErro";
+import { capturarErros } from "./lib/erros";
 import { queryClient } from "./lib/queryClient";
 import { aplicarTema, temaInicial } from "./lib/theme";
 import "./styles/theme.css";
@@ -12,6 +13,8 @@ import "./styles/theme.css";
 // redefinição de senha ficam fora dele e apareciam sempre no tema claro, mesmo
 // para quem escolheu o escuro. Também evita o pisca-claro no carregamento.
 aplicarTema(temaInicial());
+// Erro fora do React (evento, promessa sem catch) também vai para o servidor.
+capturarErros();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

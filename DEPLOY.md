@@ -229,6 +229,19 @@ histórico do git é público para sempre, então a senha antiga **tinha de ser
 trocada** — foi, em 22/09 — e a nova não volta para cá: ela vive no `.env`
 local (gitignorado), em `SENHA_DEMO`, que é de onde o script a lê.
 
+## Monitor ✅ Desde 2026-09-25
+
+`.github/workflows/monitor.yml` roda no GitHub Actions a cada 15 minutos e
+confere `https://qualaconduta.com.br/api/health` e a página inicial, com três
+tentativas espaçadas (um reinício de serviço leva segundos e não vira alarme).
+Falhou, o GitHub manda e-mail para quem mexeu por último no agendamento — o
+dono do repositório; conferir em github.com → Settings → Notifications →
+Actions que os e-mails de falha estão ligados. O `/health` não toca o banco
+de propósito (acordar o Neon a cada 15 min gastaria a cota gratuita). O
+agendamento atrasa em horário de pico e é desligado depois de 60 dias sem
+atividade no repositório (o GitHub avisa). Para disparar à mão: aba Actions →
+Monitor → Run workflow.
+
 ## 8. Checklist final antes de compartilhar qualquer link
 
 Conferido em 2026-09-22, no deploy que trouxe os 60 commits parados desde

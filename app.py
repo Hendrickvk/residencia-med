@@ -62,6 +62,7 @@ PAGINAS_NAV = [
     ("Acervo", "Nova questão", "post_add", "nova_questao"),
     ("Acervo", "Importar planilha", "upload_file", "importar"),
     ("Acervo", "Revisar explicações", "rate_review", "revisar"),
+    ("Acompanhamento", "Uso da plataforma", "insights", "uso"),
 ]
 LABEL_POR_KEY = {key: label for _, label, _, key in PAGINAS_NAV}
 
@@ -701,3 +702,56 @@ if pagina_atual == "revisar":
             for qid in ajustar:
                 m = marcas[str(qid)]
                 st.markdown(f"**id {qid}** — {m['nota'] or '(sem nota)'}")
+
+
+if pagina_atual == "uso":
+    ui.page_title(
+        "Uso da plataforma",
+        "Quem estuda, quanto e com o quê, e os erros que o app das alunas mandou. Estudo é resposta, "
+        "caso revisado ou cartão avaliado: a mesma régua da ofensiva. As contas dos testes ficam de fora.",
+    )
+    # A tabela por conta mostra os e-mails de todo mundo: é tela do dono da
+    # plataforma, e não de qualquer conta que passe pela senha do Caddy.
+    if not eh_admin:
+        st.error("Esta tela é só para quem administra a plataforma.")
+        st.stop()
+
+    m = db.metricas_uso()
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Contas", m["contas"]["total"],
+              f"+{m['contas']['novas_7d']} na semana" if m["contas"]["novas_7d"] else None)
+    c2.metric("Estudaram hoje", m["ativas"]["hoje"])
+    c3.metric("Nos últimos 7 dias", m["ativas"]["7d"])
+    c4.metric("Nos últimos 30 dias", m["ativas"]["30d"])
+
+    # Dia sem ninguém também é informação: o gráfico mostra os 14 dias.
+    calendario = pd.date_range(end=pd.Timestamp(db.hoje_br()), periods=14)
+    por_dia = {d["dia"]: d["ativas"] for d in m["ativas_por_dia"]}
+    st.markdown("**Contas que estudaram, por dia**")
+    st.bar_chart(pd.DataFrame({"Contas": [por_dia.get(d.date(), 0) for d in calendario]}, index=calendario))
+
+    s = m["semana"]
+    st.markdown(
+        f"**Nos últimos 7 dias:** {s['simulados']} simulado(s) terminado(s) · "
+        f"{s['cartoes_criados']} cartão(ões) criado(s) · {s['relatos']} relato(s) de erro"
+    )
+
+    st.markdown("**Por conta**, da atividade mais recente para a mais antiga (contagens dos últimos 30 dias)")
+    st.dataframe(pd.DataFrame([{
+        "Conta": c["nome"] or c["email"],
+        "E-mail": c["email"],
+        "Última atividade": c["ultima_atividade"].strftime("%d/%m %H:%M") if c["ultima_atividade"] else "nunca estudou",
+        "Dias ativos": c["dias_ativos"],
+        "Respostas": c["respostas"],
+        "Revisões": c["revisoes"],
+        "Cartões": c["cartoes"],
+        "E-mail confirmado": "sim" if c["confirmada"] else "não",
+    } for c in m["por_conta"]]), hide_index=True, use_container_width=True)
+
+    erros = db.erros_front_recentes()
+    st.markdown(f"**Erros do app nos últimos 7 dias:** {len(erros) if erros else 'nenhum'}")
+    for e in erros:
+        with st.expander(f"{e['vezes']}× · {e['contas']} conta(s) · {e['ultima']:%d/%m %H:%M} · {e['mensagem'][:90]}"):
+            st.caption(f"Tela: {e['url'] or '—'} · Navegador: {e['agente'] or '—'}")
+            if e["pilha"]:
+                st.code(e["pilha"], language=None)

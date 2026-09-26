@@ -134,6 +134,14 @@ class PerfilIn(BaseModel):
     cor: str = Field(default=db.COR_PERFIL_PADRAO, max_length=20)
 
 
+class ErroFrontIn(BaseModel):
+    # Tetos largos só para barrar corpo absurdo na porta; o db corta de novo
+    # nos tamanhos que guarda (500 / 4000 / 300).
+    mensagem: str = Field(max_length=2000)
+    pilha: Optional[str] = Field(default=None, max_length=20000)
+    url: Optional[str] = Field(default=None, max_length=2000)
+
+
 class NovidadesIn(BaseModel):
     # O id da entrada, não um booleano: "já viu" só faz sentido em relação a
     # uma versão, senão a próxima novidade nunca apareceria.

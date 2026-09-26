@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
+import { relatarErro } from "../lib/erros";
 import { BOTAO_PRIMARIO } from "../lib/estilos";
 
 interface Props {
@@ -20,9 +21,10 @@ export class BarreiraErro extends Component<Props, State> {
   }
 
   componentDidCatch(erro: Error, info: ErrorInfo) {
-    // Fica no console do navegador: é o que sobra para investigar depois, já
-    // que a plataforma não manda erro de front para o servidor.
     console.error("[conduta] erro não tratado na interface:", erro, info.componentStack);
+    // Vai também para o servidor (tela "Uso da plataforma" do admin), com a
+    // pilha de componentes, que é o que diz em que tela quebrou.
+    relatarErro(erro.message, `${erro.stack ?? ""}\n--- componentes ---${info.componentStack ?? ""}`);
   }
 
   render() {

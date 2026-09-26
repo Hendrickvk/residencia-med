@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 import db
 from api.deps import eh_admin, usuario_atual
 from api.schemas import (
-    FotoIn, MeOut, MetaRevisaoIn, NovidadesIn, PerfilIn, ProvaAlvoIn, TemaIn,
+    ErroFrontIn, FotoIn, MeOut, MetaRevisaoIn, NovidadesIn, PerfilIn, ProvaAlvoIn, TemaIn,
 )
 
 router = APIRouter(prefix="/me", tags=["me"])
@@ -96,6 +96,17 @@ def enviar_foto(dados: FotoIn, usuario=Depends(usuario_atual)):
 @router.delete("/foto", status_code=status.HTTP_204_NO_CONTENT)
 def apagar_foto(usuario=Depends(usuario_atual)):
     db.remover_foto_perfil(usuario["id"])
+
+
+@router.post("/erros", status_code=status.HTTP_204_NO_CONTENT)
+def relatar_erro_do_app(dados: ErroFrontIn, request: Request, usuario=Depends(usuario_atual)):
+    """Erro do app mandado pelo próprio navegador (`lib/erros.ts`). Sempre 204,
+    mesmo acima do teto por hora: quem manda não espera resposta. Só com
+    sessão, para ninguém de fora encher a tabela."""
+    db.registrar_erro_front(
+        usuario_id=usuario["id"], mensagem=dados.mensagem, pilha=dados.pilha,
+        url=dados.url, agente=request.headers.get("user-agent"),
+    )
 
 
 @router.patch("/perfil")

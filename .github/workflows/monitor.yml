@@ -1,0 +1,32 @@
+name: Monitor
+
+# Confere a cada 15 minutos se o site e a API respondem. Quando falha, o GitHub
+# manda e-mail para quem mexeu por último neste agendamento — o dono do
+# repositório. Antes disto, se a API caísse de madrugada, só se sabia quando uma
+# aluna reclamasse.
+#
+# O `/health` não toca o banco, de propósito: acordar o Neon a cada 15 minutos
+# gastaria a cota gratuita de processamento. Queda do banco aparece para as
+# alunas como erro de carga, com "Tentar de novo".
+#
+# O GitHub atrasa agendamentos em horário de pico (às vezes 10–20 min) e desliga
+# os de repositório sem atividade por 60 dias, com aviso por e-mail.
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # Três tentativas espaçadas antes de acusar: um reinício do serviço (um
+      # deploy) leva segundos e não pode virar alarme.
+      - name: API
+        run: curl -fsS --retry 3 --retry-delay 20 --retry-all-errors --max-time 20 https://qualaconduta.com.br/api/health
+      - name: Site
+        run: curl -fsS --retry 3 --retry-delay 20 --retry-all-errors --max-time 20 -o /dev/null https://qualaconduta.com.br/

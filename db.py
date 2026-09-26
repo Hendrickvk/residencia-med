@@ -82,7 +82,16 @@ def _database_url():
     """Lê a connection string do Postgres. Prioriza st.secrets (rodando
     via `streamlit run`); cai para a variável de ambiente DATABASE_URL
     quando não há contexto Streamlit (ex: scripts standalone). Nunca
-    hardcoded no repo."""
+    hardcoded no repo.
+
+    Nos testes (`CONDUTA_TESTES`, que o `tests/conftest.py` liga) vale
+    `DATABASE_URL_TESTES` quando existe: um branch do Neon, para os testes não
+    escreverem no banco das alunas. Sem ela, os testes caem no banco de
+    produção como sempre foi, e o conftest avisa."""
+    if os.environ.get("CONDUTA_TESTES"):
+        url = _url_testes()
+        if url:
+            return url
     try:
         import streamlit as st
         if "DATABASE_URL" in st.secrets:
@@ -97,6 +106,18 @@ def _database_url():
             "DATABASE_URL (para scripts standalone)."
         )
     return url
+
+
+def _url_testes():
+    """A connection string do branch de testes, se configurada (secrets.toml
+    ou ambiente), ou None."""
+    try:
+        import streamlit as st
+        if "DATABASE_URL_TESTES" in st.secrets:
+            return st.secrets["DATABASE_URL_TESTES"]
+    except Exception:
+        pass
+    return os.environ.get("DATABASE_URL_TESTES") or None
 
 
 class _PGCursor:
@@ -781,6 +802,23 @@ def init_db(forcar=False):
             FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
         )
         """)
+
+        # Erros do app das alunas (React), mandados pelo próprio navegador:
+        # antes não iam para lugar nenhum, e num celular não há console à mão.
+        # Aparecem na tela "Uso da plataforma" do admin; ficam 30 dias.
+        c.execute("""
+        CREATE TABLE IF NOT EXISTS erros_front (
+            id SERIAL PRIMARY KEY,
+            usuario_id INTEGER,
+            mensagem TEXT NOT NULL,
+            pilha TEXT,
+            url TEXT,
+            agente TEXT,
+            criado_em TIMESTAMP NOT NULL,
+            FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+        )
+        """)
+        c.execute("CREATE INDEX IF NOT EXISTS idx_erros_front_criado ON erros_front (criado_em)")
 
         # Questões marcadas manualmente pelo aluno durante uma sessão de
         # prática ("Marcar para revisão") — sinal independente do SM-2
@@ -2065,6 +2103,115 @@ def relatar_erro_questao(usuario_id, questao_id, parte, comentario=None):
             VALUES (?, ?, ?, ?, ?)
             RETURNING id
         """, (questao_id, usuario_id, parte, comentario, agora_br())).fetchone()["id"]
+
+
+LIMITE_ERROS_FRONT_POR_HORA = 30
+
+
+def registrar_erro_front(*, usuario_id, mensagem, pilha=None, url=None, agente=None):
+    """Guarda um erro do app das alunas. Devolve False quando a conta já mandou
+    `LIMITE_ERROS_FRONT_POR_HORA` erros na última hora: um laço de erro num
+    celular não pode encher a tabela. Apaga o que passou de 30 dias."""
+    agora = agora_br()
+    with get_conn() as conn:
+        recentes = conn.execute(
+            "SELECT COUNT(*) AS n FROM erros_front WHERE usuario_id = ? AND criado_em > ?",
+            (usuario_id, agora - datetime.timedelta(hours=1)),
+        ).fetchone()["n"]
+        if recentes >= LIMITE_ERROS_FRONT_POR_HORA:
+            return False
+        conn.execute(
+            "INSERT INTO erros_front (usuario_id, mensagem, pilha, url, agente, criado_em) VALUES (?, ?, ?, ?, ?, ?)",
+            (usuario_id, _texto(mensagem, 500) or "Erro sem mensagem", _texto(pilha, 4000) or None,
+             _texto(url, 300) or None, _texto(agente, 300) or None, agora),
+        )
+        conn.execute("DELETE FROM erros_front WHERE criado_em < ?", (agora - datetime.timedelta(days=30),))
+    return True
+
+
+def erros_front_recentes(*, dias=7, limite=50):
+    """Os erros do app nos últimos `dias`, agrupados pela mensagem: quantas
+    vezes, em quantas contas, a última vez, a última tela e a pilha mais recente."""
+    with get_conn() as conn:
+        return conn.execute("""
+            SELECT e.mensagem, COUNT(*) AS vezes, COUNT(DISTINCT e.usuario_id) AS contas,
+                   MAX(e.criado_em) AS ultima,
+                   (ARRAY_AGG(e.url ORDER BY e.criado_em DESC))[1] AS url,
+                   (ARRAY_AGG(e.pilha ORDER BY e.criado_em DESC))[1] AS pilha,
+                   (ARRAY_AGG(e.agente ORDER BY e.criado_em DESC))[1] AS agente
+            FROM erros_front e
+            WHERE e.criado_em >= ?
+            GROUP BY e.mensagem
+            ORDER BY ultima DESC
+            LIMIT ?
+        """, (agora_br() - datetime.timedelta(days=dias), limite)).fetchall()
+
+
+def metricas_uso(*, dias=30, excluir_testes=True):
+    """O que o dono precisa para decidir: quem estuda, quanto, com o quê, e quem
+    sumiu (tela "Uso da plataforma" do admin). Estudo é o mesmo da ofensiva:
+    resposta (Praticar e Simulado), caso avaliado na Revisão e cartão avaliado.
+    As contas `pytest_*` dos testes ficam de fora, menos quando o teste pede."""
+    agora = agora_br()
+    desde = agora - datetime.timedelta(days=dias)
+    semana = agora - datetime.timedelta(days=7)
+    sem_testes = "u.email NOT LIKE ?" if excluir_testes else "? IS NOT NULL"
+    atividade = """
+        SELECT usuario_id, respondida_em::timestamp AS momento, 'resposta' AS tipo FROM respostas
+        UNION ALL
+        SELECT usuario_id, registrado_em, 'revisao' FROM revisao_eventos WHERE origem = 'revisao'
+        UNION ALL
+        SELECT usuario_id, registrado_em, 'cartao' FROM revisao_cartao_eventos
+    """
+    with get_conn() as conn:
+        por_conta = conn.execute(f"""
+            WITH atividade AS ({atividade})
+            SELECT u.id, u.email, u.nome, u.criado_em, u.email_confirmado_em IS NOT NULL AS confirmada,
+                   MAX(a.momento) AS ultima_atividade,
+                   COUNT(DISTINCT a.momento::date) FILTER (WHERE a.momento >= ?) AS dias_ativos,
+                   COUNT(*) FILTER (WHERE a.tipo = 'resposta' AND a.momento >= ?) AS respostas,
+                   COUNT(*) FILTER (WHERE a.tipo = 'revisao' AND a.momento >= ?) AS revisoes,
+                   COUNT(*) FILTER (WHERE a.tipo = 'cartao' AND a.momento >= ?) AS cartoes
+            FROM usuarios u
+            LEFT JOIN atividade a ON a.usuario_id = u.id
+            WHERE {sem_testes}
+            GROUP BY u.id
+            ORDER BY MAX(a.momento) DESC NULLS LAST, u.id
+        """, (desde, desde, desde, desde, "pytest_%")).fetchall()
+        ids = [c["id"] for c in por_conta] or [0]
+        marcadores = ", ".join("?" * len(ids))
+        ativas_por_dia = conn.execute(f"""
+            WITH atividade AS ({atividade})
+            SELECT momento::date AS dia, COUNT(DISTINCT usuario_id) AS ativas
+            FROM atividade WHERE momento >= ? AND usuario_id IN ({marcadores})
+            GROUP BY 1 ORDER BY 1
+        """, [agora - datetime.timedelta(days=13)] + ids).fetchall()
+        simulados = conn.execute(
+            f"SELECT COUNT(*) AS n FROM simulados WHERE finalizado_em IS NOT NULL "
+            f"AND finalizado_em::timestamp >= ? AND usuario_id IN ({marcadores})", [semana] + ids,
+        ).fetchone()["n"]
+        cartoes_criados = conn.execute(
+            f"SELECT COUNT(*) AS n FROM cartoes WHERE criado_em >= ? AND usuario_id IN ({marcadores})",
+            [semana] + ids,
+        ).fetchone()["n"]
+        relatos = conn.execute(
+            f"SELECT COUNT(*) AS n FROM relatos_questao WHERE criado_em >= ? AND usuario_id IN ({marcadores})",
+            [semana] + ids,
+        ).fetchone()["n"]
+    contas = [dict(c) for c in por_conta]
+    ativa = lambda c, d: c["ultima_atividade"] is not None and c["ultima_atividade"] >= agora - datetime.timedelta(days=d)  # noqa: E731
+    return {
+        "contas": {
+            "total": len(contas),
+            "confirmadas": sum(1 for c in contas if c["confirmada"]),
+            "novas_7d": sum(1 for c in contas if c["criado_em"] and datetime.datetime.fromisoformat(c["criado_em"]) >= semana),
+        },
+        "ativas": {"hoje": sum(1 for c in contas if c["ultima_atividade"] and c["ultima_atividade"].date() == agora.date()),
+                   "7d": sum(1 for c in contas if ativa(c, 7)), "30d": sum(1 for c in contas if ativa(c, 30))},
+        "ativas_por_dia": [dict(d) for d in ativas_por_dia],
+        "semana": {"simulados": simulados, "cartoes_criados": cartoes_criados, "relatos": relatos},
+        "por_conta": contas,
+    }
 
 
 def listar_relatos(*, pendentes=True, limite=200):

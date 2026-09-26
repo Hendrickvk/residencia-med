@@ -1,8 +1,9 @@
 """
 Fixtures compartilhadas dos testes da API.
 
-Não existe banco de testes separado neste projeto (só o Neon de produção,
-apontado por `.streamlit/secrets.toml`) — por isso todo dado criado aqui é
+Os testes rodam num branch do Neon quando `DATABASE_URL_TESTES` existe (em
+`.streamlit/secrets.toml` ou no ambiente); sem ela, no Neon de produção, como
+sempre foi — e o começo da suíte avisa. Nos dois casos todo dado criado aqui é
 marcado com um sufixo `uuid4` (e-mails `pytest_*@teste.local`, áreas
 `__pytest_area_*`) e removido no teardown de cada fixture via `ON DELETE
 CASCADE`. Nunca reaproveite dados de produção nem deixe uma fixture sem
@@ -12,6 +13,7 @@ que a varredura do início da suíte sabe apagar.
 
 import datetime
 import json
+import os
 import sys
 import uuid
 from pathlib import Path
@@ -20,7 +22,19 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+# Antes do `import db`: é o que faz o `db._database_url` preferir o branch de
+# testes. O pool nasce na primeira conexão, então ainda dá tempo.
+os.environ["CONDUTA_TESTES"] = "1"
+
 import db  # noqa: E402
+
+if not db._url_testes():
+    print(
+        "\n[conduta] ATENÇÃO: sem DATABASE_URL_TESTES, os testes rodam no banco de PRODUÇÃO. "
+        "Crie um branch no Neon e ponha a connection string dele em .streamlit/secrets.toml "
+        "como DATABASE_URL_TESTES.",
+        file=sys.stderr,
+    )
 
 
 @pytest.fixture(scope="session", autouse=True)
