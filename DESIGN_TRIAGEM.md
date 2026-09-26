@@ -472,6 +472,20 @@ Conteúdo das demais telas: largura máxima 1360px, padding 36/40px.
   completa, o tempo de cada questão, em `--ink` e negrito quando passou do ritmo, e
   um traço na que o aluno nem abriu.
   Simulado de antes da medição não mostra tempo.
+- **Cartão para compartilhar** (`lib/cartaoResultado.ts`), só no resultado de prova
+  oficial: botão secundário "Compartilhar resultado" logo abaixo dos números. Imagem
+  1080×1350 (4:5, o que o WhatsApp e o Instagram mostram inteiro), sempre nos tokens
+  `.dark` como a prévia do link: marca, edição, aproveitamento grande, "{x} acertos
+  em {y} questões", até cinco áreas do pior para o melhor com a barra na cor do
+  nível, e a assinatura "Descubra onde você perde pontos." + endereço. **Sem a
+  etiqueta do nível** (decisão do usuário): quem vê o cartão não conhece a escala, e
+  "Urgente" ao lado de um bom resultado inibe quem postaria. **Nunca leva questão,
+  alternativa ou gabarito**: o que circula é o
+  resultado dela, a plataforma vai como assinatura. É desenhada quando o resultado
+  chega, para o toque abrir o compartilhamento na hora (o `share` perde o gesto se
+  esperar o desenho). Celular: compartilhamento do sistema; computador: baixa o PNG
+  e avisa "A imagem foi para a pasta de downloads." — a janela de compartilhar do
+  Windows não tem "salvar".
 
 ### Revisão espaçada
 - A fila é o que o SM-2 já venceu mais as questões marcadas pelo aluno
@@ -508,7 +522,7 @@ Conteúdo das demais telas: largura máxima 1360px, padding 36/40px.
 Desde 26/09 (`pages/Inicio.tsx`). É a única tela de persuasão: quem chega por um
 link sem ter conta. Decisões do usuário: **nenhuma promessa de preço** ("Criar
 conta", nunca "grátis" — o modelo de negócio não está decidido), abrir com "As
-provas oficiais da Revalida e do ENAMED, comentadas." e quatro blocos:
+provas oficiais do Revalida e do ENAMED, comentadas." e quatro blocos:
 1. Promessa, "Criar conta" (tinta) e "Já tenho conta", as bancas em caixa alta
    condensada como selo e, ao lado, o **painel de exemplo**: "Clínica Médica é a sua maior lacuna." e as
    cinco áreas, uma em cada nível, para a escala inteira aparecer de uma vez.

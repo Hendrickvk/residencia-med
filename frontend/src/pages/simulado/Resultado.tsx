@@ -1,5 +1,5 @@
-import { ArrowRight, ChevronDown, RotateCcw } from "lucide-react";
-import { useState } from "react";
+import { ArrowRight, ChevronDown, RotateCcw, Share2 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { NumeroAnimado } from "../../components/NumeroAnimado";
 import { TemaDoCaso } from "../../components/TemaDoCaso";
@@ -7,6 +7,7 @@ import { ImagemQuestao } from "../../components/ImagemQuestao";
 import { CriarCartao } from "../../components/CriarCartao";
 import { RelatarErro } from "../../components/RelatarErro";
 import { TextoDiscussao } from "../../components/TextoDiscussao";
+import { compartilharCartao, desenharCartao, nomeArquivoCartao } from "../../lib/cartaoResultado";
 import { BOTAO_PRIMARIO, BOTAO_SECUNDARIO } from "../../lib/estilos";
 import { formatarMMSS, formatarPctBR } from "../../lib/format";
 import { atraso } from "../../lib/movimento";
@@ -36,6 +37,26 @@ export default function Resultado({ simuladoId, onNovoSimulado }: Props) {
   const [abertos, setAbertos] = useState<Set<number>>(new Set());
   const [todosTemas, setTodosTemas] = useState(false);
   const navigate = useNavigate();
+  // Cartão para compartilhar (lib/cartaoResultado.ts), só de prova oficial:
+  // desenhado assim que o resultado chega, para o toque em "Compartilhar"
+  // abrir o compartilhamento na hora.
+  const [cartao, setCartao] = useState<File | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
+  const provaDoCartao = simulado?.edicao && simulado.banca ? nomeEdicao(simulado.banca, simulado.edicao) : null;
+  useEffect(() => {
+    if (!simulado || !provaDoCartao || !desempenho) return;
+    const total = simulado.num_questoes;
+    const acertos = simulado.acertos ?? 0;
+    let vivo = true;
+    desenharCartao({ prova: provaDoCartao, pct: total ? Math.round((100 * acertos) / total) : 0, acertos, total, areas: desempenho })
+      .then((blob) => {
+        if (vivo) setCartao(new File([blob], nomeArquivoCartao(provaDoCartao), { type: "image/png" }));
+      })
+      .catch(() => {});
+    return () => {
+      vivo = false;
+    };
+  }, [simulado, provaDoCartao, desempenho]);
 
   if (!simulado || !itens) {
     return (
@@ -100,6 +121,29 @@ export default function Resultado({ simuladoId, onNovoSimulado }: Props) {
           <span className="num-lg">{Math.max(total - respondidas, 0)}</span>
         </div>
       </div>
+
+      {nomeProva && (
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            disabled={!cartao}
+            onClick={async () => {
+              if (!cartao) return;
+              const resultado = await compartilharCartao(cartao, nomeProva, pct);
+              setAviso(resultado === "baixado" ? "A imagem foi para a pasta de downloads." : null);
+            }}
+            className={BOTAO_SECUNDARIO}
+          >
+            <Share2 size={18} strokeWidth={2} aria-hidden="true" />
+            Compartilhar resultado
+          </button>
+          {aviso && (
+            <span role="status" className="text-apoio text-muted">
+              {aviso}
+            </span>
+          )}
+        </div>
+      )}
 
       {comTempo && (
         <p className="text-corpo text-ink-2">

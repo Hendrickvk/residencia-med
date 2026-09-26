@@ -37,6 +37,17 @@ export const ROTULO_TIPO: Record<TipoNovidade, string> = {
 
 export const NOVIDADES: Novidade[] = [
   {
+    id: "2026-09-26d",
+    data: "26 de setembro de 2026",
+    titulo: "Seu resultado em imagem",
+    itens: [
+      {
+        tipo: "novo",
+        texto: "Terminou uma prova oficial? \"Compartilhar resultado\" monta uma imagem com o seu aproveitamento e o desempenho por área, pronta para o grupo de estudo. Nenhuma questão vai junto.",
+      },
+    ],
+  },
+  {
     id: "2026-09-26c",
     data: "26 de setembro de 2026",
     titulo: "Ajustes no celular",
@@ -56,7 +67,7 @@ export const NOVIDADES: Novidade[] = [
     itens: [
       {
         tipo: "novo",
-        texto: "A Revalida 2022/1 entrou no banco: 89 questões comentadas. Dá para fazer a prova inteira, com tempo, em Simulado → Prova oficial, e as questões já aparecem no Praticar.",
+        texto: "O Revalida 2022/1 entrou no banco: 89 questões comentadas. Dá para fazer a prova inteira, com tempo, em Simulado → Prova oficial, e as questões já aparecem no Praticar.",
       },
     ],
   },

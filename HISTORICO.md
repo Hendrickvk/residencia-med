@@ -25,7 +25,7 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   `start_url` `/painel` (commit `2518504`). Próximas fases da crítica: (3) e (4)
   abaixo. Decisões do usuário para a (2): **não
   prometer preço** ("Criar conta", sem "grátis"), promessa de abertura "As
-  provas oficiais da Revalida e do ENAMED, comentadas." e página **média, 4
+  provas oficiais do Revalida e do ENAMED, comentadas." e página **média, 4
   blocos**: promessa com o painel de verdade, caso comentado + revisão +
   simulado, lista das provas, convite final. Depois, na ordem da crítica:
   (3) Simulado com histórico e blocos menores — atenção: a lista já mostra a
@@ -2195,6 +2195,26 @@ governa as telas admin do Streamlit.
   tela de 852 (852 − 56 da barra de abas). **No ar em 26/09** (commit
   `ad2b93d`; API reiniciada pelo limite no `db.py`, front trocado com `dist.antigo`
   guardado), com a entrada `2026-09-26c` no "O que mudou".
+
+- **Cartão de resultado para compartilhar** (item seguinte da crítica): no
+  resultado de prova oficial, "Compartilhar resultado" gera um PNG 1080×1350 com a
+  edição, o aproveitamento, até cinco áreas e a assinatura com o endereço
+  (`lib/cartaoResultado.ts`, desenho em DESIGN_TRIAGEM, Simulado). A primeira
+  versão levava a etiqueta do nível, e 68% saía "URGENTE": o usuário aceitou
+  tirá-la, porque quem vê o cartão não conhece a escala e quem posta quer mostrar
+  o resultado, não um alarme; o nível ficou só na cor das barras. É o
+  canal de aquisição que não custa nada: a aluna posta o resultado no grupo de
+  estudo e a plataforma vai de assinatura. **Sem questão, alternativa ou
+  gabarito**, de propósito — o conteúdo é o que a cota diária protege. Só prova
+  oficial, porque um simulado montado não tem nome que diga algo a quem vê.
+  Desenhado quando o resultado chega (o `share` perde o gesto se esperar o
+  desenho); no celular abre o compartilhamento do sistema, no computador baixa o
+  arquivo — o Edge no Windows responde `canShare` verdadeiro, mas a janela do
+  sistema não tem "salvar" e o WhatsApp Web não aparece nela. No caminho, a
+  página pública, o título e a imagem de prévia diziam "**da** Revalida"; o app
+  e o INEP dizem "o Revalida", e as três foram corrigidas. Para o QA: finalizar
+  uma prova oficial do localhost leva ~50 s (cada item vira resposta + SM-2,
+  ~900 consultas a 55 ms do Neon) e parece travado; no servidor é rápido.
 
 ## Armadilhas das telas admin (Streamlit)
 

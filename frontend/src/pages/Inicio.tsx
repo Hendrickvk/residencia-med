@@ -16,7 +16,7 @@ import { CLASSES_NIVEL, NIVEIS, nivelTriagem } from "../lib/triagem";
 // diminui a plataforma; o que vende é a qualidade e o peso das bancas.
 // Quem já tem sessão vai direto ao Painel, e o app instalado abre em /painel.
 
-const TITULO = "Conduta — as provas oficiais da Revalida e do ENAMED, comentadas";
+const TITULO = "Conduta — as provas oficiais do Revalida e do ENAMED, comentadas";
 const BANCAS = [
   { nome: "Revalida", orgao: "INEP" },
   { nome: "ENAMED", orgao: "INEP" },
@@ -70,7 +70,7 @@ function Pagina() {
         <section className="mx-auto grid max-w-[1200px] items-center gap-12 px-4 pb-16 pt-8 md:px-10 md:pb-24 md:pt-14 lg:grid-cols-[minmax(0,1fr)_minmax(0,520px)] lg:gap-16">
           <div className="animate-entrar">
             <h1 className="text-[40px] font-extrabold leading-[1.02] tracking-[-0.035em] [text-wrap:balance] md:text-[56px] lg:text-[64px]">
-              As provas oficiais da Revalida e do ENAMED, comentadas.
+              As provas oficiais do Revalida e do ENAMED, comentadas.
             </h1>
             <p className="mt-5 max-w-[34rem] text-[17px] leading-[1.55] text-ink-2 md:text-[19px]">
               Cada questão com a discussão de todas as alternativas, e um painel que mostra onde você está perdendo
@@ -118,7 +118,7 @@ function Pagina() {
               Provas oficiais, revisadas questão por questão.
             </h2>
             <p className="mt-4 max-w-[36rem] text-[17px] leading-[1.6] text-ink-2">
-              Os cadernos inteiros da Revalida e do ENAMED, na ordem em que caíram, e provas de residência de São
+              Os cadernos inteiros do Revalida e do ENAMED, na ordem em que caíram, e provas de residência de São
               Paulo. Cada explicação passou por revisão, e as questões anuladas ficaram de fora.
             </p>
             <ul className="mt-10 grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -250,7 +250,7 @@ const ALTERNATIVAS_CASO = [
 
 function CasoExemplo() {
   return (
-    <Moldura etiqueta="Questão real · Revalida 2022/1" legenda="Exemplo de caso comentado: uma questão da Revalida 2022/1 com a alternativa marcada, a correta e o começo da discussão.">
+    <Moldura etiqueta="Questão real · Revalida 2022/1" legenda="Exemplo de caso comentado: uma questão do Revalida 2022/1 com a alternativa marcada, a correta e o começo da discussão.">
       <div className="flex items-center gap-2 text-apoio text-muted">
         <CircleCheck size={16} strokeWidth={2} className="text-t4" />
         Prova oficial · Revalida 2022/1 · questão 46
@@ -328,7 +328,7 @@ function RevisaoExemplo() {
   );
 }
 
-// 97 questões, como a Revalida 2025/1: respondidas até a atual, algumas
+// 97 questões, como o Revalida 2025/1: respondidas até a atual, algumas
 // marcadas para voltar, o resto em branco.
 const TOTAL_QUESTOES = 97;
 const ATUAL = 37;
