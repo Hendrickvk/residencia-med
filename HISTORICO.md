@@ -2192,7 +2192,9 @@ governa as telas admin do Streamlit.
   celular; Banca e Ano ativos enquanto carregam; ícone da prova oficial dentro
   do texto (ficava solto quando o selo quebrava). Conferido no localhost, contra
   o branch de testes, com medição: a barra do Configurador termina em 796px numa
-  tela de 852 (852 − 56 da barra de abas).
+  tela de 852 (852 − 56 da barra de abas). **No ar em 26/09** (commit
+  `ad2b93d`; API reiniciada pelo limite no `db.py`, front trocado com `dist.antigo`
+  guardado), com a entrada `2026-09-26c` no "O que mudou".
 
 ## Armadilhas das telas admin (Streamlit)
 
