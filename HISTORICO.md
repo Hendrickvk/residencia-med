@@ -22,10 +22,17 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   converter nas consultas), e o que já foi gravado em UTC fica 3h adiantado se
   passar a ser lido como horário de Brasília. Precisa de decisão do usuário e
   de um plano para o histórico antes de mexer.
-  **Decidido pelo usuário em 25/09**: Brasília para todos, histórico
-  deslocado, feito na hora. Código e script prontos e conferidos (simulação:
-  ~5,2 mil datas em 12 tabelas; "26/09 00:42" vira "25/09 21:42"), esperando
-  autorização para o minuto com a API parada. Plano que foi seguido:
+  **Resolvido e no ar em 25/09** (commit `184c352`), por decisão do usuário:
+  Brasília para todos e histórico deslocado. Às 23h18: backup completo
+  conferido (`conduta_20260925_231817.dump`), API e admin parados menos de um
+  minuto, `fuso_brasilia.py --aplicar` (~5,2 mil datas em 12 tabelas, valores
+  antigos em `backups/fuso_brasilia_aplicar_20260925_231859.json`), código
+  novo no ar. Conferido: a resposta mais recente passou de "26/09 00:42" para
+  "25/09 21:42", o script recusa rodar de novo, e o relógio da plataforma
+  marca Brasília. Na suíte, os dois testes do teto que liam `CURRENT_DATE`
+  falharam às 22h — o próprio bug, dentro dos testes — e passaram a usar
+  `db.hoje_br()`. Os logs do servidor continuam em UTC (é o relógio do
+  processo, e só serve para ler log). Plano que foi seguido:
   1. *Um relógio só, o de Brasília*: `db.agora()`/`db.hoje()` com
      `ZoneInfo("America/Sao_Paulo")`, sem fuso na saída (como as colunas
      guardam), e `tzdata` no requirements (o Windows não traz a base de
