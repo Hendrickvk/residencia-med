@@ -2215,6 +2215,10 @@ governa as telas admin do Streamlit.
   e o INEP dizem "o Revalida", e as três foram corrigidas. Para o QA: finalizar
   uma prova oficial do localhost leva ~50 s (cada item vira resposta + SM-2,
   ~900 consultas a 55 ms do Neon) e parece travado; no servidor é rápido.
+  **No ar em 26/09** (commit `458a648`; só o front, com `dist.antigo` guardado),
+  com a entrada `2026-09-26d` no "O que mudou". Plataformas que já tinham lido a
+  prévia do link podem mostrar a imagem antiga ("da Revalida") até renovarem o
+  cache delas.
 
 ## Armadilhas das telas admin (Streamlit)
 
