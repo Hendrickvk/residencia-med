@@ -37,6 +37,17 @@ export const ROTULO_TIPO: Record<TipoNovidade, string> = {
 
 export const NOVIDADES: Novidade[] = [
   {
+    id: "2026-09-26b",
+    data: "26 de setembro de 2026",
+    titulo: "Revalida 2022/1",
+    itens: [
+      {
+        tipo: "novo",
+        texto: "A Revalida 2022/1 entrou no banco: 89 questões comentadas. Dá para fazer a prova inteira, com tempo, em Simulado → Prova oficial, e as questões já aparecem no Praticar.",
+      },
+    ],
+  },
+  {
     id: "2026-09-26",
     data: "26 de setembro de 2026",
     titulo: "Lembrete das revisões",

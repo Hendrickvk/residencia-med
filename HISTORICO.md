@@ -8,6 +8,13 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
 
 ## Pendências
 
+- **Revalida 2020: travada no gabarito.** A aba de 2020 do INEP só tem
+  `gabarito_caderno_1.pdf` e `_2`, os dois **preliminares**, e a área de
+  resultados não traz o definitivo (procurado em 26/09). Sem o definitivo não
+  se importa: recurso muda letra e anula questão. Os cadernos já estão em
+  `backups/provas/revalida_2020/` (caderno 1 = `revalida_obj_001_1.pdf`). Se o
+  definitivo aparecer (DOU, edital de resultado), a importação segue o mesmo
+  roteiro.
 - **Lembrete, questões suspeitas e relatório diário** (pedido de 26/09).
   **No ar em 26/09** (commit `4bbeaa8`): timer instalado e ativo (primeira
   execução 27/09 às 8h de Brasília, 11h UTC), e a rotina simulada no próprio
@@ -2094,6 +2101,50 @@ governa as telas admin do Streamlit.
     o que vai junto ("Os 2 cartões dele vão junto. Não dá para desfazer.") e
     o foco em "Cancelar" ao abrir. Conferido no localhost: cancelar não
     apaga, "Apagar" apaga, pasta vazia diz que está vazia.
+
+### 2026-09-26
+- **Revalida 2022/1 importada:** +89 questões, de 1074 para 1163 (ids no
+  `backups/importacao_revalida_2022-1_20260926_115329.json`). Das 100 do caderno
+  1, 10 foram anuladas no gabarito **definitivo** (1, 6, 11, 14, 22, 27, 43,
+  57, 61, 83) e a Q99 saiu por depender de ilustração de livro (Montenegro &
+  Rezende) — a única figura do caderno, então nenhuma questão tem imagem. O
+  caderno vem com fontes sem mapa de caracteres: subconjuntos CFF com glifos
+  `gNN`, NN = glifo do **Calibri**; `backups/provas/decodificar.py` resolve pelo
+  `calibri.ttf` (0 glifos sem tradução) e lê a página em faixas, porque a Q100
+  ocupa a largura inteira. `montar_rascunho.py` acha as alternativas de trás
+  para frente (enunciado também começa com "A "); classificação e explicações
+  ficaram em 7 lotes (`revalida_2022-1/lotes/`), juntados por `montar_prova.py`,
+  que exige que cada correção de enunciado case uma vez só e que a explicação
+  cite a letra do gabarito. Tabelas achatadas (48, 71, 91) reescritas em prosa
+  conferindo a página; índices soltos (3, 49, 58, 93) e erros de digitação do
+  caderno ("2.4000.000 UI", "carbapenênmico", "Midazolan", "4.200 Kg")
+  corrigidos. Classificação alinhada às irmãs do banco (artrite séptica infantil
+  em Ortopedia, SIM-P em Vasculites, PSA em Promoção da saúde, ascaridíase em
+  Parasitoses). Auditorias: 2 suspeitas de `auditar_explicacoes`, ambas
+  sinônimo (flagelado/flagelados, atividade/atividades físicas), e 4 afirmações
+  numéricas conferidas; a comparação com as irmãs pegou a Q58 dizendo que
+  bicarbonato "não é indicado" na cetoacidose quando o banco diz "só em
+  acidose muito grave", e ela foi alinhada antes de gravar. Backup antes
+  (`conduta_20260926_114557.dump`, espelhado), simulação limpa e `--aplicar` com
+  a confirmação do usuário. Por área: Cirurgia 18, Clínica Médica 21, GO 21,
+  Preventiva 10, Pediatria 19; a edição entra na lista de provas oficiais entre
+  2022/2 e 2021, sem deploy; a linha em "O que mudou" (`2026-09-26b`) subiu no
+  mesmo dia, com autorização.
+- **Revisão da Revalida 2022/1** (mesmo dia, a pedido do usuário): as 89 lidas,
+  85 ok e 4 reescritas depois de backup (`conduta_20260926_150642.dump`) e da
+  confirmação do usuário — o classificador barrou o `--aplicar` antes dela, como
+  devia. Texto anterior em `backups/explicacoes_20260926_153537.json`; as 89
+  estão `ok` em `backups/revisao_explicacoes.json`. O defeito real foi a **Q48**
+  (id 9238), que afastava a dengue pelo IgM não reagente no segundo dia de febre,
+  quando o IgM ainda não positiva — a ENAMED 2025 Q26 do próprio banco ensina
+  que só do 5º–6º dia em diante; o que afasta a dengue ali é a plaquetose, a
+  anemia em vez de hemoconcentração e o momento do choque. As outras três eram
+  de precisão: **Q19** (9212) chamava a DIP de *o* principal fator de risco de
+  ectópica; **Q82** (9270) dizia que toda ferida traumática nasce contaminada e
+  depois admitia a potencialmente contaminada; **Q91** (9278) dava a entender
+  que toda hepatite B crônica recebe antiviral. A lição de sempre se repetiu: o
+  erro estava num ponto de corte (o dia em que o IgM positiva), e foi a busca por
+  irmãs no banco que o confirmou.
 
 ## Armadilhas das telas admin (Streamlit)
 
