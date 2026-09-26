@@ -8,9 +8,11 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
 
 ## Pendências
 
-- **Lembrete, questões suspeitas e relatório diário** (pedido de 26/09). Feito
-  e conferido aqui, esperando autorização para subir (a subida instala o timer
-  — DEPLOY.md, Rotina diária). Conferido: a simulação da rotina achou uma
+- **Lembrete, questões suspeitas e relatório diário** (pedido de 26/09).
+  **No ar em 26/09** (commit `4bbeaa8`): timer instalado e ativo (primeira
+  execução 27/09 às 8h de Brasília, 11h UTC), e a rotina simulada no próprio
+  servidor, com o `.env.production`, montou o relatório de 25/09 sem enviar
+  nada. Conferido antes de subir: a simulação da rotina achou uma
   conta de teste com o lembrete ligado e um cartão vencido ("1 cartão para
   revisar hoje") sem marcá-la como enviada; a tela Uso renderiza a seção nova
   pelo `AppTest`; `tests/test_rotina.py` fixa o desligado por padrão, o um por
