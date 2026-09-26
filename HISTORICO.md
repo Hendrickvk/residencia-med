@@ -14,8 +14,8 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   1. *Celular primeiro* — no ar desde 25/09 (commit `731bd06`; ver a data).
   2. *Chute antes de confirmar* — no ar desde 25/09 (commit `c014a57`; ver a
      data).
-  3. *Painel começando por "Hoje"* — feito e conferido no localhost em 25/09
-     (ver a data), esperando autorização para subir.
+  3. *Painel começando por "Hoje"* — no ar desde 25/09 (commit `8619822`; ver
+     a data). O próximo é o 4.
   4. Triagem de entrada para conta nova: prova e data, depois 25 casos, 5 por
      grande área, que montam o quadro no primeiro dia.
   5. Menores: a ofensiva contar a revisão de cartões (`db.calcular_ofensiva`
@@ -1950,7 +1950,9 @@ governa as telas admin do Streamlit.
   tudo" por `/baralhos?estudar=tudo`, o mesmo padrão do `?estudar=1` do
   baralho. Conferido com uma conta de teste: um primário só na página,
   Evolução fechada sem gráficos no DOM, aberta depois de recarregar, e o link
-  dos cartões caindo direto no estudo.
+  dos cartões caindo direto no estudo. **No ar em 25/09** (commit `8619822`),
+  depois de o usuário ver na janela que simula o celular e manter a conduta
+  abaixo do título.
 
 ## Armadilhas das telas admin (Streamlit)
 
