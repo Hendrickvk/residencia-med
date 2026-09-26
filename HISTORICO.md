@@ -8,6 +8,29 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
 
 ## Pendências
 
+- **Lembrete, questões suspeitas e relatório diário** (pedido de 26/09). Feito
+  e conferido aqui, esperando autorização para subir (a subida instala o timer
+  — DEPLOY.md, Rotina diária). Conferido: a simulação da rotina achou uma
+  conta de teste com o lembrete ligado e um cartão vencido ("1 cartão para
+  revisar hoje") sem marcá-la como enviada; a tela Uso renderiza a seção nova
+  pelo `AppTest`; `tests/test_rotina.py` fixa o desligado por padrão, o um por
+  dia, o e-mail confirmado, o interruptor pela API, o texto, a trava do
+  relatório e a suspeita. O `Interruptor` do Configurador virou componente
+  (`components/Interruptor.tsx`) e é o mesmo do Perfil. A pedido do usuário,
+  todo lembrete leva no rodapé "Desligar o lembrete" → `/perfil#lembretes`,
+  que abre rolado até o interruptor (conferido: cartão no meio da tela, um
+  toque grava no banco). Para os links de e-mail servirem a quem está com a
+  sessão vencida, o `RequireAuth` passa o destino ao login (`state.de`) e o
+  login volta para lá — só caminho interno, para não virar redirecionamento
+  para fora; antes, todo login caía no Painel. Esse caminho deslogado não foi
+  exercitado no navegador: senha em formulário por automação não se digita.
+  Plano: (1) lembrete de revisão por e-mail **opcional, desligado por
+  padrão** — a aluna liga no Perfil (decisão do usuário: "que não seja
+  forçado"); no máximo um por dia, só com revisão vencida, só para e-mail
+  confirmado; (2) "questões suspeitas" na tela de uso (acerto < 30% ou a
+  mesma errada por metade ou mais das primeiras respostas); (3) relatório do
+  dia anterior por e-mail para os admins. (1) e (3) saem de
+  `scripts/rotina_diaria.py`, por um timer do systemd às 8h de Brasília.
 - **Operação e métricas** (pedido de 25/09, itens 4 e 5 da avaliação "a
   plataforma peca em algum aspecto?"). **No ar em 26/09** (commit `c859558`;
   produção conferida: `/health` 200, `POST /me/erros` sem sessão 401, pacote

@@ -1,0 +1,12 @@
+[Unit]
+Description=Conduta - rotina diaria (lembretes de revisao opcionais e relatorio para o admin)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=residenciamed
+WorkingDirectory=/var/www/residencia-med
+# BREVO_API_KEY, EMAIL_REMETENTE, APP_URL e ADMIN_EMAILS saem daqui, como na API.
+EnvironmentFile=/var/www/residencia-med/.env.production
+ExecStart=/var/www/residencia-med/.venv/bin/python scripts/rotina_diaria.py --enviar

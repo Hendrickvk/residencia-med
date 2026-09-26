@@ -130,3 +130,78 @@ def montar_html(*, titulo: str, paragrafos: list[str], botao_texto: str,
 </table>
 </body>
 </html>"""
+
+
+def _duracao(casos: int, segundos_por_caso: float) -> str:
+    """A mesma conta do `estimarDuracao` do front (lib/prazo.ts)."""
+    minutos = max(1, round(casos * segundos_por_caso / 60))
+    if minutos < 60:
+        return f"uns {minutos} minutos"
+    horas, resto = divmod(minutos, 60)
+    return f"cerca de {horas} h {resto:02d} min" if resto else f"cerca de {horas} h"
+
+
+def lembrete_revisao(*, casos: int, cartoes: int, segundos_por_caso: float, app_url: str):
+    """O lembrete de revisão, que a aluna liga no Perfil (é opcional, desligado
+    por padrão). Devolve (assunto, texto, html). Só números entram aqui — nada
+    escrito por alguém —, porque `montar_html` não escapa."""
+    partes = []
+    if casos:
+        partes.append(f"{casos} caso{'s' if casos != 1 else ''}")
+    if cartoes:
+        partes.append(f"{cartoes} cart{'ões' if cartoes != 1 else 'ão'}")
+    oque = " e ".join(partes)
+    assunto = f"{oque} para revisar hoje"
+    paragrafos = [f"Hoje há {oque} para revisar."]
+    if casos:
+        paragrafos.append(f"No seu ritmo, os casos levam {_duracao(casos, segundos_por_caso)}.")
+    # Só cartão vencido: o botão vai direto para o estudo dos baralhos.
+    destino = f"{app_url}/revisao" if casos else f"{app_url}/baralhos?estudar=tudo"
+    # O link de desligar abre o Perfil já no interruptor (a página rola até
+    # `#lembretes`); deslogada, ela passa pelo login e volta para lá.
+    desligar = f"{app_url}/perfil#lembretes"
+    rodape = "Você recebe este e-mail porque ligou o lembrete de revisão no seu Perfil."
+    rodape_html = (
+        f'{rodape} <a href="{desligar}" style="color:{MUTED};text-decoration:underline;">'
+        "Desligar o lembrete</a>."
+    )
+    texto = "\n\n".join([*paragrafos, f"Revisar agora: {destino}", f"{rodape} Para desligar: {desligar}"])
+    html = montar_html(
+        titulo="Revisões de hoje", paragrafos=paragrafos, botao_texto="Revisar agora",
+        botao_url=destino, rodape=rodape_html,
+    )
+    return assunto, texto, html
+
+
+def relatorio_diario(*, dia, resumo: dict, suspeitas: list, erros: list, admin_url: str):
+    """O dia anterior para quem administra (ADMIN_EMAILS). Devolve (assunto,
+    texto, html). As mensagens de erro vêm do navegador das alunas: no HTML
+    entram escapadas, porque `montar_html` não escapa nada."""
+    import html as _html
+
+    data = dia.strftime("%d/%m")
+    r = resumo
+    assunto = (f"Conduta, {data}: {r['estudaram']} estudaram, {r['contas_novas']} conta(s) nova(s), "
+               f"{r['erros_app']} erro(s) do app")
+    base = [
+        f"Em {data}, {r['estudaram']} conta(s) estudaram: {r['respostas']} resposta(s), "
+        f"{r['revisoes']} caso(s) revisado(s) e {r['cartoes']} cartão(ões) avaliado(s).",
+        f"Contas novas: {r['contas_novas']}.",
+    ]
+    if suspeitas:
+        ids = ", ".join(str(s["id"]) for s in suspeitas[:10])
+        base.append(f"{len(suspeitas)} questão(ões) suspeita(s) (acerto muito baixo, ou a maioria na mesma "
+                    f"errada): {ids}.")
+    if erros:
+        cru = "; ".join(f"{e['vezes']}× {e['mensagem'][:120]}" for e in erros[:5])
+        esc = "; ".join(f"{e['vezes']}× {_html.escape(e['mensagem'][:120])}" for e in erros[:5])
+        linha_texto, linha_html = f"Erros do app nas últimas 24 h: {cru}.", f"Erros do app nas últimas 24 h: {esc}."
+    else:
+        linha_texto = linha_html = "Nenhum erro do app nas últimas 24 h."
+    rodape = "Relatório automático da rotina diária (scripts/rotina_diaria.py), para quem está em ADMIN_EMAILS."
+    texto = "\n\n".join([*base, linha_texto, f"Uso da plataforma: {admin_url}", rodape])
+    html = montar_html(
+        titulo=f"O dia {data} na Conduta", paragrafos=[*base, linha_html],
+        botao_texto="Abrir o uso da plataforma", botao_url=admin_url, rodape=rodape,
+    )
+    return assunto, texto, html

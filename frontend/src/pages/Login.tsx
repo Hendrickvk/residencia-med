@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Marca } from "../components/shell/Marca";
 import { ApiError } from "../lib/api";
 import { useAuthActions } from "../lib/auth";
@@ -18,6 +18,10 @@ export default function Login() {
   const [pedido, setPedido] = useState(false);
   const { entrar, cadastrar, pedirRedefinicao } = useAuthActions();
   const navigate = useNavigate();
+  // Volta para onde ela ia antes de cair aqui (RequireAuth). Só caminho
+  // interno: o endereço não pode servir de redirecionamento para fora.
+  const de = (useLocation().state as { de?: string } | null)?.de;
+  const destino = de && de.startsWith("/") && !de.startsWith("//") && !de.startsWith("/login") ? de : "/painel";
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -35,7 +39,7 @@ export default function Login() {
       }
       if (aba === "entrar") await entrar(email, senha);
       else await cadastrar(email, senha);
-      navigate("/painel", { replace: true });
+      navigate(destino, { replace: true });
     } catch (e) {
       setErro(e instanceof ApiError ? e.message : "Não foi possível conectar à API.");
     } finally {

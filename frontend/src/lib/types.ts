@@ -340,6 +340,8 @@ export interface Me {
   cor_perfil: string;
   foto_versao: string | null;
   cartoes_hoje: number;
+  // Lembrete de revisão por e-mail: opcional, desligado por padrão (Perfil).
+  lembrete_revisao: boolean;
   tema: "light" | "dark";
   prova_alvo: string | null;
   ofensiva_dias: number;

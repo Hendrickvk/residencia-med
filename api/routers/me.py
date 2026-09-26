@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 import db
 from api.deps import eh_admin, usuario_atual
 from api.schemas import (
-    ErroFrontIn, FotoIn, MeOut, MetaRevisaoIn, NovidadesIn, PerfilIn, ProvaAlvoIn, TemaIn,
+    ErroFrontIn, FotoIn, LembreteIn, MeOut, MetaRevisaoIn, NovidadesIn, PerfilIn, ProvaAlvoIn, TemaIn,
 )
 
 router = APIRouter(prefix="/me", tags=["me"])
@@ -33,6 +33,7 @@ def obter_me(usuario=Depends(usuario_atual)):
         cor_perfil=usuario["cor_perfil"] or db.COR_PERFIL_PADRAO,
         foto_versao=usuario["foto_versao"],
         cartoes_hoje=db.contar_cartoes_vencidos(usuario_id=usuario["id"]),
+        lembrete_revisao=bool(usuario["lembrete_revisao"]),
         brincadeira=db.obter_brincadeira(usuario["id"]),
     )
 
@@ -121,6 +122,14 @@ def listar_marcadas(usuario=Depends(usuario_atual)):
     gabarito nem explicação. Para revê-las de verdade existe o filtro
     `apenas_marcadas` do Praticar, que passa pelo teto diário como o resto."""
     return {"questoes": [dict(q) for q in db.resumo_questoes_marcadas(usuario_id=usuario["id"])]}
+
+
+@router.patch("/lembrete")
+def definir_lembrete(dados: LembreteIn, usuario=Depends(usuario_atual)):
+    """Liga ou desliga o lembrete de revisão por e-mail. Opcional por decisão do
+    usuário (26/09): nasce desligado, e só a própria aluna liga."""
+    db.definir_lembrete_revisao(usuario["id"], dados.ativo)
+    return {"lembrete_revisao": dados.ativo}
 
 
 @router.patch("/prova")

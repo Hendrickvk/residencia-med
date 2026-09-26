@@ -3,6 +3,7 @@ import { api } from "../../lib/api";
 import { useMe } from "../../lib/auth";
 import type { QuestaoMarcada } from "../../lib/types";
 import { Identidade } from "./Identidade";
+import { Lembretes } from "./Lembretes";
 import { Marcadas } from "./Marcadas";
 import { ProvaAlvo } from "./ProvaAlvo";
 
@@ -26,6 +27,7 @@ export default function Perfil() {
       <div className="grid items-start gap-7 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <Identidade me={me} />
         <ProvaAlvo me={me} />
+        <Lembretes me={me} />
       </div>
 
       <Marcadas

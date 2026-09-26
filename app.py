@@ -748,6 +748,26 @@ if pagina_atual == "uso":
         "E-mail confirmado": "sim" if c["confirmada"] else "não",
     } for c in m["por_conta"]]), hide_index=True, use_container_width=True)
 
+    # As alunas apontando, sem saber, onde o conteúdo pode estar errado: num
+    # banco que nenhum médico revisou, é o sinal mais barato que existe.
+    suspeitas = db.questoes_suspeitas()
+    st.markdown(
+        f"**Questões suspeitas:** {len(suspeitas) if suspeitas else 'nenhuma com amostra suficiente ainda'}. "
+        "Acerto abaixo de 30%, ou metade ou mais das primeiras respostas na mesma alternativa errada — "
+        "vale conferir o gabarito e a explicação (Revisar explicações)."
+    )
+    if suspeitas:
+        st.dataframe(pd.DataFrame([{
+            "Questão": s["id"],
+            "Prova": " ".join(filter(None, [s["banca"], s["edicao"]])) or "—",
+            "Nº no caderno": s["numero_prova"] or "—",
+            "Gabarito": s["resposta_correta"],
+            "Acerto": f"{round(100 * s['acerto'])}%",
+            "Errada mais marcada": (f"{s['errada_mais_marcada']} ({round(100 * s['maioria_errada'])}%)"
+                                    if s["errada_mais_marcada"] else "—"),
+            "Primeiras respostas": s["respostas"],
+        } for s in suspeitas]), hide_index=True, use_container_width=True)
+
     erros = db.erros_front_recentes()
     st.markdown(f"**Erros do app nos últimos 7 dias:** {len(erros) if erros else 'nenhum'}")
     for e in erros:

@@ -1,9 +1,16 @@
-import { Navigate, Outlet } from "react-router-dom";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { ehNaoAutenticado, useMe } from "../lib/auth";
 import { EstadoFalha } from "./EstadoFalha";
 
 export function RequireAuth() {
   const { data, isLoading, isError, error, refetch, isFetching, isPaused } = useMe();
+  // Para onde ela ia: o login devolve para lá. É o que faz o link de um
+  // e-mail ("Revisar agora", "Desligar o lembrete") funcionar para quem
+  // estava com a sessão vencida, em vez de largá-la no Painel.
+  const location = useLocation();
+  const paraOLogin = (
+    <Navigate to="/login" replace state={{ de: location.pathname + location.search + location.hash }} />
+  );
 
   if (isLoading) {
     // Skeleton com as dimensões finais do shell (barra superior de 64px +
@@ -22,7 +29,7 @@ export function RequireAuth() {
 
   // Login só quando o servidor disse que não há sessão. Antes, qualquer erro
   // em /me (ex.: conexão com o banco caída) mandava o aluno para o login.
-  if (isError && ehNaoAutenticado(error)) return <Navigate to="/login" replace />;
+  if (isError && ehNaoAutenticado(error)) return paraOLogin;
 
   // Um refetch em segundo plano que falhou mantém os dados de antes: segue a tela.
   if (data) return <Outlet />;
@@ -42,5 +49,5 @@ export function RequireAuth() {
     );
   }
 
-  return <Navigate to="/login" replace />;
+  return paraOLogin;
 }

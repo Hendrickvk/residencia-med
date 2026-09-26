@@ -1,0 +1,12 @@
+[Unit]
+Description=Conduta - rotina diaria as 8h de Brasilia
+
+[Timer]
+# O servidor roda em UTC; o fuso vai explícito (systemd >= 235).
+OnCalendar=*-*-* 08:00:00 America/Sao_Paulo
+# Servidor desligado às 8h: roda quando voltar. O lembrete e o relatório têm
+# trava de um por dia, então rodar atrasado não repete nada.
+Persistent=true
+
+[Install]
+WantedBy=timers.target

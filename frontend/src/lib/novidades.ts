@@ -37,6 +37,17 @@ export const ROTULO_TIPO: Record<TipoNovidade, string> = {
 
 export const NOVIDADES: Novidade[] = [
   {
+    id: "2026-09-26",
+    data: "26 de setembro de 2026",
+    titulo: "Lembrete das revisões",
+    itens: [
+      {
+        tipo: "novo",
+        texto: "Se quiser, a plataforma avisa por e-mail nos dias em que há revisão vencida. É só ligar em Perfil → Lembretes.",
+      },
+    ],
+  },
+  {
     id: "2026-09-25f",
     data: "25 de setembro de 2026",
     titulo: "Ofensiva",

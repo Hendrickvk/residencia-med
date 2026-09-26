@@ -67,6 +67,21 @@ rejected, so shipping a change to this logs everyone out once, by design. `COOKI
   account through `/auth/signup` and then asks for content must call `confirmar_email()` from
   `tests/conftest.py`, and must draw its e-mail *before* the call so the teardown can delete by e-mail
   (an endpoint that raises after inserting the row leaks an account into production otherwise — it did).
+- **Daily routine** (`scripts/rotina_diaria.py`, systemd `residencia-rotina.timer` at 08:00
+  America/Sao_Paulo, since 2026-09-26; simulates by default, `--enviar` sends — DEPLOY.md). Two jobs:
+  (1) the **review reminder e-mail, which is opt-in and off by default** — user decision ("que não
+  seja forçado"): `usuarios.lembrete_revisao` defaults to FALSE, only the student turns it on
+  (Perfil → Lembretes, `PATCH /me/lembrete`); it goes only to confirmed e-mails, only on days with
+  something due (the same numbers as the tabs: cases within the daily goal + due cards), at most once
+  a day (`usuarios.lembrete_enviado_em`). Never turn it on for anyone, not even in a migration.
+  (2) The **daily report to `ADMIN_EMAILS`** about the previous day (`db.resumo_do_dia`, suspicious
+  questions, front-end errors), once per day through the `envios_diarios` lock. Both e-mails are built
+  in `api/email_modelo.py` (`lembrete_revisao`, `relatorio_diario`); front-end error messages are
+  student-supplied, so the report escapes them — `montar_html` escapes nothing.
+- **Suspicious questions** (`db.questoes_suspeitas`, on the admin's Uso page and in the daily report):
+  first answer per account only, test accounts out, at least 5 answers; flagged when accuracy is below
+  30% or one wrong alternative gets half or more. With nobody medical reviewing the explanations, it is
+  the cheapest signal of a wrong gabarito or explanation.
 - `api/email_modelo.py` — the HTML e-mail, table-based and inline-styled, in the Triagem system
   (paper `--ground`, card with a 1px border, ink button, the five triage bars as the brand mark). Both
   transactional e-mails go through it; `enviar_email` sends text **and** HTML, because a text-only

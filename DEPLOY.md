@@ -242,6 +242,26 @@ agendamento atrasa em horário de pico e é desligado depois de 60 dias sem
 atividade no repositório (o GitHub avisa). Para disparar à mão: aba Actions →
 Monitor → Run workflow.
 
+## Rotina diária ✅ Desde 2026-09-26
+
+`deploy/residencia-rotina.service` + `.timer` rodam `scripts/rotina_diaria.py
+--enviar` todo dia às 8h de Brasília (o fuso vai no `OnCalendar`, porque o
+servidor é UTC; systemd 255). Manda o lembrete de revisão a quem **ligou** no
+Perfil (é opcional, desligado por padrão) e o relatório do dia anterior para o
+`ADMIN_EMAILS`. Lê o mesmo `.env.production` da API (Brevo, `APP_URL`, admins).
+
+```bash
+sudo cp deploy/residencia-rotina.service deploy/residencia-rotina.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now residencia-rotina.timer
+systemctl list-timers residencia-rotina.timer    # próxima execução
+sudo systemctl start residencia-rotina.service   # rodar agora, à mão
+journalctl -u residencia-rotina -n 20 --no-pager # o que ela fez
+```
+
+Rodar duas vezes no mesmo dia não repete nada: o lembrete tem
+`usuarios.lembrete_enviado_em` e o relatório a trava `envios_diarios`.
+
 ## 8. Checklist final antes de compartilhar qualquer link
 
 Conferido em 2026-09-22, no deploy que trouxe os 60 commits parados desde

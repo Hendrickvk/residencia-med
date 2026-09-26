@@ -930,6 +930,23 @@ def init_db(forcar=False):
         # saber se existe foto sem encostar no blob. NULL = sem foto.
         if "foto_versao" not in colunas_usuarios:
             c.execute("ALTER TABLE usuarios ADD COLUMN foto_versao TEXT")
+        # Lembrete de revisão por e-mail: **desligado por padrão** — a aluna
+        # liga no Perfil se quiser (decisão do usuário, 26/09). O dia do último
+        # envio segura um e-mail por dia mesmo se a rotina rodar duas vezes.
+        if "lembrete_revisao" not in colunas_usuarios:
+            c.execute("ALTER TABLE usuarios ADD COLUMN lembrete_revisao BOOLEAN NOT NULL DEFAULT FALSE")
+        if "lembrete_enviado_em" not in colunas_usuarios:
+            c.execute("ALTER TABLE usuarios ADD COLUMN lembrete_enviado_em DATE")
+
+        # Envios que são um por dia no total (o relatório para o admin): a linha
+        # (tipo, dia) é a trava contra mandar de novo se o timer rodar duas vezes.
+        c.execute("""
+        CREATE TABLE IF NOT EXISTS envios_diarios (
+            tipo TEXT NOT NULL,
+            dia DATE NOT NULL,
+            PRIMARY KEY (tipo, dia)
+        )
+        """)
 
         # A foto em tabela separada, e não numa coluna de `usuarios`: o
         # `obter_usuario` faz `SELECT *` e roda em **toda** requisição
@@ -1632,6 +1649,118 @@ def calcular_ofensiva(*, usuario_id):
         streak += 1
         cursor -= datetime.timedelta(days=1)
     return streak, respondeu_hoje
+
+
+def definir_lembrete_revisao(usuario_id, ativo: bool):
+    with get_conn() as conn:
+        conn.execute("UPDATE usuarios SET lembrete_revisao = ? WHERE id = ?", (bool(ativo), usuario_id))
+
+
+def contas_para_lembrete(dia):
+    """Quem pode receber o lembrete de revisão hoje: ligou no Perfil, confirmou
+    o e-mail e ainda não recebeu neste `dia`. Se há revisão vencida de fato,
+    quem decide é a rotina (`scripts/rotina_diaria.py`), com a mesma conta da
+    aba — conta sem nada vencido não recebe nada."""
+    with get_conn() as conn:
+        return conn.execute("""
+            SELECT id, email, meta_revisao_diaria FROM usuarios
+            WHERE lembrete_revisao AND email_confirmado_em IS NOT NULL
+              AND (lembrete_enviado_em IS NULL OR lembrete_enviado_em < ?)
+            ORDER BY id
+        """, (dia,)).fetchall()
+
+
+def marcar_lembrete_enviado(usuario_id, dia):
+    with get_conn() as conn:
+        conn.execute("UPDATE usuarios SET lembrete_enviado_em = ? WHERE id = ?", (dia, usuario_id))
+
+
+def reservar_envio_diario(tipo, dia) -> bool:
+    """True na primeira vez que (tipo, dia) é pedido; False se já foi — a rotina
+    diária não manda o mesmo relatório duas vezes."""
+    with get_conn() as conn:
+        return conn.execute(
+            "INSERT INTO envios_diarios (tipo, dia) VALUES (?, ?) ON CONFLICT DO NOTHING", (tipo, dia)
+        ).rowcount == 1
+
+
+def resumo_do_dia(dia, *, excluir_testes=True):
+    """O dia em números para o relatório do admin: contas novas, contas que
+    estudaram (mesma régua da ofensiva), respostas, revisões, cartões e erros do
+    app."""
+    inicio = datetime.datetime.combine(dia, datetime.time())
+    fim = inicio + datetime.timedelta(days=1)
+    filtro = "email NOT LIKE ?" if excluir_testes else "? IS NOT NULL"
+    with get_conn() as conn:
+        ids = [r["id"] for r in conn.execute(f"SELECT id FROM usuarios WHERE {filtro}", ("pytest_%",)).fetchall()]
+        if not ids:
+            ids = [0]
+        em = f"usuario_id IN ({', '.join('?' * len(ids))})"
+        contar = lambda sql, *extra: conn.execute(sql, [*extra, *ids]).fetchone()["n"]  # noqa: E731
+        return {
+            "contas_novas": contar(
+                f"SELECT COUNT(*) AS n FROM usuarios WHERE criado_em::timestamp >= ? AND criado_em::timestamp < ? "
+                f"AND id IN ({', '.join('?' * len(ids))})", inicio, fim),
+            "estudaram": contar(f"""
+                SELECT COUNT(DISTINCT usuario_id) AS n FROM (
+                    SELECT usuario_id, respondida_em::timestamp AS m FROM respostas
+                    UNION ALL SELECT usuario_id, registrado_em FROM revisao_eventos WHERE origem = 'revisao'
+                    UNION ALL SELECT usuario_id, registrado_em FROM revisao_cartao_eventos
+                ) a WHERE m >= ? AND m < ? AND {em}""", inicio, fim),
+            "respostas": contar(
+                f"SELECT COUNT(*) AS n FROM respostas WHERE respondida_em::timestamp >= ? "
+                f"AND respondida_em::timestamp < ? AND {em}", inicio, fim),
+            "revisoes": contar(
+                f"SELECT COUNT(*) AS n FROM revisao_eventos WHERE origem = 'revisao' AND registrado_em >= ? "
+                f"AND registrado_em < ? AND {em}", inicio, fim),
+            "cartoes": contar(
+                f"SELECT COUNT(*) AS n FROM revisao_cartao_eventos WHERE registrado_em >= ? "
+                f"AND registrado_em < ? AND {em}", inicio, fim),
+            "erros_app": contar(
+                f"SELECT COUNT(*) AS n FROM erros_front WHERE criado_em >= ? AND criado_em < ? AND {em}",
+                inicio, fim),
+        }
+
+
+def questoes_suspeitas(*, minimo_respostas=5, limite=30, excluir_testes=True):
+    """Questões que as próprias alunas apontam sem saber: acerto muito baixo, ou
+    uma alternativa errada escolhida pela maioria. É o sinal mais barato de
+    gabarito ou explicação com problema, num banco que nenhum médico revisou
+    (HISTORICO.md). Conta só a primeira resposta de cada conta — refazer depois
+    de ver a explicação mede memória, não a questão — e deixa de fora as contas
+    de teste. Só entra questão com `minimo_respostas` primeiras respostas."""
+    with get_conn() as conn:
+        linhas = conn.execute(f"""
+            WITH primeiras AS (
+                SELECT DISTINCT ON (r.usuario_id, r.questao_id) r.questao_id, r.resposta_dada, r.correta
+                FROM respostas r JOIN usuarios u ON u.id = r.usuario_id
+                WHERE {"u.email NOT LIKE ?" if excluir_testes else "? IS NOT NULL"}
+                ORDER BY r.usuario_id, r.questao_id, r.respondida_em
+            ),
+            por_questao AS (
+                SELECT questao_id, COUNT(*) AS respostas, SUM(correta) AS acertos
+                FROM primeiras GROUP BY questao_id HAVING COUNT(*) >= ?
+            ),
+            erradas AS (
+                SELECT questao_id, resposta_dada, COUNT(*) AS n,
+                       ROW_NUMBER() OVER (PARTITION BY questao_id ORDER BY COUNT(*) DESC, resposta_dada) AS ordem
+                FROM primeiras WHERE correta = 0 GROUP BY questao_id, resposta_dada
+            )
+            SELECT q.id, q.banca, q.edicao, q.numero_prova, q.resposta_correta,
+                   p.respostas, p.acertos, e.resposta_dada AS errada_mais_marcada, e.n AS vezes_errada
+            FROM por_questao p
+            JOIN questoes q ON q.id = p.questao_id
+            LEFT JOIN erradas e ON e.questao_id = p.questao_id AND e.ordem = 1
+        """, ("pytest_%", minimo_respostas)).fetchall()
+    suspeitas = []
+    for linha in linhas:
+        acerto = linha["acertos"] / linha["respostas"]
+        maioria_errada = (linha["vezes_errada"] or 0) / linha["respostas"]
+        # Menos de 30% de acerto, ou a mesma errada escolhida por metade ou mais.
+        if acerto < 0.3 or maioria_errada >= 0.5:
+            suspeitas.append({**dict(linha), "acerto": acerto, "maioria_errada": maioria_errada})
+    suspeitas.sort(key=lambda s: (-s["maioria_errada"], s["acerto"]))
+    return suspeitas[:limite]
 
 
 def definir_prova_alvo(usuario_id, data_iso: str | None):
