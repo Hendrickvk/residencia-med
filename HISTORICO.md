@@ -14,7 +14,15 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   novo servido, API e admin de pé; o workflow Monitor aparece `active` na API
   do GitHub, e a primeira execução agendada ainda não tinha saído dez minutos
   depois — o GitHub demora a disparar o primeiro agendamento; o `gh` não está
-  instalado aqui para disparar à mão). Feito: (4a) monitor pelo GitHub Actions a cada
+  instalado aqui para disparar à mão). Primeiro uso real: a tela recusou a
+  conta do dono. O serviço do Streamlit não carregava o `.env.production`
+  (só a API carregava) e o `secrets.toml` do servidor não traz
+  `ADMIN_EMAILS`, então para o admin ninguém era administrador desde 20/09 —
+  a exclusão em massa do Banco também estava travada. O
+  `deploy/residencia-streamlit.service` ganhou o mesmo `EnvironmentFile` da
+  API (commit `f2b2777`). O `AppTest` não pegou porque punha o e-mail na
+  sessão e lia a lista desta máquina, que tem o `secrets.toml` completo.
+  Feito: (4a) monitor pelo GitHub Actions a cada
   15 min contra o `/health` — que já existia e não toca o banco; acordar o
   Neon a cada 15 min gastaria a cota gratuita — e contra o site (DEPLOY.md,
   Monitor); (4b) erros do front vão para a API (`POST /me/erros`, tabela
