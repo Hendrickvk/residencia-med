@@ -6,6 +6,10 @@ After=network.target
 Type=simple
 User=residenciamed
 WorkingDirectory=/var/www/residencia-med
+# O mesmo arquivo da API: é de lá que sai o ADMIN_EMAILS (db.emails_admin). Sem
+# ele, o `secrets.toml` do servidor não traz a lista e, para o admin, ninguém
+# era administrador — foi o que travou a tela "Uso da plataforma" em 26/09.
+EnvironmentFile=/var/www/residencia-med/.env.production
 ExecStart=/var/www/residencia-med/.venv/bin/streamlit run app.py --server.port 8501 --server.address 127.0.0.1 --server.headless true
 Restart=on-failure
 RestartSec=3
