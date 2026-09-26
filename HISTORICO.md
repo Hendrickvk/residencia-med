@@ -8,6 +8,20 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
 
 ## Pendências
 
+- **O "dia" da plataforma vira às 21h de Brasília** (achado em 25/09, depois de
+  subir a ofensiva nova). O servidor (`timedatectl`: Etc/UTC) e o banco (sessão
+  em GMT) rodam em UTC, e tudo que é "hoje" sai de `datetime.now()`/
+  `date.today()` no Python ou de `CURRENT_DATE`/`NOW()` no SQL: a ofensiva, as
+  respondidas de hoje, a fila de revisão do dia, o teto diário. Efeito visível:
+  a etiqueta da ofensiva fica laranja às 21h para quem já estudou naquele dia,
+  e quem estuda às 20h num dia e às 22h no outro perde a sequência (em UTC há
+  um dia vazio no meio) — e aluna de residência estuda de noite. Não é
+  consertar só o Python: `respondida_em` é texto com a hora local do Python e
+  o SQL compara com `CURRENT_DATE` do banco, então os dois precisam andar
+  juntos (TZ=America/Sao_Paulo no serviço **e** `SET TIME ZONE` na conexão, ou
+  converter nas consultas), e o que já foi gravado em UTC fica 3h adiantado se
+  passar a ser lido como horário de Brasília. Precisa de decisão do usuário e
+  de um plano para o histórico antes de mexer.
 - **Crítica de interface de 25/09** (skill Impeccable, 31/40). Ordem combinada
   com o usuário, um item por vez, conferido no localhost e subido só com
   autorização:
@@ -18,9 +32,9 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
      a data). O próximo é o 4.
   4. *Triagem de entrada* — **descartada pelo usuário** em 25/09, depois de
      testar (ver a data). Não repropor como caminho sugerido para a conta nova.
-  5. Menores. Feitos em 25/09 (ver a data), esperando autorização para subir:
-     a ofensiva contando a Revisão e os cartões, o fim da meta fixa de 20 no
-     cabeçalho e os `window.confirm` dos baralhos pelo `Dialog`. Em aberto, e
+  5. Menores. No ar desde 25/09 (commit `1078fe1`; ver a data): a ofensiva
+     contando a Revisão e os cartões, o fim da meta fixa de 20 no cabeçalho e
+     os `window.confirm` dos baralhos pelo `Dialog`. Em aberto, e
      só se o usuário pedir: o botão de tema no menu da conta (é gosto, não
      defeito); modo metrô (service worker e a fila de respostas no
      `localStorage` — o service worker pode prender alunas numa versão velha
