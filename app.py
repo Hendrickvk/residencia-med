@@ -174,7 +174,7 @@ with st.container(key="topbar"):
     with col_prova:
         data_alvo = st.session_state.get("data_prova_alvo")
         if data_alvo:
-            dias_restantes = (datetime.date.fromisoformat(data_alvo) - datetime.date.today()).days
+            dias_restantes = (datetime.date.fromisoformat(data_alvo) - db.hoje_br()).days
             if dias_restantes >= 0:
                 texto_prova = f"prova em {dias_restantes} dia{'s' if dias_restantes != 1 else ''}"
             else:
@@ -592,7 +592,7 @@ def _gravar_marca(questao_id, status, nota):
     marcas[str(questao_id)] = {
         "status": status,
         "nota": nota.strip(),
-        "em": datetime.datetime.now().isoformat(timespec="seconds"),
+        "em": db.agora_br().isoformat(timespec="seconds"),
     }
     with open(ARQUIVO_REVISAO, "w", encoding="utf-8") as f:
         json.dump(marcas, f, ensure_ascii=False, indent=1, sort_keys=True)

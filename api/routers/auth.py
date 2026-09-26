@@ -1,4 +1,3 @@
-import datetime
 import hashlib
 import os
 import secrets
@@ -194,7 +193,7 @@ def esqueci_senha(dados: EsqueciSenhaIn):
     if usuario is not None and db.contar_tokens_recentes(usuario["id"]) < LIMITE_PEDIDOS:
         token = secrets.token_urlsafe(32)
         expira_em = db.criar_token_senha(usuario["id"], _hash_token(token))
-        minutos = round((expira_em - datetime.datetime.now()).total_seconds() / 60)
+        minutos = round((expira_em - db.agora_br()).total_seconds() / 60)
         url = f"{APP_URL}/senha/{token}"
         enviar_email(
             usuario["email"],

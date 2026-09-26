@@ -3,6 +3,9 @@ pandas>=2.1
 openpyxl>=3.1
 psycopg2-binary>=2.9
 bcrypt>=4.0
+# Base de fusos para o zoneinfo no Windows (db.FUSO_PLATAFORMA); no Linux o
+# sistema já traz, e o pacote é inofensivo.
+tzdata>=2024.1
 
 # API (MIGRACAO.md Fase 1) — o Streamlit acima continua rodando em paralelo
 fastapi>=0.110

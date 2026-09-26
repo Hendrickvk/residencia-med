@@ -17,6 +17,7 @@ import threading
 import time
 import unicodedata
 from contextlib import contextmanager
+from zoneinfo import ZoneInfo
 
 import psycopg2
 import psycopg2.errors
@@ -35,6 +36,26 @@ _DEC2FLOAT = psycopg2.extensions.new_type(
     lambda value, curs: float(value) if value is not None else None,
 )
 psycopg2.extensions.register_type(_DEC2FLOAT)
+
+# O relógio da plataforma é o de Brasília, para todo mundo (decisão de 25/09).
+# O servidor e o banco rodam em UTC, e com eles o "dia" virava às 21h daqui: a
+# ofensiva ficava laranja de noite e quem estudava às 22h caía no dia seguinte.
+# As colunas guardam hora sem fuso, então isto devolve Brasília sem fuso. Toda
+# hora gravada e todo "hoje" saem destas duas funções — nunca de
+# `datetime.now()`/`date.today()` (UTC no servidor, Brasília nesta máquina) nem
+# de `NOW()`/`CURRENT_DATE` no SQL (a conexão passa pelo pooler do Neon, então
+# um `SET TIME ZONE` de sessão não se sustenta): o SQL recebe a hora como
+# parâmetro. O que já estava gravado em UTC foi deslocado uma vez por
+# `scripts/fuso_brasilia.py`.
+FUSO_PLATAFORMA = ZoneInfo("America/Sao_Paulo")
+
+
+def agora_br() -> datetime.datetime:
+    return datetime.datetime.now(FUSO_PLATAFORMA).replace(tzinfo=None)
+
+
+def hoje_br() -> datetime.date:
+    return agora_br().date()
 
 
 def emails_admin():
@@ -851,7 +872,7 @@ def init_db(forcar=False):
         # a aluna fora do estudo para provar um ponto seria absurdo.
         if "email_confirmado_em" not in colunas_usuarios:
             c.execute("ALTER TABLE usuarios ADD COLUMN email_confirmado_em TIMESTAMP")
-            c.execute("UPDATE usuarios SET email_confirmado_em = NOW()")
+            c.execute("UPDATE usuarios SET email_confirmado_em = ?", (agora_br(),))
         # Novidades da plataforma: guarda o id da última entrada que a conta já
         # viu (`frontend/src/lib/novidades.ts`). No banco e não no
         # `localStorage` porque ela estuda no celular e no computador, e o
@@ -1233,7 +1254,7 @@ def criar_questao(area_id, subtopico_id, enunciado, alternativas: dict,
         """, (
             area_id, especialidade_id, subtopico_id, enunciado, json.dumps(alternativas, ensure_ascii=False),
             resposta_correta, explicacao, banca, ano, tipo_pergunta,
-            datetime.datetime.now().isoformat(),
+            agora_br().isoformat(),
         ))
         return cur.lastrowid
 
@@ -1482,7 +1503,7 @@ def registrar_resposta(questao_id, resposta_dada, correta: bool, *, usuario_id, 
         conn.execute("""
             INSERT INTO respostas (usuario_id, questao_id, resposta_dada, correta, respondida_em, confianca, tempo_ms)
             VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (usuario_id, questao_id, resposta_dada, int(correta), datetime.datetime.now().isoformat(), confianca, tempo_ms))
+        """, (usuario_id, questao_id, resposta_dada, int(correta), agora_br().isoformat(), confianca, tempo_ms))
 
 
 def distribuicao_respostas_questao(questao_id, *, excluir_usuario_id=None):
@@ -1509,8 +1530,8 @@ def contar_respondidas_hoje(*, usuario_id):
     with get_conn() as conn:
         row = conn.execute("""
             SELECT COUNT(*) AS total FROM respostas
-            WHERE usuario_id = ? AND respondida_em::date = CURRENT_DATE
-        """, (usuario_id,)).fetchone()
+            WHERE usuario_id = ? AND respondida_em::date = ?
+        """, (usuario_id, hoje_br())).fetchone()
         return row["total"] if row else 0
 
 
@@ -1523,25 +1544,26 @@ def consumir_cota_pratica(*, usuario_id, quantidade, teto=TETO_DIARIO_PRATICA):
     conta válida. O teto é por caso entregue, e não por requisição, porque é
     o caso que é o conteúdo.
     """
+    dia = hoje_br()
     with get_conn() as conn:
         conn.execute("""
             INSERT INTO cota_pratica (usuario_id, dia, entregues)
-            VALUES (?, CURRENT_DATE, 0)
+            VALUES (?, ?, 0)
             ON CONFLICT (usuario_id, dia) DO NOTHING
-        """, (usuario_id,))
+        """, (usuario_id, dia))
         # FOR UPDATE porque duas abas da mesma conta pedindo sessão ao mesmo
         # tempo leriam o mesmo saldo e gastariam duas vezes.
         row = conn.execute("""
             SELECT entregues FROM cota_pratica
-            WHERE usuario_id = ? AND dia = CURRENT_DATE
+            WHERE usuario_id = ? AND dia = ?
             FOR UPDATE
-        """, (usuario_id,)).fetchone()
+        """, (usuario_id, dia)).fetchone()
         liberados = max(0, min(quantidade, teto - row["entregues"]))
         if liberados:
             conn.execute("""
                 UPDATE cota_pratica SET entregues = entregues + ?
-                WHERE usuario_id = ? AND dia = CURRENT_DATE
-            """, (liberados, usuario_id))
+                WHERE usuario_id = ? AND dia = ?
+            """, (liberados, usuario_id, dia))
         return liberados
 
 
@@ -1553,7 +1575,7 @@ def calcular_ofensiva(*, usuario_id):
     Revisão (`revisao_eventos` — a Revisão não passa por `respostas`) e cartão
     avaliado (`revisao_cartao_eventos`). Até 25/09 só `respostas` contava, e
     quem passava o dia só revisando, casos ou cartões, perdia a sequência.
-    Os três horários saem do mesmo relógio (`datetime.now()` no Python).
+    Os três horários saem do mesmo relógio (`agora_br`).
     Retorna (dias_consecutivos, estudou_hoje)."""
     with get_conn() as conn:
         linhas = conn.execute("""
@@ -1564,7 +1586,7 @@ def calcular_ofensiva(*, usuario_id):
             SELECT registrado_em::date FROM revisao_cartao_eventos WHERE usuario_id = ?
         """, (usuario_id, usuario_id, usuario_id)).fetchall()
     dias = {r["dia"] for r in linhas}
-    hoje = datetime.date.today()
+    hoje = hoje_br()
     respondeu_hoje = hoje in dias
     cursor = hoje if respondeu_hoje else hoje - datetime.timedelta(days=1)
     streak = 0
@@ -1643,7 +1665,7 @@ def criar_pasta(*, usuario_id, nome, cor):
         c = conn.cursor()
         c.execute(
             "INSERT INTO pastas_cartoes (usuario_id, nome, cor, criada_em) VALUES (?, ?, ?, ?)",
-            (usuario_id, nome, cor, datetime.datetime.now()),
+            (usuario_id, nome, cor, agora_br()),
         )
         return c.lastrowid
 
@@ -1678,7 +1700,7 @@ def criar_baralho(*, usuario_id, pasta_id, nome):
         c = conn.cursor()
         c.execute(
             "INSERT INTO baralhos (usuario_id, pasta_id, nome, criado_em) VALUES (?, ?, ?, ?)",
-            (usuario_id, pasta_id, nome, datetime.datetime.now()),
+            (usuario_id, pasta_id, nome, agora_br()),
         )
         return c.lastrowid
 
@@ -1724,7 +1746,7 @@ def listar_pastas(*, usuario_id):
             SELECT b.id, b.pasta_id, b.nome, b.criado_em,
                    COUNT(c.id) AS cartoes,
                    COUNT(c.id) FILTER (
-                       WHERE r.cartao_id IS NULL OR r.proxima_revisao <= NOW()
+                       WHERE r.cartao_id IS NULL OR r.proxima_revisao <= ?
                    ) AS vencidos,
                    COUNT(c.id) FILTER (WHERE r.cartao_id IS NULL) AS novos,
                    COUNT(c.id) FILTER (
@@ -1739,7 +1761,7 @@ def listar_pastas(*, usuario_id):
             WHERE b.usuario_id = ?
             GROUP BY b.id, b.pasta_id, b.nome, b.criado_em
             ORDER BY b.nome
-        """, (usuario_id,)).fetchall()
+        """, (agora_br(), usuario_id)).fetchall()
     por_pasta = {}
     for b in baralhos:
         por_pasta.setdefault(b["pasta_id"], []).append(dict(b))
@@ -1780,7 +1802,7 @@ def criar_cartao(*, usuario_id, baralho_id, frente, verso, questao_id=None):
         c.execute(
             "INSERT INTO cartoes (usuario_id, baralho_id, frente, verso, criado_em, questao_id) "
             "VALUES (?, ?, ?, ?, ?, ?)",
-            (usuario_id, baralho_id, frente, verso, datetime.datetime.now(), questao_id),
+            (usuario_id, baralho_id, frente, verso, agora_br(), questao_id),
         )
         return c.lastrowid
 
@@ -1826,10 +1848,10 @@ def cartoes_para_estudar(baralho_id, *, usuario_id, limite=40):
             JOIN pastas_cartoes p ON p.id = b.pasta_id
             LEFT JOIN revisao_cartao r ON r.cartao_id = c.id AND r.usuario_id = c.usuario_id
             WHERE {condicao}
-              AND (r.cartao_id IS NULL OR r.proxima_revisao <= NOW())
+              AND (r.cartao_id IS NULL OR r.proxima_revisao <= ?)
             ORDER BY r.proxima_revisao NULLS LAST, c.id
             LIMIT ?
-        """, params + [limite]).fetchall()
+        """, params + [agora_br(), limite]).fetchall()
     linhas = list(linhas)
     random.shuffle(linhas)
     return linhas
@@ -1930,8 +1952,8 @@ def contar_cartoes_vencidos(*, usuario_id):
         row = conn.execute("""
             SELECT COUNT(*) AS n FROM cartoes c
             LEFT JOIN revisao_cartao r ON r.cartao_id = c.id AND r.usuario_id = c.usuario_id
-            WHERE c.usuario_id = ? AND (r.cartao_id IS NULL OR r.proxima_revisao <= NOW())
-        """, (usuario_id,)).fetchone()
+            WHERE c.usuario_id = ? AND (r.cartao_id IS NULL OR r.proxima_revisao <= ?)
+        """, (usuario_id, agora_br())).fetchone()
     return row["n"]
 
 
@@ -2014,7 +2036,7 @@ def marcar_questao(usuario_id, questao_id):
             INSERT INTO questoes_marcadas (usuario_id, questao_id, criada_em)
             VALUES (?, ?, ?)
             ON CONFLICT (usuario_id, questao_id) DO NOTHING
-        """, (usuario_id, questao_id, datetime.datetime.now().isoformat()))
+        """, (usuario_id, questao_id, agora_br().isoformat()))
 
 
 def desmarcar_questao(usuario_id, questao_id):
@@ -2042,7 +2064,7 @@ def relatar_erro_questao(usuario_id, questao_id, parte, comentario=None):
             INSERT INTO relatos_questao (questao_id, usuario_id, parte, comentario, criado_em)
             VALUES (?, ?, ?, ?, ?)
             RETURNING id
-        """, (questao_id, usuario_id, parte, comentario, datetime.datetime.now())).fetchone()["id"]
+        """, (questao_id, usuario_id, parte, comentario, agora_br())).fetchone()["id"]
 
 
 def listar_relatos(*, pendentes=True, limite=200):
@@ -2073,7 +2095,7 @@ def resolver_relato(relato_id):
     with get_conn() as conn:
         conn.execute(
             "UPDATE relatos_questao SET resolvido_em = ? WHERE id = ?",
-            (datetime.datetime.now(), relato_id),
+            (agora_br(), relato_id),
         )
 
 
@@ -2097,7 +2119,7 @@ def marcar_relatos_avisados(usuario_id):
         conn.execute("""
             UPDATE relatos_questao SET avisado_em = ?
             WHERE usuario_id = ? AND resolvido_em IS NOT NULL AND avisado_em IS NULL
-        """, (datetime.datetime.now(), usuario_id))
+        """, (agora_br(), usuario_id))
 
 
 def questao_esta_marcada(usuario_id, questao_id):
@@ -2380,7 +2402,7 @@ def nota_projetada(*, usuario_id):
 
 def _inicio_da_semana(agora=None):
     """Segunda-feira 00:00 desta semana, o começo do ciclo do Painel."""
-    dia = (agora or datetime.datetime.now()).replace(hour=0, minute=0, second=0, microsecond=0)
+    dia = (agora or agora_br()).replace(hour=0, minute=0, second=0, microsecond=0)
     return dia - datetime.timedelta(days=dia.weekday())
 
 
@@ -2554,7 +2576,7 @@ def simulado_em_andamento(*, usuario_id):
             ORDER BY s.iniciado_em DESC
             LIMIT 5
         """, (usuario_id,)).fetchall()
-    agora = datetime.datetime.now()
+    agora = agora_br()
     for s in rows:
         inicio = datetime.datetime.fromisoformat(s["iniciado_em"])
         if inicio + datetime.timedelta(minutes=s["tempo_limite_min"]) > agora:
@@ -2573,7 +2595,7 @@ def criar_simulado(area_id, banca, num_questoes, tempo_limite_min, questao_ids, 
                 (usuario_id, area_id, banca, edicao, num_questoes, tempo_limite_min, iniciado_em)
             VALUES (?, ?, ?, ?, ?, ?, ?)
         """, (usuario_id, area_id, banca or None, edicao, num_questoes, tempo_limite_min,
-              datetime.datetime.now().isoformat()))
+              agora_br().isoformat()))
         simulado_id = c.lastrowid
         for ordem, questao_id in enumerate(questao_ids):
             c.execute("""
@@ -2638,7 +2660,7 @@ def finalizar_simulado(simulado_id, *, usuario_id):
             WHERE id = ?
         """, (
             agregado["acertos"] or 0, agregado["total_respondidas"] or 0,
-            datetime.datetime.now().isoformat(), simulado_id,
+            agora_br().isoformat(), simulado_id,
         ))
 
 
@@ -2777,7 +2799,7 @@ def criar_usuario(email, senha_hash):
             cur = conn.cursor()
             cur.execute(
                 "INSERT INTO usuarios (email, senha_hash, criado_em) VALUES (?, ?, ?)",
-                (email, senha_hash, datetime.datetime.now().isoformat()),
+                (email, senha_hash, agora_br().isoformat()),
             )
             return cur.lastrowid
     except psycopg2.errors.UniqueViolation:
@@ -2804,7 +2826,7 @@ def obter_usuario(usuario_id):
 
 def criar_token_senha(usuario_id, token_hash, minutos_validade=60):
     """Registra um pedido de redefinição e devolve o instante de expiração."""
-    agora = datetime.datetime.now()
+    agora = agora_br()
     expira_em = agora + datetime.timedelta(minutes=minutos_validade)
     with get_conn() as conn:
         conn.execute(
@@ -2823,14 +2845,14 @@ def obter_token_senha(token_hash):
             SELECT * FROM senha_tokens
             WHERE token_hash = ? AND usado_em IS NULL AND expira_em > ?
             """,
-            (token_hash, datetime.datetime.now()),
+            (token_hash, agora_br()),
         ).fetchone()
 
 
 def contar_tokens_recentes(usuario_id, minutos=15):
     """Quantos pedidos a conta fez na última janela — o freio contra usar o
     'esqueci minha senha' para bombardear a caixa de entrada de alguém."""
-    desde = datetime.datetime.now() - datetime.timedelta(minutes=minutos)
+    desde = agora_br() - datetime.timedelta(minutes=minutos)
     with get_conn() as conn:
         row = conn.execute(
             "SELECT count(*) AS n FROM senha_tokens WHERE usuario_id = ? AND criado_em > ?",
@@ -2851,7 +2873,7 @@ def criar_token_confirmacao(usuario_id, token_hash, horas_validade=CONFIRMACAO_V
     """48 h, e não os 60 min da redefinição: o link de senha é uma reação a um
     pedido que a pessoa acabou de fazer; este chega junto com o cadastro e pode
     esperar ela voltar do plantão."""
-    agora = datetime.datetime.now()
+    agora = agora_br()
     with get_conn() as conn:
         conn.execute("""
             INSERT INTO confirmacao_tokens (usuario_id, token_hash, criado_em, expira_em)
@@ -2867,8 +2889,8 @@ def obter_token_confirmacao(token_hash):
     with get_conn() as conn:
         return conn.execute("""
             SELECT * FROM confirmacao_tokens
-            WHERE token_hash = ? AND usado_em IS NULL AND expira_em > NOW()
-        """, (token_hash,)).fetchone()
+            WHERE token_hash = ? AND usado_em IS NULL AND expira_em > ?
+        """, (token_hash, agora_br())).fetchone()
 
 
 def contar_confirmacoes_recentes(usuario_id, minutos=15):
@@ -2876,7 +2898,7 @@ def contar_confirmacoes_recentes(usuario_id, minutos=15):
     `contar_tokens_recentes`: `NOW() - (%s * INTERVAL '1 minute')` com o número
     parametrizado devolve zero sempre — o psycopg2 não dá ao parâmetro o tipo
     que o operador de intervalo espera, e a contagem passa a não limitar nada."""
-    desde = datetime.datetime.now() - datetime.timedelta(minutes=minutos)
+    desde = agora_br() - datetime.timedelta(minutes=minutos)
     with get_conn() as conn:
         row = conn.execute(
             "SELECT COUNT(*) AS n FROM confirmacao_tokens WHERE usuario_id = ? AND criado_em > ?",
@@ -2889,7 +2911,7 @@ def confirmar_email(usuario_id, token_id):
     """Marca a conta como confirmada e queima todos os tokens pendentes dela na
     mesma transação — inclusive os de um reenvio, que senão continuariam
     valendo como link de confirmação de uma conta já confirmada."""
-    agora = datetime.datetime.now()
+    agora = agora_br()
     with get_conn() as conn:
         conn.execute(
             "UPDATE usuarios SET email_confirmado_em = ? WHERE id = ? AND email_confirmado_em IS NULL",
@@ -2919,7 +2941,7 @@ def invalidar_sessoes(usuario_id, conn=None):
 def redefinir_senha(usuario_id, senha_hash, token_id):
     """Troca a senha e queima **todos** os tokens da conta na mesma transação:
     usar um link não pode deixar os outros pendentes valendo."""
-    agora = datetime.datetime.now()
+    agora = agora_br()
     with get_conn() as conn:
         conn.execute("UPDATE usuarios SET senha_hash = ? WHERE id = ?", (senha_hash, usuario_id))
         conn.execute(

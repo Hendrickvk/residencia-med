@@ -22,6 +22,35 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   converter nas consultas), e o que já foi gravado em UTC fica 3h adiantado se
   passar a ser lido como horário de Brasília. Precisa de decisão do usuário e
   de um plano para o histórico antes de mexer.
+  **Decidido pelo usuário em 25/09**: Brasília para todos, histórico
+  deslocado, feito na hora. Código e script prontos e conferidos (simulação:
+  ~5,2 mil datas em 12 tabelas; "26/09 00:42" vira "25/09 21:42"), esperando
+  autorização para o minuto com a API parada. Plano que foi seguido:
+  1. *Um relógio só, o de Brasília*: `db.agora()`/`db.hoje()` com
+     `ZoneInfo("America/Sao_Paulo")`, sem fuso na saída (como as colunas
+     guardam), e `tzdata` no requirements (o Windows não traz a base de
+     fusos). Trocar os ~22 `datetime.now()`/`date.today()` do `db.py`, o
+     `_agora()` do `repeticao_espacada.py` (que já centraliza o SM-2) e o do
+     `api/routers/auth.py`. A máquina de desenvolvimento já roda em Brasília,
+     então os testes locais passam a bater com a produção (hoje não batem).
+  2. *O SQL para de perguntar a hora ao banco*: os `CURRENT_DATE`
+     (respondidas de hoje, teto diário) e `NOW()` (cartões vencidos, token de
+     senha) viram parâmetro vindo do Python. `SET TIME ZONE` na sessão não
+     serve: a conexão passa pelo pooler do Neon, que divide conexões entre
+     transações. Nenhuma coluna tem `DEFAULT NOW()` (conferido).
+  3. *Histórico*: o que o servidor gravou está em UTC. Script
+     `scripts/fuso_brasilia.py` no padrão da casa (`backup_banco.py` antes,
+     simulação por padrão, backup JSON, `--aplicar` numa transação, e
+     `--reverter`): −3h em `respostas.respondida_em` (texto),
+     `revisao_eventos.registrado_em`, `revisao_cartao_eventos.registrado_em`,
+     `revisao.proxima_revisao`, `revisao_cartao.proxima_revisao` e as datas de
+     `simulados`. Fora a conta demo, semeada daqui já em Brasília. ~3 mil
+     linhas (592 respostas, 1 946 eventos de revisão em 25/09).
+  4. *Teste* que fixa a virada: resposta às 22h30 de Brasília conta no dia
+     certo na ofensiva e no "hoje".
+  5. *Subida* numa janela de ~1 min: parar a API, `--aplicar`, subir o
+     código, reiniciar API e Streamlit — parada antes, para o código velho
+     não gravar UTC no meio; as respostas desse minuto voltam pela fila.
 - **Crítica de interface de 25/09** (skill Impeccable, 31/40). Ordem combinada
   com o usuário, um item por vez, conferido no localhost e subido só com
   autorização:

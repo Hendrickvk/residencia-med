@@ -25,6 +25,7 @@ import datetime
 import itertools
 import statistics
 
+import db
 from db import get_conn, listar_questoes_marcadas, obter_questao, questao_esta_marcada, desmarcar_questao
 from db import estado_revisao_cartao as db_estado_cartao
 from db import gravar_revisao_cartao as db_gravar_cartao
@@ -57,7 +58,9 @@ SEMANAS_EVOLUCAO = 8
 
 
 def _agora():
-    return datetime.datetime.now()
+    # O relógio da plataforma, o de Brasília (db.agora_br). Chamado pelo módulo,
+    # e não importado pelo nome, para um teste que troca o relógio valer aqui.
+    return db.agora_br()
 
 
 def estados_revisao(questao_ids, *, usuario_id):

@@ -61,7 +61,7 @@ def confirmar_email(usuario_id):
     própria confirmação (`test_confirmacao_email.py`) usa o token de verdade.
     """
     with db.get_conn() as conn:
-        conn.execute("UPDATE usuarios SET email_confirmado_em = NOW() WHERE id = ?", (usuario_id,))
+        conn.execute("UPDATE usuarios SET email_confirmado_em = ? WHERE id = ?", (db.agora_br(), usuario_id))
 
 
 @pytest.fixture()

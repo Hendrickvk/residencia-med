@@ -160,6 +160,16 @@ capping it would make the Configurador's live count lie about the bank.
 - `frontend/.env.production` has no secrets (just `VITE_API_URL`/`VITE_STREAMLIT_URL`) but is easy to accidentally gitignore: the root `.gitignore` pattern for the backend's `.env.production` must stay anchored to the repo root (`/.env.production`), or it will also match and silently exclude the frontend one.
 
 ### Postgres specifics
+- **The platform clock is Brasília, and it comes from `db.agora_br()` / `db.hoje_br()` only** (since
+  2026-09-25). The server and the database both run in UTC, so `datetime.now()`/`date.today()` there
+  is UTC (and Brasília on this dev machine), and the "day" used to turn at 21:00 in Brasília — night
+  study fell on the next day and streaks broke. Never read the clock any other way: not
+  `datetime.now()`, not `date.today()`, and not `NOW()`/`CURRENT_DATE` in SQL — pass the time in as a
+  parameter. A session `SET TIME ZONE` would not hold: the connection goes through Neon's pooler,
+  which shares server connections between transactions. Columns store naive timestamps (or ISO text)
+  in Brasília time; what the server had written in UTC was shifted once by `scripts/fuso_brasilia.py`
+  (marker row in `migracoes_dados`, `--reverter` undoes it). `tests/test_fuso.py` pins a 22:30 answer to
+  the Brasília day.
 - `LIKE` is case-sensitive in Postgres (unlike SQLite, which earlier docs incorrectly assumed). Any free-text filter in `db.py` must use `ILIKE`.
 - Postgres doesn't auto-index foreign keys — indexes on `respostas.usuario_id`, `respostas.questao_id`, `questoes.area_id`, `questoes.banca` are created explicitly in `init_db()`.
 - `revisao.proxima_revisao` is a real `TIMESTAMP` (migrated from `TEXT`/date-only), so short "review again in 10 minutes" scheduling works for real — don't regress this back to date-only comparisons.

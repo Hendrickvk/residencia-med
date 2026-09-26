@@ -31,8 +31,8 @@ def test_cota_libera_ate_o_teto_e_depois_nada(usuario_teste):
 
     with db.get_conn() as conn:
         row = conn.execute(
-            "SELECT entregues FROM cota_pratica WHERE usuario_id = ? AND dia = CURRENT_DATE",
-            (usuario_teste,),
+            "SELECT entregues FROM cota_pratica WHERE usuario_id = ? AND dia = ?",
+            (usuario_teste, db.hoje_br()),
         ).fetchone()
     assert row["entregues"] == 10
 
@@ -75,8 +75,8 @@ def test_recorte_menor_que_o_pedido_gasta_so_o_que_entregou(quatro_questoes, are
 
         with db.get_conn() as conn:
             row = conn.execute(
-                "SELECT entregues FROM cota_pratica WHERE usuario_id = ? AND dia = CURRENT_DATE",
-                (usuario_id,),
+                "SELECT entregues FROM cota_pratica WHERE usuario_id = ? AND dia = ?",
+                (usuario_id, db.hoje_br()),
             ).fetchone()
         assert row["entregues"] == 4
     finally:
