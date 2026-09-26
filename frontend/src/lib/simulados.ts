@@ -88,8 +88,9 @@ export function criarSimulado(dados: {
   return api.post<{ id: number }>("/simulados", dados);
 }
 
-export function criarSimuladoOficial(banca: string, edicao: string) {
-  return api.post<{ id: number }>("/simulados/oficial", { banca, edicao });
+// Sem `bloco`, a prova inteira.
+export function criarSimuladoOficial(banca: string, edicao: string, bloco?: number) {
+  return api.post<{ id: number }>("/simulados/oficial", { banca, edicao, bloco });
 }
 
 export function responderSimulado(simuladoId: number, questaoId: number, alternativa: string) {
@@ -111,6 +112,22 @@ export function nomeEdicao(banca: string, edicao: string): string {
   const nome = banca === "REVALIDA" ? "Revalida" : banca;
   return `${nome} ${edicao}`;
 }
+
+// "Revalida 2025/1" ou "Revalida 2025/1 · bloco 2"; null no simulado montado.
+export function nomeProvaOficial(s: { banca: string | null; edicao: string | null; bloco?: number | null }): string | null {
+  if (!s.banca || !s.edicao) return null;
+  const nome = nomeEdicao(s.banca, s.edicao);
+  return s.bloco ? `${nome} · bloco ${s.bloco}` : nome;
+}
+
+// As bancas com caderno oficial, na ordem em que aparecem (as do INEP primeiro),
+// com quem aplica a prova. Banca fora desta lista vai para o fim.
+export const BANCAS_OFICIAIS = [
+  { banca: "REVALIDA", nome: "Revalida", orgao: "INEP" },
+  { banca: "ENAMED", nome: "ENAMED", orgao: "INEP" },
+  { banca: "USP", nome: "USP", orgao: "FUVEST" },
+  { banca: "UNICAMP", nome: "UNICAMP", orgao: "COMVEST" },
+];
 
 // Todos os cadernos em que a questão caiu (db.provas_das_questoes): as 43 questões
 // comuns ao Revalida 2025/2 e ao ENAMED 2025 apareciam com um selo só. Sem lista

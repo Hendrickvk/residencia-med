@@ -1154,6 +1154,10 @@ def init_db(forcar=False):
         if "edicao" not in {row["column_name"] for row in c.fetchall()}:
             c.execute("ALTER TABLE simulados ADD COLUMN edicao TEXT")
 
+        # Bloco da prova oficial (dividir_em_blocos): NULL na prova inteira e no
+        # simulado montado.
+        c.execute("ALTER TABLE simulados ADD COLUMN IF NOT EXISTS bloco INTEGER")
+
         # Tempo de tela de cada questão do simulado, somado a cada passagem por ela
         # (somar_tempo_simulado).
         c.execute("ALTER TABLE simulado_itens ADD COLUMN IF NOT EXISTS tempo_ms INTEGER")
@@ -2843,6 +2847,86 @@ def ids_questoes_da_edicao(banca, edicao):
     return [r["questao_id"] for r in rows]
 
 
+# 4h30 seguidas afastam quem estuda entre um plantão e outro: a prova oficial
+# também se faz em blocos, fatias contíguas do caderno com até 25 questões (1h15
+# no ritmo oficial), cada uma com o próprio resultado.
+TAMANHO_BLOCO_PROVA_OFICIAL = 25
+
+
+def numero_de_blocos(total):
+    return -(-total // TAMANHO_BLOCO_PROVA_OFICIAL)
+
+
+def dividir_em_blocos(itens):
+    """Fatias contíguas de até TAMANHO_BLOCO_PROVA_OFICIAL, com tamanhos que
+    diferem em no máximo um: 97 questões viram 25/24/24/24, e não um último
+    bloco de 22. A mesma lista na mesma ordem dá sempre os mesmos blocos."""
+    if not itens:
+        return []
+    n = numero_de_blocos(len(itens))
+    base, sobra = divmod(len(itens), n)
+    blocos, inicio = [], 0
+    for i in range(n):
+        fim = inicio + base + (1 if i < sobra else 0)
+        blocos.append(itens[inicio:fim])
+        inicio = fim
+    return blocos
+
+
+def _soma_dos_blocos(feitos, total):
+    """(acertos, questões) da prova feita em blocos — a última vez de cada
+    bloco, somada — ou None enquanto falta algum. `feitos`: a última vez de
+    cada bloco que o aluno terminou. Edição de um bloco só não conta: ali o
+    bloco é a prova inteira."""
+    n = numero_de_blocos(total)
+    ultimos = [f for f in feitos if f["bloco"] <= n]
+    if n < 2 or len(ultimos) != n:
+        return None
+    return sum(f["acertos"] for f in ultimos), sum(f["num_questoes"] for f in ultimos)
+
+
+def edicoes_oficiais_do_aluno(*, usuario_id):
+    """`listar_edicoes_oficiais` com os blocos de cada edição (tamanho e
+    tempo) e, deste aluno, o aproveitamento da última vez na
+    prova inteira (`ultima_pct`) e em cada bloco. Com todos os blocos feitos,
+    `pct_blocos` é a nota da prova feita em partes: os acertos somados sobre as
+    questões somadas. Calculado aqui, e não do histórico no cliente, porque o
+    histórico vem cortado nos 10 últimos."""
+    with get_conn() as conn:
+        numeros = conn.execute("""
+            SELECT banca, edicao, questao_id FROM questoes_provas
+            ORDER BY banca, edicao, numero_prova
+        """).fetchall()
+        feitos = conn.execute("""
+            SELECT DISTINCT ON (UPPER(banca), edicao, bloco) UPPER(banca) AS banca, edicao, bloco,
+                   acertos, num_questoes
+            FROM simulados
+            WHERE usuario_id = ? AND edicao IS NOT NULL AND finalizado_em IS NOT NULL
+            ORDER BY UPPER(banca), edicao, bloco, finalizado_em DESC
+        """, (usuario_id,)).fetchall()
+    ultima = {(f["banca"], f["edicao"], f["bloco"]): f for f in feitos}
+
+    def pct(feito):
+        return round(100 * feito["acertos"] / feito["num_questoes"], 1) if feito else None
+
+    cadernos = {}
+    for r in numeros:
+        cadernos.setdefault((r["banca"].upper(), r["edicao"]), []).append(r["questao_id"])
+    edicoes = []
+    for e in listar_edicoes_oficiais():
+        chave = (e["banca"].upper(), e["edicao"])
+        partes = dividir_em_blocos(cadernos.get(chave, []))
+        blocos = [
+            {"bloco": i, "total": len(ids), "tempo_limite_min": len(ids) * MINUTOS_POR_QUESTAO_PROVA_OFICIAL,
+             "ultima_pct": pct(ultima.get((*chave, i)))}
+            for i, ids in enumerate(partes, start=1)
+        ]
+        soma = _soma_dos_blocos([f for f in feitos if (f["banca"], f["edicao"]) == chave and f["bloco"]], e["total"])
+        edicoes.append({**e, "ultima_pct": pct(ultima.get((*chave, None))), "blocos": blocos,
+                        "pct_blocos": round(100 * soma[0] / soma[1], 1) if soma else None})
+    return edicoes
+
+
 def simulado_em_andamento(*, usuario_id):
     """Simulado mais recente ainda não finalizado e dentro do tempo limite,
     com quantas questões já foram respondidas. Uma prova oficial dura horas:
@@ -2866,7 +2950,8 @@ def simulado_em_andamento(*, usuario_id):
     return None
 
 
-def criar_simulado(area_id, banca, num_questoes, tempo_limite_min, questao_ids, *, usuario_id, edicao=None):
+def criar_simulado(area_id, banca, num_questoes, tempo_limite_min, questao_ids, *, usuario_id, edicao=None,
+                   bloco=None):
     """Cria o registro do simulado e seus itens (na ordem de `questao_ids`:
     sorteada no simulado montado, a do caderno no simulado por edição).
     Retorna o id do simulado criado."""
@@ -2874,9 +2959,9 @@ def criar_simulado(area_id, banca, num_questoes, tempo_limite_min, questao_ids, 
         c = conn.cursor()
         c.execute("""
             INSERT INTO simulados
-                (usuario_id, area_id, banca, edicao, num_questoes, tempo_limite_min, iniciado_em)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (usuario_id, area_id, banca or None, edicao, num_questoes, tempo_limite_min,
+                (usuario_id, area_id, banca, edicao, bloco, num_questoes, tempo_limite_min, iniciado_em)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (usuario_id, area_id, banca or None, edicao, bloco, num_questoes, tempo_limite_min,
               agora_br().isoformat()))
         simulado_id = c.lastrowid
         for ordem, questao_id in enumerate(questao_ids):
@@ -3048,24 +3133,53 @@ def listar_simulados(limite=10, *, usuario_id):
 
 
 def simulados_oficiais_feitos(*, usuario_id, limite=5):
-    """Provas oficiais que o aluno terminou, da mais recente para a mais antiga.
-    `ja_vistas`: questões que ele já tinha respondido antes de começar; nelas a
-    nota mede memória, não preparo (o banco é feito dos próprios cadernos)."""
-    with get_conn() as conn:
-        return conn.execute("""
-            SELECT s.id, s.banca, s.edicao, s.finalizado_em, s.num_questoes, s.acertos,
-                   ROUND(100.0 * s.acertos / s.num_questoes, 1) AS pct_acerto,
-                   (SELECT COUNT(*) FROM simulado_itens si
+    """Provas oficiais que o aluno terminou, da mais recente para a mais antiga:
+    as feitas de uma vez e as feitas em blocos, estas numa linha só
+    (`em_blocos`) e só com todos os blocos terminados — a última vez de cada
+    um, somada. Bloco solto não entra: 25 questões não se comparam com a nota
+    projetada numa prova de 100, e eles empurravam as provas inteiras para fora
+    da lista. `ja_vistas`: questões que ele já tinha respondido antes de
+    começar; nelas a nota mede memória, não preparo (o banco é feito dos
+    próprios cadernos)."""
+    ja_vistas = """(SELECT COUNT(*) FROM simulado_itens si
                     WHERE si.simulado_id = s.id AND EXISTS (
                         SELECT 1 FROM respostas r
                         WHERE r.usuario_id = s.usuario_id AND r.questao_id = si.questao_id
                           AND r.respondida_em < s.iniciado_em
-                    )) AS ja_vistas
+                    ))"""
+    with get_conn() as conn:
+        inteiras = conn.execute(f"""
+            SELECT s.id, s.banca, s.edicao, s.finalizado_em, s.num_questoes, s.acertos, {ja_vistas} AS ja_vistas
             FROM simulados s
-            WHERE s.usuario_id = ? AND s.edicao IS NOT NULL AND s.finalizado_em IS NOT NULL
+            WHERE s.usuario_id = ? AND s.edicao IS NOT NULL AND s.bloco IS NULL AND s.finalizado_em IS NOT NULL
             ORDER BY s.finalizado_em DESC
             LIMIT ?
         """, (usuario_id, limite)).fetchall()
+        blocos = conn.execute(f"""
+            SELECT DISTINCT ON (UPPER(s.banca), s.edicao, s.bloco)
+                   s.id, s.banca, s.edicao, s.bloco, s.finalizado_em, s.num_questoes, s.acertos, {ja_vistas} AS ja_vistas
+            FROM simulados s
+            WHERE s.usuario_id = ? AND s.edicao IS NOT NULL AND s.bloco IS NOT NULL AND s.finalizado_em IS NOT NULL
+            ORDER BY UPPER(s.banca), s.edicao, s.bloco, s.finalizado_em DESC
+        """, (usuario_id,)).fetchall()
+    feitas = [{**r, "em_blocos": False} for r in inteiras]
+    por_edicao = {}
+    for b in blocos:
+        por_edicao.setdefault((b["banca"].upper(), b["edicao"]), []).append(b)
+    totais = {(e["banca"].upper(), e["edicao"]): e["total"] for e in listar_edicoes_oficiais()} if por_edicao else {}
+    for chave, feitos in por_edicao.items():
+        soma = _soma_dos_blocos(feitos, totais.get(chave, 0))
+        if soma is None:
+            continue
+        ultimo = max(feitos, key=lambda f: f["finalizado_em"])
+        feitas.append({
+            "id": ultimo["id"], "banca": ultimo["banca"], "edicao": ultimo["edicao"],
+            "finalizado_em": ultimo["finalizado_em"], "acertos": soma[0], "num_questoes": soma[1],
+            "ja_vistas": sum(f["ja_vistas"] for f in feitos if f["bloco"] <= numero_de_blocos(totais[chave])),
+            "em_blocos": True,
+        })
+    feitas.sort(key=lambda f: f["finalizado_em"], reverse=True)
+    return [{**f, "pct_acerto": round(100 * f["acertos"] / f["num_questoes"], 1)} for f in feitas[:limite]]
 
 
 # ---------------------------------------------------------------------------

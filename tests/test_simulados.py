@@ -14,6 +14,9 @@ lógica do endpoint, não a autenticação (já coberta em test_api_smoke.py).
 
 import datetime
 
+import pytest
+from fastapi import HTTPException
+
 import db
 from api.routers.simulados import criar_oficial as criar_oficial_endpoint
 from api.routers.simulados import desempenho as desempenho_endpoint
@@ -81,6 +84,60 @@ def test_simulado_oficial_segue_ordem_do_caderno_sem_vazar_gabarito(usuario_test
     itens = itens_endpoint(criado["id"], usuario=_usuario(usuario_teste))
     assert [i["numero_prova"] for i in itens] == sorted(numeros_inseridos)
     assert all("resposta_correta" not in i for i in itens)
+
+
+def test_blocos_sao_fatias_contiguas_de_ate_25_com_tamanhos_parecidos():
+    for total, tamanhos in [
+        (97, [25, 24, 24, 24]), (100, [25] * 4), (113, [23, 23, 23, 22, 22]),
+        (25, [25]), (26, [13, 13]), (1, [1]), (0, []),
+    ]:
+        itens = list(range(total))
+        blocos = db.dividir_em_blocos(itens)
+        assert [len(b) for b in blocos] == tamanhos
+        assert [i for b in blocos for i in b] == itens
+
+
+def test_prova_oficial_em_blocos(usuario_teste, edicao_teste, monkeypatch):
+    # As três questões da edição (números 5, 12 e 30) em blocos de até 2: [5, 12] e [30].
+    monkeypatch.setattr(db, "TAMANHO_BLOCO_PROVA_OFICIAL", 2)
+    banca, edicao, _ = edicao_teste
+    usuario = _usuario(usuario_teste)
+    ritmo = db.MINUTOS_POR_QUESTAO_PROVA_OFICIAL
+
+    def da_edicao():
+        return next(e for e in edicoes_endpoint(usuario=usuario) if e["banca"] == banca and e["edicao"] == edicao)
+
+    assert [(b["bloco"], b["total"], b["tempo_limite_min"], b["ultima_pct"])
+            for b in da_edicao()["blocos"]] == [(1, 2, 2 * ritmo, None), (2, 1, ritmo, None)]
+
+    criado = criar_oficial_endpoint(SimuladoOficialIn(banca=banca, edicao=edicao, bloco=2), usuario=usuario)
+    simulado = db.obter_simulado(criado["id"], usuario_id=usuario_teste)
+    assert (simulado["bloco"], simulado["num_questoes"], simulado["tempo_limite_min"]) == (2, 1, ritmo)
+    itens = itens_endpoint(criado["id"], usuario=usuario)
+    assert [i["numero_prova"] for i in itens] == [30]
+
+    db.registrar_resposta_simulado(criado["id"], itens[0]["id"], "A", usuario_id=usuario_teste)
+    finalizar_endpoint(criado["id"], usuario=usuario)
+    depois = da_edicao()
+    assert [b["ultima_pct"] for b in depois["blocos"]] == [None, 100]
+    assert depois["ultima_pct"] is None  # um bloco não é a prova inteira
+    assert depois["pct_blocos"] is None  # só com todos os blocos feitos
+    assert db.simulados_oficiais_feitos(usuario_id=usuario_teste) == []  # bloco solto não vai ao Painel
+
+    # Bloco 1 com uma certa e uma errada: a prova em blocos fica em 2 de 3.
+    primeiro = criar_oficial_endpoint(SimuladoOficialIn(banca=banca, edicao=edicao, bloco=1), usuario=usuario)
+    for item, letra in zip(itens_endpoint(primeiro["id"], usuario=usuario), "AB"):
+        db.registrar_resposta_simulado(primeiro["id"], item["id"], letra, usuario_id=usuario_teste)
+    finalizar_endpoint(primeiro["id"], usuario=usuario)
+    completa = da_edicao()
+    assert [b["ultima_pct"] for b in completa["blocos"]] == [50, 100]
+    assert completa["pct_blocos"] == 66.7
+    [feita] = db.simulados_oficiais_feitos(usuario_id=usuario_teste)
+    assert (feita["em_blocos"], feita["acertos"], feita["num_questoes"], feita["pct_acerto"]) == (True, 2, 3, 66.7)
+
+    with pytest.raises(HTTPException) as erro:
+        criar_oficial_endpoint(SimuladoOficialIn(banca=banca, edicao=edicao, bloco=3), usuario=usuario)
+    assert erro.value.status_code == 404
 
 
 def test_questao_de_duas_provas_entra_nas_duas_com_o_numero_de_cada_caderno(usuario_teste, edicao_teste):

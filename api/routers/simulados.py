@@ -41,7 +41,7 @@ def disponiveis(area_id: int | None = None, banca: str | None = None, usuario=De
 
 @router.get("/edicoes")
 def edicoes(usuario=Depends(usuario_atual)):
-    return db.listar_edicoes_oficiais()
+    return db.edicoes_oficiais_do_aluno(usuario_id=usuario["id"])
 
 
 @router.get("/em-andamento")
@@ -68,14 +68,20 @@ def criar(dados: SimuladoIn, usuario=Depends(usuario_confirmado)):
 
 @router.post("/oficial", status_code=status.HTTP_201_CREATED)
 def criar_oficial(dados: SimuladoOficialIn, usuario=Depends(usuario_confirmado)):
-    """Prova de uma edição oficial inteira, na ordem do caderno e com o tempo
-    no ritmo oficial — quantidade e tempo não são escolhidos pelo aluno."""
+    """Prova de uma edição oficial inteira, ou um bloco dela, na ordem do
+    caderno e com o tempo no ritmo oficial — quantidade e tempo não são
+    escolhidos pelo aluno."""
     ids = db.ids_questoes_da_edicao(dados.banca, dados.edicao)
     if not ids:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Edição não encontrada no banco de questões.")
+    if dados.bloco is not None:
+        blocos = db.dividir_em_blocos(ids)
+        if dados.bloco > len(blocos):
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Bloco não encontrado nesta edição.")
+        ids = blocos[dados.bloco - 1]
     simulado_id = db.criar_simulado(
         None, dados.banca, len(ids), len(ids) * db.MINUTOS_POR_QUESTAO_PROVA_OFICIAL, ids,
-        usuario_id=usuario["id"], edicao=dados.edicao,
+        usuario_id=usuario["id"], edicao=dados.edicao, bloco=dados.bloco,
     )
     return {"id": simulado_id}
 

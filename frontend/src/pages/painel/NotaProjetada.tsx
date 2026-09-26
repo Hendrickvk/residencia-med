@@ -43,7 +43,8 @@ export function NotaProjetada({ nota, simulados, onFazerProva }: Props) {
           {simulados.length === 0 ? (
             <>
               <p className="text-corpo text-ink-2">
-                Nenhuma ainda. Um caderno inteiro no tempo oficial é a melhor forma de conferir a projeção.
+                Nenhuma ainda. Um caderno inteiro no tempo oficial, de uma vez ou em blocos, é a melhor forma de conferir a
+                projeção.
               </p>
               <button type="button" onClick={onFazerProva} className={`group self-start ${BOTAO_SECUNDARIO}`}>
                 Fazer uma prova oficial
@@ -59,7 +60,10 @@ export function NotaProjetada({ nota, simulados, onFazerProva }: Props) {
               {simulados.map((s) => (
                 <li key={s.id} className="flex items-center justify-between gap-4 py-2.5 first:pt-0 last:pb-0">
                   <span className="flex min-w-0 flex-col">
-                    <span className="truncate text-corpo font-semibold">{nomeEdicao(s.banca, s.edicao)}</span>
+                    <span className="truncate text-corpo font-semibold">
+                      {nomeEdicao(s.banca, s.edicao)}
+                      {s.em_blocos && " · em blocos"}
+                    </span>
                     <span className="text-apoio text-muted">
                       {new Date(s.finalizado_em).toLocaleDateString("pt-BR")}
                       {/* O banco é feito dos cadernos: questão já vista mede memória, não preparo. */}

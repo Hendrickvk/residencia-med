@@ -13,6 +13,7 @@ import { formatarMMSS, formatarPctBR } from "../../lib/format";
 import { atraso } from "../../lib/movimento";
 import {
   nomeEdicao,
+  nomeProvaOficial,
   useDesempenhoSimulado,
   useItensSimulado,
   useSimulado,
@@ -37,12 +38,14 @@ export default function Resultado({ simuladoId, onNovoSimulado }: Props) {
   const [abertos, setAbertos] = useState<Set<number>>(new Set());
   const [todosTemas, setTodosTemas] = useState(false);
   const navigate = useNavigate();
-  // Cartão para compartilhar (lib/cartaoResultado.ts), só de prova oficial:
+  // Cartão para compartilhar (lib/cartaoResultado.ts), só da prova oficial
+  // inteira — um bloco de 25 questões não é o resultado de uma prova:
   // desenhado assim que o resultado chega, para o toque em "Compartilhar"
   // abrir o compartilhamento na hora.
   const [cartao, setCartao] = useState<File | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
-  const provaDoCartao = simulado?.edicao && simulado.banca ? nomeEdicao(simulado.banca, simulado.edicao) : null;
+  const provaDoCartao =
+    simulado?.edicao && simulado.banca && !simulado.bloco ? nomeEdicao(simulado.banca, simulado.edicao) : null;
   useEffect(() => {
     if (!simulado || !provaDoCartao || !desempenho) return;
     const total = simulado.num_questoes;
@@ -74,7 +77,8 @@ export default function Resultado({ simuladoId, onNovoSimulado }: Props) {
   const pct = total ? Math.round((100 * acertos) / total) : 0;
   const nivel = nivelTriagem(pct);
   const areas = [...(desempenho ?? [])].sort((a, b) => a.pct_acerto - b.pct_acerto);
-  const nomeProva = simulado.edicao && simulado.banca ? nomeEdicao(simulado.banca, simulado.edicao) : null;
+  const nomeProva = nomeProvaOficial(simulado);
+  const nesta = simulado.bloco ? "neste bloco" : nomeProva ? "nesta prova" : "neste simulado";
   // Tempo de tela (db.somar_tempo_simulado); simulado de antes da medição não tem.
   const tempoTotalMs = itens.reduce((soma, i) => soma + (i.tempo_ms ?? 0), 0);
   const comTempo = tempoTotalMs > 0 && respondidas > 0;
@@ -122,14 +126,14 @@ export default function Resultado({ simuladoId, onNovoSimulado }: Props) {
         </div>
       </div>
 
-      {nomeProva && (
+      {provaDoCartao && (
         <div className="flex flex-wrap items-center gap-3">
           <button
             type="button"
             disabled={!cartao}
             onClick={async () => {
               if (!cartao) return;
-              const resultado = await compartilharCartao(cartao, nomeProva, pct);
+              const resultado = await compartilharCartao(cartao, provaDoCartao, pct);
               setAviso(resultado === "baixado" ? "A imagem foi para a pasta de downloads." : null);
             }}
             className={BOTAO_SECUNDARIO}
@@ -156,7 +160,7 @@ export default function Resultado({ simuladoId, onNovoSimulado }: Props) {
 
       {areas.length > 0 && (
         <div className="flex flex-col gap-3">
-          <h2 className="text-bloco">Desempenho por área {nomeProva ? "nesta prova" : "neste simulado"}</h2>
+          <h2 className="text-bloco">Desempenho por área {nesta}</h2>
           <div className="rounded-caso border border-line bg-surface">
             {areas.map((d, i) => {
               const nv = nivelTriagem(d.pct_acerto);
@@ -189,7 +193,7 @@ export default function Resultado({ simuladoId, onNovoSimulado }: Props) {
           <div className="flex flex-col gap-1">
             <h2 className="text-bloco">Temas para revisar</h2>
             <p className="text-apoio text-muted">
-              Com erro ou em branco {nomeProva ? "nesta prova" : "neste simulado"}: os de mais erros primeiro e, no empate,
+              Com erro ou em branco {nesta}: os de mais erros primeiro e, no empate,
               os que mais caem no Revalida e no ENAMED.
             </p>
           </div>

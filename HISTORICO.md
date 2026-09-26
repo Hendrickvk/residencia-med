@@ -28,10 +28,9 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   provas oficiais do Revalida e do ENAMED, comentadas." e página **média, 4
   blocos**: promessa com o painel de verdade, caso comentado + revisão +
   simulado, lista das provas, convite final. Depois, na ordem da crítica:
-  (3) Simulado com histórico e blocos menores — atenção: a lista já mostra a
-  nota da última tentativa e o "Continuar prova" (DESIGN_TRIAGEM, Simulado);
-  a crítica não viu porque a conta de teste não tinha simulados; (4) nota
-  projetada contra a nota de aprovação de cada prova.
+  (3) Simulado com histórico e blocos menores — feita em 26/09 (registro em
+  2026-09-26 abaixo); (4) nota projetada contra a nota de aprovação de cada
+  prova, que pede levantar antes as notas de corte do INEP.
 - **Revalida 2020: travada no gabarito.** A aba de 2020 do INEP só tem
   `gabarito_caderno_1.pdf` e `_2`, os dois **preliminares**, e a área de
   resultados não traz o definitivo (procurado em 26/09). Sem o definitivo não
@@ -2219,6 +2218,34 @@ governa as telas admin do Streamlit.
   com a entrada `2026-09-26d` no "O que mudou". Plataformas que já tinham lido a
   prévia do link podem mostrar a imagem antiga ("da Revalida") até renovarem o
   cache delas.
+
+- **Prova oficial em blocos e lista por banca** (fase 3 da crítica: "4h30
+  seguidas afastam muita gente; blocos de 25 ajudariam" e "13 linhas
+  idênticas"). O usuário já tinha aceitado blocos de 25 na crítica, então não
+  se reabriu a alternativa de pausar o relógio da prova inteira — que, de
+  resto, só daria o resultado no fim de tudo, e o bloco dá no fim de cada 1h15.
+  Decisões: bloco é fatia **seguida do caderno**, com até 25 questões e
+  tamanhos que diferem em no máximo 1 (`db.dividir_em_blocos`; todo Revalida e
+  o ENAMED dão 4 blocos de 21 a 25, a USP 5, a UNICAMP 4 de ~20), guardado em
+  `simulados.bloco` (NULL na prova inteira); o que a aluna já fez em cada prova
+  e bloco sai de `db.edicoes_oficiais_do_aluno`, no servidor, porque o
+  histórico do cliente vinha cortado nos 10 últimos (a "última vez" da lista
+  antiga some para quem fez mais de 10 simulados); a nota da prova feita em
+  blocos soma os acertos da última vez de cada bloco e só existe com todos
+  feitos (`_soma_dos_blocos`, compartilhada com o Painel). O QA local achou
+  dois problemas antes de subir: no Painel, blocos soltos empurravam as provas
+  inteiras para fora de "Provas oficiais feitas" (5 linhas) — agora só entram
+  provas inteiras e provas completas em blocos, numa linha "· em blocos"; e o
+  diálogo novo focava "Começar a prova inteira", de modo que um Enter
+  distraído começava 5 horas de prova — o `Dialog` ganhou `data-autofocus` e o
+  foco cai em "Agora não". O cartão de compartilhar continua só na prova
+  inteira. Armadilhas do QA: o pytest, ao começar, apaga as contas `pytest_*`
+  do branch — inclusive a conta descartável do QA, criada com esse padrão
+  para cair na limpeza —, então rodar a suíte no meio do QA obriga a recriar a
+  conta; e a foto de página inteira no celular mostra linhas "apagadas" abaixo
+  da dobra, que é da captura (medido: 13 linhas com opacidade 1 e nenhuma
+  animação rodando). Conferido no localhost em computador e celular, claro e
+  escuro, com a entrada `2026-09-26e` no "O que mudou". **Ainda não subiu.**
 
 ## Armadilhas das telas admin (Streamlit)
 

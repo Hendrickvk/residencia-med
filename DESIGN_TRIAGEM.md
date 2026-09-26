@@ -338,7 +338,10 @@ Conteúdo das demais telas: largura máxima 1360px, padding 36/40px.
    feitas" (`db.simulados_oficiais_feitos`): as 5 últimas, com data, etiqueta de
    percentual e "já tinha visto {n} das {total}" quando o aluno respondeu questões
    do caderno antes de começar (o banco é feito dos cadernos, e nessas a nota mede
-   memória). Sem nenhuma, "Fazer uma prova oficial" abre o Simulado.
+   memória). A prova feita em blocos entra numa linha só, "{prova} · em blocos",
+   quando todos os blocos estão feitos; bloco solto não entra (25 questões não se
+   comparam com a projeção numa prova de 100). Sem nenhuma, "Fazer uma prova
+   oficial" abre o Simulado.
 5. **Onde você ganha mais pontos** (`db.prioridades_estudo`), largura total: os 3
    temas com mais pontos a ganhar, pela fração dos cadernos do INEP (Revalida e
    ENAMED) que o tema ocupa × o que falta de domínio. Com poucas respostas, o
@@ -442,11 +445,25 @@ Conteúdo das demais telas: largura máxima 1360px, padding 36/40px.
   `1fr` do nome, e a 393px o nome sumia inteiro (corrigido em 25/09).
 
 ### Simulado
-- Configurador com duas abas. **Prova oficial**: lista das edições com caderno
-  identificado (nome, total de questões, duração no ritmo oficial de 3 min por
-  questão e, se houver, o aproveitamento da última tentativa como etiqueta de
-  nível); começar pede confirmação, porque o tempo não para. **Montar simulado**:
-  área, banca, quantidade e tempo.
+- Configurador com duas abas. **Prova oficial**: as edições com caderno
+  identificado, agrupadas por banca na ordem Revalida, ENAMED, USP, UNICAMP
+  (`BANCAS_OFICIAIS`), com quem aplica a prova ao lado do nome. Cada linha tem a
+  edição como título, total de questões e duração no ritmo oficial de 3 min por
+  questão e, embaixo, o que a aluna já fez: "prova inteira" com a etiqueta da última
+  vez; "em blocos" com a etiqueta da nota somada quando todos os blocos estão
+  feitos, ou "{x} de {n} blocos" enquanto faltam (`db.edicoes_oficiais_do_aluno`,
+  que calcula isso no servidor: o histórico do cliente vem cortado nos 10
+  últimos). "Fazer esta prova" abre um diálogo que é escolha e confirmação ao
+  mesmo tempo, porque o tempo não para depois do clique: a prova inteira (botão
+  primário) ou um dos blocos (`db.dividir_em_blocos`: fatias seguidas do caderno
+  com até 25 questões, tamanhos que diferem em no máximo 1 — 97 viram 25/24/24/24),
+  cada um com "{n} questões · {tempo}", a etiqueta da última vez e "Começar" ou
+  "Refazer". Edição de um bloco só não mostra a parte dos blocos. O foco do
+  diálogo cai em "Agora não" (`data-autofocus`): um Enter distraído não começa uma
+  prova de 5 horas. **Montar simulado**: área, banca, quantidade e tempo.
+- Bloco em andamento e resultado de bloco levam o nome "{prova} · bloco {n}"
+  (`nomeProvaOficial`); a linha de procedência da questão fica só com a edição e o
+  número no caderno, e o resultado diz "neste bloco".
 - Prova em andamento e ainda dentro do tempo aparece acima das abas, com borda
   `--ink` e "Continuar prova"; ao retomar, abre na primeira questão em branco.
 - Mesmo cartão e alternativas do Praticar, sem feedback e sem o tema (o resultado
@@ -472,8 +489,9 @@ Conteúdo das demais telas: largura máxima 1360px, padding 36/40px.
   completa, o tempo de cada questão, em `--ink` e negrito quando passou do ritmo, e
   um traço na que o aluno nem abriu.
   Simulado de antes da medição não mostra tempo.
-- **Cartão para compartilhar** (`lib/cartaoResultado.ts`), só no resultado de prova
-  oficial: botão secundário "Compartilhar resultado" logo abaixo dos números. Imagem
+- **Cartão para compartilhar** (`lib/cartaoResultado.ts`), só no resultado da prova
+  oficial inteira (um bloco não é o resultado de uma prova): botão secundário
+  "Compartilhar resultado" logo abaixo dos números. Imagem
   1080×1350 (4:5, o que o WhatsApp e o Instagram mostram inteiro), sempre nos tokens
   `.dark` como a prévia do link: marca, edição, aproveitamento grande, "{x} acertos
   em {y} questões", até cinco áreas do pior para o melhor com a barra na cor do

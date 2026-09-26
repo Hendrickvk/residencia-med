@@ -37,6 +37,18 @@ export const ROTULO_TIPO: Record<TipoNovidade, string> = {
 
 export const NOVIDADES: Novidade[] = [
   {
+    id: "2026-09-26e",
+    data: "26 de setembro de 2026",
+    titulo: "Prova oficial em blocos",
+    itens: [
+      {
+        tipo: "novo",
+        texto: "Sem tempo para 5 horas seguidas? Faça a prova oficial em blocos de até 25 questões, no mesmo ritmo, com o resultado ao fim de cada bloco. Com todos feitos, você vê a nota da prova inteira.",
+      },
+      { tipo: "novo", texto: "A lista de provas oficiais agora vem separada por banca e mostra o que você já fez em cada uma." },
+    ],
+  },
+  {
     id: "2026-09-26d",
     data: "26 de setembro de 2026",
     titulo: "Seu resultado em imagem",

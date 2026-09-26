@@ -188,6 +188,7 @@ class SimuladoIn(BaseModel):
 class SimuladoOficialIn(BaseModel):
     banca: str
     edicao: str
+    bloco: int | None = Field(default=None, ge=1)  # None = a prova inteira
 
 
 class RespostaSimuladoIn(BaseModel):

@@ -43,7 +43,10 @@ export function Dialog({ titulo, aberto, onFechar, children }: Props) {
       [...(caixa.current?.querySelectorAll<HTMLElement>(FOCAVEIS) ?? [])].filter(
         (el) => el.offsetParent !== null,
       );
-    (focaveis()[0] ?? caixa.current)?.focus();
+    // `data-autofocus` escolhe onde o foco cai; sem ele, no primeiro focável. Onde
+    // o primeiro botão dispara algo que não se desfaz (começar uma prova com tempo
+    // correndo), o foco vai para a saída e um Enter distraído não custa nada.
+    (caixa.current?.querySelector<HTMLElement>("[data-autofocus]") ?? focaveis()[0] ?? caixa.current)?.focus();
 
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") {
@@ -86,7 +89,7 @@ export function Dialog({ titulo, aberto, onFechar, children }: Props) {
         aria-modal="true"
         aria-labelledby={idTitulo}
         tabIndex={-1}
-        className={`relative w-full max-w-md rounded-caso border border-line bg-surface p-6 focus:outline-none ${
+        className={`relative max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-caso border border-line bg-surface p-6 focus:outline-none ${
           saindo ? "animate-sumir" : "animate-surgir"
         }`}
       >

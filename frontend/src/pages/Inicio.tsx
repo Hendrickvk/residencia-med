@@ -6,6 +6,7 @@ import { useMe } from "../lib/auth";
 import { BOTAO_PRIMARIO, BOTAO_SECUNDARIO } from "../lib/estilos";
 import { formatarPctBR } from "../lib/format";
 import { atraso } from "../lib/movimento";
+import { BANCAS_OFICIAIS } from "../lib/simulados";
 import { CLASSES_NIVEL, NIVEIS, nivelTriagem } from "../lib/triagem";
 
 // Página pública (`/`): o que quem recebeu o link vê antes de ter conta.
@@ -17,12 +18,6 @@ import { CLASSES_NIVEL, NIVEIS, nivelTriagem } from "../lib/triagem";
 // Quem já tem sessão vai direto ao Painel, e o app instalado abre em /painel.
 
 const TITULO = "Conduta — as provas oficiais do Revalida e do ENAMED, comentadas";
-const BANCAS = [
-  { nome: "Revalida", orgao: "INEP" },
-  { nome: "ENAMED", orgao: "INEP" },
-  { nome: "USP", orgao: "FUVEST" },
-  { nome: "UNICAMP", orgao: "COMVEST" },
-];
 
 export default function Inicio() {
   const { data: me, isLoading } = useMe();
@@ -87,7 +82,7 @@ function Pagina() {
             </div>
             {/* As bancas como selo, sem contagem nenhuma. */}
             <ul className="mt-9 flex flex-wrap gap-x-6 gap-y-2 text-[13px] font-bold uppercase tracking-[0.1em] text-muted [font-stretch:80%]" aria-label="Bancas">
-              {BANCAS.map((b) => (
+              {BANCAS_OFICIAIS.map((b) => (
                 <li key={b.nome}>{b.nome}</li>
               ))}
             </ul>
@@ -122,7 +117,7 @@ function Pagina() {
               Paulo. Cada explicação passou por revisão, e as questões anuladas ficaram de fora.
             </p>
             <ul className="mt-10 grid grid-cols-2 gap-3 md:grid-cols-4">
-              {BANCAS.map((b) => (
+              {BANCAS_OFICIAIS.map((b) => (
                 <li key={b.nome} className="rounded-caso border border-line bg-surface px-5 py-6">
                   <span className="block text-[26px] font-extrabold leading-none tracking-[-0.03em] [font-stretch:110%] md:text-[32px]">
                     {b.nome}

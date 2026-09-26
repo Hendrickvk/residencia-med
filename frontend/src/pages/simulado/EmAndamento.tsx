@@ -11,6 +11,7 @@ import { rolarParaTopo } from "../../lib/movimento";
 import {
   finalizarSimulado,
   nomeEdicao,
+  nomeProvaOficial,
   responderSimulado,
   somarTempoSimulado,
   useItensSimulado,
@@ -104,6 +105,8 @@ function Conteudo({
         queryClient.invalidateQueries({ queryKey: ["simulado", simuladoId] }),
         queryClient.invalidateQueries({ queryKey: ["simulado-em-andamento"] }),
         queryClient.invalidateQueries({ queryKey: ["simulados-historico"] }),
+        // A lista de provas mostra a nota da última vez em cada prova e bloco.
+        queryClient.invalidateQueries({ queryKey: ["simulados-edicoes"] }),
       ]);
     } finally {
       onFinalizado();
@@ -177,9 +180,10 @@ function Conteudo({
     restanteSeg < 60 ? "bg-t1 text-t1-on" : restanteSeg < 600 ? "bg-t2 text-t2-on" : "text-ink";
   // Sem o tema durante a prova (TemaDoCaso): o resultado mostra.
   const recorte = [itemAtual.area, itemAtual.especialidade].filter(Boolean).join(" · ");
-  const nomeProva = simulado.edicao && simulado.banca ? nomeEdicao(simulado.banca, simulado.edicao) : null;
-  const prova = nomeProva
-    ? [nomeProva, itemAtual.numero_prova ? `questão ${itemAtual.numero_prova} do caderno` : null].filter(Boolean).join(" · ")
+  // Na linha de procedência, a edição sem o bloco: o que situa a questão é o número no caderno.
+  const edicao = simulado.edicao && simulado.banca ? nomeEdicao(simulado.banca, simulado.edicao) : null;
+  const prova = edicao
+    ? [edicao, itemAtual.numero_prova ? `questão ${itemAtual.numero_prova} do caderno` : null].filter(Boolean).join(" · ")
     : [itemAtual.banca, itemAtual.ano].filter(Boolean).join(" ");
   const entradaQuestao =
     direcao === "frente" ? "animate-entrar-frente" : direcao === "tras" ? "animate-entrar-tras" : "animate-desvanecer";
@@ -187,7 +191,7 @@ function Conteudo({
   return (
     <>
       <BarraFoco>
-        <span className="hidden text-[14.5px] text-ink-2 xl:block">{nomeProva ?? "Simulado"}</span>
+        <span className="hidden text-[14.5px] text-ink-2 xl:block">{nomeProvaOficial(simulado) ?? "Simulado"}</span>
         <span className="ml-auto hidden shrink-0 text-[14px] font-semibold tabular-nums sm:block">
           Questão {idx + 1} de {itens.length}
         </span>

@@ -141,7 +141,8 @@ export interface NotaProjetada {
   respondidas: number; // primeiras respostas que sustentam a projeção
 }
 
-// Prova oficial terminada (db.simulados_oficiais_feitos), da mais recente para a mais antiga.
+// Prova oficial terminada (db.simulados_oficiais_feitos), da mais recente para a mais antiga:
+// de uma vez ou em blocos, estes somados e só com todos feitos.
 export interface SimuladoOficialFeito {
   id: number;
   banca: string;
@@ -151,6 +152,7 @@ export interface SimuladoOficialFeito {
   acertos: number;
   pct_acerto: number;
   ja_vistas: number; // já respondidas antes de começar: nelas a nota mede memória
+  em_blocos: boolean;
 }
 
 // Um tema praticado desde segunda-feira (db.progresso_semana).
@@ -266,6 +268,7 @@ export interface Simulado {
   area_id: number | null;
   banca: string | null;
   edicao: string | null; // preenchida só no simulado por edição oficial, ex. "2025/1"
+  bloco: number | null; // bloco da prova oficial (db.dividir_em_blocos); null na prova inteira
   num_questoes: number;
   tempo_limite_min: number;
   iniciado_em: string;
@@ -284,6 +287,17 @@ export interface EdicaoOficial {
   ano: number;
   total: number;
   tempo_limite_min: number;
+  ultima_pct: number | null; // da última vez que o aluno fez a prova inteira
+  blocos: BlocoOficial[];
+  pct_blocos: number | null; // a prova feita em blocos, só com todos eles feitos
+}
+
+// Fatia contígua do caderno (db.edicoes_oficiais_do_aluno), com a última nota do aluno nela.
+export interface BlocoOficial {
+  bloco: number;
+  total: number;
+  tempo_limite_min: number;
+  ultima_pct: number | null;
 }
 
 export interface HistoricoSimulado extends Simulado {

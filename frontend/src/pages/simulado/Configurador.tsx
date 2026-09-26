@@ -8,9 +8,11 @@ import { BOTAO_PRIMARIO, BOTAO_SECUNDARIO, CAMPO, PRESSAO } from "../../lib/esti
 import { formatarDuracaoMin } from "../../lib/format";
 import { atraso } from "../../lib/movimento";
 import {
+  BANCAS_OFICIAIS,
   criarSimulado,
   criarSimuladoOficial,
   nomeEdicao,
+  nomeProvaOficial,
   useDisponiveisSimulado,
   useEdicoesOficiais,
   useHistoricoSimulados,
@@ -32,7 +34,8 @@ const MODOS = [
 ] as const;
 
 function rotuloHistorico(h: HistoricoSimulado): string {
-  if (h.edicao && h.banca) return nomeEdicao(h.banca, h.edicao);
+  const prova = nomeProvaOficial(h);
+  if (prova) return prova;
   return [h.area ?? "Todas as áreas", h.banca].filter(Boolean).join(" · ");
 }
 
@@ -91,7 +94,7 @@ export default function Configurador({ onIniciado }: Props) {
 
       <div key={modo} className={trocouModo ? "animate-entrar" : ""}>
         {modo === "oficial" ? (
-          <ProvasOficiais edicoes={edicoes} historico={historico} onIniciado={onIniciado} />
+          <ProvasOficiais edicoes={edicoes} onIniciado={onIniciado} />
         ) : (
           <MontarSimulado onIniciado={onIniciado} />
         )}
@@ -134,8 +137,7 @@ function ProvaEmAndamento({ simulado, onContinuar }: { simulado: SimuladoEmAndam
   const [agora] = useState(() => Date.now());
   const fim = new Date(simulado.iniciado_em).getTime() + simulado.tempo_limite_min * 60_000;
   const restanteMin = Math.max(0, Math.floor((fim - agora) / 60_000));
-  const nome =
-    simulado.edicao && simulado.banca ? nomeEdicao(simulado.banca, simulado.edicao) : `Simulado de ${simulado.num_questoes} questões`;
+  const nome = nomeProvaOficial(simulado) ?? `Simulado de ${simulado.num_questoes} questões`;
 
   return (
     <div className="flex animate-entrar flex-wrap items-center justify-between gap-4 rounded-caso border border-ink bg-surface px-6 py-5">
@@ -154,25 +156,42 @@ function ProvaEmAndamento({ simulado, onContinuar }: { simulado: SimuladoEmAndam
   );
 }
 
+// As edições agrupadas por banca, na ordem de BANCAS_OFICIAIS; dentro de cada
+// uma, a ordem do servidor (mais recentes primeiro). Eram 13 linhas iguais numa
+// lista só, e o que distingue uma prova da outra é a banca antes do ano.
+function agruparPorBanca(edicoes: EdicaoOficial[]) {
+  const posicao = (banca: string) => {
+    const i = BANCAS_OFICIAIS.findIndex((b) => b.banca === banca);
+    return i === -1 ? BANCAS_OFICIAIS.length : i;
+  };
+  const grupos = new Map<string, EdicaoOficial[]>();
+  for (const e of edicoes) grupos.set(e.banca, [...(grupos.get(e.banca) ?? []), e]);
+  return [...grupos]
+    .sort(([a], [b]) => posicao(a) - posicao(b) || a.localeCompare(b))
+    .map(([banca, lista]) => {
+      const info = BANCAS_OFICIAIS.find((b) => b.banca === banca);
+      return { banca, nome: info?.nome ?? banca, orgao: info?.orgao, edicoes: lista };
+    });
+}
+
 function ProvasOficiais({
   edicoes,
-  historico,
   onIniciado,
 }: {
   edicoes: EdicaoOficial[] | undefined;
-  historico: HistoricoSimulado[] | undefined;
   onIniciado: (id: number) => void;
 }) {
   const [escolhida, setEscolhida] = useState<EdicaoOficial | null>(null);
   const [criando, setCriando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
-  async function comecar() {
+  // Sem `bloco`, a prova inteira.
+  async function comecar(bloco?: number) {
     if (!escolhida) return;
     setErro(null);
     setCriando(true);
     try {
-      const r = await criarSimuladoOficial(escolhida.banca, escolhida.edicao);
+      const r = await criarSimuladoOficial(escolhida.banca, escolhida.edicao, bloco);
       onIniciado(r.id);
     } catch (e) {
       // 403 = e-mail ainda não confirmado. Aqui "tente de novo" seria mentira:
@@ -214,73 +233,168 @@ function ProvasOficiais({
     );
   }
 
+  const grupos = agruparPorBanca(edicoes);
+
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-7">
       <p className="max-w-[64ch] text-corpo text-ink-2">
-        O caderno inteiro, na ordem original e com 3 minutos por questão, o ritmo da prova do INEP. As questões anuladas
-        pelo INEP ficam de fora.
+        O caderno na ordem original, com 3 minutos por questão, o ritmo das provas oficiais. Faça de uma vez ou em blocos
+        de até 25 questões. As questões anuladas pela banca ficam de fora.
       </p>
-      <div className="rounded-caso border border-line bg-surface">
-        {edicoes.map((e, i) => {
-          const ultima = historico?.find((h) => h.banca === e.banca && h.edicao === e.edicao);
-          return (
-            <div
-              key={`${e.banca}-${e.edicao}`}
-              className="grid animate-desvanecer grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b border-line-soft px-5 py-4 transition-colors duration-hover last:border-0 hover:bg-ground sm:grid-cols-[minmax(0,1fr)_auto_auto]"
-              style={atraso(i, 30)}
-            >
-              <div className="min-w-0">
-                <div className="text-[16px] font-semibold">{nomeEdicao(e.banca, e.edicao)}</div>
-                <div className="text-apoio tabular-nums text-muted">
-                  {e.total} questões · {formatarDuracaoMin(e.tempo_limite_min)}
-                </div>
-              </div>
-              <div className="hidden items-center gap-2 text-apoio text-muted sm:flex">
-                {ultima?.pct_acerto != null && (
-                  <>
-                    última vez
-                    <EtiquetaPct pct={ultima.pct_acerto} />
-                  </>
-                )}
-              </div>
-              <button type="button" onClick={() => setEscolhida(e)} className={BOTAO_SECUNDARIO}>
-                Fazer esta prova
-              </button>
+      {grupos.map((g, gi) => {
+        // Posição na cascata de entrada, contínua de uma banca para a outra.
+        const inicio = grupos.slice(0, gi).reduce((soma, anterior) => soma + anterior.edicoes.length, 0);
+        return (
+          <section key={g.banca} className="flex flex-col gap-3">
+            <h2 className="flex animate-desvanecer items-baseline gap-2 text-bloco" style={atraso(inicio, 30)}>
+              {g.nome}
+              {g.orgao && <span className="text-apoio font-normal text-muted">{g.orgao}</span>}
+            </h2>
+            <div className="rounded-caso border border-line bg-surface">
+              {g.edicoes.map((e, i) => (
+                <LinhaEdicao key={e.edicao} edicao={e} indice={inicio + i} onFazer={() => setEscolhida(e)} />
+              ))}
             </div>
-          );
-        })}
-      </div>
+          </section>
+        );
+      })}
 
       <Dialog
-        titulo={escolhida ? `Começar ${nomeEdicao(escolhida.banca, escolhida.edicao)}` : "Começar prova"}
+        titulo={escolhida ? nomeEdicao(escolhida.banca, escolhida.edicao) : "Prova oficial"}
         aberto={escolhida !== null}
         onFechar={() => {
           setEscolhida(null);
           setErro(null);
         }}
       >
-        {escolhida && (
-          <p className="text-corpo text-ink-2">
-            São <strong className="text-ink">{escolhida.total} questões</strong> em{" "}
-            <strong className="text-ink">{formatarDuracaoMin(escolhida.tempo_limite_min)}</strong>. O tempo começa a contar
-            agora e não para se você fechar a aba: dá para continuar depois, até ele acabar.
-          </p>
-        )}
+        {escolhida && <EscolhaDaProva edicao={escolhida} criando={criando} onComecar={comecar} />}
         {erro && (
           <div className="mt-4 flex animate-entrar items-start gap-2.5 rounded-card bg-t2-soft px-4 py-3 text-apoio text-ink">
             <AlertTriangle size={16} strokeWidth={2} className="mt-0.5 shrink-0" />
             <span>{erro}</span>
           </div>
         )}
-        <div className="mt-6 flex gap-2">
-          <button type="button" onClick={() => setEscolhida(null)} className={`${BOTAO_SECUNDARIO} flex-1`}>
-            Agora não
-          </button>
-          <button type="button" onClick={comecar} disabled={criando} className={`${BOTAO_PRIMARIO} flex-1`}>
-            Começar a prova
-          </button>
-        </div>
+        <button
+          type="button"
+          data-autofocus
+          onClick={() => setEscolhida(null)}
+          className={`${BOTAO_SECUNDARIO} mt-6 w-full`}
+        >
+          Agora não
+        </button>
       </Dialog>
+    </div>
+  );
+}
+
+// Uma edição na lista: o que ela é e o que a aluna já fez nela — a nota da
+// última prova inteira e, dos blocos, a nota somada quando todos estão feitos
+// ou quantos já foram.
+function LinhaEdicao({ edicao: e, indice, onFazer }: { edicao: EdicaoOficial; indice: number; onFazer: () => void }) {
+  const blocosFeitos = e.blocos.filter((b) => b.ultima_pct !== null).length;
+  return (
+    <div
+      className="grid animate-desvanecer grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b border-line-soft px-5 py-4 transition-colors duration-hover last:border-0 hover:bg-ground"
+      style={atraso(indice, 30)}
+    >
+      <div className="min-w-0">
+        <div className="text-[16px] font-semibold tabular-nums">{e.edicao}</div>
+        <div className="text-apoio tabular-nums text-muted">
+          {e.total} questões · {formatarDuracaoMin(e.tempo_limite_min)}
+        </div>
+        {(e.ultima_pct !== null || blocosFeitos > 0) && (
+          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-apoio text-muted">
+            {e.ultima_pct !== null && (
+              <span className="flex items-center gap-2">
+                prova inteira
+                <EtiquetaPct pct={e.ultima_pct} />
+              </span>
+            )}
+            {e.pct_blocos !== null ? (
+              <span className="flex items-center gap-2">
+                em blocos
+                <EtiquetaPct pct={e.pct_blocos} />
+              </span>
+            ) : (
+              blocosFeitos > 0 && (
+                <span className="tabular-nums">
+                  {blocosFeitos} de {e.blocos.length} blocos
+                </span>
+              )
+            )}
+          </div>
+        )}
+      </div>
+      <button
+        type="button"
+        onClick={onFazer}
+        aria-label={`Fazer esta prova: ${nomeEdicao(e.banca, e.edicao)}`}
+        className={BOTAO_SECUNDARIO}
+      >
+        Fazer esta prova
+      </button>
+    </div>
+  );
+}
+
+// O diálogo antes de começar: o tempo não para depois do clique, então a
+// escolha entre a prova inteira e um bloco é também a confirmação.
+function EscolhaDaProva({
+  edicao: e,
+  criando,
+  onComecar,
+}: {
+  edicao: EdicaoOficial;
+  criando: boolean;
+  onComecar: (bloco?: number) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-6">
+      <p className="text-corpo text-ink-2">
+        O tempo começa a contar quando você começa e não para se você fechar a aba: dá para continuar depois, até ele
+        acabar.
+      </p>
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+          <span className="text-corpo font-semibold">Prova inteira</span>
+          <span className="text-apoio tabular-nums text-muted">
+            {e.total} questões · {formatarDuracaoMin(e.tempo_limite_min)}
+          </span>
+        </div>
+        <button type="button" disabled={criando} onClick={() => onComecar()} className={BOTAO_PRIMARIO}>
+          Começar a prova inteira
+        </button>
+      </div>
+      {e.blocos.length > 1 && (
+        <div className="flex flex-col gap-1 border-t border-line-soft pt-5">
+          <span className="text-corpo font-semibold">Em blocos</span>
+          <p className="text-apoio text-muted">Partes seguidas do caderno, no mesmo ritmo, com o resultado ao fim de cada uma.</p>
+          <ul className="mt-2 flex flex-col divide-y divide-line-soft">
+            {e.blocos.map((b) => (
+              <li key={b.bloco} className="flex items-center justify-between gap-3 py-2.5">
+                <div className="min-w-0">
+                  <div className="text-corpo">Bloco {b.bloco}</div>
+                  <div className="text-apoio tabular-nums text-muted">
+                    {b.total} questões · {formatarDuracaoMin(b.tempo_limite_min)}
+                  </div>
+                </div>
+                <div className="flex shrink-0 items-center gap-3">
+                  {b.ultima_pct !== null && <EtiquetaPct pct={b.ultima_pct} />}
+                  <button
+                    type="button"
+                    disabled={criando}
+                    onClick={() => onComecar(b.bloco)}
+                    aria-label={`${b.ultima_pct !== null ? "Refazer" : "Começar"} o bloco ${b.bloco}`}
+                    className={`${BOTAO_SECUNDARIO} !h-9 !px-3.5 !text-[14.5px]`}
+                  >
+                    {b.ultima_pct !== null ? "Refazer" : "Começar"}
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
