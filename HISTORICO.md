@@ -2245,7 +2245,10 @@ governa as telas admin do Streamlit.
   conta; e a foto de página inteira no celular mostra linhas "apagadas" abaixo
   da dobra, que é da captura (medido: 13 linhas com opacidade 1 e nenhuma
   animação rodando). Conferido no localhost em computador e celular, claro e
-  escuro, com a entrada `2026-09-26e` no "O que mudou". **Ainda não subiu.**
+  escuro, com a entrada `2026-09-26e` no "O que mudou". **No ar em 26/09**
+  (commit `0bfc226`): a API primeiro — o front novo lê os blocos dela —, com a
+  coluna `simulados.bloco` criada pelo `init_db` na subida e conferida no banco;
+  depois o front, com `dist.antigo` guardado.
 
 ## Armadilhas das telas admin (Streamlit)
 
