@@ -30,7 +30,12 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   simulado, lista das provas, convite final. Depois, na ordem da crítica:
   (3) Simulado com histórico e blocos menores e (4) nota projetada contra a
   nota de aprovação — as duas feitas em 26/09 (registros em 2026-09-26 abaixo).
-  Com a (4), a lista da crítica fechou.
+  Com a (4), a lista da crítica fechou. **Ajuste de 27/09**, relato do usuário:
+  na grade das bancas, "UNICAMP" passava até 30 px da borda do card entre 768 e
+  900 px (quatro colunas estreitas com o nome em 32 px) e encostava na borda em
+  360 px. Agora são quatro colunas só a partir de 1024 px e o nome tem 22 px
+  abaixo de 640 px; medido de 360 a 1280 px, nenhum nome sai do card. No ar em
+  27/09 (commit `922de40`, só o front; `dist.antigo` no servidor).
 - **Revalida 2026/2 = ENAMED 2026: no ar com o gabarito preliminar desde 27/09**
   (commit `7dc1090`, API e front; banco com 1.259 questões depois da
   importação, backup `conduta_20260927_111319.dump` antes; decisão do usuário:
