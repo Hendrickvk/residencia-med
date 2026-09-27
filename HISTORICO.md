@@ -187,7 +187,13 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   no admin, com a lógica em `db.metricas_uso` e checagem de `eh_admin`
   própria (lista e-mails) — conferida com o `AppTest` do Streamlit, como
   admin e como não admin. O branch do Neon foi criado em 26/09 (ver a data);
-  **falta o usuário** conferir que os e-mails de falha do Actions estão ligados.
+  **E-mails de falha do Actions: conferidos em 27/09** — um workflow que falhava
+  de propósito, num branch temporário (já apagado), fez chegar em 20 s o
+  "Run failed" na caixa de entrada do dono. **Mas o Monitor quase não roda:**
+  de 26/09 16h42 a 27/09 11h52 (UTC) o GitHub disparou o `*/15` só 6 vezes,
+  em vez de ~76 — agendamento do Actions atrasa e pula execuções sob carga.
+  Queda no site pode levar horas para virar alerta; um monitor externo
+  resolveria (proposto ao usuário em 27/09).
 - **O "dia" da plataforma vira às 21h de Brasília** (achado em 25/09, depois de
   subir a ofensiva nova). O servidor (`timedatectl`: Etc/UTC) e o banco (sessão
   em GMT) rodam em UTC, e tudo que é "hoje" sai de `datetime.now()`/
@@ -257,15 +263,6 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
      depois de um deploy, então precisa de plano de atualização antes);
      página de entrada no `/login` (da mesma família da triagem de entrada
      que ele descartou: perguntar antes); busca no celular.
-- **Pedir ao suporte do GitHub que apague os commits antigos do
-  `residencia-med`.** A reescrita de 24/09 tirou o roteiro da brincadeira do
-  histórico, mas o GitHub continua servindo os commits antigos por link direto
-  (conferido: um commit antigo e o arquivo bruto dele respondem 200), e os
-  hashes deles aparecem nos eventos públicos de push. O pedido é em
-  support.github.com, como remoção de dados sensíveis ("cached views" dos
-  commits antigos); a lista dos 35 hashes antigos está em
-  `backups/shas_antigos_reescrita.txt`, fora do git. Só o dono da conta pode
-  pedir.
 - **Regra de ingresso da porta 8080 na Security List da Oracle**, a última
   sobra do deploy de 22/09 e a única que não depende de código. Não expõe
   nada, porque nada escuta lá e o iptables do host já a fechou, mas ficou para
@@ -1956,10 +1953,20 @@ governa as telas admin do Streamlit.
     atropelar nada que tivesse chegado ao GitHub no meio. O servidor e esta
     máquina foram para a história nova com `fetch` + `reset --hard` e tiveram
     os objetos antigos apagados (`reflog expire` + `gc --prune=now`).
-  - **O que a reescrita não alcança.** O GitHub continua servindo os commits
-    antigos por link direto até a coleta de lixo dele, e só o suporte do GitHub
-    apaga isso (ver Pendências). E qualquer clone feito antes guarda a história
-    velha: nele, nunca `pull` com merge, que traria tudo de volta — é `fetch` +
+  - **O que a reescrita não alcança.** O GitHub continuou servindo os commits
+    antigos por link direto (um commit antigo e o arquivo bruto dele davam 200).
+    **Fechado em 27/09, apagando o repositório e criando outro com o mesmo
+    nome** — escolha do usuário, em vez de pedir ao suporte. O dono apagou pela
+    interface (só ele pode: pede senha, e a credencial do git daqui não tem o
+    escopo `delete_repo`); daqui saíram a criação, pela API com essa mesma
+    credencial, e o envio só do `main`: a mesma história, 144 commits, `84f72f3`.
+    Antes, um espelho em `backups/github_espelho_20260927_122943.git`. Conferido
+    depois: os 35 hashes antigos (`backups/shas_antigos_reescrita.txt`) dão 404,
+    o arquivo bruto também, e o commit atual 200; o Monitor voltou `active` (não
+    usa segredo) e passou numa execução manual; o servidor fez `fetch` do novo
+    sem mudar nada (clone HTTPS anônimo, mesma URL). Perdeu-se só o histórico de
+    execuções do Actions. E qualquer clone feito antes guarda a história velha:
+    nele, nunca `pull` com merge, que traria tudo de volta — é `fetch` +
     `reset --hard origin/main`, ou clonar de novo.
 - **Uma área de teste aparecia para os alunos**, no filtro de Áreas do
   Praticar: `__pytest_area_…`, o ".py" que o usuário viu. Era sobra de uma
