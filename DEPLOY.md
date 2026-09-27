@@ -306,6 +306,12 @@ ssh residencia-med 'cd /var/www/residencia-med/frontend \
   && sudo -u residenciamed mv dist dist.antigo && sudo -u residenciamed mv dist.novo dist'
 ```
 
+Antes do `scp`, confira que o pacote é o build novo (`tar -tzf /tmp/dist.tgz |
+grep index-`, com o hash que está em `frontend/dist/index.html`): em 27/09 um
+`tar` falhou — no Git Bash, um caminho `C:/...` vira "servidor C" para o GNU tar;
+use `/tmp` como acima ou `--force-local` — e o `scp` mandou calado o pacote da
+subida anterior, que ficara no mesmo lugar.
+
 Desde 26/09 o app é dividido por tela, e a troca apaga as telas da versão
 anterior: uma aba aberta que pedir uma delas recarrega uma vez e segue na
 versão nova (`vite:preloadError` em `main.tsx`). É esperado, não é erro.

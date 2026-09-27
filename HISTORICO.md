@@ -32,8 +32,12 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   nota de aprovação — as duas feitas em 26/09 (registros em 2026-09-26 abaixo).
   Com a (4), a lista da crítica fechou.
 - **Revalida 2026/2 = ENAMED 2026: no ar com o gabarito preliminar desde 27/09**
-  (decisão do usuário: o definitivo só sai em 04/12, e a procura pela prova
-  comentada é agora). Entraram 96 questões, sem a 37, a 60, a 67 e a 77, as de
+  (commit `7dc1090`, API e front; banco com 1.259 questões depois da
+  importação, backup `conduta_20260927_111319.dump` antes; decisão do usuário:
+  o definitivo só sai em 04/12, e a procura pela prova comentada é agora).
+  Conferido no localhost, com a prova no branch de testes: a lista de provas, o
+  selo do Praticar ("Revalida 2026/2 · ENAMED 2026 · gabarito preliminar") e o
+  resultado. Entraram 96 questões, sem a 37, a 60, a 67 e a 77, as de
   gabarito discutível; `db.EDICOES_GABARITO_PRELIMINAR` põe "gabarito
   preliminar" no selo da questão, na lista de provas e no cabeçalho do
   resultado. **Em 04/12, com o definitivo** (`2026_2_gabarito_definitivo_…` na
