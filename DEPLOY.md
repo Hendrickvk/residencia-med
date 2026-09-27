@@ -306,6 +306,10 @@ ssh residencia-med 'cd /var/www/residencia-med/frontend \
   && sudo -u residenciamed mv dist dist.antigo && sudo -u residenciamed mv dist.novo dist'
 ```
 
+Desde 26/09 o app é dividido por tela, e a troca apaga as telas da versão
+anterior: uma aba aberta que pedir uma delas recarrega uma vez e segue na
+versão nova (`vite:preloadError` em `main.tsx`). É esperado, não é erro.
+
 `dist.antigo` fica no servidor: rollback é um `mv` de volta. O
 `frontend/.env.production` é versionado e usa `VITE_API_URL=/api`, caminho
 relativo — por isso o mesmo bundle serve http e https sem rebuild.

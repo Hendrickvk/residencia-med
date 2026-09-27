@@ -2296,6 +2296,23 @@ governa as telas admin do Streamlit.
   mudou" diz que as notas são as mesmas. **No ar em 26/09** (commit `f025907`;
   só o front, com `dist.antigo` guardado).
 
+- **App dividido por tela** (pedido do usuário, primeira das sugestões depois
+  da crítica). Quem chegava pelo link compartilhado baixava o app inteiro — 533
+  KB de JavaScript, 151 KB comprimidos — para ver a página pública. Agora as
+  páginas públicas ficam no pacote de entrada, e a casca e cada tela do app vêm
+  sob demanda (`React.lazy` no `App.tsx`, `Suspense` com o mesmo esqueleto do
+  `RequireAuth`): a página pública baixa 251 + 88 KB (76 + 28 KB comprimidos,
+  medidos no navegador). O que sobra é quase todo React, Router e React Query,
+  que ela usa. Para o app instalado, que abre em `/painel`, a casca e a tela
+  começam a baixar junto com o `/me`, e não depois dele. O risco que a divisão
+  cria — aba aberta pedindo, depois de um deploy, uma tela que saiu do
+  servidor, que o Caddy responde com o `index.html` — ficou coberto pelo que o
+  Vite recomenda: `vite:preloadError` recarrega a página uma vez (no máximo uma
+  por minuto, nunca offline). Testado de verdade: build servido pelo `vite
+  preview`, aba aberta no Painel, o front reconstruído por baixo com todos os
+  nomes novos, clique em Cartões — recarregou uma vez, já com a entrada nova, e
+  a tela abriu. Sem entrada no "O que mudou": é invisível para as alunas.
+
 ## Armadilhas das telas admin (Streamlit)
 
 - `st.markdown('<div>')` … `st.markdown('</div>')` não envolve nada: cada

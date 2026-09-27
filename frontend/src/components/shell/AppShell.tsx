@@ -1,9 +1,10 @@
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type ReactNode, Suspense, useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { BrincadeiraBoasVindas } from "../BrincadeiraBoasVindas";
 import { jaViu } from "../../lib/brincadeira";
 import { ConfirmeSeuEmail } from "../ConfirmeSeuEmail";
+import { EsqueletoTela } from "../RequireAuth";
 import { FilaPendenteAviso } from "../FilaPendenteAviso";
 import { Novidades } from "../Novidades";
 import { direcaoDaNavegacao } from "../../lib/nav";
@@ -180,7 +181,12 @@ export function AppShell() {
                     Praticar e Simulado não abrem, então ela não pode morar só
                     no Painel. Some sozinha quando a conta confirma. */}
                 <ConfirmeSeuEmail />
-                <Outlet />
+                {/* Cada tela vem sob demanda (App.tsx). Trocando de aba, o Router
+                    segura a tela atual até a nova chegar; isto só aparece quando o
+                    app abre direto numa tela que ainda não veio. */}
+                <Suspense fallback={<EsqueletoTela />}>
+                  <Outlet />
+                </Suspense>
               </div>
             </Principal>
             <FilaPendenteAviso />

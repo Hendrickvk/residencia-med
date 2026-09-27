@@ -16,6 +16,24 @@ aplicarTema(temaInicial());
 // Erro fora do React (evento, promessa sem catch) também vai para o servidor.
 capturarErros();
 
+// As telas vêm sob demanda (App.tsx). Depois de um deploy, a aba que já estava
+// aberta pede as telas da versão anterior, que saíram do servidor, e a troca de
+// aba quebrava; recarregar traz a versão nova (o que o Vite recomenda). No máximo
+// uma vez por minuto, e nunca sem rede: offline, recarregar só troca a tela por
+// uma página de erro do navegador.
+window.addEventListener("vite:preloadError", (evento) => {
+  if (!navigator.onLine) return;
+  try {
+    const ultima = Number(sessionStorage.getItem("conduta:recarregou-em") ?? 0);
+    if (Date.now() - ultima < 60_000) return;
+    sessionStorage.setItem("conduta:recarregou-em", String(Date.now()));
+  } catch {
+    return; // sem sessionStorage não há como evitar um laço de recargas
+  }
+  evento.preventDefault();
+  window.location.reload();
+});
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <BarreiraErro>
