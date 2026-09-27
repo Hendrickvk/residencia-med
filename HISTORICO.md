@@ -2447,6 +2447,27 @@ governa as telas admin do Streamlit.
   `a495f3c`; a API antes do front, sem mudança de banco; `dist.antigo` guardado),
   com a entrada `2026-09-26h` no "O que mudou".
 
+### 2026-09-27
+
+- **Varredura de layout**, a pedido do usuário, depois de ele achar "UNICAMP"
+  passando da borda do card na página inicial (ver Página pública, nas
+  Pendências). Um script de navegador sem interface (CDP no Edge) percorre cada
+  tela em 12 larguras, de 320 a 1440 px, e aponta texto que passa da borda do
+  card em que está, texto cortado sem reticências, texto fora da tela e rolagem
+  horizontal; ignora o que é de propósito (`sr-only`, reticências, áreas com
+  rolagem). Nas telas de dentro, cada estado é alcançado com cliques numa conta
+  de teste no branch do Neon e conferido antes de medir (a questão aberta, a
+  discussão, o resultado do simulado…), e uma contraprova — um card quebrado
+  injetado na página — confirmou que a varredura acha o defeito. Resultado:
+  página inicial, login e 15 estados das telas de dentro limpos. **Um achado:**
+  com e-mail longo, a faixa "Confirme o seu e-mail" estourava a borda em
+  celulares de até 430 px (76 px em 360 px): endereço não tem onde quebrar, e a
+  faixa é a primeira coisa que uma conta nova vê. Agora o e-mail quebra na linha
+  (`[overflow-wrap:anywhere]`). No ar em 27/09 (commit `a35552b`, só o front).
+  Onde esse defeito tende a voltar: palavra sem espaço numa caixa estreita —
+  nome de banca em fonte grande, e-mail, e o que a aluna digita (nome de
+  exibição, de pasta, de baralho).
+
 ## Armadilhas das telas admin (Streamlit)
 
 - `st.markdown('<div>')` … `st.markdown('</div>')` não envolve nada: cada
