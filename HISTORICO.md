@@ -2293,7 +2293,8 @@ governa as telas admin do Streamlit.
   azul vazia e o exemplo da página pública, cujo nível 4 tinha 71,4% e virou
   64,3%, com o subtítulo de 131 para 128 acertos para bater com a média). As
   cores sobem para quem está entre 55% e 84%; a entrada `2026-09-26g` do "O que
-  mudou" diz que as notas são as mesmas.
+  mudou" diz que as notas são as mesmas. **No ar em 26/09** (commit `f025907`;
+  só o front, com `dist.antigo` guardado).
 
 ## Armadilhas das telas admin (Streamlit)
 
