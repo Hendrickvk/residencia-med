@@ -127,6 +127,7 @@ export interface PainelData {
   prioridades: PrioridadeEstudo[];
   nota_projetada: NotaProjetada | null; // null sem nenhuma resposta
   simulados_oficiais: SimuladoOficialFeito[];
+  corte_revalida: CorteRevalida;
   semana: ProgressoSemana;
   por_tipo: DesempenhoTipo[];
 }
@@ -153,6 +154,25 @@ export interface SimuladoOficialFeito {
   pct_acerto: number;
   ja_vistas: number; // já respondidas antes de começar: nelas a nota mede memória
   em_blocos: boolean;
+  corte: ComparacaoCorte | null;
+}
+
+// A nota de corte da 1ª etapa do Revalida na edição (db.comparar_com_corte). `nota` é a que o
+// aluno teria tirado, com o ponto das anuladas, e só existe nas provas só objetivas: até a
+// 2025/1 a discursiva entrava na soma de 150 pontos, e a objetiva sozinha não diz se passaria.
+export interface ComparacaoCorte {
+  edicao: string;
+  corte: number;
+  maximo: number;
+  nota: number | null;
+  anuladas: number | null;
+}
+
+// O corte da edição mais recente do Revalida só objetiva (db.corte_de_referencia): a escala da nota projetada.
+export interface CorteRevalida {
+  edicao: string;
+  corte: number;
+  maximo: number;
 }
 
 // Um tema praticado desde segunda-feira (db.progresso_semana).
@@ -269,6 +289,7 @@ export interface Simulado {
   banca: string | null;
   edicao: string | null; // preenchida só no simulado por edição oficial, ex. "2025/1"
   bloco: number | null; // bloco da prova oficial (db.dividir_em_blocos); null na prova inteira
+  corte?: ComparacaoCorte | null; // só em GET /simulados/{id}: o resultado da prova inteira do Revalida
   num_questoes: number;
   tempo_limite_min: number;
   iniciado_em: string;

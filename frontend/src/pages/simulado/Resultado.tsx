@@ -9,9 +9,10 @@ import { RelatarErro } from "../../components/RelatarErro";
 import { TextoDiscussao } from "../../components/TextoDiscussao";
 import { compartilharCartao, desenharCartao, nomeArquivoCartao } from "../../lib/cartaoResultado";
 import { BOTAO_PRIMARIO, BOTAO_SECUNDARIO } from "../../lib/estilos";
-import { formatarMMSS, formatarPctBR } from "../../lib/format";
+import { formatarMMSS, formatarNumeroBR, formatarPctBR } from "../../lib/format";
 import { atraso } from "../../lib/movimento";
 import {
+  distanciaDoCorte,
   nomeEdicao,
   nomeProvaOficial,
   useDesempenhoSimulado,
@@ -20,6 +21,7 @@ import {
   useTemasErradosSimulado,
 } from "../../lib/simulados";
 import { CLASSES_NIVEL, NIVEIS, nivelTriagem } from "../../lib/triagem";
+import type { ComparacaoCorte } from "../../lib/types";
 import { AlternativaLinha, type EstadoAlternativa } from "../praticar/AlternativaLinha";
 
 interface Props {
@@ -125,6 +127,8 @@ export default function Resultado({ simuladoId, onNovoSimulado }: Props) {
           <span className="num-lg">{Math.max(total - respondidas, 0)}</span>
         </div>
       </div>
+
+      {simulado.corte && <LinhaCorte corte={simulado.corte} />}
 
       {provaDoCartao && (
         <div className="flex flex-wrap items-center gap-3">
@@ -347,5 +351,33 @@ export default function Resultado({ simuladoId, onNovoSimulado }: Props) {
         </button>
       </div>
     </div>
+  );
+}
+
+// A nota de corte da 1ª etapa do Revalida nesta edição (db.comparar_com_corte). Onde a
+// prova era só objetiva, a nota que a aluna teria tirado e a distância até o corte; onde
+// a discursiva entrava na soma, só o corte, sem veredito.
+function LinhaCorte({ corte: c }: { corte: ComparacaoCorte }) {
+  const corte = (
+    <strong className="font-semibold text-ink">
+      {formatarNumeroBR(c.corte)} de {c.maximo}
+    </strong>
+  );
+  if (c.nota === null) {
+    return (
+      <p className="text-corpo text-ink-2">
+        A nota de corte da 1ª etapa nesta edição foi {corte} pontos, somando a prova discursiva, que o Conduta não
+        aplica. Só a objetiva não diz se você passaria.
+      </p>
+    );
+  }
+  const anuladas = c.anuladas === 1 ? "da questão anulada" : `das ${c.anuladas} questões anuladas`;
+  return (
+    <p className="text-corpo text-ink-2">
+      A nota de corte da 1ª etapa nesta edição foi {corte}.{" "}
+      {c.anuladas ? `Contando o ponto ${anuladas}, que o INEP deu a todos, a sua seria ` : "A sua seria "}
+      <strong className="font-semibold text-ink">{formatarNumeroBR(c.nota)}</strong>:{" "}
+      <strong className="font-semibold text-ink">{distanciaDoCorte(c.nota, c.corte)}</strong>.
+    </p>
   );
 }

@@ -28,9 +28,9 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   provas oficiais do Revalida e do ENAMED, comentadas." e página **média, 4
   blocos**: promessa com o painel de verdade, caso comentado + revisão +
   simulado, lista das provas, convite final. Depois, na ordem da crítica:
-  (3) Simulado com histórico e blocos menores — feita em 26/09 (registro em
-  2026-09-26 abaixo); (4) nota projetada contra a nota de aprovação de cada
-  prova, que pede levantar antes as notas de corte do INEP.
+  (3) Simulado com histórico e blocos menores e (4) nota projetada contra a
+  nota de aprovação — as duas feitas em 26/09 (registros em 2026-09-26 abaixo).
+  Com a (4), a lista da crítica fechou.
 - **Revalida 2020: travada no gabarito.** A aba de 2020 do INEP só tem
   `gabarito_caderno_1.pdf` e `_2`, os dois **preliminares**, e a área de
   resultados não traz o definitivo (procurado em 26/09). Sem o definitivo não
@@ -2249,6 +2249,31 @@ governa as telas admin do Streamlit.
   (commit `0bfc226`): a API primeiro — o front novo lê os blocos dela —, com a
   coluna `simulados.bloco` criada pelo `init_db` na subida e conferida no banco;
   depois o front, com `dist.antigo` guardado.
+
+- **Nota de corte do Revalida** (fase 4 e última da crítica: "nota projetada
+  contra a nota de aprovação, o que motiva muito mais"). Levantamento em 26/09,
+  pelos títulos das notícias do INEP e pela Agência Brasil (as páginas de
+  notícia do INEP pedem login a acesso automatizado): 1ª etapa, método Angoff
+  modificado — 2021: 90; 2022/1: 99,6; 2022/2: 96,21; 2023/1: 96,635; 2023/2:
+  101,173; 2024/1: 91,96; 2024/2: 86,659; 2025/1: 88, todos **em 150 pontos,
+  somando a objetiva e a discursiva**; 2025/2: 61 e 2026/1: 59, **em 100, só a
+  objetiva**, porque a discursiva saiu da 1ª etapa na 2025/2. Guardadas em
+  `db.NOTAS_DE_CORTE_REVALIDA` (edição nova do Revalida entra ali também).
+  Decisões: (1) só nas provas só objetivas se diz "acima/abaixo do corte"; nas
+  de 150 pontos a discursiva entrava na soma e a objetiva sozinha não diz se
+  ela passaria, então a tela mostra só o corte. (2) A nota que ela teria tirado
+  soma o ponto das anuladas, que o INEP deu a todos até a 2026/1 (na 2026/2 a
+  regra mudou: a anulada sai da conta) — na 2025/2 são 7, e errar isso
+  deslocava o veredito em 7 pontos; a questão que ficou fora do banco por
+  figura de terceiros (2026/1, Q5) conta no ritmo das outras. (3) O ENAMED fica
+  de fora: o corte dele (60) é numa escala de TRI, e percentual de acerto não
+  se converte nela. (4) A referência do Painel é o corte da edição mais recente
+  só objetiva (59 na 2026/1), a mesma escala da projeção. (5) O veredito não
+  ganha cor, porque t1–t5 só dizem nível de triagem. Conferido no localhost
+  com as três variantes (2025/2 com anuladas, 2023/1 de 150 pontos, 2026/1 em
+  blocos) e a régua em claro e escuro. Uma tensão que ficou visível e não foi
+  mexida: 68% sai "Urgente" na triagem e, na 2025/2, 9 pontos acima do corte —
+  a escala de triagem é de prioridade de estudo, não de aprovação.
 
 ## Armadilhas das telas admin (Streamlit)
 

@@ -97,6 +97,20 @@ def test_blocos_sao_fatias_contiguas_de_ate_25_com_tamanhos_parecidos():
         assert [i for b in blocos for i in b] == itens
 
 
+def test_nota_de_corte_do_revalida():
+    # Só objetiva: os acertos mais as 7 anuladas, cujo ponto o INEP deu a todos.
+    assert db.comparar_com_corte("REVALIDA", "2025/2", 60, 93) == {
+        "edicao": "2025/2", "corte": 61, "maximo": 100, "nota": 67, "anuladas": 7}
+    # A Q5 ficou fora do banco (figura de terceiros): conta no ritmo das outras 99.
+    assert db.comparar_com_corte("REVALIDA", "2026/1", 66, 99)["nota"] == 66.7
+    # Com a discursiva na soma, só o corte: a objetiva sozinha não diz se passaria.
+    com_discursiva = db.comparar_com_corte("REVALIDA", "2023/1", 70, 93)
+    assert (com_discursiva["corte"], com_discursiva["maximo"], com_discursiva["nota"]) == (96.635, 150, None)
+    assert db.comparar_com_corte("ENAMED", "2025", 60, 90) is None  # corte em escala de TRI
+    assert db.comparar_com_corte("USP", "2026", 80, 113) is None
+    assert db.corte_de_referencia() == {"edicao": "2026/1", "corte": 59, "maximo": 100}
+
+
 def test_prova_oficial_em_blocos(usuario_teste, edicao_teste, monkeypatch):
     # As três questões da edição (números 5, 12 e 30) em blocos de até 2: [5, 12] e [30].
     monkeypatch.setattr(db, "TAMANHO_BLOCO_PROVA_OFICIAL", 2)

@@ -2847,6 +2847,55 @@ def ids_questoes_da_edicao(banca, edicao):
     return [r["questao_id"] for r in rows]
 
 
+# Nota de corte da 1ª etapa do Revalida (método Angoff modificado), como o INEP
+# publicou — conferidas em 26/09/2026 nas notícias do INEP e da Agência Brasil.
+# Até a 2025/1 a 1ª etapa somava a prova objetiva e a discursiva, em 150 pontos;
+# da 2025/2 em diante é só a objetiva, em 100. `anuladas` só existe nas provas só
+# objetivas, as únicas em que a nota do aluno se compara com o corte: são as
+# anuladas no gabarito definitivo, cujo ponto o INEP deu a todos (regra que valeu
+# até a 2026/1; na 2026/2 a anulada passou a sair da conta). Edição nova do
+# Revalida importada entra aqui também. O ENAMED fica de fora: o corte dele (60)
+# é numa escala de TRI, não em acertos.
+NOTAS_DE_CORTE_REVALIDA = {
+    "2021": {"corte": 90, "maximo": 150},
+    "2022/1": {"corte": 99.6, "maximo": 150},
+    "2022/2": {"corte": 96.21, "maximo": 150},
+    "2023/1": {"corte": 96.635, "maximo": 150},
+    "2023/2": {"corte": 101.173, "maximo": 150},
+    "2024/1": {"corte": 91.96, "maximo": 150},
+    "2024/2": {"corte": 86.659, "maximo": 150},
+    "2025/1": {"corte": 88, "maximo": 150},
+    "2025/2": {"corte": 61, "maximo": 100, "anuladas": 7},
+    "2026/1": {"corte": 59, "maximo": 100, "anuladas": 0},
+}
+
+
+def comparar_com_corte(banca, edicao, acertos, num_questoes):
+    """O corte da 1ª etapa do Revalida na edição e, onde a prova era só
+    objetiva, a nota que o aluno teria tirado (`nota`): os acertos mais o ponto
+    das anuladas, com as questões do caderno que ficaram fora do banco (figura
+    de terceiros) contadas no ritmo das outras. Onde a 1ª etapa somava a
+    discursiva, `nota` é None: a objetiva sozinha não diz se ele passaria. None
+    fora do Revalida ou em edição sem corte conhecido."""
+    corte = NOTAS_DE_CORTE_REVALIDA.get(edicao) if (banca or "").upper() == "REVALIDA" else None
+    if corte is None:
+        return None
+    nota = None
+    if "anuladas" in corte and num_questoes:
+        validas = corte["maximo"] - corte["anuladas"]
+        nota = round(corte["anuladas"] + acertos * validas / num_questoes, 1)
+    return {"edicao": edicao, "corte": corte["corte"], "maximo": corte["maximo"], "nota": nota,
+            "anuladas": corte.get("anuladas")}
+
+
+def corte_de_referencia():
+    """O corte da edição mais recente do Revalida só objetiva: a mesma escala da
+    nota projetada, acertos numa prova de 100."""
+    edicao = max(e for e, c in NOTAS_DE_CORTE_REVALIDA.items() if "anuladas" in c)
+    c = NOTAS_DE_CORTE_REVALIDA[edicao]
+    return {"edicao": edicao, "corte": c["corte"], "maximo": c["maximo"]}
+
+
 # 4h30 seguidas afastam quem estuda entre um plantão e outro: a prova oficial
 # também se faz em blocos, fatias contíguas do caderno com até 25 questões (1h15
 # no ritmo oficial), cada uma com o próprio resultado.
@@ -3179,7 +3228,9 @@ def simulados_oficiais_feitos(*, usuario_id, limite=5):
             "em_blocos": True,
         })
     feitas.sort(key=lambda f: f["finalizado_em"], reverse=True)
-    return [{**f, "pct_acerto": round(100 * f["acertos"] / f["num_questoes"], 1)} for f in feitas[:limite]]
+    return [{**f, "pct_acerto": round(100 * f["acertos"] / f["num_questoes"], 1),
+             "corte": comparar_com_corte(f["banca"], f["edicao"], f["acertos"], f["num_questoes"])}
+            for f in feitas[:limite]]
 
 
 # ---------------------------------------------------------------------------

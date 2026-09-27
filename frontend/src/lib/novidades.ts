@@ -37,6 +37,21 @@ export const ROTULO_TIPO: Record<TipoNovidade, string> = {
 
 export const NOVIDADES: Novidade[] = [
   {
+    id: "2026-09-26f",
+    data: "26 de setembro de 2026",
+    titulo: "Nota de corte do Revalida",
+    itens: [
+      {
+        tipo: "novo",
+        texto: "No Painel, a sua nota projetada aparece ao lado da nota de corte da 1ª etapa do Revalida, com quantos pontos faltam para chegar lá.",
+      },
+      {
+        tipo: "novo",
+        texto: "Ao terminar uma prova do Revalida, você vê a nota de corte daquela edição e, nas provas só objetivas, quanto ficou acima ou abaixo dela.",
+      },
+    ],
+  },
+  {
     id: "2026-09-26e",
     data: "26 de setembro de 2026",
     titulo: "Prova oficial em blocos",

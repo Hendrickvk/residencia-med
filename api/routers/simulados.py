@@ -91,7 +91,13 @@ def obter(simulado_id: int, usuario=Depends(usuario_atual)):
     simulado = db.obter_simulado(simulado_id, usuario_id=usuario["id"])
     if simulado is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Simulado não encontrado.")
-    return simulado
+    # A nota de corte da edição, no resultado da prova inteira (um bloco não é
+    # a prova). O corte é público; a nota só existe depois de finalizar.
+    corte = None
+    if simulado["finalizado_em"] and simulado["bloco"] is None:
+        corte = db.comparar_com_corte(simulado["banca"], simulado["edicao"], simulado["acertos"] or 0,
+                                      simulado["num_questoes"])
+    return {**simulado, "corte": corte}
 
 
 @router.get("/{simulado_id}/itens")

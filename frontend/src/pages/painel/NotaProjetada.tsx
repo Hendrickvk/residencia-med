@@ -2,19 +2,20 @@ import { ArrowRight } from "lucide-react";
 import { EtiquetaPct } from "../../components/EtiquetaPct";
 import { BOTAO_SECUNDARIO } from "../../lib/estilos";
 import { formatarPctBR } from "../../lib/format";
-import { nomeEdicao } from "../../lib/simulados";
+import { distanciaDoCorte, nomeEdicao } from "../../lib/simulados";
 import { CLASSES_NIVEL, NIVEIS, nivelTriagem } from "../../lib/triagem";
-import type { NotaProjetada as DadosNota, SimuladoOficialFeito } from "../../lib/types";
+import type { CorteRevalida, NotaProjetada as DadosNota, SimuladoOficialFeito } from "../../lib/types";
 
 interface Props {
   nota: DadosNota;
   simulados: SimuladoOficialFeito[];
+  corte: CorteRevalida;
   onFazerProva: () => void;
 }
 
 // DESIGN_TRIAGEM.md §6, Painel ("Nota projetada", db.nota_projetada): a nota que o
 // domínio de hoje dá numa prova do INEP, ao lado das provas oficiais já feitas.
-export function NotaProjetada({ nota, simulados, onFazerProva }: Props) {
+export function NotaProjetada({ nota, simulados, corte, onFazerProva }: Props) {
   const nivel = nivelTriagem(nota.nota);
   return (
     <section className="flex flex-col gap-5 rounded-card border border-line bg-surface p-6">
@@ -33,6 +34,34 @@ export function NotaProjetada({ nota, simulados, onFazerProva }: Props) {
           <p className="text-corpo text-ink-2">
             Provavelmente entre {formatarPctBR(nota.minimo, 0)}% e {formatarPctBR(nota.maximo, 0)}% numa prova de 100
             questões.
+          </p>
+          {/* A faixa provável numa régua de 0 a 100, com o corte da 1ª etapa do Revalida
+              marcado: o que a nota quer dizer é a distância até ele. A frase abaixo diz o
+              mesmo em texto, por isso a régua fica fora da leitura de tela. */}
+          <div aria-hidden="true" className="relative mb-2 mt-9 h-2 rounded-full bg-line-soft">
+            <div
+              className={`absolute inset-y-0 rounded-full ${CLASSES_NIVEL[nivel].suave}`}
+              style={{ left: `${nota.minimo}%`, width: `${Math.max(0, nota.maximo - nota.minimo)}%` }}
+            />
+            <div className="absolute -inset-y-1.5 w-0.5 -translate-x-1/2 rounded-full bg-ink" style={{ left: `${corte.corte}%` }} />
+            <span
+              className="absolute bottom-full mb-2.5 -translate-x-1/2 whitespace-nowrap text-[12px] font-semibold tabular-nums text-ink"
+              style={{ left: `${corte.corte}%` }}
+            >
+              corte {corte.corte}
+            </span>
+            <div
+              className={`absolute top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 ring-surface ${CLASSES_NIVEL[nivel].cheio}`}
+              style={{ left: `${nota.nota}%` }}
+            />
+          </div>
+          <p className="text-corpo text-ink-2">
+            A nota de corte da 1ª etapa do Revalida {corte.edicao} foi{" "}
+            <strong className="font-semibold text-ink">
+              {corte.corte} de {corte.maximo}
+            </strong>
+            . Sua projeção está{" "}
+            <strong className="font-semibold text-ink">{distanciaDoCorte(Math.round(nota.nota), corte.corte)}</strong>.
           </p>
           <p className="text-apoio text-muted [text-wrap:pretty]">
             A faixa diminui conforme você responde, até cerca de 10 pontos para cada lado: a variação de uma prova só.
@@ -68,6 +97,7 @@ export function NotaProjetada({ nota, simulados, onFazerProva }: Props) {
                       {new Date(s.finalizado_em).toLocaleDateString("pt-BR")}
                       {/* O banco é feito dos cadernos: questão já vista mede memória, não preparo. */}
                       {s.ja_vistas > 0 && ` · já tinha visto ${s.ja_vistas} das ${s.num_questoes}`}
+                      {s.corte?.nota != null && ` · ${distanciaDoCorte(s.corte.nota, s.corte.corte)}`}
                     </span>
                   </span>
                   <EtiquetaPct pct={s.pct_acerto} />

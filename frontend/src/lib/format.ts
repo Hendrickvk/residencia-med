@@ -5,6 +5,11 @@ export function formatarPctBR(n: number, casas = 1): string {
   return n.toFixed(casas).replace(".", ",");
 }
 
+// Com as casas que o número tiver, até 3: "96,635", "67", "66,7" (notas de corte do INEP).
+export function formatarNumeroBR(n: number): string {
+  return n.toLocaleString("pt-BR", { maximumFractionDigits: 3 });
+}
+
 // mm:ss com numerais tabulares — usado tanto no cronômetro por caso do
 // Praticar quanto no regressivo do Simulado.
 export function formatarMMSS(segundosOuMs: number, unidade: "s" | "ms" = "ms"): string {

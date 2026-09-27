@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "./api";
+import { formatarNumeroBR } from "./format";
 import type {
   DesempenhoAreaSimulado,
   EdicaoOficial,
@@ -118,6 +119,14 @@ export function nomeProvaOficial(s: { banca: string | null; edicao: string | nul
   if (!s.banca || !s.edicao) return null;
   const nome = nomeEdicao(s.banca, s.edicao);
   return s.bloco ? `${nome} · bloco ${s.bloco}` : nome;
+}
+
+// "6 pontos acima do corte", "1 ponto abaixo do corte", "exatamente no corte".
+export function distanciaDoCorte(nota: number, corte: number): string {
+  const d = Math.round((nota - corte) * 10) / 10;
+  if (d === 0) return "exatamente no corte";
+  const n = Math.abs(d);
+  return `${formatarNumeroBR(n)} ${n === 1 ? "ponto" : "pontos"} ${d > 0 ? "acima" : "abaixo"} do corte`;
 }
 
 // As bancas com caderno oficial, na ordem em que aparecem (as do INEP primeiro),

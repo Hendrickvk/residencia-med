@@ -152,6 +152,7 @@ export default function Painel() {
           <NotaProjetada
             nota={data.nota_projetada}
             simulados={data.simulados_oficiais}
+            corte={data.corte_revalida}
             onFazerProva={() => navigate("/simulado")}
           />
         </div>

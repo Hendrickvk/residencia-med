@@ -342,6 +342,16 @@ Conteúdo das demais telas: largura máxima 1360px, padding 36/40px.
    quando todos os blocos estão feitos; bloco solto não entra (25 questões não se
    comparam com a projeção numa prova de 100). Sem nenhuma, "Fazer uma prova
    oficial" abre o Simulado.
+   **Nota de corte** (`db.corte_de_referencia`, a edição mais recente do Revalida só
+   objetiva, hoje 59 de 100 na 2026/1): abaixo da faixa, uma régua de 0 a 100 com a
+   faixa provável na cor suave do nível, o ponto da projeção na cor cheia e o corte
+   como um traço `--ink` com "corte {n}" em cima; depois a frase "A nota de corte
+   da 1ª etapa do Revalida {edição} foi {n} de 100. Sua projeção está {x} pontos
+   abaixo do corte" (acima, ou "exatamente no corte"), com a projeção arredondada
+   como no número grande. A régua é `aria-hidden`: a frase diz o mesmo. O
+   veredito não ganha cor — t1–t5 são nível de triagem, não aprovação. Nas provas
+   feitas, as do Revalida só objetivas ganham "· {x} pontos acima do corte" na
+   linha de baixo (`db.comparar_com_corte`); as de 150 pontos, nada.
 5. **Onde você ganha mais pontos** (`db.prioridades_estudo`), largura total: os 3
    temas com mais pontos a ganhar, pela fração dos cadernos do INEP (Revalida e
    ENAMED) que o tema ocupa × o que falta de domínio. Com poucas respostas, o
@@ -464,6 +474,14 @@ Conteúdo das demais telas: largura máxima 1360px, padding 36/40px.
 - Bloco em andamento e resultado de bloco levam o nome "{prova} · bloco {n}"
   (`nomeProvaOficial`); a linha de procedência da questão fica só com a edição e o
   número no caderno, e o resultado diz "neste bloco".
+- No resultado da prova inteira do Revalida, logo abaixo dos números, a nota de
+  corte da 1ª etapa daquela edição (`simulado.corte`, `db.comparar_com_corte`). Nas
+  provas só objetivas (2025/2 em diante): "A nota de corte da 1ª etapa nesta edição
+  foi 61 de 100. Contando o ponto das 7 questões anuladas, que o INEP deu a todos,
+  a sua seria 70: 9 pontos acima do corte." Nas de 150 pontos (até a 2025/1), só o
+  corte, sem veredito: a discursiva entrava na soma, e só a objetiva não diz se
+  ela passaria. Bloco e simulado montado não mostram corte; o ENAMED também não
+  (o corte dele é numa escala de TRI).
 - Prova em andamento e ainda dentro do tempo aparece acima das abas, com borda
   `--ink` e "Continuar prova"; ao retomar, abre na primeira questão em branco.
 - Mesmo cartão e alternativas do Praticar, sem feedback e sem o tema (o resultado
