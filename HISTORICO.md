@@ -2273,7 +2273,10 @@ governa as telas admin do Streamlit.
   com as três variantes (2025/2 com anuladas, 2023/1 de 150 pontos, 2026/1 em
   blocos) e a régua em claro e escuro. Uma tensão que ficou visível e não foi
   mexida: 68% sai "Urgente" na triagem e, na 2025/2, 9 pontos acima do corte —
-  a escala de triagem é de prioridade de estudo, não de aprovação.
+  a escala de triagem é de prioridade de estudo, não de aprovação. **No ar em
+  26/09** (commit `230dda3`; a API antes do front, que lê o corte dela; sem
+  mudança de banco; `dist.antigo` guardado), com a entrada `2026-09-26f` no
+  "O que mudou".
 
 ## Armadilhas das telas admin (Streamlit)
 
