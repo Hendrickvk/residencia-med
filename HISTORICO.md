@@ -2312,6 +2312,10 @@ governa as telas admin do Streamlit.
   preview`, aba aberta no Painel, o front reconstruído por baixo com todos os
   nomes novos, clique em Cartões — recarregou uma vez, já com a entrada nova, e
   a tela abriu. Sem entrada no "O que mudou": é invisível para as alunas.
+  **No ar em 26/09** (commit `2554648`; só o front, com `dist.antigo`
+  guardado): em produção a página pública baixa 81 + 30 KB comprimidos, a casca
+  do app é servida à parte, e um arquivo que não existe mais volta como o
+  `index.html` com status 200 — o caso que a recarga cobre.
 
 ## Armadilhas das telas admin (Streamlit)
 
