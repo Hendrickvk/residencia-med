@@ -2467,6 +2467,11 @@ governa as telas admin do Streamlit.
   Onde esse defeito tende a voltar: palavra sem espaço numa caixa estreita —
   nome de banca em fonte grande, e-mail, e o que a aluna digita (nome de
   exibição, de pasta, de baralho).
+- **Trocar o e-mail antes de confirmar: dispensado pelo usuário.** Proposto
+  pelo caso de 26/09 — conta criada com e-mail de faculdade (`uni9.edu.br`), a
+  confirmação entregue pelo Brevo e nunca aberta, e a pessoa criou outra conta
+  com Gmail. A faixa só oferece "Enviar outro link". O usuário decidiu não
+  mexer ("a plataforma está estável"); não repropor sem caso novo.
 
 ## Armadilhas das telas admin (Streamlit)
 
