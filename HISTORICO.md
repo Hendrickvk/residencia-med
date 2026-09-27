@@ -2329,7 +2329,11 @@ governa as telas admin do Streamlit.
   ponto abaixo do corte de 59". O resultado passou a mostrar uma casa decimal,
   como o Painel, com o nível pelo valor exato; o cartão segue inteiro, porque não
   mostra o corte. De carona, "0,4 pontos" virou "0,4 ponto" (singular abaixo de
-  2). Conferido no localhost no computador e no celular, com o download do cartão.
+  2). Conferido no localhost no computador e no celular, com o download do cartão;
+  a prévia mostrada ao usuário pegou ainda o "79,2%" encostando na coluna ao lado,
+  e a primeira coluna dos números ficou mais larga. **No ar em 26/09** (commit
+  `a495f3c`; a API antes do front, sem mudança de banco; `dist.antigo` guardado),
+  com a entrada `2026-09-26h` no "O que mudou".
 
 ## Armadilhas das telas admin (Streamlit)
 
