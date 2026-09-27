@@ -68,13 +68,24 @@ erro barato de corrigir):
 | TXT | `@` | `brevo-code:…` | posse do domínio, para o Brevo |
 | CNAME | `brevo1._domainkey` | `b1.qualaconduta-com-br.dkim.brevo.com` | DKIM |
 | CNAME | `brevo2._domainkey` | `b2.qualaconduta-com-br.dkim.brevo.com` | DKIM |
-| TXT | `_dmarc` | `v=DMARC1; p=none; rua=mailto:rua@dmarc.brevo.com` | DMARC |
+| TXT | `_dmarc` | `v=DMARC1; p=quarantine; rua=mailto:rua@dmarc.brevo.com` | DMARC |
 
 Os quatro últimos são o que fez o e-mail parar de sair de
 `hendrickvk@12189774.brevosend.com`: sem domínio autenticado, o Brevo reescreve
 o `From:` de um freemail, porque senão o DMARC de quem recebe reprovaria a
 mensagem. Conferido na API do Brevo depois da troca — o envio de 22/09 saiu de
 `acesso@qualaconduta.com.br`, os de 19/09 saíram do endereço reescrito.
+
+O DMARC passou de `p=none` para `p=quarantine` em 27/09, a pedido do usuário:
+e-mail em nome do domínio sem a assinatura do Brevo vai para o spam de quem
+recebe — o golpe que isso barra é um "Redefinir a sua senha" falso. Antes,
+conferido que o Brevo é o único remetente (o domínio não tem MX, então nenhuma
+caixa de e-mail envia por ele) e que tudo que ele manda passa no DKIM alinhado
+(`dkim=pass header.i=@qualaconduta.com.br`). `quarantine` e não `reject` de
+propósito: se a assinatura quebrar, o e-mail de verdade cai no spam em vez de
+sumir. **Remetente novo com `@qualaconduta.com.br`** (uma caixa de e-mail no
+domínio, outro serviço de envio) precisa assinar DKIM com o domínio antes do
+primeiro envio, senão vai direto para o spam.
 
 Portas liberadas (iptables do host + Security List da VCN):
 
