@@ -6,6 +6,7 @@ export interface ProvaDaQuestao {
   banca: string;
   edicao: string;
   numero_prova: number | null;
+  gabarito_preliminar?: boolean; // db.EDICOES_GABARITO_PRELIMINAR: publicada antes do gabarito definitivo do INEP
 }
 
 export interface Questao {
@@ -158,14 +159,16 @@ export interface SimuladoOficialFeito {
 }
 
 // A nota de corte da 1ª etapa do Revalida na edição (db.comparar_com_corte). `nota` é a que o
-// aluno teria tirado, com o ponto das anuladas, e só existe nas provas só objetivas: até a
-// 2025/1 a discursiva entrava na soma de 150 pontos, e a objetiva sozinha não diz se passaria.
+// aluno teria tirado, com o ponto das anuladas, e só existe nas provas só objetivas contadas em
+// acertos: até a 2025/1 a discursiva entrava na soma de 150 pontos, e da 2026/2 em diante a nota
+// é a TRI do ENAMED (`escala`), que os acertos sozinhos não reproduzem.
 export interface ComparacaoCorte {
   edicao: string;
   corte: number;
   maximo: number;
   nota: number | null;
   anuladas: number | null;
+  escala: "TRI" | null;
 }
 
 // A prova feita em blocos, com a última vez de cada bloco somada (db.prova_em_blocos).
@@ -300,6 +303,7 @@ export interface Simulado {
   bloco: number | null; // bloco da prova oficial (db.dividir_em_blocos); null na prova inteira
   corte?: ComparacaoCorte | null; // só em GET /simulados/{id}: o resultado da prova inteira do Revalida
   prova_em_blocos?: ProvaEmBlocos | null; // só no resultado de um bloco, com todos os blocos feitos
+  gabarito_preliminar?: boolean; // só em GET /simulados/{id}
   num_questoes: number;
   tempo_limite_min: number;
   iniciado_em: string;
@@ -318,6 +322,7 @@ export interface EdicaoOficial {
   ano: number;
   total: number;
   tempo_limite_min: number;
+  gabarito_preliminar: boolean;
   ultima_pct: number | null; // da última vez que o aluno fez a prova inteira
   blocos: BlocoOficial[];
   pct_blocos: number | null; // a prova feita em blocos, só com todos eles feitos

@@ -1488,11 +1488,24 @@ def contar_questoes():
         return conn.execute("SELECT COUNT(*) AS n FROM questoes").fetchone()["n"]
 
 
+# Edições publicadas com o gabarito preliminar do INEP, por decisão do usuário em
+# 27/09/2026: o definitivo da Revalida 2026/2 (= ENAMED 2026) só sai em 04/12, e a
+# procura pela prova comentada é logo depois dela. As questões de gabarito
+# discutível (37, 60, 67 e 77) ficaram de fora. A tela avisa onde a prova aparece
+# com gabarito; saído o definitivo, a edição é conferida e deixa esta lista.
+EDICOES_GABARITO_PRELIMINAR = {("REVALIDA", "2026/2"), ("ENAMED", "2026")}
+
+
+def gabarito_preliminar(banca, edicao):
+    return ((banca or "").upper(), edicao) in EDICOES_GABARITO_PRELIMINAR
+
+
 def provas_das_questoes(ids):
-    """Cadernos oficiais de cada questão ({id: [{banca, edicao, numero_prova}]}),
-    da edição mais recente para a mais antiga. Uma questão pode estar em mais de
-    um caderno — o Revalida 2025/2 e o ENAMED 2025 aplicaram as mesmas 43 —, e as
-    colunas `questoes.banca`/`edicao` guardam só o caderno principal."""
+    """Cadernos oficiais de cada questão ({id: [{banca, edicao, numero_prova,
+    gabarito_preliminar}]}), da edição mais recente para a mais antiga. Uma
+    questão pode estar em mais de um caderno — o Revalida 2025/2 e o ENAMED 2025
+    aplicaram as mesmas 43 —, e as colunas `questoes.banca`/`edicao` guardam só o
+    caderno principal."""
     ids = list(ids)
     if not ids:
         return {}
@@ -1506,7 +1519,8 @@ def provas_das_questoes(ids):
     provas = {}
     for linha in linhas:
         provas.setdefault(linha["questao_id"], []).append(
-            {"banca": linha["banca"], "edicao": linha["edicao"], "numero_prova": linha["numero_prova"]}
+            {"banca": linha["banca"], "edicao": linha["edicao"], "numero_prova": linha["numero_prova"],
+             "gabarito_preliminar": gabarito_preliminar(linha["banca"], linha["edicao"])}
         )
     return provas
 
@@ -2831,7 +2845,8 @@ def listar_edicoes_oficiais():
             GROUP BY qp.banca, qp.edicao
             ORDER BY qp.edicao DESC, qp.banca
         """).fetchall()
-    return [{**r, "tempo_limite_min": r["total"] * MINUTOS_POR_QUESTAO_PROVA_OFICIAL} for r in rows]
+    return [{**r, "tempo_limite_min": r["total"] * MINUTOS_POR_QUESTAO_PROVA_OFICIAL,
+             "gabarito_preliminar": gabarito_preliminar(r["banca"], r["edicao"])} for r in rows]
 
 
 def ids_questoes_da_edicao(banca, edicao):
@@ -2851,11 +2866,14 @@ def ids_questoes_da_edicao(banca, edicao):
 # publicou — conferidas em 26/09/2026 nas notícias do INEP e da Agência Brasil.
 # Até a 2025/1 a 1ª etapa somava a prova objetiva e a discursiva, em 150 pontos;
 # da 2025/2 em diante é só a objetiva, em 100. `anuladas` só existe nas provas só
-# objetivas, as únicas em que a nota do aluno se compara com o corte: são as
-# anuladas no gabarito definitivo, cujo ponto o INEP deu a todos (regra que valeu
-# até a 2026/1; na 2026/2 a anulada passou a sair da conta). Edição nova do
-# Revalida importada entra aqui também. O ENAMED fica de fora: o corte dele (60)
-# é numa escala de TRI, não em acertos.
+# objetivas contadas em acertos, as únicas em que a nota do aluno se compara com o
+# corte: são as anuladas no gabarito definitivo, cujo ponto o INEP deu a todos. Da
+# 2026/2 em diante a 1ª etapa usa as questões e a nota do ENAMED (Edital Inep nº
+# 76/2026, itens 3.1.1 e 16.2): TRI pelo modelo de Rasch (Nota Técnica nº
+# 42/2025), corte 60 nessa escala, anulada fora do cálculo. Os acertos não viram
+# essa nota sem os parâmetros das questões, estimados com as respostas de todos os
+# candidatos, então essas edições levam `"escala": "TRI"` e só mostram o corte.
+# Edição nova do Revalida importada entra aqui também. O ENAMED fica de fora.
 NOTAS_DE_CORTE_REVALIDA = {
     "2021": {"corte": 90, "maximo": 150},
     "2022/1": {"corte": 99.6, "maximo": 150},
@@ -2867,16 +2885,18 @@ NOTAS_DE_CORTE_REVALIDA = {
     "2025/1": {"corte": 88, "maximo": 150},
     "2025/2": {"corte": 61, "maximo": 100, "anuladas": 7},
     "2026/1": {"corte": 59, "maximo": 100, "anuladas": 0},
+    "2026/2": {"corte": 60, "maximo": 100, "escala": "TRI"},
 }
 
 
 def comparar_com_corte(banca, edicao, acertos, num_questoes):
     """O corte da 1ª etapa do Revalida na edição e, onde a prova era só
-    objetiva, a nota que o aluno teria tirado (`nota`): os acertos mais o ponto
-    das anuladas, com as questões do caderno que ficaram fora do banco (figura
-    de terceiros) contadas no ritmo das outras. Onde a 1ª etapa somava a
-    discursiva, `nota` é None: a objetiva sozinha não diz se ele passaria. None
-    fora do Revalida ou em edição sem corte conhecido."""
+    objetiva e contada em acertos, a nota que o aluno teria tirado (`nota`): os
+    acertos mais o ponto das anuladas, com as questões do caderno que ficaram
+    fora do banco (figura de terceiros) contadas no ritmo das outras. Onde a 1ª
+    etapa somava a discursiva, ou onde a nota é a TRI do ENAMED (`escala`),
+    `nota` é None: os acertos sozinhos não dizem se ele passaria. None fora do
+    Revalida ou em edição sem corte conhecido."""
     corte = NOTAS_DE_CORTE_REVALIDA.get(edicao) if (banca or "").upper() == "REVALIDA" else None
     if corte is None:
         return None
@@ -2885,12 +2905,13 @@ def comparar_com_corte(banca, edicao, acertos, num_questoes):
         validas = corte["maximo"] - corte["anuladas"]
         nota = round(corte["anuladas"] + acertos * validas / num_questoes, 1)
     return {"edicao": edicao, "corte": corte["corte"], "maximo": corte["maximo"], "nota": nota,
-            "anuladas": corte.get("anuladas")}
+            "anuladas": corte.get("anuladas"), "escala": corte.get("escala")}
 
 
 def corte_de_referencia():
-    """O corte da edição mais recente do Revalida só objetiva: a mesma escala da
-    nota projetada, acertos numa prova de 100."""
+    """O corte da edição mais recente do Revalida só objetiva e contada em
+    acertos: a mesma escala da nota projetada, acertos numa prova de 100. A
+    2026/2, em TRI, fica de fora de propósito (não tem `anuladas`)."""
     edicao = max(e for e, c in NOTAS_DE_CORTE_REVALIDA.items() if "anuladas" in c)
     c = NOTAS_DE_CORTE_REVALIDA[edicao]
     return {"edicao": edicao, "corte": c["corte"], "maximo": c["maximo"]}

@@ -37,6 +37,25 @@ export const ROTULO_TIPO: Record<TipoNovidade, string> = {
 
 export const NOVIDADES: Novidade[] = [
   {
+    id: "2026-09-27a",
+    data: "27 de setembro de 2026",
+    titulo: "ENAMED 2026 comentado",
+    itens: [
+      {
+        tipo: "novo",
+        texto: "A prova do ENAMED 2026, que também foi a 1ª etapa da Revalida 2026/2, entrou com explicação em cada questão: no Praticar, na Revisão e como prova oficial, inteira ou em blocos.",
+      },
+      {
+        tipo: "novo",
+        texto: "O gabarito ainda é o preliminar do INEP, e o selo da questão avisa. As questões com gabarito em discussão ficaram de fora até o definitivo, previsto para 4 de dezembro.",
+      },
+      {
+        tipo: "novo",
+        texto: "No resultado da prova, o corte de 60 vem com o aviso de que, desde esta edição, o INEP calcula a nota pela TRI, como no ENAMED.",
+      },
+    ],
+  },
+  {
     id: "2026-09-26h",
     data: "26 de setembro de 2026",
     titulo: "Prova em blocos, completa",

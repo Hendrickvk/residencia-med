@@ -141,14 +141,17 @@ export const BANCAS_OFICIAIS = [
 
 // Todos os cadernos em que a questão caiu (db.provas_das_questoes): as 43 questões
 // comuns ao Revalida 2025/2 e ao ENAMED 2025 apareciam com um selo só. Sem lista
-// (questão fora de caderno oficial), cai no banca + ano da própria questão.
+// (questão fora de caderno oficial), cai no banca + ano da própria questão. Prova
+// publicada antes do gabarito definitivo do INEP leva o aviso no próprio selo.
 export function seloDasProvas(questao: {
   provas?: ProvaDaQuestao[];
   banca?: string | null;
   ano?: number | null;
 }): string {
   if (questao.provas?.length) {
-    return questao.provas.map((p) => nomeEdicao(p.banca, p.edicao)).join(" · ");
+    const nomes = questao.provas.map((p) => nomeEdicao(p.banca, p.edicao));
+    if (questao.provas.some((p) => p.gabarito_preliminar)) nomes.push("gabarito preliminar");
+    return nomes.join(" · ");
   }
   return [questao.banca, questao.ano].filter(Boolean).join(" ");
 }

@@ -100,7 +100,8 @@ def obter(simulado_id: int, usuario=Depends(usuario_atual)):
                                       simulado["num_questoes"])
     elif simulado["finalizado_em"]:
         prova = db.prova_em_blocos(simulado["banca"], simulado["edicao"], usuario_id=usuario["id"])
-    return {**simulado, "corte": corte, "prova_em_blocos": prova}
+    return {**simulado, "corte": corte, "prova_em_blocos": prova,
+            "gabarito_preliminar": db.gabarito_preliminar(simulado["banca"], simulado["edicao"])}
 
 
 @router.get("/{simulado_id}/itens")

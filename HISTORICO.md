@@ -31,6 +31,90 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   (3) Simulado com histórico e blocos menores e (4) nota projetada contra a
   nota de aprovação — as duas feitas em 26/09 (registros em 2026-09-26 abaixo).
   Com a (4), a lista da crítica fechou.
+- **Revalida 2026/2 = ENAMED 2026: no ar com o gabarito preliminar desde 27/09**
+  (decisão do usuário: o definitivo só sai em 04/12, e a procura pela prova
+  comentada é agora). Entraram 96 questões, sem a 37, a 60, a 67 e a 77, as de
+  gabarito discutível; `db.EDICOES_GABARITO_PRELIMINAR` põe "gabarito
+  preliminar" no selo da questão, na lista de provas e no cabeçalho do
+  resultado. **Em 04/12, com o definitivo** (`2026_2_gabarito_definitivo_…` na
+  aba 2026 do INEP): (1) comparar letra a letra as 96; letra trocada → nova
+  explicação pelo `corrigir_explicacoes.py`, `resposta_correta` atualizada e
+  `respostas.correta` recalculada para quem já respondeu (senão o Painel dela
+  segue contando com o gabarito velho); anulada → sai do banco com as respostas
+  dela, porque a questão deixou de valer; (2) a 37, a 60, a 67 e a 77 que o INEP
+  mantiver entram pelo `importar_prova.py` com `--tambem ENAMED 2026` (as
+  explicações já estão nos lotes 4 a 7 e dizem o que era discutível — reler à
+  luz do definitivo); (3) tirar a edição de `EDICOES_GABARITO_PRELIMINAR`; (4)
+  entrada em "O que mudou". Backup antes, como sempre. O histórico da leitura
+  segue abaixo.
+- **Revalida 2026/2 = ENAMED 2026, leitura** (começou em 26/09, pedido do
+  usuário). O caderno 1 dos dois é **a mesma prova**: as 100 questões na mesma
+  ordem e o mesmo gabarito preliminar (comparados questão a questão; a diferença
+  era só rodapé). Entra uma vez só, como REVALIDA 2026/2, com linhas de
+  `questoes_provas` para ENAMED 2026 nos mesmos números. Só há gabarito
+  **preliminar**: a leitura e as explicações se adiantam agora, e a aplicação
+  espera o definitivo — anulada sai, letra trocada reescreve a explicação (o
+  `montar_prova.py` já trava explicação que não cite a letra do gabarito).
+  **Fase A feita** (em `backups/provas/revalida_2026-2/`, fora do git): PDFs,
+  `caderno.txt` pelo `decodificar.py` — que passou a ordenar os caracteres só
+  pelo x, de forma estável, porque a ligadura "ti" saía "it" ("insittuição") —,
+  `rascunho.json` com as 100 questões pelo `montar_rascunho.py`, agora com
+  alternativas "(A)", filtro de "ÁREA LIVRE"/"CADERNO 01" e o subscrito de
+  SatO2/SpO2 religado (9 questões). Figuras reais só em 8 questões (29 ECG, 37
+  Lund-Browder, 52, 53, 67, 75, 81, 89), recortadas por `recortar_figuras.py` com
+  o título em negrito que 4 delas têm, fotos em JPEG (46–310 KB); a imagem da
+  página 28 é do questionário. Tabelas achatadas a reescrever em prosa: 22, 23,
+  32, 34, 59, 82, 96 (e 22, 23, 27, que o rascunho não marcou). **Fase B
+  feita (27/09):** os 9 lotes (Q1–Q100) montam sem problema no
+  `montar_prova.py`, que agora leva a figura do lote (`"imagem":
+  "figuras/qN.jpg"`, caminho absoluto porque o importador roda da raiz), não cola
+  mais o número da página na alternativa D e religa palavra composta partida na
+  quebra de linha ("observa- se"). O dry run do `importar_prova.py` passou: 100
+  questões, taxonomia resolvida, sem duplicata, 8 figuras. `auditar_explicacoes`
+  deu 1 suspeita, falso positivo por sinônimo (Q12); `auditar_numeros` listou 7
+  doses e 3 leis, todas conferidas. Fontes checadas na rede: a nota metodológica
+  do indicador C3 do Ministério (Q62: 1ª consulta até 12 semanas, 7 consultas,
+  testes do 1º trimestre) e o guia de inundações do Ministério (Q77).
+  **Quatro questões são recicladas** de edições no banco, com alternativas
+  diferentes, e entram como questões novas (a prova oficial precisa da versão
+  aplicada): Q4 ≈ 2024/2 Q49 (lá a resposta foi ressonância, aqui ultrassom — a
+  explicação nova cita a outra), Q54 ≈ 2024/2 Q99 (colo curto: o INEP prefere
+  progesterona, a USP 2026 Q111 cobrou cerclagem — a explicação nova amarra as
+  três), Q94 ≈ 2024/2 Q74 e Q99 ≈ 2025/1 Q44 (mesma resposta). **Gabarito
+  preliminar discutível — conferir primeiro no definitivo:** Q37 (a letra A diz
+  "2.820 mL em 16 horas", e o volume é para 24 h), Q60 ("epiglote rígida"; há
+  textos que a dizem flácida), Q67 (fixação cirúrgica antes da angioembolização,
+  com hipotensão depois da cinta pélvica) e Q77 (no guia de inundações do
+  Ministério, sentinela e surtos aparecem na recuperação, o que é a alternativa
+  C). As quatro explicações já dizem o que é discutível. **Falta:** o gabarito
+  definitivo (comparar letra a letra, tirar anuladas, reescrever explicação de
+  letra trocada), backup, `--aplicar --tambem ENAMED 2026` (opção nova do
+  importador, 27/09: grava cada questão uma vez e liga o mesmo número aos dois
+  cadernos na mesma transação; o dry run com ela passou) e a entrada em "O que
+  mudou". **O corte da 2026/2 já está no código
+  (27/09), e não era o que se pensava:** o Edital Inep nº 76/2026 (itens 3.1.1,
+  13.6 e 16.2) faz da 1ª etapa a prova e a nota do ENAMED — TRI pelo modelo de
+  Rasch (Nota Técnica nº 42/2025: nota = θ × 17,544 + 67,018, proficiente a
+  partir de 60), anulada e item descartado pelo modelo fora do cálculo. "A
+  anulada sai da conta" era a manchete; a conta não é mais de acertos. Sem os
+  parâmetros das questões, estimados com as respostas de todos os candidatos,
+  os acertos da aluna não viram essa nota, então a 2026/2 entrou em
+  `NOTAS_DE_CORTE_REVALIDA` com `"escala": "TRI"` (corte 60, sem `anuladas`), e o
+  resultado do simulado mostra o corte com esse motivo e sem veredito. O Painel
+  segue comparando a nota projetada com a 2026/1 (59), o último corte contado em
+  acertos, que é a escala da projeção. Em 27/09 o INEP ainda só tinha o gabarito
+  preliminar, tanto na aba do Revalida quanto na do ENAMED; pelo cronograma do
+  edital (item 1.4), **o definitivo sai em 04/12/2026**. **Ensaio no branch de
+  testes (27/09):** a prova importada lá com `--tambem ENAMED 2026` (100 linhas
+  em cada caderno, mesmos números) e feita inteira pelo navegador local — as
+  figuras aparecem, e o resultado mostra o corte 60 com o motivo da TRI, sem
+  veredito. Questões e conta apagadas do branch depois. Observação de
+  desempenho, sem mexer por ora: o `POST /simulados/{id}/finalizar` faz ~6 idas
+  ao banco por questão respondida (`_consolidar_no_historico`: resposta e
+  revisão, cada uma na sua transação); do localhost ao Neon, numa prova de 100,
+  passou de 1 minuto. Do servidor, colado ao Neon, deve ficar em poucos
+  segundos, mas o journal dos últimos 10 dias não tinha finalização para medir.
+  Se um dia pesar, é juntar a consolidação numa transação só.
 - **Revalida 2020: travada no gabarito.** A aba de 2020 do INEP só tem
   `gabarito_caderno_1.pdf` e `_2`, os dois **preliminares**, e a área de
   resultados não traz o definitivo (procurado em 26/09). Sem o definitivo não
@@ -2263,7 +2347,8 @@ governa as telas admin do Streamlit.
   de 150 pontos a discursiva entrava na soma e a objetiva sozinha não diz se
   ela passaria, então a tela mostra só o corte. (2) A nota que ela teria tirado
   soma o ponto das anuladas, que o INEP deu a todos até a 2026/1 (na 2026/2 a
-  regra mudou: a anulada sai da conta) — na 2025/2 são 7, e errar isso
+  nota passou a ser a TRI do ENAMED, e a edição mostra só o corte — registro
+  de 27/09 no alto) — na 2025/2 são 7, e errar isso
   deslocava o veredito em 7 pontos; a questão que ficou fora do banco por
   figura de terceiros (2026/1, Q5) conta no ritmo das outras. (3) O ENAMED fica
   de fora: o corte dele (60) é numa escala de TRI, e percentual de acerto não

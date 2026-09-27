@@ -113,7 +113,10 @@ export default function Resultado({ simuladoId, onNovoSimulado }: Props) {
   return (
     <div className="mx-auto flex max-w-[680px] animate-desvanecer flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <span className="rotulo text-muted">{nomeProva ? `Resultado · ${nomeProva}` : "Resultado do simulado"}</span>
+        <span className="rotulo text-muted">
+          {nomeProva ? `Resultado · ${nomeProva}` : "Resultado do simulado"}
+          {simulado.gabarito_preliminar && " · gabarito preliminar"}
+        </span>
         <h1 className="text-titulo">
           {acertos} de {total} questões certas.
         </h1>
@@ -369,14 +372,24 @@ export default function Resultado({ simuladoId, onNovoSimulado }: Props) {
 }
 
 // A nota de corte da 1ª etapa do Revalida nesta edição (db.comparar_com_corte). Onde a
-// prova era só objetiva, a nota que a aluna teria tirado e a distância até o corte; onde
-// a discursiva entrava na soma, só o corte, sem veredito.
+// prova era só objetiva e contada em acertos, a nota que a aluna teria tirado e a
+// distância até o corte; onde a discursiva entrava na soma, ou a nota é a TRI do ENAMED,
+// só o corte, sem veredito.
 function LinhaCorte({ corte: c }: { corte: ComparacaoCorte }) {
   const corte = (
     <strong className="font-semibold text-ink">
       {formatarNumeroBR(c.corte)} de {c.maximo}
     </strong>
   );
+  if (c.escala === "TRI") {
+    return (
+      <p className="text-corpo text-ink-2">
+        A nota de corte da 1ª etapa nesta edição foi {corte} pontos, na escala da TRI que o INEP passou a usar, a mesma
+        do ENAMED: ela pesa a dificuldade de cada questão entre todos os candidatos, e só os acertos não dizem se você
+        passaria.
+      </p>
+    );
+  }
   if (c.nota === null) {
     return (
       <p className="text-corpo text-ink-2">

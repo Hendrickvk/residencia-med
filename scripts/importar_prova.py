@@ -21,10 +21,13 @@ Formato do JSON:
 Uso:
     python scripts/importar_prova.py prova.json            # simula
     python scripts/importar_prova.py prova.json --aplicar  # grava
+
+Prova aplicada em dois cadernos com as mesmas questões na mesma ordem (a
+Revalida 2026/2 é o ENAMED 2026): `--tambem ENAMED 2026` grava cada questão uma
+vez só e liga o mesmo número também ao outro caderno, em `questoes_provas`.
 """
 
 import argparse
-import datetime
 import json
 import mimetypes
 import os
@@ -47,7 +50,7 @@ def _chave_duplicata(banca, ano, enunciado):
     return (banca or "").upper(), ano, re.sub(r"[^a-z0-9 ]", "", texto)[:90]
 
 
-def validar(prova):
+def validar(prova, tambem=None):
     """Confere tudo antes de tocar no banco. Devolve (questões prontas, erros)."""
     banca, ano, edicao = prova.get("banca"), prova.get("ano"), prova.get("edicao")
     erros = []
@@ -55,13 +58,16 @@ def validar(prova):
         erros.append("JSON sem banca, ano ou edicao")
         return [], erros
 
+    cadernos = [(banca, edicao)] + ([tuple(tambem)] if tambem else [])
     with db.get_conn() as conn:
         existentes = conn.execute("SELECT banca, ano, enunciado FROM questoes").fetchall()
         ja_no_banco = {_chave_duplicata(q["banca"], q["ano"], q["enunciado"]) for q in existentes}
+        # Número já ocupado em qualquer dos cadernos que a prova vai preencher.
         numeros_da_edicao = {
             linha["numero_prova"]
+            for b, e in cadernos
             for linha in conn.execute(
-                "SELECT numero_prova FROM questoes_provas WHERE banca = ? AND edicao = ?", (banca, edicao)
+                "SELECT numero_prova FROM questoes_provas WHERE banca = ? AND edicao = ?", (b, e)
             ).fetchall()
         }
 
@@ -105,8 +111,10 @@ def validar(prova):
     return prontas, erros
 
 
-def resumir(prova, prontas):
+def resumir(prova, prontas, tambem=None):
     print(f"{prova['banca']} {prova['edicao']} (ano {prova['ano']}): {len(prontas)} questões")
+    if tambem:
+        print(f"  também no caderno {tambem[0]} {tambem[1]}, com os mesmos números")
     for chave in ("area", "tipo_pergunta"):
         contagem = {}
         for q in prontas:
@@ -116,9 +124,10 @@ def resumir(prova, prontas):
     print(f"  com imagem: {com_imagem or 'nenhuma'}")
 
 
-def aplicar(prova, prontas):
+def aplicar(prova, prontas, tambem=None):
     banca, ano, edicao = prova["banca"], prova["ano"], prova["edicao"]
-    agora = datetime.datetime.now().isoformat()
+    cadernos = [(banca, edicao)] + ([tuple(tambem)] if tambem else [])
+    agora = db.agora_br().isoformat()
     inseridas = []
     with db.get_conn() as conn:  # uma transação: ou entra a prova inteira, ou nada
         c = conn.cursor()
@@ -134,10 +143,11 @@ def aplicar(prova, prontas):
                 q["explicacao"], banca, ano, edicao, q["numero_prova"], q["tipo_pergunta"], agora,
             ))
             questao_id = c.lastrowid
-            c.execute(
-                "INSERT INTO questoes_provas (questao_id, banca, edicao, numero_prova) VALUES (?, ?, ?, ?)",
-                (questao_id, banca, edicao, q["numero_prova"]),
-            )
+            for b, e in cadernos:
+                c.execute(
+                    "INSERT INTO questoes_provas (questao_id, banca, edicao, numero_prova) VALUES (?, ?, ?, ?)",
+                    (questao_id, b, e, q["numero_prova"]),
+                )
             if q.get("imagem"):
                 with open(q["imagem"], "rb") as arquivo:
                     dados = arquivo.read()
@@ -149,10 +159,10 @@ def aplicar(prova, prontas):
     os.makedirs(PASTA_BACKUP, exist_ok=True)
     caminho = os.path.join(
         PASTA_BACKUP,
-        f"importacao_{banca.lower()}_{edicao.replace('/', '-')}_{datetime.datetime.now():%Y%m%d_%H%M%S}.json",
+        f"importacao_{banca.lower()}_{edicao.replace('/', '-')}_{db.agora_br():%Y%m%d_%H%M%S}.json",
     )
     with open(caminho, "w", encoding="utf-8") as arquivo:
-        json.dump({"banca": banca, "edicao": edicao, "ano": ano, "questoes": inseridas},
+        json.dump({"banca": banca, "edicao": edicao, "ano": ano, "tambem": tambem, "questoes": inseridas},
                   arquivo, ensure_ascii=False, indent=1)
     print(f"Gravadas {len(inseridas)} questões. Ids em {caminho}")
 
@@ -166,12 +176,14 @@ def main():
     parser = argparse.ArgumentParser(description="Importa uma prova inteira a partir de um JSON.")
     parser.add_argument("json", help="arquivo com a prova montada")
     parser.add_argument("--aplicar", action="store_true", help="grava no banco (sem isso, só simula)")
+    parser.add_argument("--tambem", nargs=2, metavar=("BANCA", "EDICAO"),
+                        help="outro caderno com as mesmas questões na mesma ordem (ex.: ENAMED 2026)")
     args = parser.parse_args()
 
     with open(args.json, encoding="utf-8") as arquivo:
         prova = json.load(arquivo)
-    prontas, erros = validar(prova)
-    resumir(prova, prontas)
+    prontas, erros = validar(prova, args.tambem)
+    resumir(prova, prontas, args.tambem)
     if erros:
         print(f"\n{len(erros)} problema(s):")
         for erro in erros[:30]:
@@ -181,7 +193,7 @@ def main():
     if not args.aplicar:
         print("\nSimulação: nada gravado. Rode com --aplicar para gravar.")
         return
-    aplicar(prova, prontas)
+    aplicar(prova, prontas, args.tambem)
 
 
 if __name__ == "__main__":

@@ -101,14 +101,18 @@ def test_blocos_sao_fatias_contiguas_de_ate_25_com_tamanhos_parecidos():
 def test_nota_de_corte_do_revalida():
     # Só objetiva: os acertos mais as 7 anuladas, cujo ponto o INEP deu a todos.
     assert db.comparar_com_corte("REVALIDA", "2025/2", 60, 93) == {
-        "edicao": "2025/2", "corte": 61, "maximo": 100, "nota": 67, "anuladas": 7}
+        "edicao": "2025/2", "corte": 61, "maximo": 100, "nota": 67, "anuladas": 7, "escala": None}
     # A Q5 ficou fora do banco (figura de terceiros): conta no ritmo das outras 99.
     assert db.comparar_com_corte("REVALIDA", "2026/1", 66, 99)["nota"] == 66.7
     # Com a discursiva na soma, só o corte: a objetiva sozinha não diz se passaria.
     com_discursiva = db.comparar_com_corte("REVALIDA", "2023/1", 70, 93)
     assert (com_discursiva["corte"], com_discursiva["maximo"], com_discursiva["nota"]) == (96.635, 150, None)
+    # Da 2026/2 em diante a nota é a TRI do ENAMED: o corte aparece, o veredito não.
+    tri = db.comparar_com_corte("REVALIDA", "2026/2", 70, 100)
+    assert (tri["corte"], tri["nota"], tri["escala"]) == (60, None, "TRI")
     assert db.comparar_com_corte("ENAMED", "2025", 60, 90) is None  # corte em escala de TRI
     assert db.comparar_com_corte("USP", "2026", 80, 113) is None
+    # A referência do Painel é contada em acertos, como a nota projetada: a 2026/2 não entra.
     assert db.corte_de_referencia() == {"edicao": "2026/1", "corte": 59, "maximo": 100}
 
 
@@ -212,6 +216,9 @@ def test_questao_de_duas_provas_sai_com_as_duas_na_serializacao(usuario_teste, e
         )
     provas = db.provas_das_questoes([questao_id])[questao_id]
     assert {(p["banca"], p["edicao"]) for p in provas} == {(banca, edicao), ("PYTEST-GEMEA", f"{edicao}-g")}
+    # Só a edição publicada antes do gabarito definitivo leva o aviso no selo.
+    assert not any(p["gabarito_preliminar"] for p in provas)
+    assert db.gabarito_preliminar("Revalida", "2026/2") and not db.gabarito_preliminar("REVALIDA", "2026/1")
 
     simulado_id = db.criar_simulado(None, banca, 1, 10, [questao_id], usuario_id=usuario_teste, edicao=edicao)
     [item] = itens_endpoint(simulado_id, usuario=_usuario(usuario_teste))
