@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { NumeroAnimado } from "../../components/NumeroAnimado";
 import { TemaDoCaso } from "../../components/TemaDoCaso";
+import { AvisoGabaritoProvisorio } from "../../components/AvisoGabaritoProvisorio";
 import { ImagemQuestao } from "../../components/ImagemQuestao";
 import { CriarCartao } from "../../components/CriarCartao";
 import { RelatarErro } from "../../components/RelatarErro";
@@ -113,14 +114,13 @@ export default function Resultado({ simuladoId, onNovoSimulado }: Props) {
   return (
     <div className="mx-auto flex max-w-[680px] animate-desvanecer flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <span className="rotulo text-muted">
-          {nomeProva ? `Resultado · ${nomeProva}` : "Resultado do simulado"}
-          {simulado.gabarito_preliminar && " · gabarito preliminar"}
-        </span>
+        <span className="rotulo text-muted">{nomeProva ? `Resultado · ${nomeProva}` : "Resultado do simulado"}</span>
         <h1 className="text-titulo">
           {acertos} de {total} questões certas.
         </h1>
       </div>
+
+      {simulado.gabarito_preliminar && <AvisoGabaritoProvisorio fundo="bg-surface" />}
 
       {/* A primeira coluna mais larga: com uma casa decimal, "100,0%" não cabia num terço. */}
       <div className="grid grid-cols-1 divide-y divide-line-soft rounded-caso border border-line bg-surface sm:grid-cols-[1.5fr_1fr_1fr] sm:divide-x sm:divide-y-0">

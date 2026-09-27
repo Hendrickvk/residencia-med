@@ -6,6 +6,7 @@ import { EstadoFalha } from "../../components/EstadoFalha";
 import { EstadoVazio } from "../../components/EstadoVazio";
 import { Kbd } from "../../components/Kbd";
 import { TemaDoCaso } from "../../components/TemaDoCaso";
+import { AvisoGabaritoProvisorio } from "../../components/AvisoGabaritoProvisorio";
 import { ImagemQuestao } from "../../components/ImagemQuestao";
 import { CriarCartao } from "../../components/CriarCartao";
 import { RelatarErro } from "../../components/RelatarErro";
@@ -345,6 +346,7 @@ export default function Revisao() {
                 <div className="flex animate-entrar flex-col gap-3 border-t border-line-soft pt-6">
                   <span className="rotulo text-muted">Discussão do caso</span>
                   <span className="text-subtitulo">Resposta correta: {q.resposta_correta}</span>
+                  {q.provas?.some((p) => p.gabarito_preliminar) && <AvisoGabaritoProvisorio />}
                   <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
                     <TemaDoCaso tema={q.subtopico} />
                     <div className="flex flex-wrap items-center gap-4">

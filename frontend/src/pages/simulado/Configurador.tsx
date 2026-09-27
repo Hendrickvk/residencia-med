@@ -301,7 +301,7 @@ function LinhaEdicao({ edicao: e, indice, onFazer }: { edicao: EdicaoOficial; in
         <div className="text-[16px] font-semibold tabular-nums">{e.edicao}</div>
         <div className="text-apoio tabular-nums text-muted">
           {e.total} questões · {formatarDuracaoMin(e.tempo_limite_min)}
-          {e.gabarito_preliminar && " · gabarito preliminar"}
+          {e.gabarito_preliminar && " · gabarito provisório"}
         </div>
         {(e.ultima_pct !== null || blocosFeitos > 0) && (
           <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-apoio text-muted">

@@ -150,7 +150,7 @@ export function seloDasProvas(questao: {
 }): string {
   if (questao.provas?.length) {
     const nomes = questao.provas.map((p) => nomeEdicao(p.banca, p.edicao));
-    if (questao.provas.some((p) => p.gabarito_preliminar)) nomes.push("gabarito preliminar");
+    if (questao.provas.some((p) => p.gabarito_preliminar)) nomes.push("gabarito provisório");
     return nomes.join(" · ");
   }
   return [questao.banca, questao.ano].filter(Boolean).join(" ");

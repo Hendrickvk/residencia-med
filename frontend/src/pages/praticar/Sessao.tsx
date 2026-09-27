@@ -5,6 +5,7 @@ import { EstadoFalha } from "../../components/EstadoFalha";
 import { EstadoVazio } from "../../components/EstadoVazio";
 import { Kbd } from "../../components/Kbd";
 import { TemaDoCaso } from "../../components/TemaDoCaso";
+import { AvisoGabaritoProvisorio } from "../../components/AvisoGabaritoProvisorio";
 import { ImagemQuestao } from "../../components/ImagemQuestao";
 import { CriarCartao } from "../../components/CriarCartao";
 import { RelatarErro } from "../../components/RelatarErro";
@@ -459,6 +460,9 @@ export default function Sessao({ filtros, nonce, salva, email, onFinalizar, onVo
                       {fraseDistribuicao && <span className="animate-desvanecer">{fraseDistribuicao}</span>}
                     </span>
                   </div>
+                  {questaoAtual.provas?.some((p) => p.gabarito_preliminar) && (
+                    <AvisoGabaritoProvisorio />
+                  )}
                   <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
                     <TemaDoCaso tema={questaoAtual.subtopico} />
                     <div className="flex flex-wrap items-center gap-4">

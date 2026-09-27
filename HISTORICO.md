@@ -37,10 +37,20 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   o definitivo só sai em 04/12, e a procura pela prova comentada é agora).
   Conferido no localhost, com a prova no branch de testes: a lista de provas, o
   selo do Praticar ("Revalida 2026/2 · ENAMED 2026 · gabarito preliminar") e o
-  resultado. Entraram 96 questões, sem a 37, a 60, a 67 e a 77, as de
+  resultado. **Relida depois de subir (27/09), como manda o CLAUDE.md:** as 6
+  figuras contra a imagem (o ECG da Q29 é fibrilação atrial, e a explicação o
+  descreve), as doses, leis e contas; duas imprecisões corrigidas em produção
+  (Q22, sódio "no limite superior" quando está acima; Q45, sarampo "voltou a
+  circular no país", trocado pela perda do certificado de eliminação em 2019),
+  texto anterior em `backups/explicacoes_20260927_114223.json`, e as 96
+  marcadas `ok` em `backups/revisao_explicacoes.json`. Entraram 96 questões, sem a 37, a 60, a 67 e a 77, as de
   gabarito discutível; `db.EDICOES_GABARITO_PRELIMINAR` põe "gabarito
-  preliminar" no selo da questão, na lista de provas e no cabeçalho do
-  resultado. **Em 04/12, com o definitivo** (`2026_2_gabarito_definitivo_…` na
+  provisório" no selo da questão e na lista de provas e, onde a resposta certa
+  aparece (discussão do Praticar e da Revisão, resultado da prova), o aviso
+  `AvisoGabaritoProvisorio` — "Gabarito provisório. O oficial do INEP sai em
+  dezembro." —, a pedido do usuário (27/09): deixar claro que não é o oficial,
+  numa frase só; a primeira versão, com duas frases de explicação, ele achou
+  artificial. Conferido no localhost, no celular e no tema escuro. **Em 04/12, com o definitivo** (`2026_2_gabarito_definitivo_…` na
   aba 2026 do INEP): (1) comparar letra a letra as 96; letra trocada → nova
   explicação pelo `corrigir_explicacoes.py`, `resposta_correta` atualizada e
   `respostas.correta` recalculada para quem já respondeu (senão o Painel dela
