@@ -40,7 +40,8 @@ export function ConfirmeSeuEmail() {
         <div>
           <p className="text-corpo font-semibold text-ink">Confirme o seu e-mail para liberar as questões</p>
           <p className="mt-0.5 text-apoio text-muted">
-            Mandamos um link para <span className="text-ink-2">{me.email}</span>. Se não chegou, olhe o spam
+            {/* E-mail não tem onde quebrar: sem isto, um endereço longo empurrava a faixa para fora da borda no celular. */}
+            Mandamos um link para <span className="text-ink-2 [overflow-wrap:anywhere]">{me.email}</span>. Se não chegou, olhe o spam
             {" "}— ou peça outro.
           </p>
         </div>
