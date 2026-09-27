@@ -116,10 +116,11 @@ function Pagina() {
               Os cadernos inteiros do Revalida e do ENAMED, na ordem em que caíram, e provas de residência de São
               Paulo. Cada explicação passou por revisão, e as questões anuladas ficaram de fora.
             </p>
-            <ul className="mt-10 grid grid-cols-2 gap-3 md:grid-cols-4">
+            {/* Quatro colunas só a partir de 1024 px: antes disso, "UNICAMP" em 32 px passava da borda do card. */}
+            <ul className="mt-10 grid grid-cols-2 gap-3 lg:grid-cols-4">
               {BANCAS_OFICIAIS.map((b) => (
                 <li key={b.nome} className="rounded-caso border border-line bg-surface px-5 py-6">
-                  <span className="block text-[26px] font-extrabold leading-none tracking-[-0.03em] [font-stretch:110%] md:text-[32px]">
+                  <span className="block text-[22px] font-extrabold leading-none tracking-[-0.03em] [font-stretch:110%] sm:text-[32px]">
                     {b.nome}
                   </span>
                   <span className="mt-2 block text-apoio text-muted">{b.orgao}</span>

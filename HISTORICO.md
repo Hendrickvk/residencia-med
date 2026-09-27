@@ -192,8 +192,10 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   "Run failed" na caixa de entrada do dono. **Mas o Monitor quase não roda:**
   de 26/09 16h42 a 27/09 11h52 (UTC) o GitHub disparou o `*/15` só 6 vezes,
   em vez de ~76 — agendamento do Actions atrasa e pula execuções sob carga.
-  Queda no site pode levar horas para virar alerta; um monitor externo
-  resolveria (proposto ao usuário em 27/09).
+  Queda no site pode levar horas para virar alerta. Um monitor externo
+  (UptimeRobot, grátis, a cada 5 min) resolveria; **o usuário dispensou em
+  27/09, por enquanto**: com poucos usuários, o impacto de uma queda é baixo.
+  Repropor quando a base crescer, não antes.
 - **O "dia" da plataforma vira às 21h de Brasília** (achado em 25/09, depois de
   subir a ofensiva nova). O servidor (`timedatectl`: Etc/UTC) e o banco (sessão
   em GMT) rodam em UTC, e tudo que é "hoje" sai de `datetime.now()`/
@@ -272,20 +274,17 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   principals só para isso seria desproporcional. A outra sobra, o login real
   no navegador pelo https, saiu da lista: as contas reais entram por ele desde
   23/09.
-- **Próximas provas.** A próxima edição do ENAMED é a coleta de maior valor —
-  é a prova que faz hoje a seleção de acesso direto e entra no peso do INEP que
-  alimenta as prioridades e a nota projetada do Painel —, mas está
-  **bloqueada até 04/12/2026**: a prova foi aplicada em 13/09 e o INEP só
-  publicou o gabarito preliminar, que muda em anulação e em letra depois dos
-  recursos. A Revalida 2026/2 está no mesmo estado. As abas por ano da página
+- **Próximas provas.** O ENAMED é a coleta de maior valor — é a prova que faz
+  hoje a seleção de acesso direto e entra no peso do INEP que alimenta as
+  prioridades e a nota projetada do Painel. O de 2026 (= Revalida 2026/2) entrou
+  em 27/09 com o gabarito preliminar (ver acima; o definitivo sai em
+  04/12/2026); o próximo é o de 2027. As abas por ano da página
   do INEP (`…/revalida/provas-e-gabaritos/{ano}`) trazem os links dos PDFs no
   próprio HTML; foi assim que 2025/2, 2026/1 e a 2021 foram achadas depois de o
   padrão de nome falhar. Seguir o roteiro do `CLAUDE.md` e gravar com
   `scripts/importar_prova.py`. A USP precisa ser coletada todo ano, porque a
-  FUVEST só mantém a edição corrente no ar. A Revalida 2020 e a 2022/1 também
-  não entraram: a sugestão de 15/09 era importá-las junto com a 2021, porque o
-  domínio por tema se apoia numa mediana de 4 questões por tema (ver
-  Acompanhamento do desempenho), e só a 2021 saiu.
+  FUVEST só mantém a edição corrente no ar. A Revalida 2022/1 já entrou; a 2020
+  segue travada no gabarito (ver acima).
 - **Flashcards, o que ficou fora:** imagem no cartão e busca nos cartões
   esperam uma semana de uso (desde 23/09), que é quem vai dizer qual importa
   mais; juntar as duas filas de revisão continua adiado, por decisão do
