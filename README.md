@@ -1,62 +1,72 @@
-# Plataforma de Estudos para Residência Médica
+# Conduta
 
-Aplicação local (roda no seu computador) para apoiar a preparação para
-provas de residência médica (ENAMED e principais instituições de SP),
-inspirada em plataformas como a Medcof.
+As provas oficiais do Revalida e do ENAMED, comentadas. O Conduta é uma plataforma de estudo para o Revalida, o ENAMED e provas de residência médica, no ar em **[qualaconduta.com.br](https://qualaconduta.com.br)**.
 
-## Funcionalidades da versão atual (MVP)
+## O que tem
 
-- **Banco de questões**: cadastro de questões por área/subtópico, com
-  alternativas, resposta correta, explicação, banca e ano.
-- **Responder questões**: modo de estudo em lote, com correção imediata.
-- **Dashboard de desempenho**: gráficos de % de acerto por área, por
-  subtópico e por banca/instituição (com comparativo cruzado
-  banca × área), evolução diária e ranking das questões mais
-  erradas — para você enxergar rápido onde estão seus pontos fracos.
-- **Repetição espaçada**: fila de revisão baseada em um algoritmo
-  estilo Anki/SM-2 — questões erradas voltam mais cedo, questões
-  dominadas voltam com intervalos maiores.
-- **Simulado cronometrado**: monte uma prova no formato ENAMED/SP —
-  escolha o número de questões, filtre por área e/ou banca, defina o
-  tempo limite e responda sem correção imediata (igual numa prova de
-  verdade). Ao final (ou quando o tempo acaba), você vê a nota, o
-  desempenho por área naquele simulado e a revisão completa de cada
-  questão, com gabarito e explicação.
-- **Importação em massa de questões**: sobe um Excel (.xlsx) ou CSV
-  com centenas de questões de uma vez (tem botão para baixar um
-  modelo pronto). Detecta duplicatas e mostra um relatório de erros
-  linha a linha.
+- **Provas oficiais, questão por questão.** Os cadernos do Revalida e do ENAMED na ordem em que caíram, e provas de residência de São Paulo (USP e UNICAMP). As questões anuladas ficam de fora.
+- **O porquê de cada alternativa.** Você responde, vê na hora qual era a conduta e lê por que cada alternativa está certa ou errada.
+- **Painel.** O desempenho por grande área, em níveis ancorados na nota de corte, e os temas onde você mais perde pontos.
+- **Revisão espaçada.** Cada caso respondido volta no dia certo: dez minutos depois de um erro, e cada vez mais espaçado quando você lembra.
+- **Simulados.** A prova inteira ou em blocos de até 25 questões, com 3 minutos por questão, como no dia. No Revalida, o resultado vem ao lado da nota de corte da edição.
+- **Cartões.** Flashcards próprios, que seguem o mesmo ritmo da revisão.
 
-## Como importar questões em massa
+As questões são das provas oficiais publicadas pelo INEP, pela FUVEST e pela COMVEST. As explicações são próprias do Conduta, escritas para cada questão e revisadas uma a uma.
 
-1. Abra **"Importar Questões (planilha)"** no menu lateral.
-2. Baixe o modelo `.xlsx`, preencha suas questões seguindo o mesmo
-   formato (uma linha por questão) e salve.
-3. Suba o arquivo (.xlsx ou .csv) — o app mostra uma prévia antes de
-   importar.
-4. Clique em **"Importar todas as questões"**. Você recebe um
-   relatório com quantas foram importadas, quantas já existiam
-   (ignoradas) e quais linhas tiveram problema (com o motivo).
+## Como é feito
 
-## Como fazer um simulado cronometrado
+| Parte | O que é |
+|---|---|
+| `frontend/` | O app dos alunos: React 19, Vite, TypeScript e Tailwind CSS 3, no sistema visual descrito em `DESIGN_TRIAGEM.md`. |
+| `api/` | A API, em FastAPI. A sessão fica num cookie httpOnly. |
+| `db.py`, `repeticao_espacada.py` | Toda a regra de negócio — filtros, revisão espaçada (SM-2), ofensiva, painel —, usada igual pela API e pelo admin. |
+| `app.py`, `ui.py`, `auth.py` | As telas de administração, em Streamlit: banco de questões, importação e uso da plataforma. |
+| `scripts/` | Importação de provas oficiais, rotina diária (relatório e lembretes), backup e manutenção do banco. |
 
-1. Abra **"Simulado"** no menu lateral.
-2. Escolha o número de questões (10/20/30/50 ou um valor
-   personalizado), filtre por área e/ou banca se quiser, e ajuste o
-   tempo limite (o app já sugere um valor com base na quantidade de
-   questões, mas você pode editar).
-3. Clique em **"Iniciar simulado"**. Se não houver questões
-   suficientes para o filtro escolhido, o botão fica desabilitado e o
-   app avisa quantas estão disponíveis.
-4. Responda as questões na ordem que preferir — dá para navegar entre
-   elas (Anterior/Próxima ou pelo seletor "Ir para questão") e as
-   respostas ficam salvas mesmo se você voltar. Não há correção
-   imediata, só o cronômetro no topo da tela.
-5. Ao clicar em **"Finalizar Simulado"** (ou quando o tempo acabar
-   sozinho), você vê a nota final, o desempenho por área daquele
-   simulado e a revisão completa — cada questão com sua resposta, o
-   gabarito e a explicação. As respostas também alimentam o Dashboard
-   geral e a fila de Repetição Espaçada, como se você tivesse
-   respondido na tela "Responder Questões".
-6. Um histórico dos últimos simulados concluídos fica disponível na
-   própria tela de configuração.
+O banco é Postgres (Neon), o e-mail sai pelo Brevo, e a produção roda num servidor da Oracle Cloud atrás do Caddy, com HTTPS.
+
+## Rodar localmente
+
+Precisa de Python 3, Node.js e um banco Postgres. A conexão vem de `DATABASE_URL`, como variável de ambiente ou em `.streamlit/secrets.toml` (fora do git).
+
+```bash
+pip install -r requirements.txt
+uvicorn api.main:app --reload     # API em http://localhost:8000
+
+cd frontend
+npm install
+npm run dev                       # app em http://localhost:5173
+
+streamlit run app.py              # admin em http://localhost:8501
+```
+
+Outras variáveis, todas opcionais para desenvolver:
+
+| Variável | Para quê |
+|---|---|
+| `JWT_SECRET_KEY` | Assina as sessões. Sem ela, cada processo sorteia uma e as sessões caem quando a API reinicia. |
+| `ADMIN_EMAILS` | E-mails com acesso de admin, separados por vírgula. Sem ela, ninguém é admin. |
+| `BREVO_API_KEY`, `EMAIL_REMETENTE` | Envio de e-mail: a chave do Brevo e o endereço de quem envia. Sem as duas, o e-mail — com o link de confirmação ou de troca de senha — vai para o log da API. |
+| `EMAIL_REMETENTE_NOME` | Nome de quem envia os e-mails (padrão: Conduta). |
+| `COOKIE_SECURE` | `true` quando o site é servido em HTTPS. |
+| `CORS_ORIGENS` | Origens que podem chamar a API, separadas por vírgula. |
+| `DATABASE_URL_TESTES` | Banco separado para os testes (abaixo). |
+
+## Testes
+
+```bash
+pytest                                  # tudo
+pytest tests/test_sm2.py                # um arquivo
+pytest tests/test_sm2.py::test_nome     # um teste
+cd frontend && npm run lint && npm run build
+```
+
+Os testes gravam no banco. Defina `DATABASE_URL_TESTES` apontando para um banco separado: sem ela, eles usam o mesmo `DATABASE_URL` do app.
+
+## Documentação
+
+- `CLAUDE.md` — a arquitetura e as regras do código, incluindo decisões que não se mudam sem motivo.
+- `DEPLOY.md` — como a produção está montada e como subir uma versão.
+- `HISTORICO.md` — por que as coisas são como são, e o que está pendente.
+- `MIGRACAO.md` — a passagem do Streamlit para FastAPI + React.
+- `DESIGN_TRIAGEM.md` — o sistema visual.
