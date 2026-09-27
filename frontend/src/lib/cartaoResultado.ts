@@ -16,6 +16,7 @@ export interface DadosCartao {
   acertos: number;
   total: number;
   areas: { area: string; pct_acerto: number }[];
+  emBlocos?: boolean; // a prova inteira, feita em blocos (db.prova_em_blocos)
 }
 
 const LARGURA = 1080;
@@ -93,7 +94,8 @@ export async function desenharCartao(d: DadosCartao): Promise<Blob> {
   // resultado bom inibe quem postaria. O nível fica só na cor das barras.
   ctx.fillStyle = c.ink2;
   fonte(ctx, 700, 46);
-  ctx.fillText(d.prova, MARGEM, 262);
+  // Feita em blocos, o cartão diz: quatro sentadas não são cinco horas seguidas.
+  ctx.fillText(d.emBlocos ? `${d.prova} · em blocos` : d.prova, MARGEM, 262);
   ctx.fillStyle = c.ink;
   fonte(ctx, 800, 250, "semi-expanded", "-10px");
   ctx.fillText(`${d.pct}%`, MARGEM - 8, 500);
@@ -152,8 +154,13 @@ export function nomeArquivoCartao(prova: string): string {
 // de compartilhar do Windows não tem "salvar", e o WhatsApp Web não aparece
 // nela. O arquivo chega pronto: o `share` precisa sair do toque, e desenhar
 // antes dele podia estourar o tempo que o navegador dá ao gesto.
-export async function compartilharCartao(arquivo: File, prova: string, pct: number): Promise<"compartilhado" | "baixado" | "cancelado"> {
-  const texto = `Refiz a prova ${prova} no Conduta: ${pct}% de acerto. https://${SITE}`;
+export async function compartilharCartao(
+  arquivo: File,
+  prova: string,
+  pct: number,
+  emBlocos = false,
+): Promise<"compartilhado" | "baixado" | "cancelado"> {
+  const texto = `Refiz a prova ${prova}${emBlocos ? ", em blocos," : ""} no Conduta: ${pct}% de acerto. https://${SITE}`;
   if (matchMedia("(pointer: coarse)").matches && navigator.canShare?.({ files: [arquivo] })) {
     try {
       await navigator.share({ files: [arquivo], text: texto });

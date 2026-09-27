@@ -37,6 +37,21 @@ export const ROTULO_TIPO: Record<TipoNovidade, string> = {
 
 export const NOVIDADES: Novidade[] = [
   {
+    id: "2026-09-26h",
+    data: "26 de setembro de 2026",
+    titulo: "Prova em blocos, completa",
+    itens: [
+      {
+        tipo: "novo",
+        texto: "Terminou o último bloco de uma prova oficial? O resultado mostra a prova inteira somada, com a nota de corte, e dá para compartilhar o cartão dela.",
+      },
+      {
+        tipo: "corrigido",
+        texto: "O aproveitamento no resultado de uma prova agora tem uma casa decimal, como no Painel. Arredondado, 58,6% aparecia como 59% ao lado de um corte de 59.",
+      },
+    ],
+  },
+  {
     id: "2026-09-26g",
     data: "26 de setembro de 2026",
     titulo: "Triagem pela nota de corte",

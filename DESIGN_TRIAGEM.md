@@ -517,8 +517,21 @@ Conteúdo das demais telas: largura máxima 1360px, padding 36/40px.
   completa, o tempo de cada questão, em `--ink` e negrito quando passou do ritmo, e
   um traço na que o aluno nem abriu.
   Simulado de antes da medição não mostra tempo.
+- No resultado de um bloco, quando todos os blocos da edição já foram feitos, um
+  painel "Prova completa, em blocos" (borda `--ink`, como a prova em andamento):
+  o aproveitamento da prova inteira com a última vez de cada bloco
+  (`db.prova_em_blocos`), a etiqueta do nível, "Com a última vez de cada bloco,
+  a prova inteira fica em {x} de {y} questões" e a linha do corte. O
+  aproveitamento do resultado — o do simulado e o da prova completa — tem uma
+  casa decimal e o nível sai do valor exato: arredondado, 58,6% virava "59%" ao
+  lado de "0,4 ponto abaixo do corte de 59". Com a casa decimal, a primeira coluna
+  dos números ficou mais larga (1,5 para 1 nas outras duas): "100,0%" não cabia num
+  terço. A distância ao corte usa o singular abaixo de 2 ("0,4 ponto", "1,5 ponto").
 - **Cartão para compartilhar** (`lib/cartaoResultado.ts`), só no resultado da prova
-  oficial inteira (um bloco não é o resultado de uma prova): botão secundário
+  oficial inteira (um bloco não é o resultado de uma prova) ou, no bloco que fecha
+  a prova, o da prova em blocos somada, com "{edição} · em blocos" no cartão e
+  "Compartilhar a prova inteira" no botão — quatro sentadas não são cinco horas
+  seguidas, e o cartão não finge que são: botão secundário
   "Compartilhar resultado" logo abaixo dos números. Imagem
   1080×1350 (4:5, o que o WhatsApp e o Instagram mostram inteiro), sempre nos tokens
   `.dark` como a prévia do link: marca, edição, aproveitamento grande, "{x} acertos

@@ -25,6 +25,7 @@ from api.routers.simulados import edicoes as edicoes_endpoint
 from api.routers.simulados import em_andamento as em_andamento_endpoint
 from api.routers.simulados import finalizar as finalizar_endpoint
 from api.routers.simulados import itens as itens_endpoint
+from api.routers.simulados import obter as obter_endpoint
 from api.routers.simulados import somar_tempo as tempo_endpoint
 from api.routers.simulados import temas_errados as temas_endpoint
 from api.schemas import SimuladoOficialIn, TempoSimuladoIn
@@ -137,6 +138,7 @@ def test_prova_oficial_em_blocos(usuario_teste, edicao_teste, monkeypatch):
     assert depois["ultima_pct"] is None  # um bloco não é a prova inteira
     assert depois["pct_blocos"] is None  # só com todos os blocos feitos
     assert db.simulados_oficiais_feitos(usuario_id=usuario_teste) == []  # bloco solto não vai ao Painel
+    assert obter_endpoint(criado["id"], usuario=usuario)["prova_em_blocos"] is None  # ainda falta o bloco 1
 
     # Bloco 1 com uma certa e uma errada: a prova em blocos fica em 2 de 3.
     primeiro = criar_oficial_endpoint(SimuladoOficialIn(banca=banca, edicao=edicao, bloco=1), usuario=usuario)
@@ -148,6 +150,10 @@ def test_prova_oficial_em_blocos(usuario_teste, edicao_teste, monkeypatch):
     assert completa["pct_blocos"] == 66.7
     [feita] = db.simulados_oficiais_feitos(usuario_id=usuario_teste)
     assert (feita["em_blocos"], feita["acertos"], feita["num_questoes"], feita["pct_acerto"]) == (True, 2, 3, 66.7)
+    # O resultado do bloco que fechou a prova traz a prova inteira, para o cartão.
+    prova = obter_endpoint(primeiro["id"], usuario=usuario)["prova_em_blocos"]
+    assert (prova["acertos"], prova["num_questoes"], prova["pct_acerto"]) == (2, 3, 66.7)
+    assert [(a["total"], a["acertos"]) for a in prova["areas"]] == [(3, 2)]
 
     with pytest.raises(HTTPException) as erro:
         criar_oficial_endpoint(SimuladoOficialIn(banca=banca, edicao=edicao, bloco=3), usuario=usuario)

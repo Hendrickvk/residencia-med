@@ -168,6 +168,15 @@ export interface ComparacaoCorte {
   anuladas: number | null;
 }
 
+// A prova feita em blocos, com a última vez de cada bloco somada (db.prova_em_blocos).
+export interface ProvaEmBlocos {
+  acertos: number;
+  num_questoes: number;
+  pct_acerto: number;
+  areas: DesempenhoAreaSimulado[];
+  corte: ComparacaoCorte | null;
+}
+
 // O corte da edição mais recente do Revalida só objetiva (db.corte_de_referencia): a escala da nota projetada.
 export interface CorteRevalida {
   edicao: string;
@@ -290,6 +299,7 @@ export interface Simulado {
   edicao: string | null; // preenchida só no simulado por edição oficial, ex. "2025/1"
   bloco: number | null; // bloco da prova oficial (db.dividir_em_blocos); null na prova inteira
   corte?: ComparacaoCorte | null; // só em GET /simulados/{id}: o resultado da prova inteira do Revalida
+  prova_em_blocos?: ProvaEmBlocos | null; // só no resultado de um bloco, com todos os blocos feitos
   num_questoes: number;
   tempo_limite_min: number;
   iniciado_em: string;

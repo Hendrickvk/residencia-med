@@ -2934,6 +2934,42 @@ def _soma_dos_blocos(feitos, total):
     return sum(f["acertos"] for f in ultimos), sum(f["num_questoes"] for f in ultimos)
 
 
+def prova_em_blocos(banca, edicao, *, usuario_id):
+    """A prova feita em blocos, com a última vez de cada bloco: acertos e
+    questões somados, o aproveitamento por área (a mesma forma de
+    `desempenho_simulado`) e o corte do Revalida. None enquanto falta algum
+    bloco. É o que o resultado de um bloco mostra quando ele fecha a prova, e
+    o que vai no cartão de compartilhar."""
+    total = len(ids_questoes_da_edicao(banca, edicao))
+    with get_conn() as conn:
+        ultimos = conn.execute("""
+            SELECT DISTINCT ON (bloco) id, bloco, acertos, num_questoes
+            FROM simulados
+            WHERE usuario_id = ? AND UPPER(banca) = UPPER(?) AND edicao = ? AND bloco IS NOT NULL
+              AND finalizado_em IS NOT NULL
+            ORDER BY bloco, finalizado_em DESC
+        """, (usuario_id, banca, edicao)).fetchall()
+        soma = _soma_dos_blocos(ultimos, total)
+        if soma is None:
+            return None
+        ids = [u["id"] for u in ultimos if u["bloco"] <= numero_de_blocos(total)]
+        areas = conn.execute(f"""
+            SELECT a.nome AS area,
+                   COUNT(si.id) AS total,
+                   SUM(COALESCE(si.correta, 0)) AS acertos,
+                   ROUND(100.0 * SUM(COALESCE(si.correta, 0)) / COUNT(si.id), 1) AS pct_acerto
+            FROM simulado_itens si
+            JOIN questoes q ON q.id = si.questao_id
+            JOIN areas a ON a.id = q.area_id
+            WHERE si.simulado_id IN ({",".join("?" * len(ids))})
+            GROUP BY a.nome
+            ORDER BY pct_acerto ASC
+        """, tuple(ids)).fetchall()
+    acertos, questoes = soma
+    return {"acertos": acertos, "num_questoes": questoes, "pct_acerto": round(100 * acertos / questoes, 1),
+            "areas": areas, "corte": comparar_com_corte(banca, edicao, acertos, questoes)}
+
+
 def edicoes_oficiais_do_aluno(*, usuario_id):
     """`listar_edicoes_oficiais` com os blocos de cada edição (tamanho e
     tempo) e, deste aluno, o aproveitamento da última vez na

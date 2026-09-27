@@ -1,5 +1,5 @@
 import { ArrowRight, ChevronDown, RotateCcw, Share2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { NumeroAnimado } from "../../components/NumeroAnimado";
 import { TemaDoCaso } from "../../components/TemaDoCaso";
@@ -7,7 +7,7 @@ import { ImagemQuestao } from "../../components/ImagemQuestao";
 import { CriarCartao } from "../../components/CriarCartao";
 import { RelatarErro } from "../../components/RelatarErro";
 import { TextoDiscussao } from "../../components/TextoDiscussao";
-import { compartilharCartao, desenharCartao, nomeArquivoCartao } from "../../lib/cartaoResultado";
+import { compartilharCartao, type DadosCartao, desenharCartao, nomeArquivoCartao } from "../../lib/cartaoResultado";
 import { BOTAO_PRIMARIO, BOTAO_SECUNDARIO } from "../../lib/estilos";
 import { formatarMMSS, formatarNumeroBR, formatarPctBR } from "../../lib/format";
 import { atraso } from "../../lib/movimento";
@@ -21,7 +21,7 @@ import {
   useTemasErradosSimulado,
 } from "../../lib/simulados";
 import { CLASSES_NIVEL, NIVEIS, nivelTriagem } from "../../lib/triagem";
-import type { ComparacaoCorte } from "../../lib/types";
+import type { ComparacaoCorte, ProvaEmBlocos } from "../../lib/types";
 import { AlternativaLinha, type EstadoAlternativa } from "../praticar/AlternativaLinha";
 
 interface Props {
@@ -40,28 +40,38 @@ export default function Resultado({ simuladoId, onNovoSimulado }: Props) {
   const [abertos, setAbertos] = useState<Set<number>>(new Set());
   const [todosTemas, setTodosTemas] = useState(false);
   const navigate = useNavigate();
-  // Cartão para compartilhar (lib/cartaoResultado.ts), só da prova oficial
-  // inteira — um bloco de 25 questões não é o resultado de uma prova:
-  // desenhado assim que o resultado chega, para o toque em "Compartilhar"
-  // abrir o compartilhamento na hora.
+  // Cartão para compartilhar (lib/cartaoResultado.ts): o da prova oficial
+  // inteira ou, no resultado do bloco que fecha a prova, o da prova em blocos
+  // somada — um bloco solto não é o resultado de uma prova. Desenhado assim que
+  // o resultado chega, para o toque em "Compartilhar" abrir o compartilhamento
+  // na hora.
   const [cartao, setCartao] = useState<File | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
-  const provaDoCartao =
-    simulado?.edicao && simulado.banca && !simulado.bloco ? nomeEdicao(simulado.banca, simulado.edicao) : null;
+  const dadosCartao = useMemo<DadosCartao | null>(() => {
+    if (!simulado?.edicao || !simulado.banca) return null;
+    const prova = nomeEdicao(simulado.banca, simulado.edicao);
+    if (!simulado.bloco) {
+      if (!desempenho) return null;
+      const t = simulado.num_questoes;
+      const a = simulado.acertos ?? 0;
+      return { prova, pct: t ? Math.round((100 * a) / t) : 0, acertos: a, total: t, areas: desempenho };
+    }
+    const p = simulado.prova_em_blocos;
+    if (!p) return null;
+    return { prova, pct: Math.round(p.pct_acerto), acertos: p.acertos, total: p.num_questoes, areas: p.areas, emBlocos: true };
+  }, [simulado, desempenho]);
   useEffect(() => {
-    if (!simulado || !provaDoCartao || !desempenho) return;
-    const total = simulado.num_questoes;
-    const acertos = simulado.acertos ?? 0;
+    if (!dadosCartao) return;
     let vivo = true;
-    desenharCartao({ prova: provaDoCartao, pct: total ? Math.round((100 * acertos) / total) : 0, acertos, total, areas: desempenho })
+    desenharCartao(dadosCartao)
       .then((blob) => {
-        if (vivo) setCartao(new File([blob], nomeArquivoCartao(provaDoCartao), { type: "image/png" }));
+        if (vivo) setCartao(new File([blob], nomeArquivoCartao(dadosCartao.prova), { type: "image/png" }));
       })
       .catch(() => {});
     return () => {
       vivo = false;
     };
-  }, [simulado, provaDoCartao, desempenho]);
+  }, [dadosCartao]);
 
   if (!simulado || !itens) {
     return (
@@ -76,7 +86,9 @@ export default function Resultado({ simuladoId, onNovoSimulado }: Props) {
   const total = simulado.num_questoes;
   const acertos = simulado.acertos ?? 0;
   const respondidas = simulado.total_respondidas ?? 0;
-  const pct = total ? Math.round((100 * acertos) / total) : 0;
+  // Com uma casa, como no Painel, e o nível pelo valor exato: arredondado, 58,6%
+  // virava "59%" ao lado de "0,4 ponto abaixo do corte de 59".
+  const pct = total ? (100 * acertos) / total : 0;
   const nivel = nivelTriagem(pct);
   const areas = [...(desempenho ?? [])].sort((a, b) => a.pct_acerto - b.pct_acerto);
   const nomeProva = nomeProvaOficial(simulado);
@@ -107,10 +119,11 @@ export default function Resultado({ simuladoId, onNovoSimulado }: Props) {
         </h1>
       </div>
 
-      <div className="grid grid-cols-1 divide-y divide-line-soft rounded-caso border border-line bg-surface sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+      {/* A primeira coluna mais larga: com uma casa decimal, "100,0%" não cabia num terço. */}
+      <div className="grid grid-cols-1 divide-y divide-line-soft rounded-caso border border-line bg-surface sm:grid-cols-[1.5fr_1fr_1fr] sm:divide-x sm:divide-y-0">
         <div className="flex flex-col gap-2 p-6">
           <span className="rotulo text-muted">Aproveitamento</span>
-          <NumeroAnimado className="num-lg self-start" valor={pct} formatar={(v) => `${Math.round(v)}%`} />
+          <NumeroAnimado className="num-lg self-start" valor={pct} formatar={(v) => `${formatarPctBR(v, 1)}%`} />
           <span
             className={`rotulo animate-surgir self-start rounded-etq px-2 py-1 text-[12px] ${CLASSES_NIVEL[nivel].cheio} ${CLASSES_NIVEL[nivel].texto}`}
             style={{ animationDelay: "750ms" }}
@@ -129,21 +142,22 @@ export default function Resultado({ simuladoId, onNovoSimulado }: Props) {
       </div>
 
       {simulado.corte && <LinhaCorte corte={simulado.corte} />}
+      {simulado.bloco && simulado.prova_em_blocos && <ProvaCompleta dados={simulado.prova_em_blocos} />}
 
-      {provaDoCartao && (
+      {dadosCartao && (
         <div className="flex flex-wrap items-center gap-3">
           <button
             type="button"
             disabled={!cartao}
             onClick={async () => {
               if (!cartao) return;
-              const resultado = await compartilharCartao(cartao, provaDoCartao, pct);
+              const resultado = await compartilharCartao(cartao, dadosCartao.prova, dadosCartao.pct, dadosCartao.emBlocos);
               setAviso(resultado === "baixado" ? "A imagem foi para a pasta de downloads." : null);
             }}
             className={BOTAO_SECUNDARIO}
           >
             <Share2 size={18} strokeWidth={2} aria-hidden="true" />
-            Compartilhar resultado
+            {dadosCartao.emBlocos ? "Compartilhar a prova inteira" : "Compartilhar resultado"}
           </button>
           {aviso && (
             <span role="status" className="text-apoio text-muted">
@@ -379,5 +393,31 @@ function LinhaCorte({ corte: c }: { corte: ComparacaoCorte }) {
       <strong className="font-semibold text-ink">{formatarNumeroBR(c.nota)}</strong>:{" "}
       <strong className="font-semibold text-ink">{distanciaDoCorte(c.nota, c.corte)}</strong>.
     </p>
+  );
+}
+
+// No resultado do bloco que fecha a prova: a prova inteira, com a última vez de
+// cada bloco (db.prova_em_blocos), e o corte dela. É o momento raro em que a
+// aluna termina uma prova oficial aos pedaços, e o que vai no cartão.
+function ProvaCompleta({ dados: p }: { dados: ProvaEmBlocos }) {
+  const nivel = nivelTriagem(p.pct_acerto);
+  return (
+    <section className="flex animate-entrar flex-col gap-3 rounded-caso border border-ink bg-surface p-6">
+      <span className="rotulo text-muted">Prova completa, em blocos</span>
+      <div className="flex flex-wrap items-center gap-3">
+        <NumeroAnimado className="num-lg" valor={p.pct_acerto} formatar={(v) => `${formatarPctBR(v, 1)}%`} />
+        <span className={`rotulo rounded-etq px-2 py-1 text-[12px] ${CLASSES_NIVEL[nivel].cheio} ${CLASSES_NIVEL[nivel].texto}`}>
+          {NIVEIS[nivel - 1].nome}
+        </span>
+      </div>
+      <p className="text-corpo text-ink-2">
+        Com a última vez de cada bloco, a prova inteira fica em{" "}
+        <strong className="font-semibold text-ink">
+          {p.acertos} de {p.num_questoes}
+        </strong>{" "}
+        questões.
+      </p>
+      {p.corte && <LinhaCorte corte={p.corte} />}
+    </section>
   );
 }

@@ -2317,6 +2317,20 @@ governa as telas admin do Streamlit.
   do app é servida à parte, e um arquivo que não existe mais volta como o
   `index.html` com status 200 — o caso que a recarga cobre.
 
+- **Cartão para a prova feita em blocos** (segunda sugestão depois da crítica).
+  Quem fazia a prova em blocos nunca ganhava o cartão de compartilhar. Agora o
+  resultado de um bloco, quando todos os blocos da edição já foram feitos, mostra
+  a prova completa — a última vez de cada bloco somada (`db.prova_em_blocos`,
+  que reaproveita a regra `_soma_dos_blocos` do Painel), com o aproveitamento por
+  área e a linha do corte — e oferece "Compartilhar a prova inteira". O cartão
+  diz "{edição} · em blocos": quatro sentadas não são cinco horas seguidas. O QA,
+  fechando a 2026/1 em 58 de 99, pegou uma inconsistência que já estava no ar
+  desde a nota de corte: o aproveitamento arredondado dava "59%" ao lado de "0,4
+  ponto abaixo do corte de 59". O resultado passou a mostrar uma casa decimal,
+  como o Painel, com o nível pelo valor exato; o cartão segue inteiro, porque não
+  mostra o corte. De carona, "0,4 pontos" virou "0,4 ponto" (singular abaixo de
+  2). Conferido no localhost no computador e no celular, com o download do cartão.
+
 ## Armadilhas das telas admin (Streamlit)
 
 - `st.markdown('<div>')` … `st.markdown('</div>')` não envolve nada: cada
