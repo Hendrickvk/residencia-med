@@ -50,7 +50,9 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   `AvisoGabaritoProvisorio` — "Gabarito provisório. O oficial do INEP sai em
   dezembro." —, a pedido do usuário (27/09): deixar claro que não é o oficial,
   numa frase só; a primeira versão, com duas frases de explicação, ele achou
-  artificial. Conferido no localhost, no celular e no tema escuro. **Em 04/12, com o definitivo** (`2026_2_gabarito_definitivo_…` na
+  artificial. **No ar em 27/09** (commit `9b558d1`, só o front; `dist.antigo`
+  no servidor para voltar), conferido: o pacote novo servido e o pedaço com o
+  aviso respondendo em produção. Conferido no localhost, no celular e no tema escuro. **Em 04/12, com o definitivo** (`2026_2_gabarito_definitivo_…` na
   aba 2026 do INEP): (1) comparar letra a letra as 96; letra trocada → nova
   explicação pelo `corrigir_explicacoes.py`, `resposta_correta` atualizada e
   `respostas.correta` recalculada para quem já respondeu (senão o Painel dela
