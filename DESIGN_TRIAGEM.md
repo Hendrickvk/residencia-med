@@ -40,11 +40,21 @@ como tinta em vez de cor de marca.
 | Nível | Nome          | Aproveitamento | Cor (claro) | Cor (escuro) | Texto sobre a cor |
 |-------|---------------|----------------|-------------|--------------|-------------------|
 | 1     | Emergência    | abaixo de 40%  | `#CF3328`   | `#F0574C`    | branco / tinta    |
-| 2     | Muito urgente | 40 a 54%       | `#F17C1B`   | `#F58A34`    | tinta / tinta     |
-| 3     | Urgente       | 55 a 69%       | `#EDBB1C`   | `#F2C94C`    | tinta / tinta     |
-| 4     | Pouco urgente | 70 a 84%       | `#23804A`   | `#3DB372`    | branco / tinta    |
-| 5     | Não urgente   | 85% ou mais    | `#2D6CD2`   | `#5B8FEA`    | branco / tinta    |
+| 2     | Muito urgente | 40 a 49%       | `#F17C1B`   | `#F58A34`    | tinta / tinta     |
+| 3     | Urgente       | 50 a 59%       | `#EDBB1C`   | `#F2C94C`    | tinta / tinta     |
+| 4     | Pouco urgente | 60 a 69%       | `#23804A`   | `#3DB372`    | branco / tinta    |
+| 5     | Não urgente   | 70% ou mais    | `#2D6CD2`   | `#5B8FEA`    | branco / tinta    |
 
+- **A escala gira em torno da nota de corte** (desde 26/09/2026): 60% separa "ainda
+  não passa" (1 a 3) de "já passa" (4 e 5) — o corte do Revalida só objetivo foi 61
+  na 2025/2 e 59 na 2026/1 —, e os 10 pontos que uma prova varia (o que o Painel
+  explica ao lado da nota projetada) separam "passa, sem folga" (4) de "passa mesmo
+  num dia ruim" (5). Abaixo do corte, cada 10 pontos é um nível a mais de urgência.
+  As faixas antigas (40/55/70/85) foram escolhidas antes de se saber onde ficava a
+  aprovação, e 68% saía "Urgente" 9 pontos acima do corte. O 60 é fixo de propósito,
+  sem seguir cada edição, para as cores não mudarem a cada corte novo; rever só se
+  os cortes do INEP se afastarem dele. A legenda do quadro diz isso numa linha ("Do
+  verde em diante, no nível do corte do Revalida").
 - "Tinta" = `--ink` do tema (quase preto no claro, quase branco no escuro). Os pares
   acima passam AA para texto de 13px em negrito; não trocar o texto de cor sem
   medir de novo.
@@ -320,7 +330,7 @@ Conteúdo das demais telas: largura máxima 1360px, padding 36/40px.
 3. **Quadro de triagem**: 5 colunas, uma por nível, com cabeçalho e cartões de área
    ordenados do pior para o melhor. Coluna vazia: na tela larga, o cabeçalho fica só
    com o contorno da cor do nível (o cheio pesava como as colunas com área) e o
-   estado vazio curto ("Nenhuma área acima de 85% ainda."); empilhadas, abaixo de
+   estado vazio curto ("Nenhuma área com 70% ou mais ainda."); empilhadas, abaixo de
    1280px, as faixas vazias somem e uma linha diz "Nenhuma área em urgente, pouco
    urgente e não urgente." — antes eram três barras coloridas no celular dizendo 0. O primeiro cartão da coluna mais grave já mostra o
    botão "Praticar 10". Abaixo, legenda das faixas, a nota "Acerto no chute vale

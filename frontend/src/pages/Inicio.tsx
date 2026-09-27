@@ -200,7 +200,7 @@ const AREAS_EXEMPLO = [
   { area: "Clínica Médica", pct: 32.6 },
   { area: "Ginecologia e Obstetrícia", pct: 46.0 },
   { area: "Pediatria", pct: 58.3 },
-  { area: "Cirurgia", pct: 71.4 },
+  { area: "Cirurgia", pct: 64.3 },
   { area: "Medicina Preventiva e Social", pct: 86.2 },
 ];
 
@@ -208,7 +208,7 @@ function PainelExemplo() {
   return (
     <Moldura etiqueta="Exemplo" legenda="Exemplo do painel do Conduta: as cinco grandes áreas classificadas por nível de triagem, da emergência ao não urgente.">
       <p className="text-[24px] font-extrabold leading-[1.1] tracking-[-0.02em] md:text-[28px]">Clínica Médica é a sua maior lacuna.</p>
-      <p className="mt-2 text-apoio text-muted">131 acertos em 222 questões · prova em 71 dias</p>
+      <p className="mt-2 text-apoio text-muted">128 acertos em 222 questões · prova em 71 dias</p>
       <ul className="mt-6 flex flex-col gap-4">
         {AREAS_EXEMPLO.map(({ area, pct }, i) => {
           const nivel = nivelTriagem(pct);

@@ -37,6 +37,18 @@ export const ROTULO_TIPO: Record<TipoNovidade, string> = {
 
 export const NOVIDADES: Novidade[] = [
   {
+    id: "2026-09-26g",
+    data: "26 de setembro de 2026",
+    titulo: "Triagem pela nota de corte",
+    itens: [
+      {
+        tipo: "novo",
+        texto: "As cores da triagem agora partem da nota de corte do Revalida, perto de 60%: do verde em diante, a área já está no nível de passar, e no azul passa mesmo num dia ruim.",
+      },
+      { tipo: "novo", texto: "Por isso algumas áreas mudaram de cor. As suas notas continuam as mesmas." },
+    ],
+  },
+  {
     id: "2026-09-26f",
     data: "26 de setembro de 2026",
     titulo: "Nota de corte do Revalida",

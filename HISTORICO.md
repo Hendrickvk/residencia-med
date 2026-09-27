@@ -2278,6 +2278,23 @@ governa as telas admin do Streamlit.
   mudança de banco; `dist.antigo` guardado), com a entrada `2026-09-26f` no
   "O que mudou".
 
+- **A escala de triagem passou a girar em torno do corte** (pedido do usuário,
+  "pense em uma maneira melhor", depois de a tensão acima ficar à vista; ele
+  aprovou a proposta). Em vez de remendar a etiqueta perto do corte, as faixas
+  mudaram de 40/55/70/85 para **40/50/60/70**: 60% — o corte do Revalida só
+  objetivo foi 61 e 59 — separa "ainda não passa" (1 a 3) de "já passa" (4 e
+  5), e os 10 pontos que uma prova varia, que o Painel já explica ao lado da
+  nota projetada, separam "passa, sem folga" (4) de "passa mesmo num dia ruim"
+  (5); abaixo do corte, cada 10 pontos é um nível a mais de urgência. As faixas
+  antigas tinham sido escolhidas antes de se saber onde ficava a aprovação. O
+  60 ficou fixo, sem seguir cada edição, para as cores não mudarem a cada corte
+  novo. Mudou só o front (`lib/triagem.ts`, a legenda do quadro — "Do verde em
+  diante, no nível do corte do Revalida (cerca de 60%)" —, o texto da coluna
+  azul vazia e o exemplo da página pública, cujo nível 4 tinha 71,4% e virou
+  64,3%, com o subtítulo de 131 para 128 acertos para bater com a média). As
+  cores sobem para quem está entre 55% e 84%; a entrada `2026-09-26g` do "O que
+  mudou" diz que as notas são as mesmas.
+
 ## Armadilhas das telas admin (Streamlit)
 
 - `st.markdown('<div>')` … `st.markdown('</div>')` não envolve nada: cada

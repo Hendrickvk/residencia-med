@@ -12,19 +12,28 @@ export const MINIMO_AMOSTRA = 5;
 // nota projetada não aparece.
 export const VOLUME_CONFIAVEL = 50;
 
+// A escala gira em torno da nota de corte (DESIGN_TRIAGEM.md §2). As provas do
+// Revalida só objetivas tiveram corte de 61 e 59 (db.NOTAS_DE_CORTE_REVALIDA),
+// então 60% separa "ainda não passa" (1 a 3) de "já passa" (4 e 5), e os 10
+// pontos que uma prova varia — o que o Painel explica ao lado da nota projetada
+// — separam "passa, sem folga" (4) de "passa mesmo num dia ruim" (5). Até
+// 26/09/2026 as faixas eram 40/55/70/85, escolhidas antes de saber onde ficava a
+// aprovação: 68% saía "Urgente" 9 pontos acima do corte. Fixo em 60 de
+// propósito, sem seguir cada edição, para as cores não mudarem a cada corte
+// novo; rever só se os cortes do INEP se afastarem dele.
 export const NIVEIS: { nivel: NivelTriagem; nome: string; faixa: string }[] = [
   { nivel: 1, nome: "Emergência", faixa: "abaixo de 40%" },
-  { nivel: 2, nome: "Muito urgente", faixa: "40 a 54%" },
-  { nivel: 3, nome: "Urgente", faixa: "55 a 69%" },
-  { nivel: 4, nome: "Pouco urgente", faixa: "70 a 84%" },
-  { nivel: 5, nome: "Não urgente", faixa: "85% ou mais" },
+  { nivel: 2, nome: "Muito urgente", faixa: "40 a 49%" },
+  { nivel: 3, nome: "Urgente", faixa: "50 a 59%" },
+  { nivel: 4, nome: "Pouco urgente", faixa: "60 a 69%" },
+  { nivel: 5, nome: "Não urgente", faixa: "70% ou mais" },
 ];
 
 export function nivelTriagem(pct: number): NivelTriagem {
   if (pct < 40) return 1;
-  if (pct < 55) return 2;
-  if (pct < 70) return 3;
-  if (pct < 85) return 4;
+  if (pct < 50) return 2;
+  if (pct < 60) return 3;
+  if (pct < 70) return 4;
   return 5;
 }
 

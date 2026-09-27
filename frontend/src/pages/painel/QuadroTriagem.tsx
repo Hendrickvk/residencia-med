@@ -142,7 +142,7 @@ export function QuadroTriagem({ areas, onAbrir, onPraticar }: Props) {
                 className="animate-entrar rounded-card border border-dashed border-line px-3.5 py-4 text-apoio text-muted"
                 style={{ animationDelay: `${atrasoCartao(c, 1)}ms` }}
               >
-                {col.nivel === 5 ? "Nenhuma área acima de 85% ainda." : "Nenhuma área nesta faixa."}
+                {col.nivel === 5 ? `Nenhuma área com ${NIVEIS[4].faixa} ainda.` : "Nenhuma área nesta faixa."}
               </div>
             ) : (
               col.areas.map((a, linha) => (
@@ -175,6 +175,8 @@ export function QuadroTriagem({ areas, onAbrir, onPraticar }: Props) {
             {n.faixa}
           </span>
         ))}
+        {/* A escala gira em torno do corte (lib/triagem.ts): o verde começa nele. */}
+        <span>Do verde em diante, no nível do corte do Revalida (cerca de 60%)</span>
         {/* db._PRIMEIRAS_TENTATIVAS: é o que explica um "14,5 acertos". */}
         <span>Acerto no chute vale meio</span>
         {insuficientes.length > 0 && (
