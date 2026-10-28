@@ -2464,6 +2464,25 @@ governa as telas admin do Streamlit.
   celulares de até 430 px (76 px em 360 px): endereço não tem onde quebrar, e a
   faixa é a primeira coisa que uma conta nova vê. Agora o e-mail quebra na linha
   (`[overflow-wrap:anywhere]`). No ar em 27/09 (commit `a35552b`, só o front).
+
+### 2026-10-28
+- **Duas falhas do simulado, achadas lendo o projeto.** (1) *O simulado
+  contornava a cota diária*: `POST /simulados/oficial`, finalizar sem
+  responder e `GET /{id}/itens` devolviam gabarito e explicação da edição
+  inteira, sem teto — umas 40 requisições levavam o banco. Agora criar
+  simulado (montado ou oficial, prova ou bloco) gasta a cota do Praticar,
+  tudo ou nada (`inteiro=True`), e cobra ao criar, não ao finalizar, para a
+  aluna não descobrir no fim de 4 horas que o resultado não sai. Com 500 por
+  dia cabem cinco provas inteiras. O Configurador mostra a frase do 429 em vez
+  de "Tente de novo". (2) *Finalizar duas vezes dobrava o histórico* (outra
+  aba, ou nova tentativa depois de um timeout): `finalizar_simulado` só fecha
+  com `finalizado_em IS NULL` e diz se fechou, e só então as respostas vão
+  para `respostas`/SM-2. `tests/test_simulados.py` fixa as duas (conferido que
+  falham no código antigo). Conferido no localhost contra o branch de testes:
+  com 10 casos de cota, "Começar" no bloco 1 da 2026/1 dá a mensagem no
+  diálogo. Fica de fora, por ora: responder depois de finalizado ainda muda o
+  item (o resultado por área e o cartão), mas travar isso perderia a última
+  resposta que chega atrasada da tela.
   Onde esse defeito tende a voltar: palavra sem espaço numa caixa estreita —
   nome de banca em fonte grande, e-mail, e o que a aluna digita (nome de
   exibição, de pasta, de baralho).

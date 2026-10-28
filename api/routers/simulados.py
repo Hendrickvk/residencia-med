@@ -26,6 +26,19 @@ def _consolidar_no_historico(simulado_id, usuario_id):
         )
 
 
+def _cobrar_cota(usuario_id, quantidade):
+    """O resultado entrega gabarito e explicação de cada questão, então o
+    simulado gasta a cota diária do Praticar. Cobra-se ao criar, inteiro, para
+    não deixar a aluna descobrir no fim de uma prova que o resultado não sai."""
+    if not db.consumir_cota_pratica(usuario_id=usuario_id, quantidade=quantidade, inteiro=True):
+        raise HTTPException(
+            status.HTTP_429_TOO_MANY_REQUESTS,
+            f"Os {quantidade} casos deste simulado não cabem no que resta da cota de hoje "
+            f"({db.TETO_DIARIO_PRATICA} casos por dia). Ele volta amanhã — a revisão espaçada "
+            "continua disponível.",
+        )
+
+
 @router.get("")
 def historico(limite: int = Query(default=10, ge=1, le=100), usuario=Depends(usuario_atual)):
     return db.listar_simulados(limite, usuario_id=usuario["id"])
@@ -60,6 +73,7 @@ def criar(dados: SimuladoIn, usuario=Depends(usuario_confirmado)):
         )
     questoes = db.questoes_aleatorias(dados.area_id, dados.banca, limite=dados.num_questoes)
     ids = [q["id"] for q in questoes]
+    _cobrar_cota(usuario["id"], len(ids))
     simulado_id = db.criar_simulado(
         dados.area_id, dados.banca, len(ids), dados.tempo_limite_min, ids, usuario_id=usuario["id"],
     )
@@ -79,6 +93,7 @@ def criar_oficial(dados: SimuladoOficialIn, usuario=Depends(usuario_confirmado))
         if dados.bloco > len(blocos):
             raise HTTPException(status.HTTP_404_NOT_FOUND, "Bloco não encontrado nesta edição.")
         ids = blocos[dados.bloco - 1]
+    _cobrar_cota(usuario["id"], len(ids))
     simulado_id = db.criar_simulado(
         None, dados.banca, len(ids), len(ids) * db.MINUTOS_POR_QUESTAO_PROVA_OFICIAL, ids,
         usuario_id=usuario["id"], edicao=dados.edicao, bloco=dados.bloco,
@@ -140,10 +155,13 @@ def somar_tempo(simulado_id: int, dados: TempoSimuladoIn, usuario=Depends(usuari
 @router.post("/{simulado_id}/finalizar")
 def finalizar(simulado_id: int, usuario=Depends(usuario_atual)):
     try:
-        db.finalizar_simulado(simulado_id, usuario_id=usuario["id"])
+        finalizou = db.finalizar_simulado(simulado_id, usuario_id=usuario["id"])
     except PermissionError as e:
         raise HTTPException(status.HTTP_403_FORBIDDEN, str(e))
-    _consolidar_no_historico(simulado_id, usuario["id"])
+    # Já finalizado: responde ok (o cliente só quer o resultado) sem gravar as
+    # respostas no histórico de novo.
+    if finalizou:
+        _consolidar_no_historico(simulado_id, usuario["id"])
     return {"ok": True}
 
 

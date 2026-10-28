@@ -194,11 +194,11 @@ function ProvasOficiais({
       const r = await criarSimuladoOficial(escolhida.banca, escolhida.edicao, bloco);
       onIniciado(r.id);
     } catch (e) {
-      // 403 = e-mail ainda não confirmado. Aqui "tente de novo" seria mentira:
-      // a resposta só muda quando ela confirmar, e quem explica isso é a frase
-      // do servidor, com a faixa do topo logo acima.
+      // 403 = e-mail ainda não confirmado; 429 = cota do dia gasta. Aqui
+      // "tente de novo" seria mentira: a resposta só muda quando ela confirmar,
+      // ou amanhã, e quem explica isso é a frase do servidor.
       setErro(
-        e instanceof ApiError && e.status === 403
+        e instanceof ApiError && (e.status === 403 || e.status === 429)
           ? e.message
           : "Não foi possível começar a prova. Tente de novo.",
       );
@@ -427,7 +427,7 @@ function MontarSimulado({ onIniciado }: { onIniciado: (id: number) => void }) {
       onIniciado(r.id);
     } catch (e) {
       setErro(
-        e instanceof ApiError && e.status === 403
+        e instanceof ApiError && (e.status === 403 || e.status === 429)
           ? e.message
           : "Não foi possível iniciar o simulado. Tente de novo.",
       );

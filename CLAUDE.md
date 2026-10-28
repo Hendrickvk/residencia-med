@@ -94,7 +94,10 @@ rejected, so shipping a change to this logs everyone out once, by design. `COOKI
 spends a **daily per-account quota** (`db.TETO_DIARIO_PRATICA` = 500 cases, table `cota_pratica`,
 `db.consumir_cota_pratica`), because embedding the gabarito is what makes 6 requests enough to
 take the whole bank; it charges per case actually delivered, after the cut, and answers 429 when
-the day is spent. `/praticar/contagem` is deliberately **not** capped — it returns no content, and
+the day is spent. Since 2026-10-28 **simulado creation spends the same quota**, all or nothing
+(`consumir_cota_pratica(..., inteiro=True)`), because the result hands out gabarito and explicação
+too: creating an official exam and finalizing it unanswered used to drain the bank with no cap at
+all. `/praticar/contagem` is deliberately **not** capped — it returns no content, and
 capping it would make the Configurador's live count lie about the bank.
 - `GET /questoes/{id}/imagem` answers with `ETag` (sha256 of the bytes) and `Cache-Control: private, max-age=86400`, and returns 304 on `If-None-Match`. The figure is the heaviest thing the platform serves (~300 KB) and the least likely to change, and spaced repetition brings the same question back many times — without this the phone re-downloaded it on every appearance. `private` because the route needs a session: the cache belongs to her browser, not to a proxy on the way. The ETag is content-based, so `scripts/substituir_imagem.py` invalidates it on the next revalidation instead of waiting out the 24 h. `tests/test_imagem_cache.py` pins all of it.
 - `POST /respostas` is fire-and-forget from the frontend's perspective — the UI never waits on it to show correct/incorrect.

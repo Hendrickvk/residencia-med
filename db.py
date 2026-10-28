@@ -1614,14 +1614,17 @@ def contar_respondidas_hoje(*, usuario_id):
         return row["total"] if row else 0
 
 
-def consumir_cota_pratica(*, usuario_id, quantidade, teto=TETO_DIARIO_PRATICA):
+def consumir_cota_pratica(*, usuario_id, quantidade, teto=TETO_DIARIO_PRATICA, inteiro=False):
     """Reserva até `quantidade` casos da cota do dia e devolve quantos foram
-    liberados (0 = cota esgotada).
+    liberados (0 = cota esgotada). Com `inteiro`, é tudo ou nada: o simulado
+    não pode começar com parte das questões.
 
     O /praticar/sessao entrega gabarito e explicação embutidos, por decisão de
     arquitetura: sem teto, 1 074 questões cabem em 6 requisições de qualquer
     conta válida. O teto é por caso entregue, e não por requisição, porque é
-    o caso que é o conteúdo.
+    o caso que é o conteúdo. O simulado gasta a mesma cota ao ser criado: o
+    resultado dele também entrega gabarito e explicação, e finalizar sem
+    responder era um caminho sem teto para o banco inteiro.
     """
     dia = hoje_br()
     with get_conn() as conn:
@@ -1638,6 +1641,8 @@ def consumir_cota_pratica(*, usuario_id, quantidade, teto=TETO_DIARIO_PRATICA):
             FOR UPDATE
         """, (usuario_id, dia)).fetchone()
         liberados = max(0, min(quantidade, teto - row["entregues"]))
+        if inteiro and liberados < quantidade:
+            liberados = 0
         if liberados:
             conn.execute("""
                 UPDATE cota_pratica SET entregues = entregues + ?
@@ -3115,7 +3120,10 @@ def somar_tempo_simulado(simulado_id, questao_id, tempo_ms, *, usuario_id):
 def finalizar_simulado(simulado_id, *, usuario_id):
     """Agrega os resultados e marca o simulado como finalizado. Deve ser
     chamada uma única vez, no momento em que o simulado termina (por
-    tempo esgotado ou pelo botão 'Finalizar')."""
+    tempo esgotado ou pelo botão 'Finalizar'). Devolve se finalizou agora:
+    False quando já estava finalizado, para quem chama não consolidar as
+    respostas no histórico duas vezes (outra aba, ou uma nova tentativa depois
+    de um timeout, dobravam as respostas e as revisões)."""
     with get_conn() as conn:
         dono = conn.execute(
             "SELECT id FROM simulados WHERE id = ? AND usuario_id = ?", (simulado_id, usuario_id)
@@ -3127,14 +3135,16 @@ def finalizar_simulado(simulado_id, *, usuario_id):
             FROM simulado_itens
             WHERE simulado_id = ? AND resposta_dada IS NOT NULL
         """, (simulado_id,)).fetchone()
-        conn.execute("""
+        # A condição no próprio UPDATE é o que segura duas chamadas ao mesmo
+        # tempo: a segunda espera a trava da linha e já não a encontra aberta.
+        return conn.execute("""
             UPDATE simulados
             SET acertos = ?, total_respondidas = ?, finalizado_em = ?
-            WHERE id = ?
+            WHERE id = ? AND finalizado_em IS NULL
         """, (
             agregado["acertos"] or 0, agregado["total_respondidas"] or 0,
             agora_br().isoformat(), simulado_id,
-        ))
+        )).rowcount == 1
 
 
 def obter_simulado(simulado_id, *, usuario_id):

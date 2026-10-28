@@ -280,3 +280,47 @@ def test_temas_para_revisar_so_depois_de_finalizar(usuario_teste, quatro_questoe
     [t] = temas_endpoint(simulado_id, usuario=usuario)
     assert (t["subtopico_id"], t["total"], t["acertos"]) == (tema, 3, 1)
     assert desempenho_endpoint(simulado_id, usuario=usuario)[0]["acertos"] == 1
+
+
+def test_finalizar_duas_vezes_nao_dobra_o_historico(usuario_teste, questao_teste):
+    """Outra aba, ou uma nova tentativa depois de um timeout, chamava o
+    finalizar de novo e gravava as respostas e as revisões em dobro."""
+    usuario = _usuario(usuario_teste)
+    simulado_id = db.criar_simulado(None, None, 1, 10, [questao_teste], usuario_id=usuario_teste)
+    db.registrar_resposta_simulado(simulado_id, questao_teste, "A", usuario_id=usuario_teste)
+
+    finalizar_endpoint(simulado_id, usuario=usuario)
+    finalizar_endpoint(simulado_id, usuario=usuario)
+
+    with db.get_conn() as conn:
+        respostas = conn.execute(
+            "SELECT COUNT(*) AS n FROM respostas WHERE usuario_id = ? AND questao_id = ?",
+            (usuario_teste, questao_teste),
+        ).fetchone()["n"]
+        eventos = conn.execute(
+            "SELECT COUNT(*) AS n FROM revisao_eventos WHERE usuario_id = ? AND questao_id = ?",
+            (usuario_teste, questao_teste),
+        ).fetchone()["n"]
+    assert (respostas, eventos) == (1, 1)
+
+
+def test_simulado_gasta_a_cota_diaria(usuario_teste, edicao_teste):
+    """O resultado entrega gabarito e explicação: sem cota, criar e finalizar
+    provas sem responder levava o banco inteiro."""
+    banca, edicao, numeros = edicao_teste
+    usuario = _usuario(usuario_teste)
+
+    criar_oficial_endpoint(SimuladoOficialIn(banca=banca, edicao=edicao), usuario=usuario)
+    with db.get_conn() as conn:
+        entregues = conn.execute(
+            "SELECT entregues FROM cota_pratica WHERE usuario_id = ? AND dia = ?",
+            (usuario_teste, db.hoje_br()),
+        ).fetchone()["entregues"]
+    assert entregues == len(numeros)
+
+    # Sobram 2 e a prova tem 3: tudo ou nada, nada é cobrado.
+    db.consumir_cota_pratica(usuario_id=usuario_teste, quantidade=db.TETO_DIARIO_PRATICA - len(numeros) - 2)
+    with pytest.raises(HTTPException) as erro:
+        criar_oficial_endpoint(SimuladoOficialIn(banca=banca, edicao=edicao), usuario=usuario)
+    assert erro.value.status_code == 429
+    assert db.consumir_cota_pratica(usuario_id=usuario_teste, quantidade=2) == 2
