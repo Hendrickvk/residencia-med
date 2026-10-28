@@ -2525,7 +2525,12 @@ governa as telas admin do Streamlit.
   e antigo) e o endpoint (simular não grava, tetos, baralho de outra conta 404).
   Conferido no localhost contra o branch de testes, celular e computador,
   claro e escuro. Não testado com um .apkg exportado de verdade pelo Anki — o
-  dos testes é montado com a mesma tabela `notes`. Ainda não subiu.
+  dos testes é montado com a mesma tabela `notes`. **No ar em 28/10** (commit
+  `5b89671`; `pip install` no servidor trouxe o `zstandard` 0.25.0, API e
+  admin reiniciados, sem mudança de banco; front trocado com `dist.antigo`
+  guardado). Conferido em produção: `/health` 200, o pacote
+  `index-DJ397jos.js` servido, o pedaço do baralho com o diálogo de importar,
+  a rota respondendo 401 sem sessão (existe) e o journal sem erro.
 
 ## Armadilhas das telas admin (Streamlit)
 
