@@ -297,7 +297,8 @@ Conferido em 2026-09-22, no deploy que trouxe os 60 commits parados desde
       publicada devolve 401 no site, a nova vive só no `.env` local
 - [x] Login real no navegador, pelo https (o resto foi verificado por curl):
       feito na prática — as contas reais entram por ele desde 23/09
-- [x] E-mail saindo de `acesso@qualaconduta.com.br` (conferido na API do Brevo)
+- [x] E-mail saindo de `contato@qualaconduta.com.br` (`EMAIL_REMETENTE`; era
+      `acesso@` até 28/10). O domínio não tem MX: resposta a ele volta como não entregue
 - [ ] Limpar a regra de ingresso da 8080 na Security List da Oracle
 
 ### O front é construído aqui, não no servidor

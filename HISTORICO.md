@@ -2536,6 +2536,13 @@ governa as telas admin do Streamlit.
   `backups/email_flashcards_3_editorial.html`) foi para as 8 contas com e-mail
   confirmado, sem contas de teste nem a demo, enviado do servidor pelo Brevo:
   8/8 aceitos.
+- **Remetente trocado para `contato@qualaconduta.com.br`** (pedido do usuário),
+  só no `EMAIL_REMETENTE` do `.env.production` do servidor, com API e admin
+  reiniciados; a rotina diária lê o arquivo a cada execução. Não precisou
+  cadastro no Brevo: com o domínio autenticado, qualquer endereço dele envia (a
+  lista de remetentes do Brevo só tem o Gmail do usuário). Fica em aberto: o
+  domínio não tem MX, então quem responder a "contato" recebe devolução —
+  criar caixa ou redirecionamento na Hostinger é com o usuário.
 
 ## Armadilhas das telas admin (Streamlit)
 
