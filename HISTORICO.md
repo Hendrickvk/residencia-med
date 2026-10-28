@@ -2482,7 +2482,12 @@ governa as telas admin do Streamlit.
   com 10 casos de cota, "Começar" no bloco 1 da 2026/1 dá a mensagem no
   diálogo. Fica de fora, por ora: responder depois de finalizado ainda muda o
   item (o resultado por área e o cartão), mas travar isso perderia a última
-  resposta que chega atrasada da tela.
+  resposta que chega atrasada da tela. **No ar em 28/10** (commit `2052395`;
+  API e admin reiniciados, sem mudança de banco; front trocado com
+  `dist.antigo` guardado). Conferido em produção: `/health` 200, o pacote
+  `index-DK1QWkxE.js` servido, o pedaço do simulado com o tratamento do 429,
+  e o journal da API sem erro depois da subida. Sem entrada no "O que mudou":
+  a aluna não ganha nada que veja.
   Onde esse defeito tende a voltar: palavra sem espaço numa caixa estreita —
   nome de banca em fonte grande, e-mail, e o que a aluna digita (nome de
   exibição, de pasta, de baralho).
