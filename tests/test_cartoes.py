@@ -246,3 +246,107 @@ def test_desfazer_devolve_o_cartao_ao_estado_anterior():
     finally:
         if email:
             _apagar(email)
+
+
+def _apkg(notas, *, novo=True):
+    """Um .apkg mínimo: só a tabela `notes`, que é o que a importação lê. No
+    formato novo (Anki 2.1.50+) a coleção vem em zstd e o `collection.anki2`
+    que vai junto é o aviso de "atualize o Anki" — se ele fosse lido, entraria
+    como cartão."""
+    import io
+    import sqlite3
+    import zipfile
+
+    import zstandard
+
+    def colecao(linhas):
+        conn = sqlite3.connect(":memory:")
+        conn.execute("CREATE TABLE notes (id INTEGER PRIMARY KEY, flds TEXT)")
+        conn.executemany("INSERT INTO notes (flds) VALUES (?)", [("\x1f".join(n),) for n in linhas])
+        conn.commit()
+        return conn.serialize()
+
+    saida = io.BytesIO()
+    with zipfile.ZipFile(saida, "w") as z:
+        if novo:
+            z.writestr("collection.anki21b", zstandard.ZstdCompressor().compress(colecao(notas)))
+            z.writestr("collection.anki2", colecao([("Please update to the latest Anki version", "")]))
+        else:
+            z.writestr("collection.anki2", colecao(notas))
+    return saida.getvalue()
+
+
+def test_ler_texto_do_anki_csv_e_cloze():
+    # Export "Notas em texto simples" do Anki: cabeçalho, HTML e colunas extras.
+    anki = (
+        "#separator:tab\n#html:true\n#notetype column:1\n#tags column:4\n"
+        "Básico\tSinal de <b>Murphy</b>\tColecistite&nbsp;aguda\ttag1\n"
+        'Básico\t"Duas<br>linhas"\tverso\t\n'
+        "Básico\t<img src=\"x.png\">\tsó imagem na frente\t\n"
+    )
+    pares, ignorados = db.ler_cartoes_importados(anki.encode())
+    assert pares == [("Sinal de Murphy", "Colecistite aguda"), ("Duas\nlinhas", "verso")]
+    assert ignorados == 1
+
+    # Colado à mão, separado por ponto e vírgula; texto sem HTML fica como está.
+    pares, _ = db.ler_cartoes_importados("PA < 90 mmHg;choque\nsem verso\n".encode())
+    assert pares == [("PA < 90 mmHg", "choque")]
+
+    # CSV salvo pelo Excel no Windows não é UTF-8.
+    pares, _ = db.ler_cartoes_importados("Fígado,órgão".encode("cp1252"))
+    assert pares == [("Fígado", "órgão")]
+
+    pares, _ = db.ler_cartoes_importados(
+        "{{c1::Ceftriaxona::antibiótico}} trata gonorreia\tdose única".encode()
+    )
+    assert pares == [("[antibiótico] trata gonorreia", "Ceftriaxona trata gonorreia\n\ndose única")]
+
+
+def test_ler_apkg_novo_e_antigo():
+    notas = [("Frente <i>um</i>", "Verso um"), ("Frente dois", "Verso dois [sound:a.mp3]")]
+    esperado = [("Frente um", "Verso um"), ("Frente dois", "Verso dois")]
+    assert db.ler_cartoes_importados(_apkg(notas))[0] == esperado
+    assert db.ler_cartoes_importados(_apkg(notas, novo=False))[0] == esperado
+
+
+def test_importar_no_baralho():
+    email = alheia = None
+    try:
+        with TestClient(app) as client:
+            email, _ = _conta(client, "imp")
+            pasta = client.post("/cartoes/pastas", json={"nome": "Anki", "cor": "azul-3"}).json()["id"]
+            baralho = client.post("/cartoes/baralhos", json={"pasta_id": pasta, "nome": "Cirurgia"}).json()["id"]
+            url = f"/cartoes/baralhos/{baralho}/importar"
+            texto = "frente 1\tverso 1\nfrente 2\tverso 2\n".encode()
+
+            # Simular lê e não grava.
+            r = client.post(url, params={"simular": "true"}, content=texto)
+            assert r.status_code == 200, r.text
+            assert r.json()["cartoes"] == 2
+            assert r.json()["amostra"][0] == {"frente": "frente 1", "verso": "verso 1"}
+            assert client.get(f"/cartoes/baralhos/{baralho}").json()["cartoes"] == []
+
+            r = client.post(url, content=_apkg([("a", "b"), ("c", "d"), ("e", "f")]))
+            assert r.status_code == 200, r.text
+            assert r.json()["cartoes"] == 3
+            cartoes = client.get(f"/cartoes/baralhos/{baralho}").json()["cartoes"]
+            assert {c["frente"] for c in cartoes} == {"a", "c", "e"}
+            # Entram como novos: o estudo do baralho já os vê.
+            assert len(client.get(f"{url.rsplit('/', 1)[0]}/estudar").json()["cartoes"]) == 3
+
+            assert client.post(url, content=b"sem separador nenhum").status_code == 400
+            assert client.post(url, content=b"\t\n\t\n").status_code == 400
+            # Arquivo grande é recusado antes de ser lido inteiro.
+            assert client.post(url, content=b"a\tb\n" * (db.LIMITE_IMPORTACAO_BYTES // 4 + 1)).status_code == 413
+            muitos = "".join(f"f{i}\tv{i}\n" for i in range(db.LIMITE_IMPORTACAO_CARTOES + 1)).encode()
+            assert client.post(url, content=muitos).status_code == 400
+            client.post("/auth/logout")
+
+            # O baralho de outra conta, com o id na mão.
+            alheia, _ = _conta(client, "imp_alheia")
+            assert client.post(url, content=texto).status_code == 404
+            client.post("/auth/logout")
+            client.post("/auth/login", json={"email": email, "senha": "senha123"})
+            assert len(client.get(f"/cartoes/baralhos/{baralho}").json()["cartoes"]) == 3
+    finally:
+        _apagar(*[e for e in (email, alheia) if e])

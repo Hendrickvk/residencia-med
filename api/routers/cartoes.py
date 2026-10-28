@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from starlette.concurrency import run_in_threadpool
 
 import db
 import repeticao_espacada as sr
@@ -67,6 +68,41 @@ def atualizar_baralho(baralho_id: int, dados: BaralhoIn, usuario=Depends(usuario
 @router.delete("/baralhos/{baralho_id}", status_code=status.HTTP_204_NO_CONTENT)
 def excluir_baralho(baralho_id: int, usuario=Depends(usuario_atual)):
     db.excluir_baralho(baralho_id, usuario_id=usuario["id"])
+
+
+@router.post("/baralhos/{baralho_id}/importar")
+async def importar(baralho_id: int, request: Request, simular: bool = False, usuario=Depends(usuario_atual)):
+    """O corpo é o arquivo cru (texto, CSV/TSV ou .apkg do Anki — o `db`
+    reconhece pelo conteúdo). `simular=true` só lê e devolve a contagem e uma
+    amostra, para ela conferir antes de 2000 cartões errados entrarem.
+
+    Assíncrono só para ler o corpo aos pedaços, parando no teto em vez de
+    aceitar o que vier; o trabalho pesado vai para o threadpool, como nas
+    rotas síncronas.
+    """
+    if await run_in_threadpool(db.obter_baralho, baralho_id, usuario_id=usuario["id"]) is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Baralho não encontrado.")
+    grande = HTTPException(status.HTTP_413_CONTENT_TOO_LARGE, "Arquivo grande demais. No Anki, exporte sem mídia.")
+    if int(request.headers.get("content-length") or 0) > db.LIMITE_IMPORTACAO_BYTES:
+        raise grande
+    dados = bytearray()
+    async for bloco in request.stream():
+        dados += bloco
+        if len(dados) > db.LIMITE_IMPORTACAO_BYTES:
+            raise grande
+    try:
+        pares, ignorados = await run_in_threadpool(db.ler_cartoes_importados, bytes(dados))
+    except db.ImportacaoInvalida as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e))
+    if not pares:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Nenhum cartão com frente e verso nesse arquivo.")
+    if not simular:
+        await run_in_threadpool(db.importar_cartoes, usuario_id=usuario["id"], baralho_id=baralho_id, pares=pares)
+    return {
+        "cartoes": len(pares),
+        "ignorados": ignorados,
+        "amostra": [{"frente": f, "verso": v} for f, v in pares[:3]],
+    }
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)

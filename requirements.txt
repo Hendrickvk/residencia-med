@@ -3,6 +3,8 @@ pandas>=2.1
 openpyxl>=3.1
 psycopg2-binary>=2.9
 bcrypt>=4.0
+# Importar flashcards do Anki: o .apkg do Anki 2.1.50+ vem compactado com zstd.
+zstandard>=0.22
 # Base de fusos para o zoneinfo no Windows (db.FUSO_PLATAFORMA); no Linux o
 # sistema já traz, e o pacote é inofensivo.
 tzdata>=2024.1

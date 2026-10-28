@@ -6,7 +6,10 @@ Todas as tabelas e funções de CRUD/consulta usadas pelo app Streamlit
 ficam centralizadas aqui, para manter a interface (app.py) enxuta.
 """
 
+import csv
 import hashlib
+import html as html_lib
+import io
 import os
 import random
 import re
@@ -15,7 +18,9 @@ import math
 import datetime
 import threading
 import time
+import sqlite3
 import unicodedata
+import zipfile
 from contextlib import contextmanager
 from zoneinfo import ZoneInfo
 
@@ -24,6 +29,7 @@ import psycopg2.errors
 import psycopg2.extensions
 import psycopg2.pool
 from psycopg2.extras import RealDictCursor
+import zstandard
 
 # Postgres retorna colunas NUMERIC/DECIMAL (ex: resultado de ROUND()) como
 # Decimal por padrão no psycopg2 — o SQLite sempre devolvia float aqui.
@@ -2001,6 +2007,171 @@ def criar_cartao(*, usuario_id, baralho_id, frente, verso, questao_id=None):
             (usuario_id, baralho_id, frente, verso, agora_br(), questao_id),
         )
         return c.lastrowid
+
+
+# Importar cartões: texto colado ou arquivo (CSV/TSV, o "Notas em texto
+# simples" do Anki) e o pacote .apkg do Anki. O que chega é um arquivo
+# qualquer, então os tetos são o que impede um upload de ocupar a memória de
+# um servidor com 954 MB e sem swap — inclusive o arquivo que diz ser pequeno
+# e descompacta em gigabytes.
+LIMITE_IMPORTACAO_BYTES = 30 * 1024 * 1024
+LIMITE_IMPORTACAO_CARTOES = 2000
+_LIMITE_COLECAO_ANKI = 200 * 1024 * 1024
+_SEPARADORES_ANKI = {"tab": "\t", "comma": ",", "semicolon": ";", "space": " ", "pipe": "|", "colon": ":"}
+_CLOZE = re.compile(r"\{\{c\d+::(.*?)(?:::(.*?))?\}\}", re.S)
+
+
+class ImportacaoInvalida(ValueError):
+    """A mensagem vai direto para a tela."""
+
+
+def ler_cartoes_importados(dados):
+    """Bytes do arquivo (ou do texto colado) -> (pares (frente, verso), ignorados).
+
+    Uma nota vira um cartão: o primeiro campo é a frente, o segundo o verso.
+    Nota cloze ({{c1::…}}) vira frente com lacuna e verso com a resposta.
+    Ignorada é a nota que fica sem frente ou sem verso — no Anki, quase sempre
+    um campo que era só imagem, e cartão ainda não tem imagem.
+    """
+    if dados[:4] == b"PK\x03\x04":
+        notas, html = _notas_do_apkg(dados), True
+    else:
+        try:
+            texto = dados.decode("utf-8-sig")
+        except UnicodeDecodeError:
+            texto = dados.decode("cp1252", errors="replace")  # CSV salvo pelo Excel
+        notas, html = _notas_do_texto(texto)
+    pares, ignorados = [], 0
+    for campos in notas:
+        par = _par_do_cartao(campos, html)
+        if par:
+            pares.append(par)
+        else:
+            ignorados += 1
+    if len(pares) > LIMITE_IMPORTACAO_CARTOES:
+        raise ImportacaoInvalida(
+            f"São {len(pares)} cartões; o limite por importação é {LIMITE_IMPORTACAO_CARTOES}. "
+            "Divida em partes."
+        )
+    return pares, ignorados
+
+
+def _notas_do_texto(texto):
+    # Cabeçalho do export do Anki: "#separator:tab", "#html:true",
+    # "#deck column:2"… As colunas de tipo, baralho, guid e tags saem da conta.
+    separador, html, fora = None, False, set()
+    linhas = texto.splitlines(keepends=True)
+    inicio = 0
+    for linha in linhas:
+        if not (linha.startswith("#") and ":" in linha):
+            break
+        chave, valor = (s.strip() for s in linha[1:].split(":", 1))
+        chave = chave.lower()
+        if chave == "separator":
+            separador = _SEPARADORES_ANKI.get(valor.lower(), valor[:1] or None)
+        elif chave == "html":
+            html = valor.lower() == "true"
+        elif chave.endswith(" column") and valor.isdigit():
+            fora.add(int(valor) - 1)
+        inicio += 1
+    corpo = "".join(linhas[inicio:])
+    if separador is None:
+        separador = next((s for s in ("\t", ";", ",") if s in corpo), None)
+    if separador is None:
+        raise ImportacaoInvalida("Separe frente e verso com tab, ponto e vírgula ou vírgula.")
+    notas = []
+    for linha in csv.reader(io.StringIO(corpo), delimiter=separador):
+        campos = [c for i, c in enumerate(linha) if i not in fora]
+        if any(c.strip() for c in campos):
+            notas.append(campos)
+            if len(notas) > LIMITE_IMPORTACAO_CARTOES * 2:
+                break  # o teto de cartões avisa; não adianta ler o resto
+    return notas, html
+
+
+def _ler_com_teto(arquivo, teto):
+    partes, total = [], 0
+    while bloco := arquivo.read(1024 * 1024):
+        total += len(bloco)
+        if total > teto:
+            raise ImportacaoInvalida("Esse baralho é grande demais para importar de uma vez.")
+        partes.append(bloco)
+    return b"".join(partes)
+
+
+def _notas_do_apkg(dados):
+    try:
+        pacote = zipfile.ZipFile(io.BytesIO(dados))
+        nomes = set(pacote.namelist())
+        # Do Anki 2.1.50 em diante a coleção vem compactada com zstd
+        # (`collection.anki21b`), e o `collection.anki2` que vai junto é só um
+        # aviso de "atualize o Anki" — por isso ele é o último da fila.
+        if "collection.anki21b" in nomes:
+            with pacote.open("collection.anki21b") as f:
+                banco = _ler_com_teto(zstandard.ZstdDecompressor().stream_reader(f), _LIMITE_COLECAO_ANKI)
+        else:
+            nome = next((n for n in ("collection.anki21", "collection.anki2") if n in nomes), None)
+            if nome is None:
+                raise ImportacaoInvalida("Esse .apkg não tem uma coleção do Anki dentro.")
+            with pacote.open(nome) as f:
+                banco = _ler_com_teto(f, _LIMITE_COLECAO_ANKI)
+    except (zipfile.BadZipFile, zstandard.ZstdError, EOFError):
+        raise ImportacaoInvalida("Não deu para abrir esse arquivo. Exporte de novo pelo Anki.")
+
+    # Um SQLite que veio de fora: sem funções vindas do esquema, e com um
+    # relógio — uma `notes` que fosse uma view recursiva prenderia o servidor.
+    conn = sqlite3.connect(":memory:")
+    try:
+        conn.deserialize(banco)
+        conn.execute("PRAGMA trusted_schema = OFF")
+        prazo = time.monotonic() + 5
+        conn.set_progress_handler(lambda: time.monotonic() > prazo, 10_000)
+        linhas = conn.execute(
+            "SELECT flds FROM notes ORDER BY id LIMIT ?", (LIMITE_IMPORTACAO_CARTOES * 2 + 1,)
+        ).fetchall()
+    except sqlite3.Error:
+        raise ImportacaoInvalida("Não deu para ler esse arquivo. Exporte de novo pelo Anki.")
+    finally:
+        conn.close()
+    return [str(flds or "").split("\x1f") for (flds,) in linhas]
+
+
+def _limpar_html(s):
+    s = re.sub(r"\[sound:[^\]]*\]", "", s)
+    s = re.sub(r"<br\s*/?>|</(?:div|p|li|tr)>", "\n", s, flags=re.I)
+    s = html_lib.unescape(re.sub(r"<[^>]*>", "", s))
+    s = re.sub(r"[ \t\xa0]+", " ", s)
+    return re.sub(r"\n\s*\n\s*", "\n\n", "\n".join(l.strip() for l in s.split("\n")))
+
+
+def _par_do_cartao(campos, html):
+    campos = [_limpar_html(c) if html else c for c in campos]
+    frente = campos[0] if campos else ""
+    if _CLOZE.search(frente):
+        extra = campos[1].strip() if len(campos) > 1 else ""
+        verso = _CLOZE.sub(lambda m: m.group(1), frente) + (f"\n\n{extra}" if extra else "")
+        frente = _CLOZE.sub(lambda m: f"[{m.group(2) or '…'}]", frente)
+    else:
+        verso = campos[1] if len(campos) > 1 else ""
+    frente, verso = _texto(frente, LIMITE_TEXTO_CARTAO), _texto(verso, LIMITE_TEXTO_CARTAO)
+    return (frente, verso) if frente and verso else None
+
+
+def importar_cartoes(*, usuario_id, baralho_id, pares):
+    """Grava os pares num INSERT só — um por cartão seriam 2000 idas ao Neon.
+    None se o baralho não é dela."""
+    with get_conn() as conn:
+        dono = conn.execute(
+            "SELECT 1 FROM baralhos WHERE id = ? AND usuario_id = ?", (baralho_id, usuario_id)
+        ).fetchone()
+        if dono is None:
+            return None
+        conn.execute(
+            "INSERT INTO cartoes (usuario_id, baralho_id, frente, verso, criado_em) "
+            "SELECT ?, ?, f, v, ? FROM unnest(?::text[], ?::text[]) AS t(f, v)",
+            (usuario_id, baralho_id, agora_br(), [f for f, _ in pares], [v for _, v in pares]),
+        )
+    return len(pares)
 
 
 def atualizar_cartao(cartao_id, *, usuario_id, frente, verso):

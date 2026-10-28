@@ -37,6 +37,21 @@ export const ROTULO_TIPO: Record<TipoNovidade, string> = {
 
 export const NOVIDADES: Novidade[] = [
   {
+    id: "2026-10-28",
+    data: "28 de outubro de 2026",
+    titulo: "Importar flashcards",
+    itens: [
+      {
+        tipo: "novo",
+        texto: "Dentro de um baralho, \"Importar\" traz cartões prontos: cole uma lista com frente e verso por linha, ou escolha um arquivo CSV ou um baralho do Anki (.apkg).",
+      },
+      {
+        tipo: "novo",
+        texto: "Antes de entrar, você confere quantos cartões vieram e como ficaram os primeiros. Cartões de lacuna do Anki viram frente com a lacuna e verso com a resposta.",
+      },
+    ],
+  },
+  {
     id: "2026-09-27a",
     data: "27 de setembro de 2026",
     titulo: "ENAMED 2026 comentado",

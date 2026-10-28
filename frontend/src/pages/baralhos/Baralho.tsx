@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Pencil, Play, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, FileUp, Pencil, Play, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { Dialog } from "../../components/Dialog";
@@ -12,6 +12,7 @@ import {
 import { corDeFundo } from "../../lib/paleta";
 import { BOTAO_PRIMARIO, BOTAO_SECUNDARIO, CAMPO } from "../../lib/estilos";
 import Estudo from "./Estudo";
+import { ImportarCartoes } from "./ImportarCartoes";
 
 export default function Baralho() {
   const { id = "" } = useParams();
@@ -28,6 +29,7 @@ export default function Baralho() {
   const [params, setParams] = useSearchParams();
   const [estudando, setEstudando] = useState(() => params.get("estudar") === "1");
   const [ajustando, setAjustando] = useState(false);
+  const [importando, setImportando] = useState(false);
 
   const recarregar = () => {
     queryClient.invalidateQueries({ queryKey: ["baralho", baralhoId] });
@@ -92,6 +94,10 @@ export default function Baralho() {
               <Pencil size={18} strokeWidth={2} />
               Ajustar
             </button>
+            <button type="button" onClick={() => setImportando(true)} className={BOTAO_SECUNDARIO}>
+              <FileUp size={18} strokeWidth={2} />
+              Importar
+            </button>
             <button type="button" onClick={() => setEditando({})} className={BOTAO_SECUNDARIO}>
               <Plus size={18} strokeWidth={2} />
               Novo cartão
@@ -134,8 +140,8 @@ export default function Baralho() {
           {cartoes.map((c) => (
             <li key={c.id} className="flex items-start gap-4 rounded-card border border-line bg-surface p-4">
               <div className="min-w-0 flex-1">
-                <p className="text-corpo font-semibold text-ink">{c.frente}</p>
-                <p className="mt-1 text-corpo text-ink-2">{c.verso}</p>
+                <p className="whitespace-pre-line text-corpo font-semibold text-ink [overflow-wrap:anywhere]">{c.frente}</p>
+                <p className="mt-1 whitespace-pre-line text-corpo text-ink-2 [overflow-wrap:anywhere]">{c.verso}</p>
               </div>
               <div className="flex shrink-0 gap-1">
                 <button
@@ -166,6 +172,12 @@ export default function Baralho() {
         nomeAtual={data?.baralho.nome ?? ""}
         pastaAtualId={data?.baralho.pasta_id}
         onFechar={() => setAjustando(false)}
+        onSalvo={recarregar}
+      />
+      <ImportarCartoes
+        aberto={importando}
+        baralhoId={baralhoId}
+        onFechar={() => setImportando(false)}
         onSalvo={recarregar}
       />
       <FormularioCartao

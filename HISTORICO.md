@@ -290,7 +290,8 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   `scripts/importar_prova.py`. A USP precisa ser coletada todo ano, porque a
   FUVEST só mantém a edição corrente no ar. A Revalida 2022/1 já entrou; a 2020
   segue travada no gabarito (ver acima).
-- **Flashcards, o que ficou fora:** imagem no cartão e busca nos cartões
+- **Flashcards, o que ficou fora:** imagem no cartão (o importador do Anki
+  já descarta o campo que era só imagem e conta quantos ficaram de fora) e busca nos cartões
   esperam uma semana de uso (desde 23/09), que é quem vai dizer qual importa
   mais; juntar as duas filas de revisão continua adiado, por decisão do
   usuário. O backup semanal, que tinha de vir antes da imagem (ela multiplica o
@@ -2496,6 +2497,35 @@ governa as telas admin do Streamlit.
   confirmação entregue pelo Brevo e nunca aberta, e a pessoa criou outra conta
   com Gmail. A faixa só oferece "Enviar outro link". O usuário decidiu não
   mexer ("a plataforma está estável"); não repropor sem caso novo.
+- **Importar flashcards num baralho** (pedido do usuário). Formatos, por
+  decisão dele: texto colado ou arquivo CSV/TSV (frente e verso por linha, o
+  "Notas em texto simples" do Anki com o cabeçalho `#separator`/`#html`/
+  `#… column`) **e** o `.apkg` do Anki; sempre para dentro do baralho aberto,
+  nunca criando baralho. Um endpoint só, `POST /cartoes/baralhos/{id}/importar`,
+  com o arquivo cru no corpo — o `db.ler_cartoes_importados` reconhece o .apkg
+  pela assinatura do zip. Uma nota vira um cartão (1º campo frente, 2º verso);
+  cloze vira frente com `[…]` (ou a dica) e verso com a resposta; HTML do Anki
+  vira texto; nota que fica sem frente ou verso (no Anki, quase sempre campo só
+  de imagem) é contada como ignorada. Tetos, porque o arquivo é de fora e o
+  servidor tem 954 MB sem swap: 30 MB de corpo, lido aos pedaços e cortado no
+  teto; 200 MB da coleção descompactada (zip bomb); 2000 cartões por
+  importação, recusada inteira acima disso (cortar calado seria pior); o
+  SQLite do .apkg abre em memória com `trusted_schema = OFF` e um relógio de
+  5 s. Grava num `INSERT … SELECT FROM unnest(...)` — um por cartão seriam
+  2000 idas ao Neon. A tela confere antes (`?simular=true`: contagem e três de
+  amostra) porque não existe apagar em lote e um separador errado faria
+  centenas de cartões tortos. **Dependência nova: `zstandard`** — do Anki
+  2.1.50 em diante a coleção do .apkg vem em zstd (`collection.anki21b`), e o
+  `collection.anki2` que vai junto é só o aviso "atualize o Anki"; sem ela o
+  formato que o Anki exporta por padrão não abriria. **No deploy, rodar o
+  `pip install -r requirements.txt` no servidor antes de reiniciar a API**, ou
+  o `import db` quebra a API e o admin. A lista do baralho passou a respeitar
+  quebra de linha (`whitespace-pre-line`), que o estudo já respeitava.
+  `tests/test_cartoes.py` fixa o parser (texto, Excel cp1252, cloze, .apkg novo
+  e antigo) e o endpoint (simular não grava, tetos, baralho de outra conta 404).
+  Conferido no localhost contra o branch de testes, celular e computador,
+  claro e escuro. Não testado com um .apkg exportado de verdade pelo Anki — o
+  dos testes é montado com a mesma tabela `notes`. Ainda não subiu.
 
 ## Armadilhas das telas admin (Streamlit)
 

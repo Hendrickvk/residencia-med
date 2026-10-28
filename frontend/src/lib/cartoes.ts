@@ -80,6 +80,21 @@ export const criarCartao = (baralhoId: number, frente: string, verso: string, qu
     baralho_id: baralhoId, frente, verso, questao_id: questaoId ?? null,
   });
 
+export interface ResultadoImportacao {
+  cartoes: number;
+  ignorados: number;
+  amostra: { frente: string; verso: string }[];
+}
+
+/** O corpo vai cru — texto colado, CSV/TSV ou .apkg; o servidor reconhece
+ *  pelo conteúdo. `simular` só lê e devolve a contagem e uma amostra. */
+export const importarCartoes = (baralhoId: number, conteudo: Blob | string, simular: boolean) =>
+  api.post<ResultadoImportacao>(
+    `/cartoes/baralhos/${baralhoId}/importar${simular ? "?simular=true" : ""}`,
+    undefined,
+    { body: conteudo, headers: { "Content-Type": "application/octet-stream" } },
+  );
+
 export const moverBaralho = (id: number, pastaId: number, nome: string) =>
   api.patch(`/cartoes/baralhos/${id}`, { nome, pasta_id: pastaId });
 
