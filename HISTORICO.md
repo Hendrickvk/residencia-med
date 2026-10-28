@@ -2530,7 +2530,12 @@ governa as telas admin do Streamlit.
   admin reiniciados, sem mudança de banco; front trocado com `dist.antigo`
   guardado). Conferido em produção: `/health` 200, o pacote
   `index-DJ397jos.js` servido, o pedaço do baralho com o diálogo de importar,
-  a rota respondendo 401 sem sessão (existe) e o journal sem erro.
+  a rota respondendo 401 sem sessão (existe) e o journal sem erro. No mesmo
+  dia, um aviso avulso por e-mail ("Agora você pode importar seus
+  flashcards!", desenho editorial escolhido pelo usuário entre três, HTML em
+  `backups/email_flashcards_3_editorial.html`) foi para as 8 contas com e-mail
+  confirmado, sem contas de teste nem a demo, enviado do servidor pelo Brevo:
+  8/8 aceitos.
 
 ## Armadilhas das telas admin (Streamlit)
 
