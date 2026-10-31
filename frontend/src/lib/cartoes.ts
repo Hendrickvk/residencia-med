@@ -1,4 +1,5 @@
 import { api } from "./api";
+import type { Ganho } from "./types";
 
 // Flashcards escritos pela própria aluna: pasta > baralho > cartão.
 //
@@ -112,7 +113,9 @@ export const cartoesParaEstudar = (baralhoId: number | null) =>
 export const desfazerCartao = (id: number) => api.post(`/cartoes/${id}/desfazer`);
 
 export const avaliarCartao = (id: number, qualidade: number) =>
-  api.post<{ proxima_revisao: string; intervalo_dias: number }>(`/cartoes/${id}/avaliar`, { qualidade });
+  api.post<{ proxima_revisao: string; intervalo_dias: number; ganho: Ganho | null }>(`/cartoes/${id}/avaliar`, {
+    qualidade,
+  });
 
 /** "10 min", "6 dias" — o rótulo embaixo de cada botão de nota. */
 export function textoPrazo(prazo: PrazoCartao | undefined): string {

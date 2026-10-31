@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 import db
 from api.routers import (
-    areas, auth, busca, cartoes, me, painel, praticar, questoes, revisao, simulados,
+    areas, auth, busca, cartoes, me, painel, praticar, progresso, questoes, revisao, simulados,
 )
 
 
@@ -30,7 +30,7 @@ app.add_middleware(
 
 for router in (auth.router, me.router, painel.router, praticar.router, questoes.router,
                revisao.router, areas.router, simulados.router, busca.router,
-               cartoes.router):
+               cartoes.router, progresso.router):
     app.include_router(router)
 
 

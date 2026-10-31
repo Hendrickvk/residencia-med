@@ -2,15 +2,18 @@ import { ArrowRight, ChevronDown, RotateCcw, Share2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { NumeroAnimado } from "../../components/NumeroAnimado";
+import { RecompensaSessao } from "../../components/RecompensaSessao";
 import { TemaDoCaso } from "../../components/TemaDoCaso";
 import { AvisoGabaritoProvisorio } from "../../components/AvisoGabaritoProvisorio";
 import { ImagemQuestao } from "../../components/ImagemQuestao";
 import { CriarCartao } from "../../components/CriarCartao";
 import { RelatarErro } from "../../components/RelatarErro";
 import { TextoDiscussao } from "../../components/TextoDiscussao";
+import { useMe } from "../../lib/auth";
 import { compartilharCartao, type DadosCartao, desenharCartao, nomeArquivoCartao } from "../../lib/cartaoResultado";
 import { BOTAO_PRIMARIO, BOTAO_SECUNDARIO } from "../../lib/estilos";
 import { formatarMMSS, formatarNumeroBR, formatarPctBR } from "../../lib/format";
+import { lerGanhosDeProva, resumirGanhos } from "../../lib/ganhos";
 import { atraso } from "../../lib/movimento";
 import {
   distanciaDoCorte,
@@ -22,7 +25,7 @@ import {
   useTemasErradosSimulado,
 } from "../../lib/simulados";
 import { CLASSES_NIVEL, NIVEIS, nivelTriagem } from "../../lib/triagem";
-import type { ComparacaoCorte, ProvaEmBlocos } from "../../lib/types";
+import type { ComparacaoCorte, ProvaEmBlocos, ResumoGanhos } from "../../lib/types";
 import { AlternativaLinha, type EstadoAlternativa } from "../praticar/AlternativaLinha";
 
 interface Props {
@@ -38,6 +41,7 @@ export default function Resultado({ simuladoId, onNovoSimulado }: Props) {
   const { data: itens } = useItensSimulado(simuladoId);
   const { data: desempenho } = useDesempenhoSimulado(simuladoId);
   const { data: temas } = useTemasErradosSimulado(simuladoId);
+  const { data: me } = useMe();
   const [abertos, setAbertos] = useState<Set<number>>(new Set());
   const [todosTemas, setTodosTemas] = useState(false);
   const navigate = useNavigate();
@@ -101,6 +105,14 @@ export default function Resultado({ simuladoId, onNovoSimulado }: Props) {
   // Ritmo que o tempo do simulado dá a cada questão: 3 min na prova oficial.
   const ritmoMs = (simulado.tempo_limite_min * 60_000) / total;
   const acimaDoRitmo = itens.filter((i) => (i.tempo_ms ?? 0) > ritmoMs).length;
+  // Recém-finalizado, com a barra enchendo. Voltando depois, só o total que ficou
+  // guardado e o nível de agora: a barra de meses atrás não diz mais nada.
+  const ganhosDaProva = lerGanhosDeProva(simuladoId);
+  const recompensa: ResumoGanhos | null = ganhosDaProva?.length
+    ? resumirGanhos(ganhosDaProva)
+    : simulado.xp_ganho && me?.progresso
+      ? { xp: simulado.xp_ganho, areas: [], antes: me.progresso, depois: me.progresso }
+      : null;
 
   function alternar(itemId: number) {
     setAbertos((prev) => {
@@ -121,6 +133,8 @@ export default function Resultado({ simuladoId, onNovoSimulado }: Props) {
       </div>
 
       {simulado.gabarito_preliminar && <AvisoGabaritoProvisorio fundo="bg-surface" />}
+
+      {recompensa && <RecompensaSessao resumo={recompensa} />}
 
       {/* A primeira coluna mais larga: com uma casa decimal, "100,0%" não cabia num terço. */}
       <div className="grid grid-cols-1 divide-y divide-line-soft rounded-caso border border-line bg-surface sm:grid-cols-[1.5fr_1fr_1fr] sm:divide-x sm:divide-y-0">

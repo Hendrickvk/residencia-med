@@ -27,6 +27,13 @@ daí:
   São outros hex, não os tokens `t1`–`t5`, e não significam nível; o que continua
   proibido é usar `t1`–`t5` fora do nível. O seletor é um disco radial
   (`components/SeletorCor.tsx`), e cada tom traz o texto que passa 4,5:1 por cima.
+- **Segunda exceção: o metal das conquistas** (decisão do usuário, 31/10/2026, entre
+  carimbo em tinta, carimbo em metal e medalha, no protótipo da Progressão, §6):
+  bronze, prata e ouro pintam o carimbo, a moeda e o trecho da barra de nível que a
+  sessão rendeu. O grau também está na forma do carimbo (borda simples, dupla, e
+  grossa com um fio em volta), então a cor nunca carrega o significado sozinha, e o
+  ouro é mais escuro e mais pardo que o amarelo de "Urgente", para não ser lido como
+  nível.
 - No Praticar e na Revisão, cada questão é um **caso** ("Caso 07", "Discussão do
   caso", "Conduta correta"). No Simulado continua "Questão", porque ali o aluno
   está reproduzindo a prova.
@@ -98,6 +105,10 @@ e mapeados no `tailwind.config.js`. Nenhum hex solto em componente.
 --t4-soft       #E1F2E7    #10301E   fundo de alternativa correta, ofensiva cumprida
 --t5-soft       #E1EAF9    #142540
 --focus         #2D6CD2    #5B8FEA   anel de foco (2px, offset 2px)
+
+--bronze        #8A5A2B    #CF9A66   carimbo de bronze (§1, segunda exceção)
+--prata         #646C75    #AAB2BA   carimbo de prata
+--ouro          #8C6A0F    #D2A94B   carimbo de ouro, moeda, o que a sessão rendeu na barra
 ```
 
 ### Tipografia
@@ -576,6 +587,46 @@ Conteúdo das demais telas: largura máxima 1360px, padding 36/40px.
   decide é o servidor, `classificar_eventos`).
 - Fila vazia: estado vazio com a próxima leva ("As próximas 8 vencem na quinta.") e
   "Praticar casos novos".
+
+### Progressão
+
+Protótipo no canvas [Conduta Progressão](https://claude.ai/artifact/XTQLEHosgjB3osSZVYbRo7);
+as regras do jogo estão em `progressao.py` e os porquês no `HISTORICO.md`. **Sóbria
+durante o caso, forte nos marcos** (decisão do usuário, 31/10/2026). A intensidade
+acompanha a raridade: o que se repete dezenas de vezes por dia quase não aparece.
+
+- **Durante o caso**: só `+10 XP` em negrito, na linha de "Discussão do caso", do lado
+  direito, numa linha que já existia (nada se desloca). Quem diz quanto é o servidor,
+  no lote (`recompensa`), como os prazos da Revisão. No Simulado, nada até finalizar:
+  XP durante a prova vazaria o gabarito.
+- **Fim da sessão** (`components/RecompensaSessao.tsx`, em Praticar, Revisão, Baralhos
+  e Simulado), logo abaixo do título: `+170` em `num-lg` contando, a barra de nível (o
+  que já tinha em tinta, o que a sessão rendeu em `--ouro`), o que cada área ganhou e a
+  próxima patente. A barra enche por `scaleX` e os números contam sobre a largura
+  reservada, porque a última resposta da fila pode chegar depois de a tela abrir.
+- **Subir de nível** acontece quase todo dia no começo, então não interrompe: o número
+  do nível carimba dentro do próprio bloco. Só a **troca de patente** abre um diálogo,
+  com o crachá novo e o que ela libera: são sete na carreira inteira.
+- **Anel de nível** (`components/AnelNivel.tsx`): em volta do avatar na barra superior,
+  em tinta sobre `--line`, sem ocupar largura nenhuma (o avatar encolhe de 36 para 28px
+  dentro dos mesmos 36). A moldura não aparece abaixo de 64px.
+- **Menu da conta**: nível, patente e uma barra fina, que levam a `/progresso`.
+- **Faixa no Painel**, abaixo da Conduta de hoje: uma linha só com nível, barra e quanto
+  falta. Sem botão primário, porque o da Conduta de hoje é o único da tela.
+- **`/progresso`**, fora do `NAV` como o Perfil (o rodapé tem cinco colunas): o título
+  é o que falta ("Faltam 120 XP para o nível 15."), como o Painel é o diagnóstico; ao
+  lado, o crachá; abaixo, a trilha das patentes, a experiência por área e o mapa de
+  calor em tons de `--ink` (nenhum t1–t5, porque não é nível). A frase abaixo das áreas
+  deixa claro que o nível de área mede trabalho, e que desempenho é o quadro do Painel.
+- **Crachá** (`components/Cracha.tsx`): a identidade da aluna, com a faixa na cor
+  dela, a fenda do cordão, nome, patente, nível e um código de barras decorativo.
+  Largura fixa de 300px, e o nome quebra com `[overflow-wrap:anywhere]`.
+- **Patentes**: por posto e não por pessoa, para não terem gênero: Ciclo básico,
+  Ciclo clínico, Internato, R1, R2, R3, Preceptoria, Chefia.
+- **Voz**: sem "Parabéns!". "Nível 20. R1." diz tudo.
+- **Ainda por vir** (no protótipo): loja com itens travados à vista (fase 2), caderneta
+  de carimbos numa ficha de doses (fase 3), temas, estampas e efeitos (fase 4), perfil
+  público (fase 5).
 
 ### Página pública (`/`)
 Desde 26/09 (`pages/Inicio.tsx`). É a única tela de persuasão: quem chega por um

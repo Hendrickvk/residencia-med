@@ -943,6 +943,32 @@ def init_db(forcar=False):
             c.execute("ALTER TABLE usuarios ADD COLUMN lembrete_revisao BOOLEAN NOT NULL DEFAULT FALSE")
         if "lembrete_enviado_em" not in colunas_usuarios:
             c.execute("ALTER TABLE usuarios ADD COLUMN lembrete_enviado_em DATE")
+        # Progressão (progressao.py): o saldo fica aqui porque o `/me` já lê esta
+        # linha a cada requisição. Quem manda é o razão `progresso_eventos`.
+        if "xp_total" not in colunas_usuarios:
+            c.execute("ALTER TABLE usuarios ADD COLUMN xp_total INTEGER NOT NULL DEFAULT 0")
+        if "moedas" not in colunas_usuarios:
+            c.execute("ALTER TABLE usuarios ADD COLUMN moedas INTEGER NOT NULL DEFAULT 0 CHECK (moedas >= 0)")
+
+        # O razão da progressão: uma linha por ganho. A `chave` única por conta é o
+        # que torna reenvio inofensivo e o que limita a mesma questão a pagar uma
+        # vez por dia. Sem FK para a questão, de propósito: questão anulada sai do
+        # banco, e o XP de quem a respondeu fica.
+        c.execute("""
+        CREATE TABLE IF NOT EXISTS progresso_eventos (
+            id SERIAL PRIMARY KEY,
+            usuario_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+            chave TEXT NOT NULL,
+            tipo TEXT NOT NULL,
+            xp INTEGER NOT NULL DEFAULT 0,
+            moedas INTEGER NOT NULL DEFAULT 0,
+            area_id INTEGER REFERENCES areas(id) ON DELETE SET NULL,
+            dia DATE NOT NULL,
+            criado_em TIMESTAMP NOT NULL,
+            UNIQUE (usuario_id, chave)
+        )
+        """)
+        c.execute("CREATE INDEX IF NOT EXISTS idx_progresso_eventos_usuario_dia ON progresso_eventos(usuario_id, dia)")
 
         # Envios que são um por dia no total (o relatório para o admin): a linha
         # (tipo, dia) é a trava contra mandar de novo se o timer rodar duas vezes.
@@ -1157,8 +1183,15 @@ def init_db(forcar=False):
             SELECT column_name FROM information_schema.columns
             WHERE table_name = 'simulados'
         """)
-        if "edicao" not in {row["column_name"] for row in c.fetchall()}:
+        colunas_simulados = {row["column_name"] for row in c.fetchall()}
+        if "edicao" not in colunas_simulados:
             c.execute("ALTER TABLE simulados ADD COLUMN edicao TEXT")
+        # O que o simulado rendeu (progressao.fechar_simulado): o resultado mostra
+        # mesmo depois de recarregar a página. NULL em simulado de antes disto.
+        if "xp_ganho" not in colunas_simulados:
+            c.execute("ALTER TABLE simulados ADD COLUMN xp_ganho INTEGER")
+        if "moedas_ganhas" not in colunas_simulados:
+            c.execute("ALTER TABLE simulados ADD COLUMN moedas_ganhas INTEGER")
 
         # Bloco da prova oficial (dividir_em_blocos): NULL na prova inteira e no
         # simulado montado.

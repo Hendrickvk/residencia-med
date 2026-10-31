@@ -14,6 +14,7 @@ import { api, ApiError } from "../../lib/api";
 import { ACAO_DA_VEZ, BOTAO_PRIMARIO, PRESSAO } from "../../lib/estilos";
 import { BarraFoco } from "../../lib/foco";
 import { formatarMMSS } from "../../lib/format";
+import { zerarGanhos } from "../../lib/ganhos";
 import { rolarParaTopo } from "../../lib/movimento";
 import { enfileirarResposta } from "../../lib/respostasQueue";
 import { limparSessao, salvarSessao, type SessaoSalva } from "../../lib/sessaoSalva";
@@ -77,6 +78,12 @@ export default function Sessao({ filtros, nonce, salva, email, onFinalizar, onVo
 
   const questaoAtual = fila[idx];
   const correta = questaoAtual ? selecionada === questaoAtual.resposta_correta : false;
+  const xpDoCaso = questaoAtual?.recompensa?.[correta ? "certo" : "errado"] ?? 0;
+
+  // O bloco do fim mostra o que esta sessão rendeu, não a anterior.
+  useEffect(() => {
+    zerarGanhos();
+  }, []);
 
   useEffect(() => {
     if (data) setMarcadas(new Set(fila.filter((q) => q.marcada).map((q) => q.id)));
@@ -452,7 +459,12 @@ export default function Sessao({ filtros, nonce, salva, email, onFinalizar, onVo
             ) : (
               <>
                 <div className="flex animate-entrar flex-col gap-3 border-t border-line-soft pt-6">
-                  <span className="rotulo text-muted">Discussão do caso</span>
+                  {/* O +XP na linha que já existia: nada se desloca, e o caso segue
+                      sóbrio (DESIGN_TRIAGEM.md §6). */}
+                  <div className="flex items-baseline justify-between gap-4">
+                    <span className="rotulo text-muted">Discussão do caso</span>
+                    {xpDoCaso > 0 && <span className="text-apoio font-bold tabular-nums text-ink">+{xpDoCaso} XP</span>}
+                  </div>
                   <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                     <span className="text-subtitulo">Resposta correta: {questaoAtual.resposta_correta}</span>
                     {/* Altura reservada: a frase só entra quando a distribuição chega. */}

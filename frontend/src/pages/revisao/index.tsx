@@ -13,6 +13,7 @@ import { RelatarErro } from "../../components/RelatarErro";
 import { TextoDiscussao } from "../../components/TextoDiscussao";
 import { ACAO_DA_VEZ, BOTAO_PRIMARIO, PRESSAO } from "../../lib/estilos";
 import { BarraFoco } from "../../lib/foco";
+import { registrarGanho, zerarGanhos } from "../../lib/ganhos";
 import { rolarParaTopo } from "../../lib/movimento";
 import { estimarDuracao, formatarPrazo } from "../../lib/prazo";
 import { avaliarRevisao, useLevaRevisao } from "../../lib/revisao";
@@ -62,9 +63,11 @@ export default function Revisao() {
   const restantes = Math.max(fila.length - idx, 0);
   const q = fila[idx];
   const acertou = q ? selecionada === q.resposta_correta : false;
+  const xpDoCaso = q?.recompensa?.[acertou ? "certo" : "errado"] ?? 0;
 
   // A contagem da aba e do Painel vem do servidor: atualiza ao sair da Revisão.
   useEffect(() => {
+    zerarGanhos();
     return () => {
       void queryClient.invalidateQueries({ queryKey: ["painel"] });
     };
@@ -82,6 +85,7 @@ export default function Revisao() {
     setAvaliacoes([]);
     setAvancou(true);
     rolarParaTopo();
+    zerarGanhos();
     void queryClient.invalidateQueries({ queryKey: ["painel"] });
   }
 
@@ -110,6 +114,9 @@ export default function Revisao() {
       () => null,
     );
     setEnviando(false);
+    registrarGanho(resultado?.ganho);
+    // O anel e o menu da conta leem o nível do `/me`.
+    void queryClient.invalidateQueries({ queryKey: ["me"] });
     setAvaliacoes((anteriores) => [
       ...anteriores,
       {
@@ -124,9 +131,14 @@ export default function Revisao() {
     if (!certa) {
       // O servidor já agenda de verdade para 10 minutos, mas a fila que o
       // cliente buscou não saberia disso sozinha: sem reinserir, o caso sumia
-      // da sessão. Volta com os prazos recalculados a partir do erro.
+      // da sessão. Volta com os prazos recalculados a partir do erro, e sem o +XP:
+      // a mesma questão só paga uma vez por dia.
       const copia = [...fila];
-      copia.splice(Math.min(idx + 4, copia.length), 0, resultado ? { ...q, prazos: resultado.prazos } : q);
+      copia.splice(Math.min(idx + 4, copia.length), 0, {
+        ...q,
+        prazos: resultado?.prazos ?? q.prazos,
+        recompensa: null,
+      });
       setFilaSessao(copia);
     }
     setIdx((i) => i + 1);
@@ -344,7 +356,10 @@ export default function Revisao() {
             ) : (
               <>
                 <div className="flex animate-entrar flex-col gap-3 border-t border-line-soft pt-6">
-                  <span className="rotulo text-muted">Discussão do caso</span>
+                  <div className="flex items-baseline justify-between gap-4">
+                    <span className="rotulo text-muted">Discussão do caso</span>
+                    {xpDoCaso > 0 && <span className="text-apoio font-bold tabular-nums text-ink">+{xpDoCaso} XP</span>}
+                  </div>
                   <span className="text-subtitulo">Resposta correta: {q.resposta_correta}</span>
                   {q.provas?.some((p) => p.gabarito_preliminar) && <AvisoGabaritoProvisorio />}
                   <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">

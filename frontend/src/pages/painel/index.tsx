@@ -12,6 +12,7 @@ import { Cabecalho } from "./Cabecalho";
 import { CondutaHoje } from "./CondutaHoje";
 import { EvolucaoMemoria } from "./EvolucaoMemoria";
 import { EvolucaoTriagem } from "./EvolucaoTriagem";
+import { FaixaProgresso } from "./FaixaProgresso";
 import { NotaProjetada } from "./NotaProjetada";
 import { PorTipoPergunta } from "./PorTipoPergunta";
 import { PrevisaoSemana } from "./PrevisaoSemana";
@@ -141,6 +142,7 @@ export default function Painel() {
         onEstudarCartoes={() => navigate("/baralhos?estudar=tudo")}
         onPraticar={praticarTema}
       />
+      {me?.progresso && <FaixaProgresso progresso={me.progresso} />}
       <QuadroTriagem
         areas={data.por_area}
         onAbrir={(areaId) => navigate("/praticar", { state: { areaId } })}

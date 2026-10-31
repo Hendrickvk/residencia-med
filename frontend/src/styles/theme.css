@@ -42,6 +42,12 @@
   /* Véu do baralho (lib/paleta.ts): quanto do tom do meio da família entra
      misturado ao papel. Por tema, porque a mesma proporção some no escuro. */
   --veu-pasta: 20%;
+
+  /* O metal das conquistas (§1, segunda exceção). Não são nível de triagem, e o
+     ouro é mais pardo que o amarelo de "Urgente" para não ser lido como um. */
+  --bronze: #8a5a2b;
+  --prata: #646c75;
+  --ouro: #8c6a0f;
 }
 
 .dark {
@@ -74,6 +80,10 @@
   --veu-pasta: 30%;
 
   --focus: #5b8fea;
+
+  --bronze: #cf9a66;
+  --prata: #aab2ba;
+  --ouro: #d2a94b;
 }
 
 @layer base {
@@ -197,6 +207,22 @@
     font-weight: 800;
     font-stretch: 115%;
     letter-spacing: -0.03em;
+  }
+  /* O código de barras do crachá, só desenho (components/Cracha.tsx). */
+  .cracha-barras {
+    background: repeating-linear-gradient(
+      90deg,
+      var(--ink) 0 2px,
+      transparent 2px 4px,
+      var(--ink) 4px 5px,
+      transparent 5px 9px,
+      var(--ink) 9px 12px,
+      transparent 12px 14px,
+      var(--ink) 14px 15px,
+      transparent 15px 19px,
+      var(--ink) 19px 20px,
+      transparent 20px 23px
+    );
   }
 }
 

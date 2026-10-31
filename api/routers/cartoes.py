@@ -171,4 +171,8 @@ def avaliar(cartao_id: int, dados: NotaCartaoIn, usuario=Depends(usuario_atual))
     estado = sr.avaliar_cartao(cartao_id, dados.qualidade, usuario_id=usuario["id"])
     if estado is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Cartão não encontrado.")
-    return {"proxima_revisao": estado["proxima_revisao"], "intervalo_dias": estado["intervalo_dias"]}
+    return {
+        "proxima_revisao": estado["proxima_revisao"],
+        "intervalo_dias": estado["intervalo_dias"],
+        "ganho": estado["ganho"],
+    }

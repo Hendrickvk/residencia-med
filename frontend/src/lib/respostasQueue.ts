@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { api } from "./api";
+import { registrarGanho } from "./ganhos";
 import { queryClient } from "./queryClient";
-import type { RespostaPayload } from "./types";
+import type { Ganho, RespostaPayload } from "./types";
 
 /**
  * MIGRACAO.md §2: "POST /respostas é fire-and-forget do ponto de vista da
@@ -34,8 +35,9 @@ async function processar() {
     let enviado = false;
     while (tentativas < MAX_TENTATIVAS && !enviado) {
       try {
-        await api.post("/respostas", payload);
+        const resposta = await api.post<{ ganho: Ganho | null }>("/respostas", payload);
         enviado = true;
+        registrarGanho(resposta.ganho);
         // Ofensiva/contadores no topbar (`/me`) dependem de respostas
         // recém-gravadas — sem isso ficam presos ao valor de antes da sessão
         // até o staleTime da query expirar por conta própria.

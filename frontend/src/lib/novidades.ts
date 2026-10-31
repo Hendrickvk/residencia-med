@@ -37,6 +37,25 @@ export const ROTULO_TIPO: Record<TipoNovidade, string> = {
 
 export const NOVIDADES: Novidade[] = [
   {
+    id: "2026-10-31",
+    data: "31 de outubro de 2026",
+    titulo: "Nível e patente",
+    itens: [
+      {
+        tipo: "novo",
+        texto: "Cada caso respondido agora rende XP, e a sua conta tem nível e patente, do Ciclo básico à Chefia. Errar também rende: o que conta é ter estudado.",
+      },
+      {
+        tipo: "novo",
+        texto: "O fim de cada sessão mostra o que ela rendeu. O anel em volta da sua foto mostra quanto falta para o próximo nível.",
+      },
+      {
+        tipo: "novo",
+        texto: "Em Progresso, no menu da conta, ficam o seu crachá, a experiência em cada grande área e os seus dias de estudo. O que você já estudou até aqui contou.",
+      },
+    ],
+  },
+  {
     id: "2026-10-28",
     data: "28 de outubro de 2026",
     titulo: "Importar flashcards",

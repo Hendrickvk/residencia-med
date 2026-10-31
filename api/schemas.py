@@ -80,6 +80,10 @@ class MeOut(BaseModel):
     # numa rota à parte, seria uma ida a mais ao servidor antes de qualquer
     # tela abrir, para todo mundo.
     brincadeira: Optional[dict] = None
+    # Nível, patente e quanto falta (progressao.progresso_do_xp): o anel da barra
+    # e o menu da conta. Vem sem consulta a mais: o saldo está na linha do usuário.
+    progresso: dict
+    moedas: int = 0
 
 
 class TemaIn(BaseModel):

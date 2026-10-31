@@ -4,6 +4,7 @@ import { formatarNumeroBR } from "./format";
 import type {
   DesempenhoAreaSimulado,
   EdicaoOficial,
+  Ganho,
   HistoricoSimulado,
   ItemSimulado,
   ProvaDaQuestao,
@@ -105,7 +106,7 @@ export function somarTempoSimulado(simuladoId: number, questaoId: number, tempoM
 }
 
 export function finalizarSimulado(simuladoId: number) {
-  return api.post(`/simulados/${simuladoId}/finalizar`);
+  return api.post<{ ok: boolean; ganhos: Ganho[] }>(`/simulados/${simuladoId}/finalizar`);
 }
 
 // "REVALIDA" -> "Revalida"; siglas curtas como ENAMED ficam em caixa alta.

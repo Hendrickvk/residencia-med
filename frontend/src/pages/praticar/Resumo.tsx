@@ -1,5 +1,6 @@
 import { RotateCcw } from "lucide-react";
 import { NumeroAnimado } from "../../components/NumeroAnimado";
+import { RecompensaDaSessao } from "../../components/RecompensaSessao";
 import { BOTAO_PRIMARIO } from "../../lib/estilos";
 import { formatarMMSS, formatarPctBR } from "../../lib/format";
 import { atraso } from "../../lib/movimento";
@@ -39,6 +40,8 @@ export default function Resumo({ resumo, onNovaSessao }: Props) {
         <span className="rotulo text-muted">Resumo da sessão</span>
         <h1 className="text-titulo">{n ? `${acertos} de ${n} casos certos.` : "Nenhum caso respondido."}</h1>
       </div>
+
+      <RecompensaDaSessao />
 
       <div className="grid grid-cols-1 divide-y divide-line-soft rounded-caso border border-line bg-surface sm:grid-cols-3 sm:divide-x sm:divide-y-0">
         <div className="flex flex-col gap-2 p-6">

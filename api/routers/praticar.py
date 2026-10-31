@@ -3,6 +3,7 @@ import random
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 import db
+import progressao
 import repeticao_espacada as sr
 from api.deps import usuario_atual, usuario_confirmado
 from api.schemas import RespostaIn
@@ -51,7 +52,9 @@ def obter_sessao_pratica(
             )
         ids = ids[:liberados]
     questoes = db.obter_questoes_por_ids(ids, usuario_id=usuario["id"])
-    return {"questoes": questoes_publicas(questoes)}
+    # O `+10 XP` da discussão: a resposta só é gravada ao ir para o próximo caso.
+    recompensas = progressao.prever_casos(ids, usuario_id=usuario["id"])
+    return {"questoes": [{**q, "recompensa": recompensas.get(q["id"])} for q in questoes_publicas(questoes)]}
 
 
 @router.get("/praticar/contagem")
@@ -106,8 +109,8 @@ def registrar_resposta(dados: RespostaIn, usuario=Depends(usuario_atual)):
         dados.questao_id, dados.alternativa, correta,
         usuario_id=usuario["id"], confianca=dados.confianca, tempo_ms=dados.tempo_ms,
     )
-    sr.registrar_revisao(
+    novo = sr.registrar_revisao(
         dados.questao_id, qualidade, usuario_id=usuario["id"], origem="pratica",
         correta=correta, alternativa=dados.alternativa, tempo_ms=dados.tempo_ms,
     )
-    return {"correta": correta, "resposta_correta": q["resposta_correta"]}
+    return {"correta": correta, "resposta_correta": q["resposta_correta"], "ganho": novo["ganho"]}

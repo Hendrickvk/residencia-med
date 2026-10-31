@@ -26,6 +26,9 @@ export interface Questao {
   marcada: boolean;
   tem_imagem: boolean;
   provas?: ProvaDaQuestao[]; // vazio na questão que não veio de caderno oficial
+  // O XP que a resposta rende (progressao.prever_casos), para a discussão mostrar
+  // na hora: a resposta só é gravada ao ir para o próximo caso.
+  recompensa?: { certo: number; errado: number } | null;
 }
 
 export interface FiltrosPratica {
@@ -293,6 +296,7 @@ export interface AvaliacaoRevisao {
   prazos: PrazosRevisao;
   recuperado: boolean; // tinha errado e lembrou depois de pelo menos 1 dia
   consolidou: boolean; // o intervalo passou a 21 dias ou mais
+  ganho: Ganho | null;
 }
 
 export interface Simulado {
@@ -310,6 +314,7 @@ export interface Simulado {
   finalizado_em: string | null;
   acertos: number | null;
   total_respondidas: number | null;
+  xp_ganho?: number | null; // o que rendeu (progressao.fechar_simulado); null antes de finalizar
 }
 
 export interface SimuladoEmAndamento extends Simulado {
@@ -380,6 +385,52 @@ export interface ResultadoBuscaQuestao {
   especialidade: string | null;
 }
 
+// A curva mora no servidor (progressao.progresso_do_xp): o front só desenha.
+export interface ProgressoNivel {
+  xp: number;
+  nivel: number;
+  patente: string;
+  falta: number;
+  pct: number;
+  proxima_patente: { nome: string; nivel: number } | null;
+}
+
+// O que uma resposta ou um cartão rendeu. `null` no servidor quando não rendeu
+// nada (a mesma questão no mesmo dia).
+export interface Ganho {
+  xp: number;
+  moedas: number;
+  areas: Record<string, number>;
+  antes: ProgressoNivel;
+  depois: ProgressoNivel;
+  trocou_patente: boolean;
+}
+
+export interface ResumoGanhos {
+  xp: number;
+  areas: { nome: string; xp: number }[];
+  antes: ProgressoNivel;
+  depois: ProgressoNivel;
+}
+
+export interface AreaProgresso {
+  id: number;
+  nome: string;
+  xp: number;
+  nivel: number;
+  falta: number;
+  pct: number;
+}
+
+export interface Progresso {
+  nivel: ProgressoNivel;
+  patentes: { nome: string; nivel: number }[];
+  areas: AreaProgresso[];
+  hoje: string;
+  dias: { dia: string; xp: number }[];
+  maior_sequencia: number;
+}
+
 export interface Me {
   id: number;
   email: string;
@@ -401,4 +452,6 @@ export interface Me {
   meta_revisao_diaria: number;
   // Só a conta da convidada recebe o roteiro (lib/brincadeira.ts).
   brincadeira: Brincadeira | null;
+  progresso: ProgressoNivel;
+  moedas: number;
 }

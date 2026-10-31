@@ -4,7 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import { Dialog } from "../../components/Dialog";
 import { EstadoFalha } from "../../components/EstadoFalha";
 import { EstadoVazio } from "../../components/EstadoVazio";
+import { RecompensaDaSessao } from "../../components/RecompensaSessao";
 import { BarraFoco } from "../../lib/foco";
+import { registrarGanho, zerarGanhos } from "../../lib/ganhos";
+import { queryClient } from "../../lib/queryClient";
 import {
   atualizarCartao, avaliarCartao, cartoesParaEstudar, desfazerCartao, plural,
   textoPrazo,
@@ -65,11 +68,17 @@ export default function Estudo({ baralhoId, nome, cor, onSair }: Props) {
   // Quantos ainda vêm depois deste: é o que a pilha de trás desenha.
   const restantes = Math.max(fila.length - feitos - 1, 0);
 
+  useEffect(() => {
+    zerarGanhos();
+  }, []);
+
   function responder(nota: number) {
     if (!atual) return;
     // Fire-and-forget, como o `/respostas` do Praticar: a tela não espera a
     // rede para ir ao próximo cartão.
-    void avaliarCartao(atual.id, nota).catch(() => {});
+    void avaliarCartao(atual.id, nota)
+      .then((r) => registrarGanho(r.ganho))
+      .catch(() => {});
     setNotas((n) => [...n, nota]);
     setVirado(false);
     setIdx((i) => i + 1);
@@ -383,7 +392,13 @@ function ResumoSessao({
   onSair: () => void;
 }) {
   const pct = total ? Math.round((acertos / total) * 100) : 0;
+  // O anel e o menu da conta leem o nível do `/me`. Aqui, e não a cada nota: uma
+  // sessão de 40 cartões seria uma ida ao servidor a mais por cartão.
+  useEffect(() => {
+    void queryClient.invalidateQueries({ queryKey: ["me"] });
+  }, []);
   return (
+    <>
     <div className="flex animate-entrar flex-col items-center gap-5 rounded-caso border border-line bg-surface px-6 py-10 text-center">
       {/* O visto na cor `on` do tom: branco fixo sumia nos tons claros. Carimba
           ao chegar, como a letra da alternativa escolhida: fim de sessão é
@@ -408,5 +423,7 @@ function ResumoSessao({
         Voltar
       </button>
     </div>
+    <RecompensaDaSessao />
+    </>
   );
 }

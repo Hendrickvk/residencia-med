@@ -19,6 +19,7 @@ const TELAS = {
   revisao: () => import("./pages/revisao"),
   baralhos: () => import("./pages/baralhos"),
   perfil: () => import("./pages/perfil"),
+  progresso: () => import("./pages/progresso"),
   simulado: () => import("./pages/simulado"),
 };
 const carregarBaralho = () => import("./pages/baralhos/Baralho");
@@ -30,6 +31,7 @@ const Revisao = lazy(TELAS.revisao);
 const Baralhos = lazy(TELAS.baralhos);
 const Baralho = lazy(carregarBaralho);
 const PaginaPerfil = lazy(TELAS.perfil);
+const PaginaProgresso = lazy(TELAS.progresso);
 const Simulado = lazy(TELAS.simulado);
 
 // Quem abre direto numa tela do app (o app instalado abre em /painel) começa a
@@ -71,6 +73,9 @@ export default function App() {
           {/* Fora do NAV de propósito: a conta não é uma aba de estudo, e o
               caminho para ela é o menu da conta. */}
           <Route path="/perfil" element={<PaginaPerfil />} />
+          {/* Também fora do NAV: o rodapé do celular tem cinco colunas, e o
+              caminho é o anel do avatar, a faixa do Painel e o fim das sessões. */}
+          <Route path="/progresso" element={<PaginaProgresso />} />
           <Route path="/simulado" element={<Simulado />} />
           {/* Fase 7 do MIGRACAO.md §5: as telas do Acervo ficam no Streamlit
               e não ganham rota React própria. */}

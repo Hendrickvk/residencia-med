@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
+import progressao
 import repeticao_espacada as sr
 from api.deps import usuario_atual
 from api.schemas import MarcarRevisaoIn
@@ -18,11 +19,17 @@ def obter_leva(
     fila = plano["fila"]
     # Uma consulta para o estado de todas; o prazo de cada botão sai do mesmo
     # cálculo que agenda (repeticao_espacada.prever_prazos).
-    estados = sr.estados_revisao([q["id"] for q in fila], usuario_id=uid)
+    ids = [q["id"] for q in fila]
+    estados = sr.estados_revisao(ids, usuario_id=uid)
+    recompensas = progressao.prever_casos(ids, usuario_id=uid)
     proxima = sr.proxima_leva_revisao(usuario_id=uid)
     return {
         "fila": [
-            {**publica, "prazos": sr.prever_prazos(estados.get(publica["id"]))}
+            {
+                **publica,
+                "prazos": sr.prever_prazos(estados.get(publica["id"])),
+                "recompensa": recompensas.get(publica["id"]),
+            }
             for publica in questoes_publicas(fila)
         ],
         "proxima_leva": proxima,
@@ -52,4 +59,5 @@ def avaliar(questao_id: int, dados: MarcarRevisaoIn, usuario=Depends(usuario_atu
         "prazos": resultado["prazos"],
         "recuperado": resultado["recuperado"],
         "consolidou": resultado["consolidou"],
+        "ganho": resultado["ganho"],
     }

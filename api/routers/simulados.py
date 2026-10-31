@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 import db
+import progressao
 import repeticao_espacada as sr
 from api.deps import usuario_atual, usuario_confirmado
 from api.schemas import RespostaSimuladoIn, SimuladoIn, SimuladoOficialIn, TempoSimuladoIn
@@ -12,7 +13,9 @@ router = APIRouter(prefix="/simulados", tags=["simulados"])
 def _consolidar_no_historico(simulado_id, usuario_id):
     """Mesma lógica de `app.py::consolidar_simulado_no_historico`: joga as
     respostas do simulado nos mesmos caminhos usados por Praticar, para que
-    Painel e revisão espaçada considerem o simulado automaticamente."""
+    Painel e revisão espaçada considerem o simulado automaticamente. É aqui que
+    o simulado paga: XP durante a prova vazaria o gabarito. Devolve os ganhos."""
+    ganhos = []
     for item in db.listar_itens_simulado(simulado_id, usuario_id=usuario_id):
         if item["resposta_dada"] is None:
             continue
@@ -20,10 +23,12 @@ def _consolidar_no_historico(simulado_id, usuario_id):
         db.registrar_resposta(
             item["id"], item["resposta_dada"], correta, usuario_id=usuario_id, tempo_ms=item["tempo_ms"],
         )
-        sr.registrar_revisao(
+        novo = sr.registrar_revisao(
             item["id"], 5 if correta else 1, usuario_id=usuario_id, origem="simulado",
             correta=correta, alternativa=item["resposta_dada"], tempo_ms=item["tempo_ms"],
         )
+        ganhos.append(novo["ganho"])
+    return progressao.fechar_simulado(simulado_id, usuario_id=usuario_id, ganhos=ganhos, agora=db.agora_br())
 
 
 def _cobrar_cota(usuario_id, quantidade):
@@ -160,9 +165,8 @@ def finalizar(simulado_id: int, usuario=Depends(usuario_atual)):
         raise HTTPException(status.HTTP_403_FORBIDDEN, str(e))
     # Já finalizado: responde ok (o cliente só quer o resultado) sem gravar as
     # respostas no histórico de novo.
-    if finalizou:
-        _consolidar_no_historico(simulado_id, usuario["id"])
-    return {"ok": True}
+    ganhos = _consolidar_no_historico(simulado_id, usuario["id"]) if finalizou else []
+    return {"ok": True, "ganhos": ganhos}
 
 
 def _finalizado(simulado_id, usuario):

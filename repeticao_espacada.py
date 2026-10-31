@@ -26,6 +26,7 @@ import itertools
 import statistics
 
 import db
+import progressao
 from db import get_conn, listar_questoes_marcadas, obter_questao, questao_esta_marcada, desmarcar_questao
 from db import estado_revisao_cartao as db_estado_cartao
 from db import gravar_revisao_cartao as db_gravar_cartao
@@ -148,7 +149,9 @@ def registrar_revisao(questao_id, qualidade: int, *, usuario_id, origem=None, co
 
     `origem`: "pratica", "simulado" ou "revisao" (None nas telas antigas do
     Streamlit). `correta`/`alternativa`: quando houve resposta a uma
-    alternativa. Devolve o novo estado."""
+    alternativa. Devolve o novo estado, com o `ganho` da progressão: Praticar,
+    Simulado e Revisão passam todos por aqui, então é aqui que a resposta paga.
+    Sem resposta a uma alternativa não há o que pagar."""
     qualidade = max(0, min(5, int(qualidade)))
     agora = _agora()
 
@@ -187,6 +190,13 @@ def registrar_revisao(questao_id, qualidade: int, *, usuario_id, origem=None, co
             atraso,
             novo["facilidade"], novo["intervalo_dias"], novo["repeticoes"], novo["proxima_revisao"], agora,
         ))
+
+        novo["ganho"] = None
+        if correta is not None:
+            novo["ganho"] = progressao.pontuar_caso(
+                conn, usuario_id=usuario_id, questao_id=questao_id, primeira=estado is None,
+                vencida=atraso is not None and atraso >= 0, correta=correta, agora=agora,
+            )
 
     return novo
 
@@ -547,8 +557,9 @@ def avaliar_revisao(questao_id, qualidade: int, *, usuario_id, alternativa=None,
 
     Devolve {"correta", "qualidade", "prazos" (previstos a partir do novo
     estado, para quando o caso reaparece na mesma sessão), "recuperado" e
-    "consolidou" (`classificar_eventos`, para o resumo da sessão), + novo
-    estado}."""
+    "consolidou" (`classificar_eventos`, para o resumo da sessão), "ganho" (o da
+    resposta, somado ao bônus da meta do dia se ela acabou de ser cumprida), +
+    novo estado}."""
     correta = None
     if alternativa is not None:
         questao = obter_questao(questao_id)
@@ -561,6 +572,10 @@ def avaliar_revisao(questao_id, qualidade: int, *, usuario_id, alternativa=None,
         questao_id, qualidade, usuario_id=usuario_id, origem="revisao",
         correta=correta, alternativa=alternativa, tempo_ms=tempo_ms,
     )
+    if correta is not None:
+        novo["ganho"] = progressao.juntar(novo["ganho"], progressao.pontuar_meta_revisao(
+            usuario_id=usuario_id, feitas=revisadas_hoje(usuario_id=usuario_id), agora=_agora(),
+        ))
     if qualidade != 1 and questao_esta_marcada(usuario_id, questao_id):
         desmarcar_questao(usuario_id, questao_id)
     with get_conn() as conn:
@@ -598,8 +613,8 @@ def proxima_leva_revisao(*, usuario_id):
 # união das duas consultas — não um segundo algoritmo.
 
 def avaliar_cartao(cartao_id, qualidade: int, *, usuario_id):
-    """Aplica a nota no cartão e devolve o estado novo, ou None se o cartão
-    não for da conta que pediu."""
+    """Aplica a nota no cartão e devolve o estado novo, com o `ganho` da
+    progressão, ou None se o cartão não for da conta que pediu."""
     agora = _agora()
     antes = db_estado_cartao(cartao_id, usuario_id=usuario_id)
     depois = calcular_proximo_estado(antes, qualidade, agora)
@@ -607,7 +622,10 @@ def avaliar_cartao(cartao_id, qualidade: int, *, usuario_id):
         cartao_id, usuario_id=usuario_id, qualidade=qualidade,
         estado_antes=antes, estado_depois=depois, agora=agora,
     )
-    return depois if gravou else None
+    if not gravou:
+        return None
+    depois["ganho"] = progressao.pontuar_cartao(cartao_id, usuario_id=usuario_id, agora=agora)
+    return depois
 
 
 def prazos_do_cartao(cartao_id, *, usuario_id):

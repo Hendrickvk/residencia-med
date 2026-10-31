@@ -8,6 +8,50 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
 
 ## Pendências
 
+- **Gamificação** (pedido de 31/10: "causar a necessidade de querer estudar",
+  replicando os modelos mais famosos). Plano aprovado em fases, cada uma conferida
+  no localhost e subida só com autorização, a API antes do front. O modelo soma
+  Duolingo (XP, ofensiva com proteção, fim de lição), League of Legends (nível de
+  conta e por área, moeda que não se compra, bônus do primeiro acerto do dia) e
+  Steam/PlayStation (conquistas por grau, molduras, vitrine). Decisões do usuário:
+  sóbria durante o caso e forte nos marcos; perfil público opcional; loja com
+  molduras, títulos, temas, estampas e efeitos, além de proteção de ofensiva e XP em
+  dobro; conquistas como carimbo em metal (protótipo no canvas [Conduta
+  Progressão](https://claude.ai/artifact/XTQLEHosgjB3osSZVYbRo7)). Moeda só vem de
+  acerto e de conquista, como ele definiu. **Regras que não são negociáveis, porque
+  o jogo não pode sujar o diagnóstico:** errar também dá XP (só acerto renderia
+  consulta externa antes de responder, e o Painel passaria a mentir); chute rende
+  igual (senão ela para de marcar, e a triagem e o SM-2 perdem o dado); cartão rende
+  por revisar, nunca pela nota, que é autoavaliada; a mesma questão paga uma vez por
+  dia; a loja nunca vende ajuda na questão, dinheiro de verdade não entra e não há
+  caixa surpresa; o Simulado só paga ao finalizar. Dados de 31/10 que moldaram o
+  plano: 12 contas, 6 com alguma resposta, 167 respostas, a última no Praticar em
+  27/09. Por isso a liga semanal ficou de fora (adicionar com 30 alunas ativas por
+  semana, e só depois de registrar o que foi entregue a cada conta, porque `POST
+  /respostas` aceita qualquer questão), e o lançamento pede um aviso por e-mail, que
+  só sai com autorização: gamificação retém quem chega, mas não traz ninguém.
+  **Fases:** (0) protótipo, feito em 31/10; (1) XP e níveis, **feita no localhost em
+  31/10, falta subir**; (2) moedas e loja, **a próxima**; (3) conquistas; (4) temas,
+  estampas e efeitos; (5) perfil público; (6) lançamento e métricas de guarda (chute
+  marcado e acerto na primeira resposta: queda indica que a recompensa sujou o
+  diagnóstico). Na troca de gabarito de 04/12, XP e moedas já ganhos não voltam atrás.
+  **Fase 1, o que tem:** `progressao.py` (regras puras, razão, previsão), tabela
+  `progresso_eventos`, `usuarios.xp_total`/`moedas`, `simulados.xp_ganho`/
+  `moedas_ganhas`, `GET /progresso`; `ganho` nas respostas de `/respostas`,
+  `/revisao/{id}/avaliar` e `/cartoes/{id}/avaliar`, `ganhos` no finalizar do simulado
+  e `recompensa` nos lotes do Praticar e da Revisão. As moedas já entram no razão, mas
+  só aparecem na fase 2. No front: anel de nível no avatar, faixa no Painel, bloco no
+  menu da conta, `RecompensaSessao` no fim das quatro sessões, diálogo só na troca de
+  patente e a página `/progresso`. **Na subida:** a API antes do front, e depois
+  `python scripts/backup_banco.py` e `python scripts/retroagir_progresso.py` (simula;
+  `--aplicar` com a confirmação do usuário). Simulado no branch de testes: a conta
+  demo fica no nível 21, as reais entre 1 e 4. O `+XP` da discussão vem do lote, e não
+  da resposta, porque ela só é gravada ao ir para o próximo caso (`concluir()`), para
+  o tempo medido incluir a leitura da discussão. Conferido no localhost contra o
+  branch: as quatro sessões, a troca de patente, computador e celular, claro e
+  escuro; o caso refeito no mesmo dia não mostra XP e não paga. O pacote de entrada
+  cresceu 2,7 KB, mas o empacotador só moveu código entre os dois arquivos que a
+  página pública baixa: a soma cresceu 327 bytes. Medir a soma, e não só o `index-*.js`.
 - **Página pública e prévia de link** (pedido de 26/09, a partir da crítica
   comercial do mesmo dia), em fases, conferidas no localhost e subidas só com
   autorização: (1) prévia de link — `og:*` no `index.html`, imagem

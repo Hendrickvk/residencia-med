@@ -45,7 +45,9 @@ def test_fluxo_signup_sessao_e_resposta(area_teste, questao_teste):
                 "questao_id": questao_teste, "alternativa": "A", "confianca": "seguro",
             })
             assert r.status_code == 200, r.text
-            assert r.json() == {"correta": True, "resposta_correta": "A"}
+            corpo = r.json()
+            assert (corpo["correta"], corpo["resposta_correta"]) == (True, "A")
+            assert corpo["ganho"]["xp"] == 10
 
             r = client.get("/revisao/leva")
             assert r.status_code == 200, r.text

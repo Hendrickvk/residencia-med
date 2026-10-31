@@ -10,12 +10,14 @@ interface Props {
   aberto: boolean;
   onFechar: () => void;
   children: React.ReactNode;
+  // A troca de patente põe o crachá ao lado do texto, o que não cabe na caixa padrão.
+  larga?: boolean;
 }
 
 // Esc ou clique fora fecha qualquer camada sobreposta, e enquanto está aberta
 // o foco fica preso dentro dela: sem isso o Tab passeava pela página atrás, que
 // para quem navega por teclado ou leitor de tela é o diálogo não existir.
-export function Dialog({ titulo, aberto, onFechar, children }: Props) {
+export function Dialog({ titulo, aberto, onFechar, children, larga = false }: Props) {
   const idTitulo = useId();
   const { montado, saindo } = usePresenca(aberto);
   // Durante a saída mostra o último conteúdo aberto: quem abre o diálogo
@@ -89,9 +91,9 @@ export function Dialog({ titulo, aberto, onFechar, children }: Props) {
         aria-modal="true"
         aria-labelledby={idTitulo}
         tabIndex={-1}
-        className={`relative max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-caso border border-line bg-surface p-6 focus:outline-none ${
-          saindo ? "animate-sumir" : "animate-surgir"
-        }`}
+        className={`relative max-h-[calc(100dvh-2rem)] w-full overflow-y-auto rounded-caso border border-line bg-surface p-6 focus:outline-none ${
+          larga ? "max-w-[760px]" : "max-w-md"
+        } ${saindo ? "animate-sumir" : "animate-surgir"}`}
       >
         <h2 id={idTitulo} className="mb-3 text-subtitulo">
           {conteudo.titulo}

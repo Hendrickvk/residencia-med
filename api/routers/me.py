@@ -5,6 +5,7 @@ import hashlib
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 
 import db
+import progressao
 from api.deps import eh_admin, usuario_atual
 from api.schemas import (
     ErroFrontIn, FotoIn, LembreteIn, MeOut, MetaRevisaoIn, NovidadesIn, PerfilIn, ProvaAlvoIn, TemaIn,
@@ -35,6 +36,8 @@ def obter_me(usuario=Depends(usuario_atual)):
         cartoes_hoje=db.contar_cartoes_vencidos(usuario_id=usuario["id"]),
         lembrete_revisao=bool(usuario["lembrete_revisao"]),
         brincadeira=db.obter_brincadeira(usuario["id"]),
+        progresso=progressao.progresso_do_xp(usuario["xp_total"]),
+        moedas=usuario["moedas"],
     )
 
 

@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, RotateCcw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { NumeroAnimado } from "../../components/NumeroAnimado";
+import { RecompensaDaSessao } from "../../components/RecompensaSessao";
 import { api } from "../../lib/api";
 import { BOTAO_PRIMARIO, BOTAO_SECUNDARIO } from "../../lib/estilos";
 import { CLASSES_NIVEL, NIVEIS, nivelTriagem } from "../../lib/triagem";
@@ -90,6 +91,8 @@ export default function ResumoRevisao({ avaliacoes, onRecomecar, onRevisarMais }
           </p>
         )}
       </div>
+
+      <RecompensaDaSessao />
 
       <div className="grid grid-cols-1 divide-y divide-line-soft rounded-caso border border-line bg-surface sm:grid-cols-3 sm:divide-x sm:divide-y-0">
         <div className="flex flex-col gap-2 p-6">

@@ -1,7 +1,8 @@
 import { Flame, LogOut, Moon, Sparkles, Sun, Terminal, UserRound } from "lucide-react";
-import { textoProva } from "../../lib/format";
+import { formatarNumeroBR, textoProva } from "../../lib/format";
 import { nomeExibido } from "../../lib/perfil";
-import { Avatar } from "../Avatar";
+import { AnelNivel } from "../AnelNivel";
+import { BarraNivel } from "../BarraNivel";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { PRESSAO } from "../../lib/estilos";
@@ -204,10 +205,10 @@ export function Topbar({ tema, onAlternarTema, me, revisoesHoje, onSair, onRever
                   type="button"
                   onClick={() => setContaAberta((v) => !v)}
                   className={`flex rounded-pill transition duration-hover hover:opacity-90 ${PRESSAO}`}
-                  aria-label="Abrir menu da conta"
+                  aria-label={me?.progresso ? `Abrir menu da conta. Nível ${me.progresso.nivel}` : "Abrir menu da conta"}
                   aria-expanded={contaAberta}
                 >
-                  <Avatar me={me} />
+                  <AnelNivel me={me} />
                 </button>
                 {contaAberta && <div className="fixed inset-0 z-40" onClick={() => setContaAberta(false)} />}
                 {menuConta.montado && (
@@ -224,6 +225,24 @@ export function Topbar({ tema, onAlternarTema, me, revisoesHoje, onSair, onRever
                       {me?.nome && <div className="break-all text-apoio text-muted">{me.email}</div>}
                       {prova && <div className="mt-0.5 text-apoio text-muted">{prova}</div>}
                     </div>
+
+                    {me?.progresso && (
+                      <div className="border-t border-line-soft py-1">
+                        <NavLink
+                          to="/progresso"
+                          onClick={() => setContaAberta(false)}
+                          className="flex flex-col gap-1.5 rounded-btn px-2.5 py-2 transition duration-hover hover:bg-ground"
+                        >
+                          <span className="text-corpo font-semibold text-ink">
+                            Nível {me.progresso.nivel} · {me.progresso.patente}
+                          </span>
+                          <BarraNivel pct={me.progresso.pct} fina />
+                          <span className="text-apoio tabular-nums text-muted">
+                            Faltam {formatarNumeroBR(me.progresso.falta)} XP para o nível {me.progresso.nivel + 1}
+                          </span>
+                        </NavLink>
+                      </div>
+                    )}
 
                     {/* Primeiro item da lista: é o que a pessoa procura
                         quando abre o menu da conta. */}

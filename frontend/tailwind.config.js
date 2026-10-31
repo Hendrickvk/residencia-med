@@ -28,6 +28,9 @@ export default {
         t3: nivel(3),
         t4: nivel(4),
         t5: nivel(5),
+        bronze: "var(--bronze)",
+        prata: "var(--prata)",
+        ouro: "var(--ouro)",
       },
       fontFamily: {
         sans: ["Archivo", "Arial Narrow", "Arial", "sans-serif"],

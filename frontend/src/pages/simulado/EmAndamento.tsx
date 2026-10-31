@@ -7,6 +7,7 @@ import { api } from "../../lib/api";
 import { BOTAO_PRIMARIO, BOTAO_SECUNDARIO, PRESSAO } from "../../lib/estilos";
 import { BarraFoco } from "../../lib/foco";
 import { formatarTempoRestante } from "../../lib/format";
+import { guardarGanhosDeProva } from "../../lib/ganhos";
 import { rolarParaTopo } from "../../lib/movimento";
 import {
   finalizarSimulado,
@@ -94,7 +95,8 @@ function Conteudo({
       // O tempo da última questão chega antes de o simulado fechar para ele.
       await enviarTempo(simuladoId, itens[idx].id, entrouEm);
       entrouEm.current = null;
-      await finalizarSimulado(simuladoId);
+      const { ganhos } = await finalizarSimulado(simuladoId);
+      guardarGanhosDeProva(simuladoId, ganhos);
       // Sem isso, o Resultado monta com o cache de ANTES de responder
       // qualquer coisa (mesma queryKey, staleTime padrão) e mostra "não
       // respondida"/gabarito ausente por um instante até um refetch em
@@ -107,6 +109,8 @@ function Conteudo({
         queryClient.invalidateQueries({ queryKey: ["simulados-historico"] }),
         // A lista de provas mostra a nota da última vez em cada prova e bloco.
         queryClient.invalidateQueries({ queryKey: ["simulados-edicoes"] }),
+        // O anel e o menu da conta leem o nível do `/me`.
+        queryClient.invalidateQueries({ queryKey: ["me"] }),
       ]);
     } finally {
       onFinalizado();
