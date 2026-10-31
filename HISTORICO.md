@@ -35,8 +35,9 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   guardado; backup `conduta_20261031_183430.dump` e `retroagir_progresso.py --aplicar`
   com a autorização do usuário: 1.562 lançamentos em 8 contas, as 14 contas com saldo
   igual à soma do razão, e rodar de novo não acrescenta nada; linhas criadas em
-  `backups/retroagir_progresso_20261031_183513.json`); (2) moedas e loja, **pronta no
-  localhost, falta subir**; (3) conquistas; (4) temas,
+  `backups/retroagir_progresso_20261031_183513.json`); (2) moedas e loja, **no ar em
+  31/10** (commit `81c3525`; a API antes do front, colunas criadas pelo `init_db` na
+  subida, `dist.antigo` guardado); (3) conquistas, **a próxima**; (4) temas,
   estampas e efeitos; (5) perfil público; (6) lançamento e métricas de guarda (chute
   marcado e acerto na primeira resposta: queda indica que a recompensa sujou o
   diagnóstico). Na troca de gabarito de 04/12, XP e moedas já ganhos não voltam atrás.
