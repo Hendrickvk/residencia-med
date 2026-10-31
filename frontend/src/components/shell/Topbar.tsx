@@ -251,10 +251,11 @@ export function Topbar({ tema, onAlternarTema, me, revisoesHoje, onSair, onRever
                     )}
 
                     {/* Primeiro item da lista: é o que a pessoa procura
-                        quando abre o menu da conta. */}
+                        quando abre o menu da conta. Leva ao crachá e às
+                        customizações; editar os dados sai de lá. */}
                     <div className="border-t border-line-soft py-1">
                       <NavLink
-                        to="/perfil"
+                        to="/progresso"
                         onClick={() => setContaAberta(false)}
                         className="flex items-center gap-2.5 rounded-btn px-2.5 py-2 text-corpo text-ink-2 transition duration-hover hover:bg-ground hover:text-ink"
                       >
@@ -340,7 +341,7 @@ export function Topbar({ tema, onAlternarTema, me, revisoesHoje, onSair, onRever
           por isso fica acima do conteúdo pelo z-30 dele. */}
       {!emFoco && (
         <nav className="fixed inset-x-0 bottom-0 animate-desvanecer border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden">
-          <div className="relative grid grid-cols-5">
+          <div className="relative grid grid-cols-6">
             {NAV.map((item) => (
               <NavLink
                 key={item.path}
@@ -363,7 +364,7 @@ export function Topbar({ tema, onAlternarTema, me, revisoesHoje, onSair, onRever
                 índice, sem medir nada. */}
             <span
               aria-hidden="true"
-              className={`pointer-events-none absolute left-0 top-0 h-0.5 w-1/5 bg-ink transition-transform duration-desliza ease-suave ${
+              className={`pointer-events-none absolute left-0 top-0 h-0.5 w-1/6 bg-ink transition-transform duration-desliza ease-suave ${
                 abaAtual < 0 ? "opacity-0" : ""
               }`}
               style={{ transform: `translateX(${ultimaAba * 100}%)` }}

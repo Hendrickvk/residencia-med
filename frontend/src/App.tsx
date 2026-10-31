@@ -43,7 +43,13 @@ const [, secao, detalhe] = window.location.pathname.split("/");
 if (secao in TELAS) {
   const ignorar = () => {};
   carregarCasca().catch(ignorar);
-  (secao === "baralhos" && detalhe ? carregarBaralho : TELAS[secao as keyof typeof TELAS])().catch(ignorar);
+  const tela =
+    secao === "baralhos" && detalhe
+      ? carregarBaralho
+      : secao === "progresso" && detalhe === "loja"
+        ? carregarLoja
+        : TELAS[secao as keyof typeof TELAS];
+  tela().catch(ignorar);
 }
 
 export default function App() {
@@ -75,8 +81,8 @@ export default function App() {
           {/* Fora do NAV de propósito: a conta não é uma aba de estudo, e o
               caminho para ela é o menu da conta. */}
           <Route path="/perfil" element={<PaginaPerfil />} />
-          {/* Também fora do NAV: o rodapé do celular tem cinco colunas, e o
-              caminho é o anel do avatar, a faixa do Painel e o fim das sessões. */}
+          {/* "Seu perfil" no menu da conta: o crachá e as customizações. Fora do
+              NAV, como a edição; a Loja, logo abaixo, é aba por decisão do usuário. */}
           <Route path="/progresso" element={<PaginaProgresso />} />
           <Route path="/progresso/loja" element={<PaginaLoja />} />
           <Route path="/simulado" element={<Simulado />} />

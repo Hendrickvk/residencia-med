@@ -127,7 +127,7 @@ capping it would make the Configurador's live count lie about the bank.
   coloured pills that must use `bg-tN text-tN-on`; a hardcoded white breaks contrast on t2/t3 in light
   mode. Counting cards goes through `plural()` in `lib/cartoes.ts`: naive interpolation writes "cartãos".
 - **`/perfil`** (`pages/perfil/`) — the account page: identity, exam date, marked questions. It is
-  deliberately outside `NAV` (the account is not a study tab; the way in is the account menu). The
+  deliberately outside `NAV` (the account is not a study tab; the way in is "Editar seu perfil" on `/progresso` and on the shop, and "Seu perfil" in the account menu opens `/progresso`, the badge and customizations). The
   **marked list returns no gabarito, alternativas or explicação** (`db.resumo_questoes_marcadas`) and
   that is a security boundary, not a payload choice: question ids are sequential, so marking every question
   and fetching the list once would drain the bank around the `/praticar/sessao` daily cap. Reviewing

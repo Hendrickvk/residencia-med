@@ -55,6 +55,13 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   escuro; o caso refeito no mesmo dia não mostra XP e não paga. O pacote de entrada
   cresceu 2,7 KB, mas o empacotador só moveu código entre os dois arquivos que a
   página pública baixa: a soma cresceu 327 bytes. Medir a soma, e não só o `index-*.js`.
+  **Ajustes pedidos ao testar a fase 2 (31/10):** a Loja virou aba fixa ao lado de Baralhos
+  (o caminho `/progresso/loja` não mudou) e "Seu perfil" no menu abre `/progresso`, com
+  "Editar seu perfil" lá e na Loja. As abas Progresso/Loja saíram; a Caderneta da fase 3
+  precisa de um lugar próprio. **Defeito antigo achado aí:** com a sessão vencida e o app
+  aberto, o 401 do próprio `/me` invalidava a consulta em curso, que recomeçava: 180 chamadas
+  em 10 s e nunca o login. Vinha de 23/09, e sessão dura 12 h: toda aba esquecida fazia isso.
+  `api.ts` agora não invalida no `/me`; medido, são 2 chamadas e o login devolve à tela.
   **Fase 2, o que tem:** catálogo em `progressao.CATALOGO` (os ids não mudam nunca: estão
   gravados em `equipados` e nas chaves do razão), `GET /progresso/loja`, `POST
   /progresso/loja/{item}/comprar`, `PUT /progresso/equipar`, `usuarios.equipados`,

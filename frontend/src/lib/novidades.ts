@@ -47,7 +47,7 @@ export const NOVIDADES: Novidade[] = [
       },
       {
         tipo: "novo",
-        texto: "Em Progresso, a Loja tem molduras e títulos para o seu crachá. Cada nível libera mais itens, e cada patente traz uma moldura de graça.",
+        texto: "A Loja tem molduras e títulos para o seu crachá. Cada nível libera mais itens, e cada patente traz uma moldura de graça.",
       },
       {
         tipo: "novo",

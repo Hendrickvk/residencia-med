@@ -292,7 +292,7 @@ tema e avatar. O menu do avatar tem e-mail, prova alvo, **Acervo** (links do
 Streamlit, só para `is_admin`) e Sair.
 
 Abaixo de 1024px as abas descem para uma **barra no rodapé** (56px, `--surface`,
-borda superior): cinco colunas iguais com ícone e rótulo curto, a contagem no
+borda superior): seis colunas iguais com ícone e rótulo curto, a contagem no
 canto do ícone (com anel `--surface` que recorta o traço) e o mesmo traço de 2px
 `--ink`, na borda de cima, deslizando até a aba ativa. Some no modo foco, e o
 `main` reserva a altura dela no fim da página. Até 25/09 era um menu em gaveta
@@ -617,8 +617,9 @@ acompanha a raridade: o que se repete dezenas de vezes por dia quase não aparec
   "Acertos em dobro hoje: 3 de 10" (some ao completar) e os avisos de que uma proteção
   segurou a ofensiva ontem e de até quando vale o XP em dobro. Sem botão primário, porque
   o da Conduta de hoje é o único da tela.
-- **`/progresso`**, fora do `NAV` como o Perfil (o rodapé tem cinco colunas): o título
-  é o que falta ("Faltam 120 XP para o nível 15."), como o Painel é o diagnóstico; ao
+- **`/progresso`** é o "Seu perfil" do menu da conta (decisão do usuário, 31/10: ele abria
+  a edição, e quem queria ver as customizações não as achava). Fora do `NAV`, com "Editar
+  seu perfil" no cabeçalho, que leva a `/perfil`. Abaixo do título, a frase é o que falta ("Faltam 120 XP para o nível 15."), como o Painel é o diagnóstico; ao
   lado, o crachá; abaixo, a trilha das patentes, a experiência por área e o mapa de
   calor em tons de `--ink` (nenhum t1–t5, porque não é nível). A frase abaixo das áreas
   deixa claro que o nível de área mede trabalho, e que desempenho é o quadro do Painel.
@@ -633,9 +634,9 @@ acompanha a raridade: o que se repete dezenas de vezes por dia quase não aparec
   `db.normalizar_cor`. A caixa do avatar cresce para caber a moldura (`tamanho / 0,74`), e
   quem chama reserva esse espaço. Nas molduras de ouro o traço é `--ouro`; o resto é tinta,
   e por isso elas funcionam em qualquer cor de avatar.
-- **Loja** (`/progresso/loja`, com `pages/progresso/Abas.tsx`, links e não estado, porque o
-  fim da sessão e o Painel mandam direto para ela): o saldo é o título, como "o que falta" é
-  o título do Progresso. Depois, "Para a ofensiva" em linhas (proteção e XP em dobro, que se
+- **Loja** (`/progresso/loja`, aba fixa ao lado de Baralhos por decisão do usuário, 31/10; no
+  rodapé de 320px "Simulado" ocupa 51 dos 53px da coluna, e não há espaço para uma sétima):
+  o saldo é o título, com "Editar seu perfil" ao lado. Depois, "Para a ofensiva" em linhas (proteção e XP em dobro, que se
   gastam e não têm prévia) e as seções em ladrilhos, cada um com um palco em `--ground` e o
   rodapé que muda: travado (cadeado + exigência, preço apagado), à venda (preço + "Comprar"),
   sem saldo ("Faltam 40"), confirmando ("Pagar 200" + "Voltar"), dela ("Sua" + "Usar") e em

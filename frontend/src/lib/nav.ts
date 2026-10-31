@@ -6,6 +6,7 @@ import {
   Layers,
   type LucideIcon,
   PencilLine,
+  Store,
   Timer,
   UploadCloud,
 } from "lucide-react";
@@ -26,6 +27,7 @@ export const NAV: ItemNav[] = [
   { label: "Simulado", path: "/simulado", icon: Timer },
   { label: "Revisão espaçada", curto: "Revisão", path: "/revisao", icon: Brain },
   { label: "Baralhos", path: "/baralhos", icon: Layers },
+  { label: "Loja", path: "/progresso/loja", icon: Store },
 ];
 
 /** A aba a que o caminho pertence (`/baralhos/12` é Baralhos), ou -1. */

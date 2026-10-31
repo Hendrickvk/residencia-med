@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 import { api } from "../../lib/api";
 import { useMe } from "../../lib/auth";
+import { BOTAO_SECUNDARIO } from "../../lib/estilos";
 import type { QuestaoMarcada } from "../../lib/types";
 import { Identidade } from "./Identidade";
 import { Lembretes } from "./Lembretes";
@@ -19,9 +21,14 @@ export default function Perfil() {
 
   return (
     <div className="flex flex-col gap-7">
-      <div>
-        <div className="rotulo text-muted">Sua conta</div>
-        <h1 className="mt-1 text-titulo text-ink">Perfil</h1>
+      <div className="flex flex-wrap items-end justify-between gap-3.5">
+        <div>
+          <div className="rotulo text-muted">Sua conta</div>
+          <h1 className="mt-1 text-titulo text-ink">Editar seu perfil</h1>
+        </div>
+        <Link to="/progresso" className={BOTAO_SECUNDARIO}>
+          Ver seu perfil
+        </Link>
       </div>
 
       <div className="grid items-start gap-7 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">

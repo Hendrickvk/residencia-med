@@ -1,16 +1,17 @@
 import { Check, Lock, Shield, Zap } from "lucide-react";
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Avatar } from "../../components/Avatar";
 import { EstadoFalha } from "../../components/EstadoFalha";
 import { Moeda } from "../../components/Moeda";
 import { NumeroAnimado } from "../../components/NumeroAnimado";
 import { ApiError } from "../../lib/api";
 import { useMe } from "../../lib/auth";
+import { BOTAO_SECUNDARIO } from "../../lib/estilos";
 import { formatarNumeroBR } from "../../lib/format";
 import { nomeExibido } from "../../lib/perfil";
 import { comprarItem, equiparItem, useLoja } from "../../lib/progresso";
 import type { ItemLoja, Loja as DadosLoja, Me } from "../../lib/types";
-import { Abas } from "./Abas";
 
 const BOTAO_PEQUENO =
   "inline-flex h-9 items-center justify-center gap-1.5 rounded-btn border border-line bg-surface px-3 text-[14px] font-medium text-ink-2 transition duration-hover ease-brand hover:border-muted hover:text-ink active:scale-[0.97] disabled:cursor-not-allowed disabled:text-faint disabled:active:scale-100";
@@ -223,7 +224,9 @@ export default function PaginaLoja() {
             moeda{data.moedas !== 1 ? "s" : ""}
           </h1>
         </div>
-        <Abas />
+        <Link to="/perfil" className={BOTAO_SECUNDARIO}>
+          Editar seu perfil
+        </Link>
       </div>
 
       {erro && (

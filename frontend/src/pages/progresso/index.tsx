@@ -5,10 +5,10 @@ import { Cracha } from "../../components/Cracha";
 import { EstadoFalha } from "../../components/EstadoFalha";
 import { Moeda } from "../../components/Moeda";
 import { useMe } from "../../lib/auth";
+import { BOTAO_SECUNDARIO } from "../../lib/estilos";
 import { formatarNumeroBR } from "../../lib/format";
 import { useProgresso } from "../../lib/progresso";
 import type { Progresso } from "../../lib/types";
-import { Abas } from "./Abas";
 
 // O mapa cobre 26 semanas e fecha no sábado desta: como no GitHub e no Anki, cada
 // coluna é uma semana, de domingo a sábado.
@@ -72,8 +72,10 @@ export default function PaginaProgresso() {
   return (
     <div className="flex flex-col gap-7">
       <div className="flex flex-wrap items-center justify-between gap-3.5">
-        <h1 className="text-titulo">Progresso</h1>
-        <Abas />
+        <h1 className="text-titulo">Seu perfil</h1>
+        <Link to="/perfil" className={BOTAO_SECUNDARIO}>
+          Editar seu perfil
+        </Link>
       </div>
 
       <section className="flex flex-wrap items-start gap-7">

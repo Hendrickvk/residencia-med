@@ -23,8 +23,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     // novo" que ia falhar para sempre. Invalidar o ["me"] faz o `RequireAuth`
     // reperguntar e mandar para o login. Fora do React de propósito — é o
     // mesmo caminho que o `respostasQueue` já usa. `/auth/*` fica de fora:
-    // senha errada no login é 401 e não tem sessão nenhuma a derrubar.
-    if (res.status === 401 && !path.startsWith("/auth/")) {
+    // senha errada no login é 401 e não tem sessão nenhuma a derrubar. O próprio
+    // `/me` também: invalidar a consulta que está em curso a cancela e pergunta
+    // de novo, e a aba repetia o `/me` sem parar, sem nunca chegar ao login.
+    if (res.status === 401 && !path.startsWith("/auth/") && path !== "/me") {
       void queryClient.invalidateQueries({ queryKey: ["me"] });
     }
     const corpo = await res.json().catch(() => ({}));
