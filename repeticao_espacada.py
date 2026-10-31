@@ -140,6 +140,86 @@ def prever_prazos(estado, notas=(1,) + NOTAS_ACERTO):
     return prazos
 
 
+def _avaliacao(questao_id, estado, qualidade, agora, *, correta=None, alternativa=None, tempo_ms=None):
+    """Uma avaliação pronta para gravar: o estado novo, o que o evento guarda e o
+    que a progressão precisa saber para pagar."""
+    # Atraso em dias em relação ao que estava agendado: positivo = já tinha
+    # vencido; negativo = revisada antes (marcada, ou praticada de novo).
+    atraso = (agora - estado["proxima_revisao"]).total_seconds() / 86400 if estado else None
+    return {
+        "questao_id": questao_id,
+        "estado": estado,
+        "novo": calcular_proximo_estado(estado, qualidade, agora),
+        "qualidade": qualidade,
+        "correta": correta,
+        "alternativa": alternativa,
+        "tempo_ms": tempo_ms,
+        "atraso": atraso,
+        "primeira": estado is None,
+        "vencida": atraso is not None and atraso >= 0,
+    }
+
+
+def _gravar_avaliacoes(conn, avaliacoes, *, usuario_id, origem, agora):
+    """O estado atual em `revisao` e o histórico em `revisao_eventos`. Um comando
+    por tabela, seja uma avaliação ou uma prova de cem: a uma ida ao banco por
+    questão, a 14 ms cada, finalizar uma prova levava 15 s (HISTORICO.md, 31/10)."""
+    conn.execute("""
+        INSERT INTO revisao (usuario_id, questao_id, facilidade, intervalo_dias, repeticoes, proxima_revisao)
+        SELECT ?, questao_id, facilidade, intervalo_dias, repeticoes, proxima_revisao
+        FROM unnest(?::int[], ?::real[], ?::int[], ?::int[], ?::timestamp[])
+            AS t(questao_id, facilidade, intervalo_dias, repeticoes, proxima_revisao)
+        ON CONFLICT (usuario_id, questao_id) DO UPDATE SET
+            facilidade = excluded.facilidade,
+            intervalo_dias = excluded.intervalo_dias,
+            repeticoes = excluded.repeticoes,
+            proxima_revisao = excluded.proxima_revisao
+    """, (
+        usuario_id,
+        [a["questao_id"] for a in avaliacoes],
+        [a["novo"]["facilidade"] for a in avaliacoes],
+        [a["novo"]["intervalo_dias"] for a in avaliacoes],
+        [a["novo"]["repeticoes"] for a in avaliacoes],
+        [a["novo"]["proxima_revisao"] for a in avaliacoes],
+    ))
+
+    def antes(avaliacao, coluna):
+        return avaliacao["estado"][coluna] if avaliacao["estado"] else None
+
+    conn.execute("""
+        INSERT INTO revisao_eventos (
+            usuario_id, questao_id, origem, qualidade, correta, alternativa, tempo_ms,
+            facilidade_antes, intervalo_antes, repeticoes_antes, atraso_dias,
+            facilidade_depois, intervalo_depois, repeticoes_depois, proxima_revisao, registrado_em
+        )
+        SELECT ?, questao_id, ?, qualidade, correta, alternativa, tempo_ms,
+               facilidade_antes, intervalo_antes, repeticoes_antes, atraso_dias,
+               facilidade_depois, intervalo_depois, repeticoes_depois, proxima_revisao, ?
+        FROM unnest(
+            ?::int[], ?::int[], ?::int[], ?::text[], ?::int[], ?::real[], ?::int[], ?::int[], ?::real[],
+            ?::real[], ?::int[], ?::int[], ?::timestamp[]
+        ) AS t(
+            questao_id, qualidade, correta, alternativa, tempo_ms, facilidade_antes, intervalo_antes,
+            repeticoes_antes, atraso_dias, facilidade_depois, intervalo_depois, repeticoes_depois, proxima_revisao
+        )
+    """, (
+        usuario_id, origem, agora,
+        [a["questao_id"] for a in avaliacoes],
+        [a["qualidade"] for a in avaliacoes],
+        [None if a["correta"] is None else int(bool(a["correta"])) for a in avaliacoes],
+        [a["alternativa"] for a in avaliacoes],
+        [a["tempo_ms"] for a in avaliacoes],
+        [antes(a, "facilidade") for a in avaliacoes],
+        [antes(a, "intervalo_dias") for a in avaliacoes],
+        [antes(a, "repeticoes") for a in avaliacoes],
+        [a["atraso"] for a in avaliacoes],
+        [a["novo"]["facilidade"] for a in avaliacoes],
+        [a["novo"]["intervalo_dias"] for a in avaliacoes],
+        [a["novo"]["repeticoes"] for a in avaliacoes],
+        [a["novo"]["proxima_revisao"] for a in avaliacoes],
+    ))
+
+
 def registrar_revisao(questao_id, qualidade: int, *, usuario_id, origem=None, correta=None,
                       alternativa=None, tempo_ms=None):
     """Aplica uma avaliação no SM-2 e grava o evento em `revisao_eventos`, na
@@ -147,11 +227,11 @@ def registrar_revisao(questao_id, qualidade: int, *, usuario_id, origem=None, co
     sobrescreve a anterior); o evento é o histórico que permite acompanhar a
     retenção do aluno ao longo do tempo.
 
-    `origem`: "pratica", "simulado" ou "revisao" (None nas telas antigas do
-    Streamlit). `correta`/`alternativa`: quando houve resposta a uma
-    alternativa. Devolve o novo estado, com o `ganho` da progressão: Praticar,
-    Simulado e Revisão passam todos por aqui, então é aqui que a resposta paga.
-    Sem resposta a uma alternativa não há o que pagar."""
+    `origem`: "pratica" ou "revisao" (None nas telas antigas do Streamlit; o
+    Simulado vai em lote, por `registrar_simulado`). `correta`/`alternativa`:
+    quando houve resposta a uma alternativa. Devolve o novo estado, com o `ganho`
+    da progressão: é aqui que a resposta paga. Sem resposta a uma alternativa não
+    há o que pagar."""
     qualidade = max(0, min(5, int(qualidade)))
     agora = _agora()
 
@@ -159,46 +239,40 @@ def registrar_revisao(questao_id, qualidade: int, *, usuario_id, origem=None, co
         estado = conn.execute(
             "SELECT * FROM revisao WHERE questao_id = ? AND usuario_id = ?", (questao_id, usuario_id)
         ).fetchone()
-        novo = calcular_proximo_estado(estado, qualidade, agora)
-
-        conn.execute("""
-            INSERT INTO revisao (usuario_id, questao_id, facilidade, intervalo_dias, repeticoes, proxima_revisao)
-            VALUES (?, ?, ?, ?, ?, ?)
-            ON CONFLICT (usuario_id, questao_id) DO UPDATE SET
-                facilidade = excluded.facilidade,
-                intervalo_dias = excluded.intervalo_dias,
-                repeticoes = excluded.repeticoes,
-                proxima_revisao = excluded.proxima_revisao
-        """, (usuario_id, questao_id, novo["facilidade"], novo["intervalo_dias"],
-              novo["repeticoes"], novo["proxima_revisao"]))
-
-        # Atraso em dias em relação ao que estava agendado: positivo = já tinha
-        # vencido; negativo = revisada antes (marcada, ou praticada de novo).
-        atraso = (agora - estado["proxima_revisao"]).total_seconds() / 86400 if estado else None
-        conn.execute("""
-            INSERT INTO revisao_eventos (
-                usuario_id, questao_id, origem, qualidade, correta, alternativa, tempo_ms,
-                facilidade_antes, intervalo_antes, repeticoes_antes, atraso_dias,
-                facilidade_depois, intervalo_depois, repeticoes_depois, proxima_revisao, registrado_em
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            usuario_id, questao_id, origem, qualidade,
-            None if correta is None else int(bool(correta)), alternativa, tempo_ms,
-            estado["facilidade"] if estado else None,
-            estado["intervalo_dias"] if estado else None,
-            estado["repeticoes"] if estado else None,
-            atraso,
-            novo["facilidade"], novo["intervalo_dias"], novo["repeticoes"], novo["proxima_revisao"], agora,
-        ))
-
+        avaliacao = _avaliacao(
+            questao_id, estado, qualidade, agora, correta=correta, alternativa=alternativa, tempo_ms=tempo_ms,
+        )
+        _gravar_avaliacoes(conn, [avaliacao], usuario_id=usuario_id, origem=origem, agora=agora)
+        novo = avaliacao["novo"]
         novo["ganho"] = None
         if correta is not None:
-            novo["ganho"] = progressao.pontuar_caso(
-                conn, usuario_id=usuario_id, questao_id=questao_id, primeira=estado is None,
-                vencida=atraso is not None and atraso >= 0, correta=correta, agora=agora,
-            )
+            novo["ganho"] = progressao.pontuar_casos(conn, usuario_id=usuario_id, casos=[avaliacao], agora=agora)
 
     return novo
+
+
+def registrar_simulado(simulado_id, *, usuario_id):
+    """Joga as respostas de um simulado recém-finalizado nos mesmos caminhos do
+    Praticar, para que Painel e revisão espaçada o considerem: `respostas`, o SM-2 e
+    a progressão, tudo numa transação e em lote. É aqui que o simulado paga, porque
+    XP durante a prova vazaria o gabarito. Devolve o ganho somado, ou None."""
+    agora = _agora()
+    # Por questão, porque o `ON CONFLICT` de um comando só não aceita a mesma linha duas vezes.
+    itens = list({i["questao_id"]: i for i in db.itens_respondidos_simulado(simulado_id, usuario_id=usuario_id)}.values())
+    if not itens:
+        return None
+    estados = estados_revisao([i["questao_id"] for i in itens], usuario_id=usuario_id)
+    avaliacoes = [
+        _avaliacao(
+            i["questao_id"], estados.get(i["questao_id"]), 5 if i["correta"] else 1, agora,
+            correta=bool(i["correta"]), alternativa=i["resposta_dada"], tempo_ms=i["tempo_ms"],
+        )
+        for i in itens
+    ]
+    with get_conn() as conn:
+        db.registrar_respostas_de_simulado(conn, itens, usuario_id=usuario_id, agora=agora)
+        _gravar_avaliacoes(conn, avaliacoes, usuario_id=usuario_id, origem="simulado", agora=agora)
+        return progressao.pontuar_casos(conn, usuario_id=usuario_id, casos=avaliacoes, agora=agora)
 
 
 def questoes_para_revisar_hoje(*, usuario_id):

@@ -1618,6 +1618,21 @@ def registrar_resposta(questao_id, resposta_dada, correta: bool, *, usuario_id, 
         """, (usuario_id, questao_id, resposta_dada, int(correta), agora_br().isoformat(), confianca, tempo_ms))
 
 
+def registrar_respostas_de_simulado(conn, itens, *, usuario_id, agora):
+    """As respostas de uma prova de uma vez, dentro da transação de quem consolida
+    (`sr.registrar_simulado`). Cada item traz `questao_id`, `resposta_dada`, `correta`
+    (0/1) e `tempo_ms`."""
+    conn.execute("""
+        INSERT INTO respostas (usuario_id, questao_id, resposta_dada, correta, respondida_em, tempo_ms)
+        SELECT ?, questao_id, resposta_dada, correta, ?, tempo_ms
+        FROM unnest(?::int[], ?::text[], ?::int[], ?::int[]) AS t(questao_id, resposta_dada, correta, tempo_ms)
+    """, (
+        usuario_id, agora.isoformat(),
+        [i["questao_id"] for i in itens], [i["resposta_dada"] for i in itens],
+        [int(i["correta"]) for i in itens], [i["tempo_ms"] for i in itens],
+    ))
+
+
 MINIMO_RESPOSTAS_DISTRIBUICAO = 10
 
 
@@ -3306,6 +3321,18 @@ def registrar_resposta_simulado(simulado_id, questao_id, resposta_dada, *, usuar
             SET resposta_dada = ?, correta = ?
             WHERE simulado_id = ? AND questao_id = ?
         """, (resposta_dada, correta, simulado_id, questao_id))
+
+
+def itens_respondidos_simulado(simulado_id, *, usuario_id):
+    """Só o que a consolidação precisa: `listar_itens_simulado` traz a questão
+    inteira, figura incluída."""
+    with get_conn() as conn:
+        return conn.execute("""
+            SELECT si.questao_id, si.resposta_dada, si.correta, si.tempo_ms
+            FROM simulado_itens si
+            JOIN simulados s ON s.id = si.simulado_id
+            WHERE si.simulado_id = ? AND s.usuario_id = ? AND si.resposta_dada IS NOT NULL
+        """, (simulado_id, usuario_id)).fetchall()
 
 
 def somar_tempo_simulado(simulado_id, questao_id, tempo_ms, *, usuario_id):

@@ -183,31 +183,75 @@ def _lancar(conn, *, usuario_id, chave, tipo, xp, moedas, area_id, agora):
     ).fetchone()["xp_total"]
 
 
-def pontuar_caso(conn, *, usuario_id, questao_id, primeira, vencida, correta, agora):
-    """Paga a resposta a uma questão, dentro da transação de quem grava a revisão
-    (`sr.registrar_revisao`, por onde passam Praticar, Simulado e Revisão). Devolve
-    o ganho, ou None se a questão já pagou hoje."""
-    xp, moedas = regra_caso(primeira=primeira, vencida=vencida, correta=correta)
+def pontuar_casos(conn, *, usuario_id, casos, agora):
+    """Paga as respostas a questões, dentro da transação de quem grava a revisão
+    (`sr.registrar_revisao`, por onde passam Praticar e Revisão, uma de cada vez, e
+    `sr.registrar_simulado`, a prova inteira de uma vez). Cada caso traz `questao_id`,
+    `primeira`, `vencida` e `correta`. O número de idas ao banco não depende de
+    quantos são. Devolve o ganho somado, ou None se nenhuma questão pagou (a mesma
+    questão só paga uma vez por dia)."""
     dia = agora.date()
-    if moedas:
-        acertos = conn.execute("""
-            SELECT COUNT(*) AS n FROM progresso_eventos
-            WHERE usuario_id = ? AND dia = ? AND tipo = 'caso' AND moedas > 0
-        """, (usuario_id, dia)).fetchone()["n"]
-        if acertos < ACERTOS_EM_DOBRO_POR_DIA:
-            moedas *= 2
-    questao = conn.execute("""
-        SELECT q.area_id, a.nome AS area FROM questoes q
-        LEFT JOIN areas a ON a.id = q.area_id
-        WHERE q.id = ?
-    """, (questao_id,)).fetchone()
-    total = _lancar(
-        conn, usuario_id=usuario_id, chave=chave_caso(questao_id, dia), tipo="caso", xp=xp, moedas=moedas,
-        area_id=questao["area_id"], agora=agora,
-    )
-    if total is None:
+    hoje = conn.execute(
+        "SELECT chave, moedas FROM progresso_eventos WHERE usuario_id = ? AND dia = ? AND tipo = 'caso'",
+        (usuario_id, dia),
+    ).fetchall()
+    pagas = {linha["chave"] for linha in hoje}
+    acertos = sum(1 for linha in hoje if linha["moedas"] > 0)
+    questoes = {
+        q["id"]: q
+        for q in conn.execute("""
+            SELECT q.id, q.area_id, a.nome AS area FROM questoes q
+            LEFT JOIN areas a ON a.id = q.area_id
+            WHERE q.id = ANY(?)
+        """, ([caso["questao_id"] for caso in casos],)).fetchall()
+    }
+
+    linhas = []
+    for caso in casos:
+        chave = chave_caso(caso["questao_id"], dia)
+        if chave in pagas:
+            continue
+        pagas.add(chave)
+        xp, moedas = regra_caso(primeira=caso["primeira"], vencida=caso["vencida"], correta=caso["correta"])
+        if moedas:
+            if acertos < ACERTOS_EM_DOBRO_POR_DIA:
+                moedas *= 2
+            acertos += 1
+        questao = questoes[caso["questao_id"]]
+        linhas.append({"chave": chave, "xp": xp, "moedas": moedas, "area_id": questao["area_id"], "area": questao["area"]})
+    if not linhas:
         return None
-    return _ganho(xp=xp, moedas=moedas, areas={questao["area"]: xp}, total=total)
+
+    # RETURNING, e não confiar em `pagas`: outra aba pode ter pago a mesma questão
+    # entre a leitura e aqui, e é a chave única que decide.
+    criadas = {
+        r["chave"]
+        for r in conn.execute("""
+            INSERT INTO progresso_eventos (usuario_id, chave, tipo, xp, moedas, area_id, dia, criado_em)
+            SELECT ?, chave, 'caso', xp, moedas, area_id, ?, ?
+            FROM unnest(?::text[], ?::int[], ?::int[], ?::int[]) AS t(chave, xp, moedas, area_id)
+            ON CONFLICT (usuario_id, chave) DO NOTHING
+            RETURNING chave
+        """, (
+            usuario_id, dia, agora,
+            [li["chave"] for li in linhas], [li["xp"] for li in linhas],
+            [li["moedas"] for li in linhas], [li["area_id"] for li in linhas],
+        )).fetchall()
+    }
+    linhas = [li for li in linhas if li["chave"] in criadas]
+    if not linhas:
+        return None
+
+    xp = sum(li["xp"] for li in linhas)
+    moedas = sum(li["moedas"] for li in linhas)
+    total = conn.execute(
+        "UPDATE usuarios SET xp_total = xp_total + ?, moedas = moedas + ? WHERE id = ? RETURNING xp_total",
+        (xp, moedas, usuario_id),
+    ).fetchone()["xp_total"]
+    areas = {}
+    for li in linhas:
+        areas[li["area"]] = areas.get(li["area"], 0) + li["xp"]
+    return _ganho(xp=xp, moedas=moedas, areas=areas, total=total)
 
 
 def pontuar_cartao(cartao_id, *, usuario_id, agora):

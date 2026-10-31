@@ -30,8 +30,13 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   semana, e só depois de registrar o que foi entregue a cada conta, porque `POST
   /respostas` aceita qualquer questão), e o lançamento pede um aviso por e-mail, que
   só sai com autorização: gamificação retém quem chega, mas não traz ninguém.
-  **Fases:** (0) protótipo, feito em 31/10; (1) XP e níveis, **feita no localhost em
-  31/10, falta subir**; (2) moedas e loja, **a próxima**; (3) conquistas; (4) temas,
+  **Fases:** (0) protótipo, feito em 31/10; (1) XP e níveis, **no ar em 31/10** (commit
+  `4dd065f`; a API antes do front, tabelas criadas pelo `init_db` na subida, `dist.antigo`
+  guardado; backup `conduta_20261031_183430.dump` e `retroagir_progresso.py --aplicar`
+  com a autorização do usuário: 1.562 lançamentos em 8 contas, as 14 contas com saldo
+  igual à soma do razão, e rodar de novo não acrescenta nada; linhas criadas em
+  `backups/retroagir_progresso_20261031_183513.json`); (2) moedas e loja, **a próxima**;
+  (3) conquistas; (4) temas,
   estampas e efeitos; (5) perfil público; (6) lançamento e métricas de guarda (chute
   marcado e acerto na primeira resposta: queda indica que a recompensa sujou o
   diagnóstico). Na troca de gabarito de 04/12, XP e moedas já ganhos não voltam atrás.
@@ -42,16 +47,23 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   e `recompensa` nos lotes do Praticar e da Revisão. As moedas já entram no razão, mas
   só aparecem na fase 2. No front: anel de nível no avatar, faixa no Painel, bloco no
   menu da conta, `RecompensaSessao` no fim das quatro sessões, diálogo só na troca de
-  patente e a página `/progresso`. **Na subida:** a API antes do front, e depois
-  `python scripts/backup_banco.py` e `python scripts/retroagir_progresso.py` (simula;
-  `--aplicar` com a confirmação do usuário). Simulado no branch de testes: a conta
-  demo fica no nível 21, as reais entre 1 e 4. O `+XP` da discussão vem do lote, e não
+  patente e a página `/progresso`. O `+XP` da discussão vem do lote, e não
   da resposta, porque ela só é gravada ao ir para o próximo caso (`concluir()`), para
   o tempo medido incluir a leitura da discussão. Conferido no localhost contra o
   branch: as quatro sessões, a troca de patente, computador e celular, claro e
   escuro; o caso refeito no mesmo dia não mostra XP e não paga. O pacote de entrada
   cresceu 2,7 KB, mas o empacotador só moveu código entre os dois arquivos que a
   página pública baixa: a soma cresceu 327 bytes. Medir a soma, e não só o `index-*.js`.
+  **O finalizar do simulado foi para lote (31/10, depois de subir):** medido, cada ida
+  do servidor ao Neon leva 14 ms, e não os poucos milissegundos que o registro de 27/09
+  supunha. A 10,5 idas por questão (eram 6 antes da fase 1), uma prova de 100 esperava
+  15 s; o limite do plano era 5 s. Agora `sr.registrar_simulado` grava respostas,
+  revisões, eventos e razão num comando por tabela, numa transação só: 15 idas para
+  qualquer tamanho, cerca de 0,2 s. `registrar_revisao` usa as mesmas funções com uma
+  avaliação só, para o SQL existir uma vez. A consolidação também parou de trazer a
+  questão inteira, figura incluída, só para ler a resposta dada.
+  `tests/test_progressao.py` fixa que o número de idas não cresce com a prova e que o
+  histórico sai igual.
 - **Página pública e prévia de link** (pedido de 26/09, a partir da crítica
   comercial do mesmo dia), em fases, conferidas no localhost e subidas só com
   autorização: (1) prévia de link — `og:*` no `index.html`, imagem
@@ -179,7 +191,7 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   revisão, cada uma na sua transação); do localhost ao Neon, numa prova de 100,
   passou de 1 minuto. Do servidor, colado ao Neon, deve ficar em poucos
   segundos, mas o journal dos últimos 10 dias não tinha finalização para medir.
-  Se um dia pesar, é juntar a consolidação numa transação só.
+  Resolvido em 31/10, em lote (ver Gamificação, acima).
 - **Revalida 2020: travada no gabarito.** A aba de 2020 do INEP só tem
   `gabarito_caderno_1.pdf` e `_2`, os dois **preliminares**, e a área de
   resultados não traz o definitivo (procurado em 26/09). Sem o definitivo não

@@ -286,6 +286,74 @@ def test_simulado_so_paga_ao_finalizar_e_uma_vez(usuario_teste, edicao_teste):
     assert _saldo(usuario_teste)[0] == xp_esperado
 
 
+def _idas_ao_finalizar(usuario_id, questoes, monkeypatch):
+    """Quantas consultas o finalizar faz para um simulado com estas questões."""
+    simulado_id = db.criar_simulado(None, None, len(questoes), 10, questoes, usuario_id=usuario_id)
+    for q in questoes:
+        db.registrar_resposta_simulado(simulado_id, q, "A", usuario_id=usuario_id)
+    idas = []
+    original = db._PGCursor.execute
+
+    def contar(self, query, params=()):
+        idas.append(query)
+        return original(self, query, params)
+
+    with monkeypatch.context() as m:
+        m.setattr(db._PGCursor, "execute", contar)
+        finalizar_endpoint(simulado_id, usuario=_usuario(usuario_id))
+    return len(idas)
+
+
+def test_finalizar_nao_cresce_com_o_tamanho_da_prova(usuario_teste, quatro_questoes, questao_teste, monkeypatch):
+    """Do servidor ao Neon são 14 ms por ida. A uma ida por questão (eram 10), uma
+    prova de 100 levava 15 s para finalizar; em lote, o número é fixo."""
+    uma = _idas_ao_finalizar(usuario_teste, [questao_teste], monkeypatch)
+    quatro = _idas_ao_finalizar(usuario_teste, quatro_questoes, monkeypatch)
+    assert uma == quatro
+
+
+def test_finalizar_em_lote_grava_o_mesmo_que_uma_a_uma(usuario_teste, quatro_questoes):
+    """O histórico e o SM-2 de uma prova têm de sair iguais aos de quem respondeu no
+    Praticar: é o que o Painel e a Revisão leem."""
+    certa, errada, em_branco, ja_vista = quatro_questoes
+    sr.registrar_revisao(ja_vista, 5, usuario_id=usuario_teste, origem="pratica", correta=True, alternativa="A")
+    simulado_id = db.criar_simulado(None, None, 4, 10, quatro_questoes, usuario_id=usuario_teste)
+    db.registrar_resposta_simulado(simulado_id, certa, "A", usuario_id=usuario_teste)
+    db.registrar_resposta_simulado(simulado_id, errada, "B", usuario_id=usuario_teste)
+    db.registrar_resposta_simulado(simulado_id, ja_vista, "A", usuario_id=usuario_teste)
+    db.somar_tempo_simulado(simulado_id, certa, 4000, usuario_id=usuario_teste)
+    finalizar_endpoint(simulado_id, usuario=_usuario(usuario_teste))
+
+    with db.get_conn() as conn:
+        respostas = conn.execute(
+            "SELECT questao_id, resposta_dada, correta, tempo_ms FROM respostas WHERE usuario_id = ? AND questao_id = ANY(?)",
+            (usuario_teste, [certa, errada, em_branco]),
+        ).fetchall()
+        eventos = conn.execute(
+            "SELECT questao_id, origem, qualidade, correta, alternativa, tempo_ms, facilidade_antes, atraso_dias "
+            "FROM revisao_eventos WHERE usuario_id = ? AND origem = 'simulado'",
+            (usuario_teste,),
+        ).fetchall()
+        estados = {
+            r["questao_id"]: r
+            for r in conn.execute("SELECT * FROM revisao WHERE usuario_id = ?", (usuario_teste,)).fetchall()
+        }
+    assert {(r["questao_id"], r["resposta_dada"], r["correta"], r["tempo_ms"]) for r in respostas} == {
+        (certa, "A", 1, 4000), (errada, "B", 0, None),
+    }
+    por_questao = {e["questao_id"]: e for e in eventos}
+    assert set(por_questao) == {certa, errada, ja_vista}
+    assert (por_questao[certa]["qualidade"], por_questao[certa]["correta"]) == (5, 1)
+    assert (por_questao[errada]["qualidade"], por_questao[errada]["correta"]) == (1, 0)
+    assert por_questao[certa]["facilidade_antes"] is None
+    assert por_questao[ja_vista]["facilidade_antes"] is not None
+    assert por_questao[ja_vista]["atraso_dias"] is not None
+    # O erro volta em 10 minutos, o acerto amanhã: quem calcula é o mesmo SM-2.
+    assert em_branco not in estados
+    assert estados[errada]["proxima_revisao"] < estados[certa]["proxima_revisao"]
+    assert estados[ja_vista]["repeticoes"] == 2
+
+
 def test_prova_refeita_nao_paga_o_bonus_de_novo(usuario_teste, edicao_teste):
     banca, edicao, numeros = edicao_teste
     usuario = _usuario(usuario_teste)

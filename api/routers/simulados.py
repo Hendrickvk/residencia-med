@@ -11,24 +11,10 @@ router = APIRouter(prefix="/simulados", tags=["simulados"])
 
 
 def _consolidar_no_historico(simulado_id, usuario_id):
-    """Mesma lógica de `app.py::consolidar_simulado_no_historico`: joga as
-    respostas do simulado nos mesmos caminhos usados por Praticar, para que
-    Painel e revisão espaçada considerem o simulado automaticamente. É aqui que
-    o simulado paga: XP durante a prova vazaria o gabarito. Devolve os ganhos."""
-    ganhos = []
-    for item in db.listar_itens_simulado(simulado_id, usuario_id=usuario_id):
-        if item["resposta_dada"] is None:
-            continue
-        correta = bool(item["correta"])
-        db.registrar_resposta(
-            item["id"], item["resposta_dada"], correta, usuario_id=usuario_id, tempo_ms=item["tempo_ms"],
-        )
-        novo = sr.registrar_revisao(
-            item["id"], 5 if correta else 1, usuario_id=usuario_id, origem="simulado",
-            correta=correta, alternativa=item["resposta_dada"], tempo_ms=item["tempo_ms"],
-        )
-        ganhos.append(novo["ganho"])
-    return progressao.fechar_simulado(simulado_id, usuario_id=usuario_id, ganhos=ganhos, agora=db.agora_br())
+    """As respostas no histórico e na revisão espaçada, e o que a prova rendeu.
+    Devolve os ganhos."""
+    ganho = sr.registrar_simulado(simulado_id, usuario_id=usuario_id)
+    return progressao.fechar_simulado(simulado_id, usuario_id=usuario_id, ganhos=[ganho], agora=db.agora_br())
 
 
 def _cobrar_cota(usuario_id, quantidade):
