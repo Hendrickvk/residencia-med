@@ -62,6 +62,7 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   aberto, o 401 do próprio `/me` invalidava a consulta em curso, que recomeçava: 180 chamadas
   em 10 s e nunca o login. Vinha de 23/09, e sessão dura 12 h: toda aba esquecida fazia isso.
   `api.ts` agora não invalida no `/me`; medido, são 2 chamadas e o login devolve à tela.
+  No ar em 31/10 (commit `10e7fea`, só o front).
   **Fase 2, o que tem:** catálogo em `progressao.CATALOGO` (os ids não mudam nunca: estão
   gravados em `equipados` e nas chaves do razão), `GET /progresso/loja`, `POST
   /progresso/loja/{item}/comprar`, `PUT /progresso/equipar`, `usuarios.equipados`,
