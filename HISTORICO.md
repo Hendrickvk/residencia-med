@@ -63,7 +63,7 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   avaliação só, para o SQL existir uma vez. A consolidação também parou de trazer a
   questão inteira, figura incluída, só para ler a resposta dada.
   `tests/test_progressao.py` fixa que o número de idas não cresce com a prova e que o
-  histórico sai igual.
+  histórico sai igual. No ar em 31/10 (commit `1adf7e5`, só a API, sem mudança de banco).
 - **Página pública e prévia de link** (pedido de 26/09, a partir da crítica
   comercial do mesmo dia), em fases, conferidas no localhost e subidas só com
   autorização: (1) prévia de link — `og:*` no `index.html`, imagem
