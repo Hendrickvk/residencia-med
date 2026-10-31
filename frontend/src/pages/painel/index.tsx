@@ -142,7 +142,7 @@ export default function Painel() {
         onEstudarCartoes={() => navigate("/baralhos?estudar=tudo")}
         onPraticar={praticarTema}
       />
-      {me?.progresso && <FaixaProgresso progresso={me.progresso} />}
+      {me?.progresso && <FaixaProgresso me={me} bonus={data.bonus_do_dia} />}
       <QuadroTriagem
         areas={data.por_area}
         onAbrir={(areaId) => navigate("/praticar", { state: { areaId } })}

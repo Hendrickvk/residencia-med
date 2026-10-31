@@ -56,6 +56,11 @@ def test_texto_do_lembrete():
     # Só cartão: o botão vai direto para o estudo dos baralhos.
     assunto, texto, _ = lembrete_revisao(casos=0, cartoes=3, segundos_por_caso=75, app_url="https://x")
     assert assunto == "3 cartões para revisar hoje" and "https://x/baralhos?estudar=tudo" in texto
+    # A ofensiva só entra a partir de 2 dias: com 1, não há o que perder.
+    _, texto, _ = lembrete_revisao(casos=1, cartoes=0, segundos_por_caso=75, app_url="https://x", ofensiva=5)
+    assert "Sua ofensiva de 5 dias continua" in texto
+    _, texto, _ = lembrete_revisao(casos=1, cartoes=0, segundos_por_caso=75, app_url="https://x", ofensiva=1)
+    assert "ofensiva" not in texto
 
 
 def test_relatorio_do_dia_so_sai_uma_vez():

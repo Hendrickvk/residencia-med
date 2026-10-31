@@ -1,3 +1,4 @@
+import datetime
 from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator
@@ -84,6 +85,17 @@ class MeOut(BaseModel):
     # e o menu da conta. Vem sem consulta a mais: o saldo está na linha do usuário.
     progresso: dict
     moedas: int = 0
+    # A moldura (id) e o título (nome) em uso: progressao.equipados_de.
+    equipados: dict
+    protecoes_ofensiva: int = 0
+    # Ontem foi um dia sem estudo que uma proteção segurou: a faixa do Painel avisa.
+    ofensiva_protegida_ontem: bool = False
+    xp_dobro_ate: Optional[datetime.datetime] = None
+
+
+class EquiparIn(BaseModel):
+    tipo: str
+    item: Optional[str] = None
 
 
 class TemaIn(BaseModel):

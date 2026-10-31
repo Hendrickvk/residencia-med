@@ -1,11 +1,14 @@
 import { Link } from "react-router-dom";
+import { Avatar } from "../../components/Avatar";
 import { BarraNivel } from "../../components/BarraNivel";
 import { Cracha } from "../../components/Cracha";
 import { EstadoFalha } from "../../components/EstadoFalha";
+import { Moeda } from "../../components/Moeda";
 import { useMe } from "../../lib/auth";
 import { formatarNumeroBR } from "../../lib/format";
 import { useProgresso } from "../../lib/progresso";
 import type { Progresso } from "../../lib/types";
+import { Abas } from "./Abas";
 
 // O mapa cobre 26 semanas e fecha no sábado desta: como no GitHub e no Anki, cada
 // coluna é uma semana, de domingo a sábado.
@@ -68,7 +71,10 @@ export default function PaginaProgresso() {
 
   return (
     <div className="flex flex-col gap-7">
-      <h1 className="text-titulo">Progresso</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3.5">
+        <h1 className="text-titulo">Progresso</h1>
+        <Abas />
+      </div>
 
       <section className="flex flex-wrap items-start gap-7">
         <div className="mx-auto w-full max-w-[300px] shrink-0 sm:mx-0">
@@ -81,19 +87,62 @@ export default function PaginaProgresso() {
               Faltam {formatarNumeroBR(nivel.falta)} XP para o nível {nivel.nivel + 1}.
             </h2>
             <BarraNivel pct={nivel.pct} rotulo={`${Math.round(nivel.pct)}% do caminho até o nível ${nivel.nivel + 1}`} />
-            <p className="text-apoio tabular-nums text-muted">
-              <strong className="font-semibold text-ink">{formatarNumeroBR(nivel.xp)} XP</strong> no total
+            <p className="flex flex-wrap items-center gap-x-5 gap-y-1 text-apoio tabular-nums text-muted">
+              <span>
+                <strong className="font-semibold text-ink">{formatarNumeroBR(nivel.xp)} XP</strong> no total
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Moeda tamanho={15} />
+                <strong className="font-semibold text-ink">{formatarNumeroBR(me?.moedas ?? 0)}</strong> moedas
+              </span>
               {ofensiva > 0 && (
-                <>
-                  {" · "}
+                <span>
                   <strong className="font-semibold text-ink">
                     {ofensiva} dia{ofensiva !== 1 ? "s" : ""}
                   </strong>{" "}
                   de ofensiva
-                </>
+                  {me?.protecoes_ofensiva
+                    ? `, com ${me.protecoes_ofensiva} ${me.protecoes_ofensiva === 1 ? "proteção guardada" : "proteções guardadas"}`
+                    : ""}
+                </span>
               )}
             </p>
           </div>
+
+          {nivel.libera && (
+            <div className="flex flex-col gap-3 rounded-caso border border-line bg-surface px-5 py-4">
+              <div className="flex items-baseline justify-between gap-3">
+                <h3 className="text-bloco">O nível {nivel.libera.nivel} libera</h3>
+                <Link
+                  to="/progresso/loja"
+                  className="text-apoio font-semibold text-ink underline decoration-line underline-offset-[3px] hover:decoration-ink"
+                >
+                  Ver a loja
+                </Link>
+              </div>
+              <div className="grid grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-3">
+                {nivel.libera.itens.map((item) => (
+                  <div key={item.id} className="flex min-w-0 items-center gap-2.5">
+                    {item.tipo === "moldura" ? (
+                      <Avatar me={me} tamanho={36} moldura={item.id} />
+                    ) : (
+                      <span className="flex h-[49px] w-[49px] shrink-0 items-center justify-center rounded-card border border-line text-[11px] font-bold leading-tight text-muted">
+                        Título
+                      </span>
+                    )}
+                    <div className="flex min-w-0 flex-col">
+                      <span className="text-corpo font-semibold [overflow-wrap:anywhere]">
+                        {item.tipo === "moldura" ? "Moldura" : "Título"} {item.nome}
+                      </span>
+                      <span className="text-apoio tabular-nums text-muted">
+                        {item.de_patente ? "Vem com a patente" : `${formatarNumeroBR(item.preco)} moedas`}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="flex flex-col gap-3">
             <h3 className="text-bloco">Patentes</h3>

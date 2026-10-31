@@ -609,24 +609,47 @@ acompanha a raridade: o que se repete dezenas de vezes por dia quase não aparec
   com o crachá novo e o que ela libera: são sete na carreira inteira.
 - **Anel de nível** (`components/AnelNivel.tsx`): em volta do avatar na barra superior,
   em tinta sobre `--line`, sem ocupar largura nenhuma (o avatar encolhe de 36 para 28px
-  dentro dos mesmos 36). A moldura não aparece abaixo de 64px.
-- **Menu da conta**: nível, patente e uma barra fina, que levam a `/progresso`.
-- **Faixa no Painel**, abaixo da Conduta de hoje: uma linha só com nível, barra e quanto
-  falta. Sem botão primário, porque o da Conduta de hoje é o único da tela.
+  dentro dos mesmos 36). Na barra o anel ocupa o lugar da moldura, que só aparece no
+  crachá, no Perfil e nas prévias da loja.
+- **Menu da conta**: o título equipado abaixo do nome; nível, patente, uma barra fina e o
+  saldo de moedas, que levam a `/progresso`.
+- **Faixa no Painel**, abaixo da Conduta de hoje: nível, barra e quanto falta, mais
+  "Acertos em dobro hoje: 3 de 10" (some ao completar) e os avisos de que uma proteção
+  segurou a ofensiva ontem e de até quando vale o XP em dobro. Sem botão primário, porque
+  o da Conduta de hoje é o único da tela.
 - **`/progresso`**, fora do `NAV` como o Perfil (o rodapé tem cinco colunas): o título
   é o que falta ("Faltam 120 XP para o nível 15."), como o Painel é o diagnóstico; ao
   lado, o crachá; abaixo, a trilha das patentes, a experiência por área e o mapa de
   calor em tons de `--ink` (nenhum t1–t5, porque não é nível). A frase abaixo das áreas
   deixa claro que o nível de área mede trabalho, e que desempenho é o quadro do Painel.
 - **Crachá** (`components/Cracha.tsx`): a identidade da aluna, com a faixa na cor
-  dela, a fenda do cordão, nome, patente, nível e um código de barras decorativo.
-  Largura fixa de 300px, e o nome quebra com `[overflow-wrap:anywhere]`.
+  dela, a fenda do cordão, a moldura, nome, título, patente, nível e um código de barras
+  decorativo. Largura fixa de 300px, e o nome quebra com `[overflow-wrap:anywhere]`.
+- **Moeda** (`components/Moeda.tsx`): um círculo em `--ouro` com as cinco barras da marca
+  dentro, sempre junto do número. É a única coisa além dos metais das conquistas a usar
+  esse tom.
+- **Molduras** (`lib/cosmeticos.ts`, prop `moldura` do `Avatar`): traços de SVG em volta do
+  avatar, desenhados por id. O servidor só diz o id, nunca o desenho, pelo mesmo motivo de
+  `db.normalizar_cor`. A caixa do avatar cresce para caber a moldura (`tamanho / 0,74`), e
+  quem chama reserva esse espaço. Nas molduras de ouro o traço é `--ouro`; o resto é tinta,
+  e por isso elas funcionam em qualquer cor de avatar.
+- **Loja** (`/progresso/loja`, com `pages/progresso/Abas.tsx`, links e não estado, porque o
+  fim da sessão e o Painel mandam direto para ela): o saldo é o título, como "o que falta" é
+  o título do Progresso. Depois, "Para a ofensiva" em linhas (proteção e XP em dobro, que se
+  gastam e não têm prévia) e as seções em ladrilhos, cada um com um palco em `--ground` e o
+  rodapé que muda: travado (cadeado + exigência, preço apagado), à venda (preço + "Comprar"),
+  sem saldo ("Faltam 40"), confirmando ("Pagar 200" + "Voltar"), dela ("Sua" + "Usar") e em
+  uso ("Em uso" + "Tirar"). **Comprar são dois toques, sem diálogo**: gastar moeda não é
+  grave a ponto de interromper, mas um toque errado num item de 1.200 seria ruim. O liberado
+  vem primeiro e a ordem não depende de ser dela: o item recém-comprado não sai de baixo do
+  dedo. Item travado fica à vista, porque é ele que cria a vontade. No celular cada seção
+  corre de lado com encaixe, em ladrilhos de 212px: em duas colunas a loja dava 4 mil pixels
+  de rolagem.
 - **Patentes**: por posto e não por pessoa, para não terem gênero: Ciclo básico,
   Ciclo clínico, Internato, R1, R2, R3, Preceptoria, Chefia.
 - **Voz**: sem "Parabéns!". "Nível 20. R1." diz tudo.
-- **Ainda por vir** (no protótipo): loja com itens travados à vista (fase 2), caderneta
-  de carimbos numa ficha de doses (fase 3), temas, estampas e efeitos (fase 4), perfil
-  público (fase 5).
+- **Ainda por vir** (no protótipo): caderneta de carimbos numa ficha de doses (fase 3),
+  temas, estampas e efeitos (fase 4), perfil público (fase 5).
 
 ### Página pública (`/`)
 Desde 26/09 (`pages/Inicio.tsx`). É a única tela de persuasão: quem chega por um

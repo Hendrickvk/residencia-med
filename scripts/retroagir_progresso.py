@@ -82,14 +82,14 @@ def lancamentos_de_casos(eventos, respostas, areas):
 def lancamentos_de_cartoes(eventos):
     linhas = []
     pagas = set()
-    xp_do_dia = collections.Counter()
+    cartoes_do_dia = collections.Counter()
     for e in sorted(eventos, key=lambda e: _quando(e["registrado_em"])):
         quando = _quando(e["registrado_em"])
         chave = progressao.chave_cartao(e["cartao_id"], quando.date())
-        if chave in pagas or xp_do_dia[quando.date()] + progressao.XP_CARTAO > progressao.TETO_XP_CARTOES_DIA:
+        if chave in pagas or cartoes_do_dia[quando.date()] >= progressao.TETO_CARTOES_PAGOS_DIA:
             continue
         pagas.add(chave)
-        xp_do_dia[quando.date()] += progressao.XP_CARTAO
+        cartoes_do_dia[quando.date()] += 1
         linhas.append(_linha(chave, "cartao", progressao.XP_CARTAO, 0, None, quando))
     return linhas
 

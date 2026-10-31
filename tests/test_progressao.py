@@ -256,8 +256,9 @@ def test_teto_diario_de_cartoes(usuario_teste):
     with db.get_conn() as conn:
         conn.execute("""
             INSERT INTO progresso_eventos (usuario_id, chave, tipo, xp, dia, criado_em)
-            VALUES (?, 'cartao:teste', 'cartao', ?, ?, ?)
-        """, (usuario_teste, progressao.TETO_XP_CARTOES_DIA, agora.date(), agora))
+            SELECT ?, 'cartao:teste:' || n, 'cartao', ?, ?, ?
+            FROM generate_series(1, ?) AS n
+        """, (usuario_teste, progressao.XP_CARTAO, agora.date(), agora, progressao.TETO_CARTOES_PAGOS_DIA))
     pasta = db.criar_pasta(usuario_id=usuario_teste, nome="Pasta", cor=None)
     baralho = db.criar_baralho(usuario_id=usuario_teste, pasta_id=pasta, nome="Baralho")
     cartao = db.criar_cartao(usuario_id=usuario_teste, baralho_id=baralho, frente="f", verso="v")

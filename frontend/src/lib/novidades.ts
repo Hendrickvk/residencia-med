@@ -37,6 +37,25 @@ export const ROTULO_TIPO: Record<TipoNovidade, string> = {
 
 export const NOVIDADES: Novidade[] = [
   {
+    id: "2026-10-31b",
+    data: "31 de outubro de 2026",
+    titulo: "Moedas e loja",
+    itens: [
+      {
+        tipo: "novo",
+        texto: "Cada acerto agora rende moedas, e os 10 primeiros acertos de cada dia valem dobro. O que você acertou até aqui já contou.",
+      },
+      {
+        tipo: "novo",
+        texto: "Em Progresso, a Loja tem molduras e títulos para o seu crachá. Cada nível libera mais itens, e cada patente traz uma moldura de graça.",
+      },
+      {
+        tipo: "novo",
+        texto: "Um dia sem estudar não precisa quebrar a sua ofensiva: a proteção segura sozinha, e a primeira já é sua. A Loja também tem XP em dobro por 30 minutos.",
+      },
+    ],
+  },
+  {
     id: "2026-10-31",
     data: "31 de outubro de 2026",
     titulo: "Nível e patente",

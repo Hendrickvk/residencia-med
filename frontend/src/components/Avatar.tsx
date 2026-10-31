@@ -1,4 +1,5 @@
 import { API_URL } from "../lib/api";
+import { desenhoDaMoldura } from "../lib/cosmeticos";
 import type { Me } from "../lib/types";
 import { corCheia } from "../lib/paleta";
 import { inicial } from "../lib/perfil";
@@ -8,6 +9,10 @@ interface Props {
   /** Lado em pixels. 36 na barra superior, 64 na tela de perfil. */
   tamanho?: number;
   className?: string;
+  /** Id da moldura. Ela fica em volta do avatar, então a caixa cresce: o `tamanho`
+   *  continua sendo o do círculo. Abaixo de uns 64px o desenho vira ruído, e a barra
+   *  superior usa o anel de nível no lugar. */
+  moldura?: string | null;
 }
 
 // A foto quando existe, a inicial sobre a cor escolhida quando não.
@@ -16,7 +21,7 @@ interface Props {
 // carrega, e o que sobra se ela falhar. A URL carrega a versão da foto, então
 // trocar a foto troca a URL — o servidor pode mandar cachear por um ano sem
 // que a nova demore a aparecer.
-export function Avatar({ me, tamanho = 36, className = "" }: Props) {
+export function Avatar({ me, tamanho = 36, className = "", moldura }: Props) {
   // A letra vai na cor `on` do tom, e não em branco fixo: nos tons claros da
   // paleta o branco some.
   const estilo = {
@@ -26,7 +31,7 @@ export function Avatar({ me, tamanho = 36, className = "" }: Props) {
     ...corCheia(me?.cor_perfil, "perfil"),
   };
 
-  return (
+  const circulo = (
     <span
       className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-pill border border-black/15 dark:border-white/15 font-bold ${className}`}
       style={estilo}
@@ -41,6 +46,34 @@ export function Avatar({ me, tamanho = 36, className = "" }: Props) {
       ) : (
         inicial(me)
       )}
+    </span>
+  );
+
+  const tracos = moldura ? desenhoDaMoldura(moldura) : [];
+  if (tracos.length === 0) return circulo;
+
+  const caixa = Math.round(tamanho / 0.74);
+  return (
+    <span className="relative flex shrink-0 items-center justify-center text-ink" style={{ width: caixa, height: caixa }}>
+      <svg
+        viewBox="0 0 100 100"
+        fill="none"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+        className="absolute inset-0 h-full w-full overflow-visible"
+      >
+        {tracos.map((t) => (
+          <path
+            key={t.d}
+            d={t.d}
+            strokeWidth={t.largura}
+            strokeDasharray={t.tracejado}
+            stroke={t.ouro ? "var(--ouro)" : "currentColor"}
+          />
+        ))}
+      </svg>
+      {circulo}
     </span>
   );
 }

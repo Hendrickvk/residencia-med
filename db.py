@@ -949,6 +949,24 @@ def init_db(forcar=False):
             c.execute("ALTER TABLE usuarios ADD COLUMN xp_total INTEGER NOT NULL DEFAULT 0")
         if "moedas" not in colunas_usuarios:
             c.execute("ALTER TABLE usuarios ADD COLUMN moedas INTEGER NOT NULL DEFAULT 0 CHECK (moedas >= 0)")
+        # O que ela está usando: {"moldura": id, "titulo": id}. O que é dela não tem
+        # tabela: comprar é uma linha `compra:{item}` no razão.
+        if "equipados" not in colunas_usuarios:
+            c.execute("ALTER TABLE usuarios ADD COLUMN equipados JSONB NOT NULL DEFAULT '{}'")
+        # A primeira proteção de ofensiva é de graça: é o default da coluna.
+        if "protecoes_ofensiva" not in colunas_usuarios:
+            c.execute("ALTER TABLE usuarios ADD COLUMN protecoes_ofensiva INTEGER NOT NULL DEFAULT 1")
+        if "xp_dobro_ate" not in colunas_usuarios:
+            c.execute("ALTER TABLE usuarios ADD COLUMN xp_dobro_ate TIMESTAMP")
+
+        # Os dias em que uma proteção segurou a ofensiva (progressao.usar_protecoes).
+        c.execute("""
+        CREATE TABLE IF NOT EXISTS ofensiva_protecoes (
+            usuario_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+            dia DATE NOT NULL,
+            PRIMARY KEY (usuario_id, dia)
+        )
+        """)
 
         # O razão da progressão: uma linha por ganho. A `chave` única por conta é o
         # que torna reenvio inofensivo e o que limita a mesma questão a pagar uma
@@ -1705,33 +1723,45 @@ def consumir_cota_pratica(*, usuario_id, quantidade, teto=TETO_DIARIO_PRATICA, i
         return liberados
 
 
-def calcular_ofensiva(*, usuario_id):
-    """Dias consecutivos de estudo, contando pra trás a partir de hoje (ou de
-    ontem, se hoje ainda não teve estudo — a ofensiva de ontem continua
-    'valendo' até o fim do dia de hoje). Conta como estudo qualquer uma das
+def dias_de_ofensiva(*, usuario_id):
+    """(dias com estudo, dias protegidos). Conta como estudo qualquer uma das
     três: resposta no Praticar ou no Simulado (`respostas`), caso avaliado na
     Revisão (`revisao_eventos` — a Revisão não passa por `respostas`) e cartão
     avaliado (`revisao_cartao_eventos`). Até 25/09 só `respostas` contava, e
     quem passava o dia só revisando, casos ou cartões, perdia a sequência.
-    Os três horários saem do mesmo relógio (`agora_br`).
-    Retorna (dias_consecutivos, estudou_hoje)."""
+    Os três horários saem do mesmo relógio (`agora_br`)."""
     with get_conn() as conn:
         linhas = conn.execute("""
-            SELECT respondida_em::date AS dia FROM respostas WHERE usuario_id = ?
+            SELECT respondida_em::date AS dia, FALSE AS protegido FROM respostas WHERE usuario_id = ?
             UNION
-            SELECT registrado_em::date FROM revisao_eventos WHERE usuario_id = ?
+            SELECT registrado_em::date, FALSE FROM revisao_eventos WHERE usuario_id = ?
             UNION
-            SELECT registrado_em::date FROM revisao_cartao_eventos WHERE usuario_id = ?
-        """, (usuario_id, usuario_id, usuario_id)).fetchall()
-    dias = {r["dia"] for r in linhas}
+            SELECT registrado_em::date, FALSE FROM revisao_cartao_eventos WHERE usuario_id = ?
+            UNION
+            SELECT dia, TRUE FROM ofensiva_protecoes WHERE usuario_id = ?
+        """, (usuario_id, usuario_id, usuario_id, usuario_id)).fetchall()
+    return {r["dia"] for r in linhas if not r["protegido"]}, {r["dia"] for r in linhas if r["protegido"]}
+
+
+def contar_ofensiva(estudo, protegidos):
+    """Dias consecutivos de estudo, contando pra trás a partir de hoje (ou de
+    ontem, se hoje ainda não teve estudo — a ofensiva de ontem continua
+    'valendo' até o fim do dia de hoje). O dia protegido não quebra a sequência,
+    mas também não conta: protegido não é estudado, como no Duolingo.
+    Retorna (dias_consecutivos, estudou_hoje)."""
     hoje = hoje_br()
-    respondeu_hoje = hoje in dias
+    respondeu_hoje = hoje in estudo
     cursor = hoje if respondeu_hoje else hoje - datetime.timedelta(days=1)
     streak = 0
-    while cursor in dias:
-        streak += 1
+    while cursor in estudo or cursor in protegidos:
+        if cursor in estudo:
+            streak += 1
         cursor -= datetime.timedelta(days=1)
     return streak, respondeu_hoje
+
+
+def calcular_ofensiva(*, usuario_id):
+    return contar_ofensiva(*dias_de_ofensiva(usuario_id=usuario_id))
 
 
 def definir_lembrete_revisao(usuario_id, ativo: bool):

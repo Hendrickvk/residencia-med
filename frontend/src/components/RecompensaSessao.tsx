@@ -8,6 +8,7 @@ import type { ResumoGanhos } from "../lib/types";
 import { BarraNivel } from "./BarraNivel";
 import { Cracha } from "./Cracha";
 import { Dialog } from "./Dialog";
+import { Moeda } from "./Moeda";
 import { NumeroAnimado } from "./NumeroAnimado";
 
 // O bloco do fim da sessão: é aqui que a progressão aparece com força, porque o
@@ -15,10 +16,12 @@ import { NumeroAnimado } from "./NumeroAnimado";
 // dia no começo, então o número só carimba; a troca de patente, que são sete na
 // carreira inteira, é a única que abre um diálogo.
 export function RecompensaSessao({ resumo }: { resumo: ResumoGanhos }) {
-  const { xp, areas, antes, depois } = resumo;
+  const { xp, moedas, areas, antes, depois } = resumo;
   const subiu = depois.nivel > antes.nivel;
   const proxima = depois.proxima_patente;
   const [fechouDialogo, setFechouDialogo] = useState(false);
+  const CLASSE_LINK =
+    "text-apoio font-semibold text-ink underline decoration-line underline-offset-[3px] transition-colors duration-hover hover:decoration-ink";
 
   return (
     <>
@@ -26,9 +29,16 @@ export function RecompensaSessao({ resumo }: { resumo: ResumoGanhos }) {
         aria-label="O que esta sessão rendeu"
         className="flex animate-entrar flex-col gap-5 rounded-caso border border-line bg-surface p-6"
       >
-        <div className="flex items-baseline gap-2">
-          <NumeroAnimado className="num-lg" valor={xp} formatar={(v) => `+${formatarNumeroBR(Math.round(v))}`} />
-          <span className="text-subtitulo">XP</span>
+        <div className="flex flex-col gap-2.5">
+          <div className="flex items-baseline gap-2">
+            <NumeroAnimado className="num-lg" valor={xp} formatar={(v) => `+${formatarNumeroBR(Math.round(v))}`} />
+            <span className="text-subtitulo">XP</span>
+          </div>
+          {moedas > 0 && (
+            <span className="flex items-center gap-2 text-bloco tabular-nums">
+              <Moeda tamanho={18} />+{formatarNumeroBR(moedas)} moeda{moedas !== 1 ? "s" : ""}
+            </span>
+          )}
         </div>
 
         <div className="flex flex-col gap-2">
@@ -60,17 +70,20 @@ export function RecompensaSessao({ resumo }: { resumo: ResumoGanhos }) {
         )}
 
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-line-soft pt-4">
-          {proxima && (
-            <span className="text-apoio text-ink-2">
-              A próxima patente, {proxima.nome}, vem no nível {proxima.nivel}.
-            </span>
+          {depois.libera ? (
+            <>
+              <span className="text-apoio text-ink-2">
+                No nível {depois.libera.nivel} você libera {depois.libera.frase}.
+              </span>
+              <Link to="/progresso/loja" className={CLASSE_LINK}>
+                Ver na loja
+              </Link>
+            </>
+          ) : (
+            <Link to="/progresso" className={CLASSE_LINK}>
+              Ver meu progresso
+            </Link>
           )}
-          <Link
-            to="/progresso"
-            className="text-apoio font-semibold text-ink underline decoration-line underline-offset-[3px] transition-colors duration-hover hover:decoration-ink"
-          >
-            Ver meu progresso
-          </Link>
         </div>
       </section>
 
@@ -110,13 +123,14 @@ function TrocaDePatente({
           <p className="text-corpo text-ink-2">
             {patenteAntes} ficou para trás.
             {proxima && ` A próxima patente, ${proxima.nome}, vem no nível ${proxima.nivel}.`}
+            {" "}A moldura desta já é sua.
           </p>
           <div className="mt-auto flex flex-wrap gap-2.5">
             <button type="button" onClick={onFechar} className={BOTAO_PRIMARIO}>
               Continuar
             </button>
-            <Link to="/progresso" onClick={onFechar} className={BOTAO_SECUNDARIO}>
-              Ver meu progresso
+            <Link to="/progresso/loja" onClick={onFechar} className={BOTAO_SECUNDARIO}>
+              Ver a loja
             </Link>
           </div>
         </div>

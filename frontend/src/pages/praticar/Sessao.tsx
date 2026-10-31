@@ -142,7 +142,7 @@ export default function Sessao({ filtros, nonce, salva, email, onFinalizar, onVo
   // lembrava de ter tido certeza, e o acerto no chute vale meio no Painel.
   // Acerto sem a marca vai como "seguro"; erro com a marca vai como "chute" (a
   // qualidade do SM-2 é 1 de todo jeito, mas fica registrado que era palpite).
-  function concluir() {
+  function registrarCaso() {
     if (!questaoAtual || !selecionada) return;
     const tempoMs = tempoDecorridoMs();
     const confianca = chutando ? "chute" : correta ? "seguro" : undefined;
@@ -155,6 +155,11 @@ export default function Sessao({ filtros, nonce, salva, email, onFinalizar, onVo
       tempoMs,
     });
     setResultados((r) => [...r, correta]);
+  }
+
+  function concluir() {
+    if (!confirmado) return;
+    registrarCaso();
     avancarOuFinalizar();
   }
 
@@ -181,7 +186,9 @@ export default function Sessao({ filtros, nonce, salva, email, onFinalizar, onVo
     });
   }
 
+  // Com a discussão aberta o caso já foi respondido: encerrar não pode perdê-lo.
   function encerrarSessao() {
+    if (confirmado) registrarCaso();
     finalizar();
   }
 

@@ -134,6 +134,7 @@ export interface PainelData {
   corte_revalida: CorteRevalida;
   semana: ProgressoSemana;
   por_tipo: DesempenhoTipo[];
+  bonus_do_dia: { feitos: number; total: number };
 }
 
 // Nota esperada numa prova do INEP (db.projetar_nota), em %: o domínio estimado
@@ -315,6 +316,7 @@ export interface Simulado {
   acertos: number | null;
   total_respondidas: number | null;
   xp_ganho?: number | null; // o que rendeu (progressao.fechar_simulado); null antes de finalizar
+  moedas_ganhas?: number | null;
 }
 
 export interface SimuladoEmAndamento extends Simulado {
@@ -393,6 +395,11 @@ export interface ProgressoNivel {
   falta: number;
   pct: number;
   proxima_patente: { nome: string; nivel: number } | null;
+  libera: {
+    nivel: number;
+    frase: string;
+    itens: { id: string; tipo: "moldura" | "titulo"; nome: string; preco: number; de_patente: boolean }[];
+  } | null;
 }
 
 // O que uma resposta ou um cartão rendeu. `null` no servidor quando não rendeu
@@ -408,6 +415,7 @@ export interface Ganho {
 
 export interface ResumoGanhos {
   xp: number;
+  moedas: number;
   areas: { nome: string; xp: number }[];
   antes: ProgressoNivel;
   depois: ProgressoNivel;
@@ -429,6 +437,28 @@ export interface Progresso {
   hoje: string;
   dias: { dia: string; xp: number }[];
   maior_sequencia: number;
+}
+
+// A loja: quem decide o que está liberado, o que é dela e o que está em uso é o
+// servidor (progressao.loja).
+export interface ItemLoja {
+  id: string;
+  tipo: "moldura" | "titulo";
+  nome: string;
+  preco: number;
+  exige: string;
+  de_patente: boolean;
+  liberado: boolean;
+  seu: boolean;
+  em_uso: boolean;
+}
+
+export interface Loja {
+  moedas: number;
+  nivel: number;
+  protecao: { id: string; preco: number; tem: number; maximo: number };
+  xp_dobro: { id: string; preco: number; minutos: number; ate: string | null };
+  secoes: { tipo: ItemLoja["tipo"]; nome: string; itens: ItemLoja[] }[];
 }
 
 export interface Me {
@@ -454,4 +484,9 @@ export interface Me {
   brincadeira: Brincadeira | null;
   progresso: ProgressoNivel;
   moedas: number;
+  // A moldura (id, o desenho está em lib/cosmeticos.ts) e o título (nome) em uso.
+  equipados: { moldura: string | null; titulo: string | null };
+  protecoes_ofensiva: number;
+  ofensiva_protegida_ontem: boolean;
+  xp_dobro_ate: string | null;
 }

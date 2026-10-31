@@ -111,7 +111,7 @@ export default function Resultado({ simuladoId, onNovoSimulado }: Props) {
   const recompensa: ResumoGanhos | null = ganhosDaProva?.length
     ? resumirGanhos(ganhosDaProva)
     : simulado.xp_ganho && me?.progresso
-      ? { xp: simulado.xp_ganho, areas: [], antes: me.progresso, depois: me.progresso }
+      ? { xp: simulado.xp_ganho, moedas: simulado.moedas_ganhas ?? 0, areas: [], antes: me.progresso, depois: me.progresso }
       : null;
 
   function alternar(itemId: number) {

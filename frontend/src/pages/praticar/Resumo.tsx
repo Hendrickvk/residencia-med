@@ -38,7 +38,7 @@ export default function Resumo({ resumo, onNovaSessao }: Props) {
     <div className="mx-auto flex max-w-[680px] flex-col gap-6">
       <div className="flex flex-col gap-2">
         <span className="rotulo text-muted">Resumo da sessão</span>
-        <h1 className="text-titulo">{n ? `${acertos} de ${n} casos certos.` : "Nenhum caso respondido."}</h1>
+        <h1 className="text-titulo">{n ? `${acertos} de ${n} ${n === 1 ? "caso certo" : "casos certos"}.` : "Nenhum caso respondido."}</h1>
       </div>
 
       <RecompensaDaSessao />

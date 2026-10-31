@@ -41,9 +41,11 @@ def lembretes(hoje, enviar):
         cartoes = db.contar_cartoes_vencidos(usuario_id=conta["id"])
         if resumo["hoje"] == 0 and cartoes == 0:
             continue  # nada vencido: nenhum e-mail
+        ofensiva, estudou_hoje = db.calcular_ofensiva(usuario_id=conta["id"])
         assunto, texto, html = lembrete_revisao(
             casos=resumo["hoje"], cartoes=cartoes,
             segundos_por_caso=resumo["segundos_por_caso"], app_url=APP_URL,
+            ofensiva=0 if estudou_hoje else ofensiva,
         )
         if not enviar:
             print(f"  lembrete para a conta {conta['id']}: {assunto}")

@@ -141,10 +141,11 @@ def _duracao(casos: int, segundos_por_caso: float) -> str:
     return f"cerca de {horas} h {resto:02d} min" if resto else f"cerca de {horas} h"
 
 
-def lembrete_revisao(*, casos: int, cartoes: int, segundos_por_caso: float, app_url: str):
+def lembrete_revisao(*, casos: int, cartoes: int, segundos_por_caso: float, app_url: str, ofensiva: int = 0):
     """O lembrete de revisão, que a aluna liga no Perfil (é opcional, desligado
     por padrão). Devolve (assunto, texto, html). Só números entram aqui — nada
-    escrito por alguém —, porque `montar_html` não escapa."""
+    escrito por alguém —, porque `montar_html` não escapa. `ofensiva`: os dias em
+    jogo, quando ela ainda não estudou hoje."""
     partes = []
     if casos:
         partes.append(f"{casos} caso{'s' if casos != 1 else ''}")
@@ -155,6 +156,8 @@ def lembrete_revisao(*, casos: int, cartoes: int, segundos_por_caso: float, app_
     paragrafos = [f"Hoje há {oque} para revisar."]
     if casos:
         paragrafos.append(f"No seu ritmo, os casos levam {_duracao(casos, segundos_por_caso)}.")
+    if ofensiva >= 2:
+        paragrafos.append(f"Sua ofensiva de {ofensiva} dias continua se você estudar hoje.")
     # Só cartão vencido: o botão vai direto para o estudo dos baralhos.
     destino = f"{app_url}/revisao" if casos else f"{app_url}/baralhos?estudar=tudo"
     # O link de desligar abre o Perfil já no interruptor (a página rola até

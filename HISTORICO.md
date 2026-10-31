@@ -35,8 +35,8 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   guardado; backup `conduta_20261031_183430.dump` e `retroagir_progresso.py --aplicar`
   com a autorização do usuário: 1.562 lançamentos em 8 contas, as 14 contas com saldo
   igual à soma do razão, e rodar de novo não acrescenta nada; linhas criadas em
-  `backups/retroagir_progresso_20261031_183513.json`); (2) moedas e loja, **a próxima**;
-  (3) conquistas; (4) temas,
+  `backups/retroagir_progresso_20261031_183513.json`); (2) moedas e loja, **pronta no
+  localhost, falta subir**; (3) conquistas; (4) temas,
   estampas e efeitos; (5) perfil público; (6) lançamento e métricas de guarda (chute
   marcado e acerto na primeira resposta: queda indica que a recompensa sujou o
   diagnóstico). Na troca de gabarito de 04/12, XP e moedas já ganhos não voltam atrás.
@@ -54,6 +54,28 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   escuro; o caso refeito no mesmo dia não mostra XP e não paga. O pacote de entrada
   cresceu 2,7 KB, mas o empacotador só moveu código entre os dois arquivos que a
   página pública baixa: a soma cresceu 327 bytes. Medir a soma, e não só o `index-*.js`.
+  **Fase 2, o que tem:** catálogo em `progressao.CATALOGO` (os ids não mudam nunca: estão
+  gravados em `equipados` e nas chaves do razão), `GET /progresso/loja`, `POST
+  /progresso/loja/{item}/comprar`, `PUT /progresso/equipar`, `usuarios.equipados`,
+  `protecoes_ofensiva` (default 1: a primeira é de graça), `xp_dobro_ate`, tabela
+  `ofensiva_protecoes`, e no front a Loja, moldura no avatar, título, moedas e o bônus do dia
+  na faixa do Painel. Decisões tomadas no caminho: **sem tabela `inventario`**, ao contrário
+  do plano: comprar é uma linha `compra:{item}` no razão, e ter o item é ter a linha (um
+  lugar só para o saldo e a posse, e a chave única já barra comprar duas vezes); **moldura
+  sem escolha é a da patente**, então subir de patente troca sozinha, e só "Tirar" grava
+  `nenhuma`; **a escolha de moldura e título fica na Loja**, e não em `Identidade` como dizia
+  o plano (o Perfil só leva até lá: um seletor nos dois lugares é duas telas para o mesmo);
+  **dia protegido não quebra nem conta** na ofensiva, para a proteção não virar dia de graça;
+  a proteção é gasta no `/me`, sozinha, só quando cobre o buraco inteiro; **o teto do cartão
+  é por contagem** (50 pagos por dia, os 100 XP do plano); **o XP em dobro vale para casos e
+  cartões**, não para meta e prova, e nunca para moedas. O lembrete por e-mail ganhou a linha
+  da ofensiva em jogo, só para quem já tinha ligado. **Defeito antigo achado no QA:**
+  "Encerrar" com a discussão aberta jogava fora a resposta daquele caso, que nunca ia para o
+  servidor, com o `+XP` já na tela. Agora registra antes de encerrar (`registrarCaso` em
+  `praticar/Sessao.tsx`). Conferido no localhost contra o branch: compra, equipar, tirar,
+  guarda cheia, 409 na terceira proteção, XP em dobro valendo, sessão inteira com moedas no
+  fim, de 320 a 1440 px, claro e escuro. Não precisa rodar o retroagir: as moedas do
+  histórico já entraram na fase 1.
   **O finalizar do simulado foi para lote (31/10, depois de subir):** medido, cada ida
   do servidor ao Neon leva 14 ms, e não os poucos milissegundos que o registro de 27/09
   supunha. A 10,5 idas por questão (eram 6 antes da fase 1), uma prova de 100 esperava

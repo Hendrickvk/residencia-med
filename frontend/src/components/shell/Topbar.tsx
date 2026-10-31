@@ -3,6 +3,7 @@ import { formatarNumeroBR, textoProva } from "../../lib/format";
 import { nomeExibido } from "../../lib/perfil";
 import { AnelNivel } from "../AnelNivel";
 import { BarraNivel } from "../BarraNivel";
+import { Moeda } from "../Moeda";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { PRESSAO } from "../../lib/estilos";
@@ -222,6 +223,7 @@ export function Topbar({ tema, onAlternarTema, me, revisoesHoje, onSair, onRever
                       <div className="mt-1 break-all text-corpo font-semibold text-ink">{nomeExibido(me)}</div>
                       {/* O e-mail vira apoio quando já existe um nome; sem
                           nome ele já é a linha de cima e não se repete. */}
+                      {me?.equipados?.titulo && <div className="text-apoio text-ink-2">{me.equipados.titulo}</div>}
                       {me?.nome && <div className="break-all text-apoio text-muted">{me.email}</div>}
                       {prova && <div className="mt-0.5 text-apoio text-muted">{prova}</div>}
                     </div>
@@ -239,6 +241,10 @@ export function Topbar({ tema, onAlternarTema, me, revisoesHoje, onSair, onRever
                           <BarraNivel pct={me.progresso.pct} fina />
                           <span className="text-apoio tabular-nums text-muted">
                             Faltam {formatarNumeroBR(me.progresso.falta)} XP para o nível {me.progresso.nivel + 1}
+                          </span>
+                          <span className="flex items-center gap-1.5 text-apoio tabular-nums text-muted">
+                            <Moeda tamanho={15} />
+                            {formatarNumeroBR(me.moedas)} moeda{me.moedas !== 1 ? "s" : ""}
                           </span>
                         </NavLink>
                       </div>

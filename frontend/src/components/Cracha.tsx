@@ -23,11 +23,15 @@ export function Cracha({ me, nivel, patente }: Props) {
         <span className="h-2.5 w-[52px] rounded-pill bg-ground" aria-hidden="true" />
         <span className="marca-texto text-[17px]">Conduta</span>
       </div>
-      <div className="-mt-10 flex flex-col items-center gap-3.5 px-5 pb-5 text-center">
+      <div className="-mt-12 flex flex-col items-center gap-3.5 px-5 pb-5 text-center">
+        {/* O disco da superfície é o que deixa a moldura visível sobre a faixa colorida. */}
         <span className="rounded-pill bg-surface p-1">
-          <Avatar me={me} tamanho={84} />
+          <Avatar me={me} tamanho={84} moldura={me?.equipados?.moldura} />
         </span>
-        <span className="w-full text-subtitulo [overflow-wrap:anywhere]">{nome}</span>
+        <span className="flex w-full flex-col gap-0.5">
+          <span className="text-subtitulo [overflow-wrap:anywhere]">{nome}</span>
+          {me?.equipados?.titulo && <span className="text-apoio text-ink-2">{me.equipados.titulo}</span>}
+        </span>
         <div className="grid w-full grid-cols-2 border-y border-line-soft">
           <div className="flex flex-col gap-1 border-r border-line-soft py-3">
             <span className="rotulo text-muted">Patente</span>

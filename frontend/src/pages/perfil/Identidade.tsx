@@ -1,5 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { Avatar } from "../../components/Avatar";
 import { api, ApiError } from "../../lib/api";
 import { BOTAO_PRIMARIO, BOTAO_SECUNDARIO, CAMPO } from "../../lib/estilos";
@@ -82,8 +83,8 @@ export function Identidade({ me }: { me: Me | undefined }) {
 
       <div className="flex items-center gap-4">
         {/* Prévia com a cor escolhida agora, não a salva. */}
-        <Avatar me={me && { ...me, cor_perfil: cor }} tamanho={72} />
-        <div className="flex flex-wrap gap-2">
+        <Avatar me={me && { ...me, cor_perfil: cor }} tamanho={72} moldura={me?.equipados?.moldura} />
+        <div className="flex flex-wrap items-center gap-2">
           <input
             ref={campoArquivo}
             type="file"
@@ -104,6 +105,12 @@ export function Identidade({ me }: { me: Me | undefined }) {
               Remover
             </button>
           )}
+          <Link
+            to="/progresso/loja"
+            className="whitespace-nowrap text-apoio font-semibold text-ink underline decoration-line underline-offset-[3px] hover:decoration-ink"
+          >
+            Trocar moldura e título
+          </Link>
         </div>
       </div>
 

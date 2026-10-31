@@ -44,6 +44,7 @@ export function resumirGanhos(lista: Ganho[]): ResumoGanhos | null {
   }
   return {
     xp: lista.reduce((soma, ganho) => soma + ganho.xp, 0),
+    moedas: lista.reduce((soma, ganho) => soma + ganho.moedas, 0),
     areas: [...porArea.entries()].map(([nome, xp]) => ({ nome, xp })).sort((a, b) => b.xp - a.xp),
     antes: lista.reduce((menor, ganho) => (ganho.antes.xp < menor.xp ? ganho.antes : menor), lista[0].antes),
     depois: lista.reduce((maior, ganho) => (ganho.depois.xp > maior.xp ? ganho.depois : maior), lista[0].depois),

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends
 
 import db
+import progressao
 import repeticao_espacada as sr
 from api.deps import usuario_atual
 
@@ -44,4 +45,5 @@ def obter_painel(usuario=Depends(usuario_atual)):
         "corte_revalida": db.corte_de_referencia(),
         "semana": db.progresso_semana(usuario_id=uid),
         "por_tipo": db.desempenho_por_tipo(usuario_id=uid),
+        "bonus_do_dia": progressao.bonus_do_dia(usuario_id=uid),
     }

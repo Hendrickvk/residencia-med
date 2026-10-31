@@ -23,6 +23,7 @@ const TELAS = {
   simulado: () => import("./pages/simulado"),
 };
 const carregarBaralho = () => import("./pages/baralhos/Baralho");
+const carregarLoja = () => import("./pages/progresso/Loja");
 
 const AppShell = lazy(() => carregarCasca().then((m) => ({ default: m.AppShell })));
 const Painel = lazy(TELAS.painel);
@@ -32,6 +33,7 @@ const Baralhos = lazy(TELAS.baralhos);
 const Baralho = lazy(carregarBaralho);
 const PaginaPerfil = lazy(TELAS.perfil);
 const PaginaProgresso = lazy(TELAS.progresso);
+const PaginaLoja = lazy(carregarLoja);
 const Simulado = lazy(TELAS.simulado);
 
 // Quem abre direto numa tela do app (o app instalado abre em /painel) começa a
@@ -76,6 +78,7 @@ export default function App() {
           {/* Também fora do NAV: o rodapé do celular tem cinco colunas, e o
               caminho é o anel do avatar, a faixa do Painel e o fim das sessões. */}
           <Route path="/progresso" element={<PaginaProgresso />} />
+          <Route path="/progresso/loja" element={<PaginaLoja />} />
           <Route path="/simulado" element={<Simulado />} />
           {/* Fase 7 do MIGRACAO.md §5: as telas do Acervo ficam no Streamlit
               e não ganham rota React própria. */}

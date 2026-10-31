@@ -1,5 +1,6 @@
 import base64
 import binascii
+import datetime
 import hashlib
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
@@ -16,7 +17,11 @@ router = APIRouter(prefix="/me", tags=["me"])
 
 @router.get("", response_model=MeOut)
 def obter_me(usuario=Depends(usuario_atual)):
-    ofensiva_dias, respondeu_hoje = db.calcular_ofensiva(usuario_id=usuario["id"])
+    estudo, protegidos = db.dias_de_ofensiva(usuario_id=usuario["id"])
+    # Aqui, a primeira coisa que o app pergunta quando ela volta: o número da
+    # ofensiva na barra já sai com a proteção aplicada.
+    protegidos |= progressao.usar_protecoes(usuario, estudo, protegidos)
+    ofensiva_dias, respondeu_hoje = db.contar_ofensiva(estudo, protegidos)
     return MeOut(
         id=usuario["id"],
         email=usuario["email"],
@@ -38,6 +43,10 @@ def obter_me(usuario=Depends(usuario_atual)):
         brincadeira=db.obter_brincadeira(usuario["id"]),
         progresso=progressao.progresso_do_xp(usuario["xp_total"]),
         moedas=usuario["moedas"],
+        equipados=progressao.equipados_de(usuario),
+        protecoes_ofensiva=usuario["protecoes_ofensiva"],
+        ofensiva_protegida_ontem=db.hoje_br() - datetime.timedelta(days=1) in protegidos,
+        xp_dobro_ate=usuario["xp_dobro_ate"] if usuario["xp_dobro_ate"] and usuario["xp_dobro_ate"] > db.agora_br() else None,
     )
 
 
