@@ -8,7 +8,7 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
 
 ## Pendências
 
-- **Molduras novas (01/11).** Feito no localhost, sem commit: patentes em coroa de louros, com
+- **Molduras novas (01/11).** No ar desde 01/11: patentes em coroa de louros, com
   o reflexo subindo da prata para cima; Flor, Órbita, Dália, Leque e Noite estrelada na loja,
   nos preços e níveis das seis antigas, cada uma com o tema do crachá e do painel do perfil.
   As seis antigas ganharam `aposentado`: saem da vitrine e da promessa do próximo nível, não se
