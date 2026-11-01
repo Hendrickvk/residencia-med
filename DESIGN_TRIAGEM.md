@@ -652,9 +652,9 @@ acompanha a raridade: o que se repete dezenas de vezes por dia quase não aparec
   o saldo é o título, com "Editar seu perfil" ao lado. Depois, "Para a ofensiva" em linhas (proteção e XP em dobro, que se
   gastam e não têm prévia) e as seções em ladrilhos, cada um com um palco em `--ground` e o
   rodapé que muda: travado (cadeado + exigência, preço apagado), à venda (preço + "Comprar"),
-  sem saldo ("Faltam 40"), confirmando ("Pagar 200" + "Voltar"), dela ("Sua" + "Usar") e em
-  uso ("Em uso" + "Tirar"). **Comprar são dois toques, sem diálogo**: gastar moeda não é
-  grave a ponto de interromper, mas um toque errado num item de 1.200 seria ruim. O liberado
+  sem saldo ("Faltam 40"), dela ("Sua" + "Usar") e em uso ("Em uso" + "Tirar"). **Comprar abre um
+  popup de confirmação** (decisão do usuário em 01/11, no lugar dos dois toques), com a prévia,
+  o preço e o saldo depois; o foco cai em "Cancelar", e uma falha mantém o popup aberto. O liberado
   vem primeiro e a ordem não depende de ser dela: o item recém-comprado não sai de baixo do
   dedo. Item travado fica à vista, porque é ele que cria a vontade. No celular cada seção
   corre de lado com encaixe, em ladrilhos de 212px: em duas colunas a loja dava 4 mil pixels

@@ -2,6 +2,7 @@ import { Check, Lock, Shield, Zap } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Avatar } from "../../components/Avatar";
+import { Dialog } from "../../components/Dialog";
 import { EstadoFalha } from "../../components/EstadoFalha";
 import { Moeda } from "../../components/Moeda";
 import { NumeroAnimado } from "../../components/NumeroAnimado";
@@ -9,14 +10,11 @@ import { CenaDoTema } from "../../components/Tracos";
 import { ApiError } from "../../lib/api";
 import { useMe } from "../../lib/auth";
 import { temaDaMoldura } from "../../lib/cosmeticos";
-import { BOTAO_PEQUENO, BOTAO_SECUNDARIO } from "../../lib/estilos";
+import { BOTAO_PEQUENO, BOTAO_PRIMARIO, BOTAO_SECUNDARIO } from "../../lib/estilos";
 import { formatarNumeroBR } from "../../lib/format";
 import { nomeExibido } from "../../lib/perfil";
 import { comprarItem, equiparItem, useLoja } from "../../lib/progresso";
 import type { ItemLoja, Loja as DadosLoja, Me } from "../../lib/types";
-
-const BOTAO_PAGAR =
-  "inline-flex h-9 items-center justify-center gap-1.5 rounded-btn bg-ink px-3 text-[14px] font-semibold tabular-nums text-onink transition duration-hover ease-brand hover:opacity-90 active:scale-[0.97] disabled:cursor-not-allowed disabled:bg-line disabled:text-faint disabled:active:scale-100";
 
 function Preco({ valor, className = "" }: { valor: number; className?: string }) {
   return (
@@ -27,42 +25,33 @@ function Preco({ valor, className = "" }: { valor: number; className?: string })
   );
 }
 
-// O que uma ação da loja precisa: quem está sendo confirmado agora, e o que fazer.
+// O que a pessoa pediu para comprar: o popup de confirmação mostra isto.
+interface Pedido {
+  id: string;
+  nome: string;
+  preco: number;
+  previa: React.ReactNode;
+}
+
+// O que uma ação da loja precisa.
 interface Acoes {
-  confirmando: string | null;
   ocupado: boolean;
-  pedir: (id: string) => void;
-  voltar: () => void;
-  pagar: (id: string) => void;
+  pedir: (pedido: Pedido) => void;
   usar: (tipo: string, id: string | null) => void;
 }
 
-// Comprar pede dois toques, sem diálogo: gastar moedas não é irreversível o bastante
-// para interromper, mas um toque errado num item de 1.200 moedas seria ruim.
-function PedirOuPagar({ id, preco, saldo, acoes }: { id: string; preco: number; saldo: number; acoes: Acoes }) {
-  if (acoes.confirmando === id) {
-    return (
-      <span className="flex items-center gap-1.5">
-        <button type="button" disabled={acoes.ocupado} onClick={() => acoes.pagar(id)} className={BOTAO_PAGAR}>
-          Pagar {formatarNumeroBR(preco)}
-        </button>
-        <button type="button" disabled={acoes.ocupado} onClick={acoes.voltar} className="h-9 px-2 text-[14px] font-medium text-muted hover:text-ink">
-          Voltar
-        </button>
-      </span>
-    );
-  }
-  if (saldo < preco) {
-    return <span className="text-apoio tabular-nums text-muted">Faltam {formatarNumeroBR(preco - saldo)}</span>;
+function BotaoComprar({ pedido, saldo, acoes }: { pedido: Pedido; saldo: number; acoes: Acoes }) {
+  if (saldo < pedido.preco) {
+    return <span className="text-apoio tabular-nums text-muted">Faltam {formatarNumeroBR(pedido.preco - saldo)}</span>;
   }
   return (
-    <button type="button" onClick={() => acoes.pedir(id)} className={BOTAO_PEQUENO}>
+    <button type="button" onClick={() => acoes.pedir(pedido)} className={BOTAO_PEQUENO}>
       Comprar
     </button>
   );
 }
 
-function RodapeDoItem({ item, saldo, acoes }: { item: ItemLoja; saldo: number; acoes: Acoes }) {
+function RodapeDoItem({ item, me, saldo, acoes }: { item: ItemLoja; me: Me | undefined; saldo: number; acoes: Acoes }) {
   if (item.em_uso) {
     return (
       <>
@@ -99,9 +88,52 @@ function RodapeDoItem({ item, saldo, acoes }: { item: ItemLoja; saldo: number; a
   }
   return (
     <>
-      {acoes.confirmando !== item.id && <Preco valor={item.preco} className="text-corpo" />}
-      <PedirOuPagar id={item.id} preco={item.preco} saldo={saldo} acoes={acoes} />
+      <Preco valor={item.preco} className="text-corpo" />
+      <BotaoComprar
+        pedido={{ id: item.id, nome: item.nome, preco: item.preco, previa: <PreviaDoItem item={item} me={me} /> }}
+        saldo={saldo}
+        acoes={acoes}
+      />
     </>
+  );
+}
+
+function PreviaDoItem({ item, me }: { item: ItemLoja; me: Me | undefined }) {
+  if (item.tipo !== "moldura") {
+    return (
+      <div className="flex h-[124px] items-center justify-center overflow-hidden rounded-col bg-ground">
+        <span className="flex flex-col items-center gap-0.5 px-2.5 text-center">
+          <span className="text-apoio text-ink-2 [overflow-wrap:anywhere]">{nomeExibido(me)}</span>
+          <span className="text-bloco">{item.nome}</span>
+        </span>
+      </div>
+    );
+  }
+  const tema = temaDaMoldura(item.id);
+  return (
+    <div className="[container-type:inline-size]">
+      <div
+        className={`relative flex h-[calc(39cqw+56px)] items-center justify-center overflow-hidden rounded-col ${tema ? "bg-surface" : "bg-ground"}`}
+        style={tema?.variaveis as React.CSSProperties | undefined}
+      >
+        {tema ? (
+          <>
+            {/* Um crachá em miniatura. A cena é desenhada com o avatar em (150, 117) de
+                300 por 104: é por isso que ele fica a 39% da largura, e não no meio. */}
+            <span className="absolute inset-x-0 top-0 aspect-[300/104]" style={{ color: tema.marca }}>
+              <CenaDoTema tema={tema} />
+              <span className="absolute left-1/2 top-[3.4cqw] h-[3.3cqw] w-[17cqw] -translate-x-1/2 rounded-pill bg-ground" />
+              <span className="marca-texto absolute inset-x-0 top-[10.5cqw] text-center text-[5.7cqw]">Conduta</span>
+            </span>
+            <span className="absolute left-1/2 top-[39cqw] -translate-x-1/2 -translate-y-1/2 rounded-pill bg-surface p-0.5">
+              <Avatar me={me} tamanho={64} moldura={item.id} />
+            </span>
+          </>
+        ) : (
+          <Avatar me={me} tamanho={64} moldura={item.id} />
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -109,38 +141,7 @@ function CartaoDoItem({ item, me, saldo, acoes }: { item: ItemLoja; me: Me | und
   const tema = item.tipo === "moldura" ? temaDaMoldura(item.id) : null;
   return (
     <article className="flex min-w-0 flex-col gap-3 rounded-card border border-line bg-surface p-3 max-sm:w-[220px] max-sm:shrink-0 max-sm:snap-start">
-      {item.tipo === "moldura" ? (
-        <div className="[container-type:inline-size]">
-          <div
-            className={`relative flex h-[calc(39cqw+56px)] items-center justify-center overflow-hidden rounded-col ${tema ? "bg-surface" : "bg-ground"}`}
-            style={tema?.variaveis as React.CSSProperties | undefined}
-          >
-            {tema ? (
-              <>
-                {/* Um crachá em miniatura. A cena é desenhada com o avatar em (150, 117) de
-                    300 por 104: é por isso que ele fica a 39% da largura, e não no meio. */}
-                <span className="absolute inset-x-0 top-0 aspect-[300/104]" style={{ color: tema.marca }}>
-                  <CenaDoTema tema={tema} />
-                  <span className="absolute left-1/2 top-[3.4cqw] h-[3.3cqw] w-[17cqw] -translate-x-1/2 rounded-pill bg-ground" />
-                  <span className="marca-texto absolute inset-x-0 top-[10.5cqw] text-center text-[5.7cqw]">Conduta</span>
-                </span>
-                <span className="absolute left-1/2 top-[39cqw] -translate-x-1/2 -translate-y-1/2 rounded-pill bg-surface p-0.5">
-                  <Avatar me={me} tamanho={64} moldura={item.id} />
-                </span>
-              </>
-            ) : (
-              <Avatar me={me} tamanho={64} moldura={item.id} />
-            )}
-          </div>
-        </div>
-      ) : (
-        <div className="flex h-[124px] items-center justify-center overflow-hidden rounded-col bg-ground">
-          <span className="flex flex-col items-center gap-0.5 px-2.5 text-center">
-            <span className="text-apoio text-ink-2 [overflow-wrap:anywhere]">{nomeExibido(me)}</span>
-            <span className="text-bloco">{item.nome}</span>
-          </span>
-        </div>
-      )}
+      <PreviaDoItem item={item} me={me} />
       {item.tipo === "moldura" && (
         <span className="flex flex-col">
           <span className="text-corpo font-semibold [overflow-wrap:anywhere]">{item.nome}</span>
@@ -149,7 +150,7 @@ function CartaoDoItem({ item, me, saldo, acoes }: { item: ItemLoja; me: Me | und
       )}
       {/* Travado, a exigência quebra ao lado do preço; solto, cada nome longo mudava a disposição do rodapé. */}
       <div className={`mt-auto flex min-h-9 items-center justify-between gap-2 ${item.liberado || item.seu ? "flex-wrap" : ""}`}>
-        <RodapeDoItem item={item} saldo={saldo} acoes={acoes} />
+        <RodapeDoItem item={item} me={me} saldo={saldo} acoes={acoes} />
       </div>
     </article>
   );
@@ -179,8 +180,22 @@ function LinhaConsumivel({
         <span className="ml-auto text-apoio font-semibold text-ink">{encerrado}</span>
       ) : (
         <span className="ml-auto flex items-center gap-3">
-          {acoes.confirmando !== id && <Preco valor={preco} className="text-corpo" />}
-          <PedirOuPagar id={id} preco={preco} saldo={saldo} acoes={acoes} />
+          <Preco valor={preco} className="text-corpo" />
+          <BotaoComprar
+            pedido={{
+              id,
+              nome,
+              preco,
+              previa: (
+                <div className="flex flex-col items-center gap-2 rounded-col bg-ground px-4 py-5 text-center text-ink">
+                  {icone}
+                  <span className="text-apoio text-ink-2">{descricao}</span>
+                </div>
+              ),
+            }}
+            saldo={saldo}
+            acoes={acoes}
+          />
         </span>
       )}
     </div>
@@ -190,7 +205,7 @@ function LinhaConsumivel({
 export default function PaginaLoja() {
   const { data: me } = useMe();
   const { data, isLoading, isPaused, refetch } = useLoja();
-  const [confirmando, setConfirmando] = useState<string | null>(null);
+  const [pedido, setPedido] = useState<Pedido | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -199,7 +214,7 @@ export default function PaginaLoja() {
     setOcupado(true);
     try {
       await acao();
-      setConfirmando(null);
+      setPedido(null);
     } catch (e) {
       // A frase do servidor diz o que faltou (nível, saldo). Sem ela, é a conexão.
       setErro(e instanceof ApiError ? e.message : "Não deu para concluir agora.");
@@ -209,11 +224,11 @@ export default function PaginaLoja() {
   }
 
   const acoes: Acoes = {
-    confirmando,
     ocupado,
-    pedir: setConfirmando,
-    voltar: () => setConfirmando(null),
-    pagar: (id) => void agir(() => comprarItem(id)),
+    pedir: (novo) => {
+      setErro(null);
+      setPedido(novo);
+    },
     usar: (tipo, id) => void agir(() => equiparItem(tipo, id)),
   };
 
@@ -254,7 +269,7 @@ export default function PaginaLoja() {
         </Link>
       </div>
 
-      {erro && (
+      {erro && !pedido && (
         <p role="alert" className="text-apoio font-medium text-t1">
           {erro}
         </p>
@@ -297,6 +312,53 @@ export default function PaginaLoja() {
           </div>
         </section>
       ))}
+
+      <Dialog
+        titulo={pedido ? `Comprar ${pedido.nome}?` : ""}
+        aberto={pedido !== null}
+        onFechar={() => {
+          if (!ocupado) setPedido(null);
+        }}
+      >
+        {pedido && (
+          <div className="flex flex-col gap-4">
+            {pedido.previa}
+            <dl className="flex flex-col gap-1.5 text-corpo">
+              <div className="flex items-center justify-between gap-3">
+                <dt className="text-ink-2">Preço</dt>
+                <dd>
+                  <Preco valor={pedido.preco} />
+                </dd>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <dt className="text-ink-2">Saldo depois</dt>
+                <dd>
+                  <Preco valor={data.moedas - pedido.preco} />
+                </dd>
+              </div>
+            </dl>
+            {erro && (
+              <p role="alert" className="text-apoio font-medium text-t1">
+                {erro}
+              </p>
+            )}
+            {/* "Cancelar" primeiro: é nele que o foco cai ao abrir. */}
+            <div className="flex flex-col-reverse gap-2.5 sm:flex-row sm:justify-end">
+              <button type="button" disabled={ocupado} onClick={() => setPedido(null)} className={BOTAO_SECUNDARIO} data-autofocus>
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={ocupado}
+                onClick={() => void agir(() => comprarItem(pedido.id))}
+                className={BOTAO_PRIMARIO}
+              >
+                {ocupado ? "Comprando…" : "Confirmar compra"}
+              </button>
+            </div>
+          </div>
+        )}
+      </Dialog>
     </div>
   );
 }
