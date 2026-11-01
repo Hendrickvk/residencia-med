@@ -1,4 +1,12 @@
-import type { TemaDoPerfil, TracoMoldura } from "../lib/cosmeticos";
+import type { Movimento, TemaDoPerfil, TracoMoldura } from "../lib/cosmeticos";
+
+// Por extenso: o Tailwind só mantém no CSS a classe que encontra escrita, e um nome montado
+// em tempo de execução deixava as molduras paradas em produção.
+const CLASSE_DO_MOVIMENTO: Record<Movimento["nome"], string> = {
+  gira: "moldura-gira",
+  "gira-contra": "moldura-gira-contra",
+  pisca: "moldura-pisca",
+};
 
 function estiloDoMovimento(t: TracoMoldura): React.CSSProperties | undefined {
   if (t.atraso !== undefined) return { animationDelay: `${t.atraso}s` };
@@ -17,7 +25,7 @@ export function Tracos({ tracos }: { tracos: TracoMoldura[] }) {
     const preenchido = t.largura === undefined;
     let classe: string | undefined;
     if (t.atraso !== undefined) classe = "brilho-folha";
-    else if (t.movimento) classe = `moldura-${t.movimento.nome}`;
+    else if (t.movimento) classe = CLASSE_DO_MOVIMENTO[t.movimento.nome];
     return (
       <path
         key={i}

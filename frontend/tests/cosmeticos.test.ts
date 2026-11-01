@@ -28,6 +28,12 @@ test("cada moldura nova desenha e traz um tema", () => {
   }
 });
 
+test("toda moldura da loja se mexe", () => {
+  for (const id of COM_TEMA) {
+    assert.ok(desenhoDaMoldura(id).some((t) => t.movimento), id);
+  }
+});
+
 test("patente, moldura antiga e nenhuma moldura não mudam o perfil", () => {
   for (const id of [...PATENTES, "monitor", "item-do-futuro", null, undefined]) {
     assert.equal(temaDaMoldura(id), null, String(id));

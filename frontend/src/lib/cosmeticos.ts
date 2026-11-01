@@ -215,8 +215,8 @@ function molduraLeque(): TracoMoldura[] {
   }
   return [
     { d: anel(43), largura: 11, cor: PRETO_DECO },
-    { d: cheios, cor: OURO_DECO },
-    { d: vazados, largura: 0.5, cor: OURO_DECO },
+    { d: cheios, cor: OURO_DECO, movimento: { nome: "gira", segundos: 36, centro: [50, 50] } },
+    { d: vazados, largura: 0.5, cor: OURO_DECO, movimento: { nome: "gira-contra", segundos: 36, centro: [50, 50] } },
     { d: anel(48.6), largura: 0.8, cor: OURO_DECO },
     { d: anel(37.9), largura: 0.5, cor: OURO_DECO },
   ];
@@ -233,18 +233,30 @@ function molduraOrbita(): TracoMoldura[] {
 
 function molduraFlor(): TracoMoldura[] {
   return [
-    { d: polar(50, 50, (g) => 43.5 + 5.6 * Math.abs(Math.cos((g * Math.PI) / 30))), cor: "#f2a7b5" },
-    { d: polar(50, 50, (g) => 40 + 5 * Math.abs(Math.cos(((g + 15) * Math.PI) / 30))), cor: "#f9d3d9" },
+    {
+      d: polar(50, 50, (g) => 43.5 + 5.6 * Math.abs(Math.cos((g * Math.PI) / 30))),
+      cor: "#f2a7b5",
+      movimento: { nome: "gira", segundos: 40, centro: [50, 50] },
+    },
+    {
+      d: polar(50, 50, (g) => 40 + 5 * Math.abs(Math.cos(((g + 15) * Math.PI) / 30))),
+      cor: "#f9d3d9",
+      movimento: { nome: "gira-contra", segundos: 40, centro: [50, 50] },
+    },
   ];
 }
 
 function molduraDalia(): TracoMoldura[] {
-  const coroa = (inicio: number, comprimento: number, largura: number, cor: string): TracoMoldura => {
+  const coroa = (inicio: number, comprimento: number, largura: number, cor: string, movimento: Movimento): TracoMoldura => {
     let d = "";
     for (let g = inicio; g < inicio + 360; g += 20) d += petala(50, 50, 36.4, 37 + comprimento, largura, g);
-    return { d, cor };
+    return { d, cor, movimento };
   };
-  return [coroa(0, 12, 3.4, "#e0603f"), coroa(10, 9.2, 3.1, "#f09a45"), coroa(0, 5.6, 2.4, "#f7c96e")];
+  return [
+    coroa(0, 12, 3.4, "#e0603f", { nome: "gira", segundos: 48, centro: [50, 50] }),
+    coroa(10, 9.2, 3.1, "#f09a45", { nome: "gira-contra", segundos: 36, centro: [50, 50] }),
+    coroa(0, 5.6, 2.4, "#f7c96e", { nome: "gira", segundos: 28, centro: [50, 50] }),
+  ];
 }
 
 function molduraNoite(): TracoMoldura[] {
