@@ -50,8 +50,11 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   igual à soma do razão, e rodar de novo não acrescenta nada; linhas criadas em
   `backups/retroagir_progresso_20261031_183513.json`); (2) moedas e loja, **no ar em
   31/10** (commit `81c3525`; a API antes do front, colunas criadas pelo `init_db` na
-  subida, `dist.antigo` guardado); (3) conquistas, **pronta no localhost, falta subir**; (4) temas,
-  estampas e efeitos; (5) perfil público; (6) lançamento e métricas de guarda (chute
+  subida, `dist.antigo` guardado); (3) conquistas, **no ar em 31/10** (commit `a741945`, junto com a confiabilidade das
+  respostas; backup `conduta_20261031_211511.dump` e `retroagir_progresso.py --aplicar` com a
+  autorização do usuário, linhas em `backups/retroagir_progresso_20261031_211643.json`);
+  (4) temas,
+  estampas e efeitos, **a próxima**; (5) perfil público; (6) lançamento e métricas de guarda (chute
   marcado e acerto na primeira resposta: queda indica que a recompensa sujou o
   diagnóstico). Na troca de gabarito de 04/12, XP e moedas já ganhos não voltam atrás.
   **Fase 1, o que tem:** `progressao.py` (regras puras, razão, previsão), tabela
@@ -81,8 +84,7 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   "Saiu da Emergência" é história, e cada área só conta a partir de 20 respostas; **vitrine
   automática**, os 3 de maior grau e mais recentes: escolher à mão fica para a fase 5, quando
   ela for pública. Secreto não obtido sai da API sem nome e sem id, pinado no teste. Ficou
-  fora do plano o carimbo de metas diárias. Falta, ao subir: `backup_banco.py` e
-  `retroagir_progresso.py --aplicar`, que também carimba o histórico. A batida do carimbo
+  fora do plano o carimbo de metas diárias. A batida do carimbo
   não foi vista em movimento: o painel do navegador estava oculto e congela as animações;
   o estado final e o quadro inicial foram conferidos.
   **Ajustes pedidos ao testar a fase 2 (31/10):** a Loja virou aba fixa ao lado de Baralhos
