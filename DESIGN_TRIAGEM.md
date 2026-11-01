@@ -649,8 +649,18 @@ acompanha a raridade: o que se repete dezenas de vezes por dia quase não aparec
 - **Patentes**: por posto e não por pessoa, para não terem gênero: Ciclo básico,
   Ciclo clínico, Internato, R1, R2, R3, Preceptoria, Chefia.
 - **Voz**: sem "Parabéns!". "Nível 20. R1." diz tudo.
-- **Ainda por vir** (no protótipo): caderneta de carimbos numa ficha de doses (fase 3),
-  temas, estampas e efeitos (fase 4), perfil público (fase 5).
+- **Carimbos** (`components/Carimbo.tsx`, `.carimbo` em `theme.css`): o grau está na forma,
+  e o metal só reforça: traço simples em bronze, traço duplo em prata, cantos e contorno em
+  ouro. Caem um pouco tortos, sempre do mesmo jeito, porque o giro vem da posição. O que
+  ainda não veio é o nome em tracejado. Nenhum t1–t5, nem nos carimbos da série Triagem.
+- **Caderneta** (`/progresso/conquistas`): o título é a contagem ("15 de 44 carimbos."), e
+  cada série é uma ficha de doses, com uma célula por carimbo, o que falta e as moedas. Seis
+  colunas no computador, três em 768, duas no celular.
+- **O carimbo novo cai no bloco do fim da sessão**, com a batida (340ms, depois de 650ms, o
+  tempo de o XP contar), as moedas e "Ver a caderneta". O protótipo tinha um aviso durante a
+  sessão; ficou de fora, porque a decisão é sóbria durante o caso. Seu perfil mostra os 3 de
+  maior grau.
+- **Ainda por vir** (no protótipo): temas, estampas e efeitos (fase 4), perfil público (fase 5).
 
 ### Página pública (`/`)
 Desde 26/09 (`pages/Inicio.tsx`). É a única tela de persuasão: quem chega por um

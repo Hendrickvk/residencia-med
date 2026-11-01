@@ -26,6 +26,7 @@ import sys
 RAIZ = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(RAIZ))
 
+import conquistas  # noqa: E402
 import db  # noqa: E402
 import progressao  # noqa: E402
 
@@ -192,6 +193,10 @@ def main():
             ).fetchall()
             for usuario in contas:
                 criadas = retroagir_conta(conn, usuario, areas)
+                # Sem aviso na tela: quem tem o histórico vê os carimbos na caderneta.
+                carimbos = conquistas.carimbar(conn, usuario["id"], conquistas.medir(usuario["id"]), db.agora_br())
+                criadas += [{"chave": conquistas.chave(c["id"]), "tipo": "conquista", "xp": 0, "moedas": c["moedas"]}
+                            for c in carimbos]
                 saldo = conn.execute(
                     "SELECT xp_total, moedas FROM usuarios WHERE id = ?", (usuario["id"],),
                 ).fetchone()

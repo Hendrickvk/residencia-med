@@ -16,7 +16,7 @@ export function useLevaRevisao(extra = 0) {
 // nota 1 seja qual for a `qualidade` enviada (repeticao_espacada.avaliar_revisao).
 export function avaliarRevisao(
   questaoId: number,
-  dados: { qualidade: number; alternativa?: string; tempo_ms?: number },
+  dados: { qualidade: number; alternativa?: string; tempo_ms?: number; envio?: string },
 ) {
   return api.post<AvaliacaoRevisao>(`/revisao/${questaoId}/avaliar`, dados);
 }

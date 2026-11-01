@@ -8,6 +8,19 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
 
 ## Pendências
 
+- **Confiabilidade das respostas (31/10, auditoria externa pedida pelo usuário).** Os quatro
+  defeitos apontados existiam no código e foram corrigidos, regras no CLAUDE.md (`respostasQueue.ts`).
+  A leitura achou mais dois, que o reenvio automático pioraria: prova finalizada aceitava
+  resposta nova, inclusive depois de mostrar o gabarito; e consolidação que falhava depois de
+  fechar a prova nunca mais gravava as respostas no histórico. Conferido no localhost com
+  `fetch` falhando de propósito: rede caída, 500, resposta perdida na volta, aba recarregada e
+  tempo esgotado. O pacote de front não tem executor de testes, então essa parte foi
+  verificada à mão, e só o contrato da API ficou em teste (`tests/test_reenvio.py`).
+  **Ficou de fora:** cartão continua sem fila (`baralhos/Estudo.tsx`), e a falha some em
+  silêncio; prova com tempo esgotado que não fechou e teve a aba fechada fica aberta para
+  sempre, porque `simulado_em_andamento` não a lista mais, e as respostas dela não vão para o
+  histórico; resposta enviada dias depois conta no dia em que chegou, e isso pode quebrar a
+  ofensiva de quem ficou sem sinal na virada do dia.
 - **Gamificação** (pedido de 31/10: "causar a necessidade de querer estudar",
   replicando os modelos mais famosos). Plano aprovado em fases, cada uma conferida
   no localhost e subida só com autorização, a API antes do front. O modelo soma
@@ -37,7 +50,7 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   igual à soma do razão, e rodar de novo não acrescenta nada; linhas criadas em
   `backups/retroagir_progresso_20261031_183513.json`); (2) moedas e loja, **no ar em
   31/10** (commit `81c3525`; a API antes do front, colunas criadas pelo `init_db` na
-  subida, `dist.antigo` guardado); (3) conquistas, **a próxima**; (4) temas,
+  subida, `dist.antigo` guardado); (3) conquistas, **pronta no localhost, falta subir**; (4) temas,
   estampas e efeitos; (5) perfil público; (6) lançamento e métricas de guarda (chute
   marcado e acerto na primeira resposta: queda indica que a recompensa sujou o
   diagnóstico). Na troca de gabarito de 04/12, XP e moedas já ganhos não voltam atrás.
@@ -55,10 +68,26 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   escuro; o caso refeito no mesmo dia não mostra XP e não paga. O pacote de entrada
   cresceu 2,7 KB, mas o empacotador só moveu código entre os dois arquivos que a
   página pública baixa: a soma cresceu 327 bytes. Medir a soma, e não só o `index-*.js`.
+  **Fase 3, o que tem:** `conquistas.py`, 44 carimbos em 8 séries (4.090 moedas no total),
+  `GET /progresso/conquistas`, `POST /progresso/verificar`, `/progresso/conquistas` (a
+  Caderneta, no menu da conta e a partir de Seu perfil), `vitrine` no `GET /progresso`.
+  Decisões tomadas no caminho, diferentes do plano: **sem tabela `conquistas_usuario`**: ter
+  o carimbo é ter a linha `conquista:{id}` no razão, como na compra; **sem avaliação a cada
+  resposta e sem aviso durante o caso**: o carimbo cai dentro do bloco do fim da sessão,
+  porque a decisão foi "sóbria durante o caso", e a medição custa umas dez idas ao banco;
+  **carimbo é limite sobre uma medida do histórico**, o que torna o histórico retroativo de
+  graça e dispensa guardar evento; **prova só conta se pagou XP**, o que já exige 90%
+  respondida (finalizar em branco não carimba); **triagem é percurso, não foto**, por isso
+  "Saiu da Emergência" é história, e cada área só conta a partir de 20 respostas; **vitrine
+  automática**, os 3 de maior grau e mais recentes: escolher à mão fica para a fase 5, quando
+  ela for pública. Secreto não obtido sai da API sem nome e sem id, pinado no teste. Ficou
+  fora do plano o carimbo de metas diárias. Falta, ao subir: `backup_banco.py` e
+  `retroagir_progresso.py --aplicar`, que também carimba o histórico. A batida do carimbo
+  não foi vista em movimento: o painel do navegador estava oculto e congela as animações;
+  o estado final e o quadro inicial foram conferidos.
   **Ajustes pedidos ao testar a fase 2 (31/10):** a Loja virou aba fixa ao lado de Baralhos
   (o caminho `/progresso/loja` não mudou) e "Seu perfil" no menu abre `/progresso`, com
-  "Editar seu perfil" lá e na Loja. As abas Progresso/Loja saíram; a Caderneta da fase 3
-  precisa de um lugar próprio. **Defeito antigo achado aí:** com a sessão vencida e o app
+  "Editar seu perfil" lá e na Loja. As abas Progresso/Loja saíram. **Defeito antigo achado aí:** com a sessão vencida e o app
   aberto, o 401 do próprio `/me` invalidava a consulta em curso, que recomeçava: 180 chamadas
   em 10 s e nunca o login. Vinha de 23/09, e sessão dura 12 h: toda aba esquecida fazia isso.
   `api.ts` agora não invalida no `/me`; medido, são 2 chamadas e o login devolve à tela.

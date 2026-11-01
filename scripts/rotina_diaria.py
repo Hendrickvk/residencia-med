@@ -79,6 +79,8 @@ def main():
     print(f"Rotina de {hoje:%d/%m/%Y} ({'enviando' if args.enviar else 'simulação, nada é enviado'})")
     print(f"Lembretes enviados: {lembretes(hoje, args.enviar)}")
     print(f"Relatórios enviados: {relatorio(hoje, args.enviar)}")
+    if args.enviar:
+        print(f"Envios antigos apagados: {db.limpar_envios(db.agora_br() - datetime.timedelta(days=30))}")
 
 
 if __name__ == "__main__":

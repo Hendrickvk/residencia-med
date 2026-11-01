@@ -182,6 +182,7 @@ class RespostaIn(BaseModel):
     alternativa: str
     confianca: Optional[str] = Field(default=None, pattern="^(seguro|chute)$")
     tempo_ms: Optional[int] = None
+    envio: Optional[str] = Field(default=None, max_length=64)
 
 
 class MarcarRevisaoIn(BaseModel):
@@ -190,6 +191,7 @@ class MarcarRevisaoIn(BaseModel):
     # erro (repeticao_espacada.avaliar_revisao), não a nota enviada.
     alternativa: Optional[str] = Field(default=None, pattern="^[A-E]$")
     tempo_ms: Optional[int] = Field(default=None, ge=0)
+    envio: Optional[str] = Field(default=None, max_length=64)
 
 
 # --- Simulados ----------------------------------------------------------

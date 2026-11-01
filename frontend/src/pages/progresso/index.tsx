@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Avatar } from "../../components/Avatar";
 import { BarraNivel } from "../../components/BarraNivel";
+import { Carimbo } from "../../components/Carimbo";
 import { Cracha } from "../../components/Cracha";
 import { EstadoFalha } from "../../components/EstadoFalha";
 import { Moeda } from "../../components/Moeda";
@@ -66,7 +67,7 @@ export default function PaginaProgresso() {
     );
   }
 
-  const { nivel, patentes, areas, dias, maior_sequencia: maiorSequencia } = data;
+  const { nivel, patentes, areas, dias, maior_sequencia: maiorSequencia, vitrine } = data;
   const ofensiva = me?.ofensiva_dias ?? 0;
 
   return (
@@ -145,6 +146,27 @@ export default function PaginaProgresso() {
               </div>
             </div>
           )}
+
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+              <h3 className="text-bloco">Carimbos</h3>
+              <Link
+                to="/progresso/conquistas"
+                className="text-apoio font-semibold tabular-nums text-ink underline decoration-line underline-offset-[3px] hover:decoration-ink"
+              >
+                Ver a caderneta, {vitrine.obtidos} de {vitrine.total}
+              </Link>
+            </div>
+            {vitrine.itens.length > 0 ? (
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-5 py-1">
+                {vitrine.itens.map((c, i) => (
+                  <Carimbo key={c.id} nome={c.nome} grau={c.grau} obtidaEm={c.obtida_em} ordem={i} />
+                ))}
+              </div>
+            ) : (
+              <p className="text-apoio text-muted">O primeiro sai com o primeiro caso respondido.</p>
+            )}
+          </div>
 
           <div className="flex flex-col gap-3">
             <h3 className="text-bloco">Patentes</h3>

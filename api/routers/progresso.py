@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 
+import conquistas
 import progressao
 from api.deps import usuario_atual
 from api.schemas import EquiparIn
@@ -9,7 +10,18 @@ router = APIRouter(prefix="/progresso", tags=["progresso"])
 
 @router.get("")
 def obter_progresso(usuario=Depends(usuario_atual)):
-    return progressao.resumo(usuario)
+    return {**progressao.resumo(usuario), "vitrine": conquistas.vitrine(usuario["id"])}
+
+
+@router.get("/conquistas")
+def obter_caderneta(usuario=Depends(usuario_atual)):
+    return conquistas.caderneta(usuario["id"])
+
+
+@router.post("/verificar")
+def verificar_conquistas(usuario=Depends(usuario_atual)):
+    """O fim da sessão pergunta o que ela carimbou: as moedas entram aqui, uma vez só."""
+    return {"novas": conquistas.verificar(usuario["id"])}
 
 
 @router.get("/loja")

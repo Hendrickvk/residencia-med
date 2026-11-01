@@ -10,10 +10,31 @@ export class ApiError extends Error {
   }
 }
 
+/** O servidor recusou de vez: tentar de novo dá o mesmo. 401 fica de fora (ela entra de
+ * novo e a fila continua), e 408 e 429 passam com o tempo. */
+export function recusaDefinitiva(erro: unknown) {
+  return erro instanceof ApiError && erro.status >= 400 && erro.status < 500 && ![401, 408, 429].includes(erro.status);
+}
+
+/** Espera antes de tentar de novo, e acaba antes se a conexão voltar. */
+export function esperarOuConexao(ms: number) {
+  return new Promise<void>((resolve) => {
+    const fim = () => {
+      clearTimeout(timer);
+      window.removeEventListener("online", fim);
+      resolve();
+    };
+    const timer = setTimeout(fim, ms);
+    window.addEventListener("online", fim);
+  });
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
     credentials: "include", // envia/recebe o cookie httpOnly de sessão
     headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
+    // Sem isto, uma conexão que pendura deixava a tela esperando para sempre.
+    signal: AbortSignal.timeout?.(60_000),
     ...init,
   });
   if (!res.ok) {

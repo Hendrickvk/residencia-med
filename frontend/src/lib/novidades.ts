@@ -37,6 +37,21 @@ export const ROTULO_TIPO: Record<TipoNovidade, string> = {
 
 export const NOVIDADES: Novidade[] = [
   {
+    id: "2026-10-31c",
+    data: "31 de outubro de 2026",
+    titulo: "A caderneta de carimbos",
+    itens: [
+      {
+        tipo: "novo",
+        texto: "O que você conquista estudando agora vira carimbo, em bronze, prata ou ouro, e cada um rende moedas. Sair da Emergência, passar do corte e terminar uma prova oficial estão entre eles.",
+      },
+      {
+        tipo: "novo",
+        texto: "O que você já fez até aqui conta: os carimbos do seu histórico já estão lá. Abra a Caderneta no menu da conta, e os três maiores aparecem no seu perfil.",
+      },
+    ],
+  },
+  {
     id: "2026-10-31b",
     data: "31 de outubro de 2026",
     titulo: "Moedas e loja",

@@ -270,6 +270,12 @@ def registrar_simulado(simulado_id, *, usuario_id):
         for i in itens
     ]
     with get_conn() as conn:
+        # Na mesma transação de gravar: se algo falhar, a pendência volta junto, e tentar
+        # finalizar de novo refaz; duas chamadas ao mesmo tempo, a segunda não acha nada.
+        if not conn.execute(
+            "UPDATE simulados SET consolidacao_pendente = FALSE WHERE id = ? AND consolidacao_pendente", (simulado_id,),
+        ).rowcount:
+            return None
         db.registrar_respostas_de_simulado(conn, itens, usuario_id=usuario_id, agora=agora)
         _gravar_avaliacoes(conn, avaliacoes, usuario_id=usuario_id, origem="simulado", agora=agora)
         return progressao.pontuar_casos(conn, usuario_id=usuario_id, casos=avaliacoes, agora=agora)

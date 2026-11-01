@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { BadgeCheck, RefreshCw, RotateCcw } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { EstadoFalha } from "../../components/EstadoFalha";
 import { EstadoVazio } from "../../components/EstadoVazio";
@@ -58,6 +58,8 @@ export default function Revisao() {
   const [avancou, setAvancou] = useState(false);
   const [avaliacoes, setAvaliacoes] = useState<AvaliacaoSessao[]>([]);
   const { tempoDecorridoMs } = useCronometro(idx);
+  const [erroAvaliar, setErroAvaliar] = useState(false);
+  const envioDoCaso = useRef<string | null>(null);
 
   const fila = filaSessao ?? data?.fila ?? [];
   const restantes = Math.max(fila.length - idx, 0);
@@ -76,6 +78,7 @@ export default function Revisao() {
   function limparCaso() {
     setSelecionada(null);
     setConfirmado(false);
+    setErroAvaliar(false);
   }
 
   function reiniciarSessao() {
@@ -109,12 +112,27 @@ export default function Revisao() {
     // Tempo do caso inteiro (ler, responder, ler a discussão), como no Praticar:
     // é o que alimenta a estimativa de duração da revisão.
     const tempoMs = tempoDecorridoMs();
-    // Mesma política de antes: se a gravação falhar, a sessão segue.
-    const resultado = await avaliarRevisao(q.id, { qualidade, alternativa: selecionada, tempo_ms: tempoMs }).catch(
-      () => null,
-    );
+    // Se a gravação falhar, o caso fica na tela: seguir em frente contaria no resumo uma
+    // avaliação que o SM-2 nunca recebeu. O `envio` é o mesmo a cada tentativa do caso,
+    // porque a falha pode ter sido só na volta, com a avaliação já gravada.
+    envioDoCaso.current ??= crypto.randomUUID();
+    setErroAvaliar(false);
+    let resultado;
+    try {
+      resultado = await avaliarRevisao(q.id, {
+        qualidade,
+        alternativa: selecionada,
+        tempo_ms: tempoMs,
+        envio: envioDoCaso.current,
+      });
+    } catch {
+      setEnviando(false);
+      setErroAvaliar(true);
+      return;
+    }
+    envioDoCaso.current = null;
     setEnviando(false);
-    registrarGanho(resultado?.ganho);
+    registrarGanho(resultado.ganho);
     // O anel e o menu da conta leem o nível do `/me`.
     void queryClient.invalidateQueries({ queryKey: ["me"] });
     setAvaliacoes((anteriores) => [
@@ -124,8 +142,8 @@ export default function Revisao() {
         correta: certa,
         qualidade,
         primeira: !anteriores.some((a) => a.id === q.id),
-        recuperado: resultado?.recuperado ?? false,
-        consolidou: resultado?.consolidou ?? false,
+        recuperado: resultado.recuperado,
+        consolidou: resultado.consolidou,
       },
     ]);
     if (!certa) {
@@ -136,7 +154,8 @@ export default function Revisao() {
       const copia = [...fila];
       copia.splice(Math.min(idx + 4, copia.length), 0, {
         ...q,
-        prazos: resultado?.prazos ?? q.prazos,
+        // Reenvio já gravado volta sem prazos, e os do caso servem até a tela recarregar.
+        prazos: resultado.prazos ?? q.prazos,
         recompensa: null,
       });
       setFilaSessao(copia);
@@ -375,6 +394,11 @@ export default function Revisao() {
                   {q.explicacao && <TextoDiscussao texto={q.explicacao} />}
                 </div>
 
+                {erroAvaliar && (
+                  <p role="alert" className="text-apoio font-medium text-t1">
+                    Não deu para gravar esta avaliação. Pode ser a conexão. O caso fica aqui: é só tentar de novo.
+                  </p>
+                )}
                 {acertou ? (
                   // No celular as três notas ficam numa linha só, cada botão da
                   // largura do rótulo (flex-auto): em três colunas iguais "Com

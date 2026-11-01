@@ -98,6 +98,9 @@ def registrar_resposta(dados: RespostaIn, usuario=Depends(usuario_atual)):
     q = db.obter_questao(dados.questao_id)
     if q is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Questão não encontrada.")
+    # A fila do aparelho reenvia quando não sabe se gravou (respostasQueue.ts).
+    if dados.envio and db.envio_ja_registrado(usuario["id"], dados.envio):
+        return {"correta": dados.alternativa == q["resposta_correta"], "resposta_correta": q["resposta_correta"], "ganho": None}
 
     correta = dados.alternativa == q["resposta_correta"]
     if correta:
@@ -113,4 +116,6 @@ def registrar_resposta(dados: RespostaIn, usuario=Depends(usuario_atual)):
         dados.questao_id, qualidade, usuario_id=usuario["id"], origem="pratica",
         correta=correta, alternativa=dados.alternativa, tempo_ms=dados.tempo_ms,
     )
+    if dados.envio:
+        db.registrar_envio(usuario["id"], dados.envio)
     return {"correta": correta, "resposta_correta": q["resposta_correta"], "ganho": novo["ganho"]}

@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
+import db
 import progressao
 import repeticao_espacada as sr
 from api.deps import usuario_atual
@@ -44,6 +45,10 @@ def obter_leva(
 
 @router.post("/{questao_id}/avaliar")
 def avaliar(questao_id: int, dados: MarcarRevisaoIn, usuario=Depends(usuario_atual)):
+    # O cliente reenvia quando não sabe se gravou: avaliar duas vezes empurraria o SM-2.
+    if dados.envio and db.envio_ja_registrado(usuario["id"], dados.envio):
+        return {"ok": True, "repetido": True, "correta": None, "qualidade": dados.qualidade, "proxima_revisao": None,
+                "prazos": None, "recuperado": False, "consolidou": False, "ganho": None}
     try:
         resultado = sr.avaliar_revisao(
             questao_id, dados.qualidade, usuario_id=usuario["id"],
@@ -51,6 +56,8 @@ def avaliar(questao_id: int, dados: MarcarRevisaoIn, usuario=Depends(usuario_atu
         )
     except ValueError:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Questão não encontrada.")
+    if dados.envio:
+        db.registrar_envio(usuario["id"], dados.envio)
     return {
         "ok": True,
         "correta": resultado["correta"],

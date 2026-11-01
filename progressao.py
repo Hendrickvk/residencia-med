@@ -422,10 +422,12 @@ def fechar_simulado(simulado_id, *, usuario_id, ganhos, agora):
                 )
                 if total is not None:
                     ganhos.append(_ganho(xp=xp, moedas=0, areas={}, total=total))
-        conn.execute(
-            "UPDATE simulados SET xp_ganho = ?, moedas_ganhas = ? WHERE id = ?",
-            (sum(g["xp"] for g in ganhos), sum(g["moedas"] for g in ganhos), simulado_id),
-        )
+        # Só com ganho: a chamada repetida não tem nada a somar, e não pode zerar o total.
+        if ganhos:
+            conn.execute(
+                "UPDATE simulados SET xp_ganho = ?, moedas_ganhas = ? WHERE id = ?",
+                (sum(g["xp"] for g in ganhos), sum(g["moedas"] for g in ganhos), simulado_id),
+            )
     return ganhos
 
 

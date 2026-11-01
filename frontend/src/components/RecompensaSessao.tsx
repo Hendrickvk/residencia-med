@@ -1,11 +1,14 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMe } from "../lib/auth";
 import { BOTAO_PRIMARIO, BOTAO_SECUNDARIO } from "../lib/estilos";
 import { formatarNumeroBR } from "../lib/format";
 import { resumirGanhos, useGanhos } from "../lib/ganhos";
-import type { ResumoGanhos } from "../lib/types";
+import { verificarCarimbos } from "../lib/progresso";
+import { useRespostasPendentes } from "../lib/respostasQueue";
+import type { CarimboNovo, ResumoGanhos } from "../lib/types";
 import { BarraNivel } from "./BarraNivel";
+import { Carimbo } from "./Carimbo";
 import { Cracha } from "./Cracha";
 import { Dialog } from "./Dialog";
 import { Moeda } from "./Moeda";
@@ -69,6 +72,8 @@ export function RecompensaSessao({ resumo }: { resumo: ResumoGanhos }) {
           </div>
         )}
 
+        <CarimbosDaSessao />
+
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-line-soft pt-4">
           {depois.libera ? (
             <>
@@ -96,6 +101,55 @@ export function RecompensaSessao({ resumo }: { resumo: ResumoGanhos }) {
         onFechar={() => setFechouDialogo(true)}
       />
     </>
+  );
+}
+
+// O carimbo sai aqui e não durante o caso, que fica sóbrio. Só pergunta depois de a
+// fila de respostas esvaziar: antes disso a última resposta ainda não conta.
+function CarimbosDaSessao() {
+  const livre = useRespostasPendentes() === 0;
+  const [novos, setNovos] = useState<CarimboNovo[]>([]);
+
+  useEffect(() => {
+    if (!livre) return;
+    let ativo = true;
+    verificarCarimbos()
+      .then((chegaram) => {
+        if (!ativo || !chegaram.length) return;
+        setNovos((atuais) => [...atuais, ...chegaram.filter((c) => !atuais.some((a) => a.id === c.id))]);
+      })
+      .catch(() => {
+        // Sem carimbo agora: a caderneta confere de novo ao abrir, e nada se perde.
+      });
+    return () => {
+      ativo = false;
+    };
+  }, [livre]);
+
+  const moedas = novos.reduce((soma, c) => soma + c.moedas, 0);
+  return (
+    <div aria-live="polite">
+      {novos.length > 0 && (
+        <div className="flex flex-col gap-3 border-t border-line-soft pt-4">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-4">
+            {novos.map((c, i) => (
+              <Carimbo key={c.id} nome={c.nome} grau={c.grau} obtidaEm={c.obtida_em} ordem={i} bate />
+            ))}
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+            <span className="flex items-center gap-1.5 text-apoio font-semibold tabular-nums text-ink">
+              <Moeda tamanho={14} />+{moedas} moeda{moedas !== 1 ? "s" : ""}
+            </span>
+            <Link
+              to="/progresso/conquistas"
+              className="text-apoio font-semibold text-ink underline decoration-line underline-offset-[3px] transition-colors duration-hover hover:decoration-ink"
+            >
+              Ver a caderneta
+            </Link>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 

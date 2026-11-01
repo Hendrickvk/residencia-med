@@ -10,10 +10,15 @@ import { formatarTempoRestante } from "../../lib/format";
 import { guardarGanhosDeProva } from "../../lib/ganhos";
 import { rolarParaTopo } from "../../lib/movimento";
 import {
+  enviarRespostaSimulado,
+  esvaziarRespostasSimulado,
+  retomarRespostasSimulado,
+  useRespostasSimuladoPendentes,
+} from "../../lib/respostasSimulado";
+import {
   finalizarSimulado,
   nomeEdicao,
   nomeProvaOficial,
-  responderSimulado,
   somarTempoSimulado,
   useItensSimulado,
   useSimulado,
@@ -35,6 +40,18 @@ function enviarTempo(simuladoId: number, questaoId: number, entrouEm: { current:
   entrouEm.current = document.hidden ? null : agora;
   if (inicio === null) return Promise.resolve();
   return somarTempoSimulado(simuladoId, questaoId, agora - inicio).catch(() => {});
+}
+
+// A resposta do servidor pode se perder depois de a prova já ter fechado. Aí quem responde
+// é o estado dele, e o `xp_ganho` do simulado cobre o que o resultado mostraria.
+async function finalizarOuConferir(simuladoId: number) {
+  try {
+    return await finalizarSimulado(simuladoId);
+  } catch (erro) {
+    const simulado = await api.get<Simulado>(`/simulados/${simuladoId}`);
+    if (!simulado.finalizado_em) throw erro;
+    return { ok: true, ganhos: [] };
+  }
 }
 
 export default function EmAndamento({ simuladoId, onFinalizado }: Props) {
@@ -77,8 +94,12 @@ function Conteudo({
   const [respostasLocais, setRespostasLocais] = useState<Record<number, string>>(() => {
     const r: Record<number, string> = {};
     for (const item of itens) if (item.resposta_dada) r[item.id] = item.resposta_dada;
-    return r;
+    // O que não chegou da outra vez vale mais que o servidor: é a escolha mais recente.
+    return { ...r, ...retomarRespostasSimulado(simuladoId) };
   });
+  const { pendentes, comFalha } = useRespostasSimuladoPendentes(simuladoId);
+  const quantasPendentes = Object.keys(pendentes).length;
+  const [erroFinalizar, setErroFinalizar] = useState<string | null>(null);
   const [marcadasLocais, setMarcadasLocais] = useState<Set<number>>(
     () => new Set(itens.filter((i) => i.marcada).map((i) => i.id)),
   );
@@ -91,11 +112,22 @@ function Conteudo({
   async function finalizarAgora() {
     if (finalizando) return;
     setFinalizando(true);
+    setErroFinalizar(null);
     try {
+      // Fechar antes de as respostas chegarem as deixaria em branco no resultado.
+      const faltam = await esvaziarRespostasSimulado(simuladoId);
+      if (faltam > 0) {
+        setErroFinalizar(
+          `${faltam} resposta${faltam !== 1 ? "s" : ""} ainda não ${faltam !== 1 ? "chegaram" : "chegou"} ao servidor. A prova segue aberta, e nada se perdeu.`,
+        );
+        setDialogoAberto(true);
+        setFinalizando(false);
+        return;
+      }
       // O tempo da última questão chega antes de o simulado fechar para ele.
       await enviarTempo(simuladoId, itens[idx].id, entrouEm);
       entrouEm.current = null;
-      const { ganhos } = await finalizarSimulado(simuladoId);
+      const { ganhos } = await finalizarOuConferir(simuladoId);
       guardarGanhosDeProva(simuladoId, ganhos);
       // Sem isso, o Resultado monta com o cache de ANTES de responder
       // qualquer coisa (mesma queryKey, staleTime padrão) e mostra "não
@@ -112,12 +144,26 @@ function Conteudo({
         // O anel e o menu da conta leem o nível do `/me`.
         queryClient.invalidateQueries({ queryKey: ["me"] }),
       ]);
-    } finally {
       onFinalizado();
+    } catch {
+      // Só vai para o resultado com a prova fechada de verdade. Aqui ela segue aberta,
+      // com a tela como estava, e dá para tentar de novo.
+      setErroFinalizar("Não deu para finalizar agora. Pode ser a conexão. A prova segue aberta, e nada se perdeu.");
+      setDialogoAberto(true);
+      setFinalizando(false);
     }
   }
 
   const restanteSeg = useCronometroRegressivo(simulado.iniciado_em, simulado.tempo_limite_min, finalizarAgora);
+  const tempoAcabou = restanteSeg <= 0;
+
+  // O tempo acabou e não deu para fechar: tenta sozinha, porque ela não tem mais o que fazer.
+  useEffect(() => {
+    if (!tempoAcabou || !erroFinalizar || finalizando) return;
+    const timer = setTimeout(() => void finalizarAgora(), 15_000);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tempoAcabou, erroFinalizar, finalizando]);
 
   const itemAtual = itens[idx];
   const respostaAtual = respostasLocais[itemAtual.id] ?? null;
@@ -149,12 +195,11 @@ function Conteudo({
   }
 
   function responder(letra: string) {
+    if (tempoAcabou) return;
     setRespostasLocais((prev) => ({ ...prev, [itemAtual.id]: letra }));
-    // Sem fila de retry dedicada aqui (diferente de Praticar): uma falha
-    // pontual não deveria travar a navegação do aluno durante a prova — o
-    // pior caso é essa resposta específica não persistir, revisável no
-    // histórico depois.
-    responderSimulado(simuladoId, itemAtual.id, letra).catch(() => {});
+    // A falha não trava a prova: a resposta fica guardada e segue tentando, e a tela
+    // avisa enquanto ela não chega (lib/respostasSimulado.ts).
+    enviarRespostaSimulado(simuladoId, itemAtual.id, letra);
   }
 
   function alternarMarcacao() {
@@ -230,6 +275,13 @@ function Conteudo({
       </BarraFoco>
 
       <div className="mx-auto flex max-w-[680px] flex-col gap-5">
+        {comFalha && quantasPendentes > 0 && (
+          <p role="status" className="flex items-start gap-2.5 rounded-card border border-line bg-surface px-4 py-3 text-apoio text-ink-2">
+            <span className="mt-1.5 h-2 w-2 shrink-0 animate-pulse rounded-pill bg-t2" aria-hidden="true" />
+            {quantasPendentes} resposta{quantasPendentes !== 1 && "s"} ainda não {quantasPendentes !== 1 ? "chegaram" : "chegou"} ao
+            servidor. {quantasPendentes !== 1 ? "Estão guardadas" : "Está guardada"} neste aparelho e {quantasPendentes !== 1 ? "vão" : "vai"} sozinha{quantasPendentes !== 1 && "s"} quando a conexão voltar.
+          </p>
+        )}
         <div key={itemAtual.item_id} className={`flex flex-col gap-5 ${entradaQuestao}`}>
           <div className="flex items-end justify-between gap-6">
             <div className="flex flex-col gap-1">
@@ -262,7 +314,7 @@ function Conteudo({
                   letra={letra}
                   texto={itemAtual.alternativas[letra]}
                   estado={letra === respostaAtual ? "selecionada" : "normal"}
-                  disabled={false}
+                  disabled={tempoAcabou}
                   onClick={() => responder(letra)}
                 />
               ))}
@@ -317,9 +369,14 @@ function Conteudo({
           <div className="flex flex-wrap gap-2">
             {itens.map((item, i) => {
               const respondida = Boolean(respostasLocais[item.id]);
+              // Só depois de uma falha: o envio normal é rápido demais para aparecer.
+              const aCaminho = comFalha && item.id in pendentes;
               const marcada = marcadasLocais.has(item.id);
               const atual = i === idx;
-              const estado = [respondida ? "respondida" : "em branco", marcada ? "marcada" : null].filter(Boolean).join(", ");
+              const estado = [
+                aCaminho ? "respondida, aguardando envio" : respondida ? "respondida" : "em branco",
+                marcada ? "marcada" : null,
+              ].filter(Boolean).join(", ");
               return (
                 <button
                   key={item.item_id}
@@ -328,7 +385,11 @@ function Conteudo({
                   aria-label={`Questão ${i + 1}: ${estado}`}
                   aria-current={atual ? "step" : undefined}
                   className={`relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-btn border text-[13px] font-semibold tabular-nums transition duration-toggle ease-brand ${PRESSAO} ${
-                    respondida ? "border-ink bg-ink text-onink" : "border-line bg-surface text-ink-2 hover:border-muted"
+                    aCaminho
+                      ? "border-dashed border-ink bg-surface text-ink"
+                      : respondida
+                        ? "border-ink bg-ink text-onink"
+                        : "border-line bg-surface text-ink-2 hover:border-muted"
                   } ${atual ? "ring-2 ring-focus ring-offset-2 ring-offset-surface" : ""}`}
                 >
                   {i + 1}
@@ -345,7 +406,20 @@ function Conteudo({
         </div>
       </div>
 
-      <Dialog titulo="Finalizar simulado" aberto={dialogoAberto} onFechar={() => setDialogoAberto(false)}>
+      <Dialog
+        titulo={tempoAcabou ? "O tempo acabou" : "Finalizar simulado"}
+        aberto={dialogoAberto}
+        // Com o tempo esgotado não há prova para voltar: só falta fechar.
+        onFechar={() => {
+          if (!tempoAcabou) setDialogoAberto(false);
+        }}
+      >
+        {erroFinalizar && (
+          <p role="alert" className="mb-3 text-apoio font-medium text-t1">
+            {erroFinalizar}
+            {tempoAcabou && " Tentamos de novo sozinhos a cada 15 segundos."}
+          </p>
+        )}
         <p className="text-corpo text-ink-2">
           {emBranco > 0 ? (
             <>
@@ -357,11 +431,13 @@ function Conteudo({
           )}
         </p>
         <div className="mt-6 flex gap-2">
-          <button type="button" onClick={() => setDialogoAberto(false)} className={`${BOTAO_SECUNDARIO} flex-1`}>
-            Voltar à prova
-          </button>
+          {!tempoAcabou && (
+            <button type="button" onClick={() => setDialogoAberto(false)} className={`${BOTAO_SECUNDARIO} flex-1`}>
+              Voltar à prova
+            </button>
+          )}
           <button type="button" onClick={finalizarAgora} disabled={finalizando} className={`${BOTAO_PRIMARIO} flex-1`}>
-            Finalizar simulado
+            {finalizando ? "Finalizando…" : erroFinalizar ? "Tentar de novo" : "Finalizar simulado"}
           </button>
         </div>
       </Dialog>

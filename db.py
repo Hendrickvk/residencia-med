@@ -794,6 +794,18 @@ def init_db(forcar=False):
         )
         """)
 
+        # Quem reenvia depois de perder a resposta do servidor não pode gravar duas vezes
+        # (registrar_envio). O envio é um uuid do cliente; o `usuario_id` na chave impede
+        # uma conta de queimar o envio de outra.
+        c.execute("""
+        CREATE TABLE IF NOT EXISTS envios_processados (
+            usuario_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+            envio TEXT NOT NULL,
+            criado_em TIMESTAMP NOT NULL,
+            PRIMARY KEY (usuario_id, envio)
+        )
+        """)
+
         # explicação, imagem, outro) e é o que torna a correção dirigida.
         c.execute("""
         CREATE TABLE IF NOT EXISTS relatos_questao (
@@ -1206,6 +1218,8 @@ def init_db(forcar=False):
             c.execute("ALTER TABLE simulados ADD COLUMN edicao TEXT")
         # O que o simulado rendeu (progressao.fechar_simulado): o resultado mostra
         # mesmo depois de recarregar a página. NULL em simulado de antes disto.
+        # DEFAULT FALSE: o que já estava finalizado antes desta coluna já foi consolidado.
+        c.execute("ALTER TABLE simulados ADD COLUMN IF NOT EXISTS consolidacao_pendente BOOLEAN NOT NULL DEFAULT FALSE")
         if "xp_ganho" not in colunas_simulados:
             c.execute("ALTER TABLE simulados ADD COLUMN xp_ganho INTEGER")
         if "moedas_ganhas" not in colunas_simulados:
@@ -3332,6 +3346,33 @@ def criar_simulado(area_id, banca, num_questoes, tempo_limite_min, questao_ids, 
         return simulado_id
 
 
+class SimuladoEncerrado(Exception):
+    """Resposta que chegou depois de a prova fechar, ou a uma questão fora dela."""
+
+
+def envio_ja_registrado(usuario_id, envio):
+    with get_conn() as conn:
+        return conn.execute(
+            "SELECT 1 FROM envios_processados WHERE usuario_id = ? AND envio = ?", (usuario_id, envio),
+        ).fetchone() is not None
+
+
+def registrar_envio(usuario_id, envio):
+    """Depois de gravar, e não antes: se o servidor cair entre as duas coisas, o
+    reenvio duplica uma resposta, e não some com ela."""
+    with get_conn() as conn:
+        conn.execute("""
+            INSERT INTO envios_processados (usuario_id, envio, criado_em) VALUES (?, ?, ?)
+            ON CONFLICT (usuario_id, envio) DO NOTHING
+        """, (usuario_id, envio, agora_br()))
+
+
+def limpar_envios(antes_de):
+    """Reenvio só faz sentido em dias: a fila do aparelho não guarda por mais que isso."""
+    with get_conn() as conn:
+        return conn.execute("DELETE FROM envios_processados WHERE criado_em < ?", (antes_de,)).rowcount
+
+
 def registrar_resposta_simulado(simulado_id, questao_id, resposta_dada, *, usuario_id):
     """Grava (ou atualiza) a resposta escolhida para uma questão do
     simulado, sem revelar se está certa — isso só é usado na tela de
@@ -3345,12 +3386,19 @@ def registrar_resposta_simulado(simulado_id, questao_id, resposta_dada, *, usuar
         questao = conn.execute(
             "SELECT resposta_correta FROM questoes WHERE id = ?", (questao_id,)
         ).fetchone()
+        if questao is None:
+            raise PermissionError("Questão não encontrada.")
         correta = int(resposta_dada == questao["resposta_correta"])
-        conn.execute("""
+        # Prova finalizada não muda: o resultado já mostrou o gabarito, e um reenvio
+        # atrasado não pode reescrever a nota. A trava é a mesma linha de `finalizar`.
+        alterou = conn.execute("""
             UPDATE simulado_itens
             SET resposta_dada = ?, correta = ?
             WHERE simulado_id = ? AND questao_id = ?
-        """, (resposta_dada, correta, simulado_id, questao_id))
+              AND EXISTS (SELECT 1 FROM simulados s WHERE s.id = ? AND s.finalizado_em IS NULL)
+        """, (resposta_dada, correta, simulado_id, questao_id, simulado_id)).rowcount
+        if not alterou:
+            raise SimuladoEncerrado("A prova já foi finalizada.")
 
 
 def itens_respondidos_simulado(simulado_id, *, usuario_id):
@@ -3400,7 +3448,7 @@ def finalizar_simulado(simulado_id, *, usuario_id):
         # tempo: a segunda espera a trava da linha e já não a encontra aberta.
         return conn.execute("""
             UPDATE simulados
-            SET acertos = ?, total_respondidas = ?, finalizado_em = ?
+            SET acertos = ?, total_respondidas = ?, finalizado_em = ?, consolidacao_pendente = TRUE
             WHERE id = ? AND finalizado_em IS NULL
         """, (
             agregado["acertos"] or 0, agregado["total_respondidas"] or 0,

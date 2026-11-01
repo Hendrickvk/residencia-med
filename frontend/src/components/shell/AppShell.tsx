@@ -11,6 +11,7 @@ import { direcaoDaNavegacao } from "../../lib/nav";
 import { NOVIDADES, novidadesNaoVistas } from "../../lib/novidades";
 import { api } from "../../lib/api";
 import { useAuthActions, useMe } from "../../lib/auth";
+import { retomarRespostas } from "../../lib/respostasQueue";
 import { FocoProvider } from "../../lib/foco";
 import { useFoco } from "../../lib/focoContexto";
 import { prefereMenosMovimento } from "../../lib/movimento";
@@ -89,6 +90,11 @@ export function AppShell() {
   useEffect(() => {
     aplicarTema(tema);
   }, [tema]);
+
+  const contaId = me?.id;
+  useEffect(() => {
+    if (contaId !== undefined) retomarRespostas();
+  }, [contaId]);
 
   useEffect(() => {
     if (jaAbriuSozinha.current || brincadeira !== "off") return;

@@ -133,6 +133,8 @@ def responder(simulado_id: int, dados: RespostaSimuladoIn, usuario=Depends(usuar
         db.registrar_resposta_simulado(simulado_id, dados.questao_id, dados.alternativa, usuario_id=usuario["id"])
     except PermissionError as e:
         raise HTTPException(status.HTTP_403_FORBIDDEN, str(e))
+    except db.SimuladoEncerrado as e:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(e))
     return {"ok": True}
 
 
@@ -146,13 +148,13 @@ def somar_tempo(simulado_id: int, dados: TempoSimuladoIn, usuario=Depends(usuari
 @router.post("/{simulado_id}/finalizar")
 def finalizar(simulado_id: int, usuario=Depends(usuario_atual)):
     try:
-        finalizou = db.finalizar_simulado(simulado_id, usuario_id=usuario["id"])
+        db.finalizar_simulado(simulado_id, usuario_id=usuario["id"])
     except PermissionError as e:
         raise HTTPException(status.HTTP_403_FORBIDDEN, str(e))
-    # Já finalizado: responde ok (o cliente só quer o resultado) sem gravar as
-    # respostas no histórico de novo.
-    ganhos = _consolidar_no_historico(simulado_id, usuario["id"]) if finalizou else []
-    return {"ok": True, "ganhos": ganhos}
+    # Sempre, e não só quando acabou de finalizar: se a consolidação falhou da outra
+    # vez, tentar de novo a refaz; se já foi feita, não grava nada duas vezes
+    # (`consolidacao_pendente`, em sr.registrar_simulado).
+    return {"ok": True, "ganhos": _consolidar_no_historico(simulado_id, usuario["id"])}
 
 
 def _finalizado(simulado_id, usuario):

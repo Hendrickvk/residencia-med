@@ -292,9 +292,10 @@ export interface AvaliacaoRevisao {
   ok: boolean;
   correta: boolean | null;
   qualidade: number;
-  proxima_revisao: string;
+  proxima_revisao: string | null;
   // Previstos a partir do novo estado: o caso errado reaparece na sessão com eles.
-  prazos: PrazosRevisao;
+  // null quando o servidor reconheceu um reenvio já gravado.
+  prazos: PrazosRevisao | null;
   recuperado: boolean; // tinha errado e lembrou depois de pelo menos 1 dia
   consolidou: boolean; // o intervalo passou a 21 dias ou mais
   ganho: Ganho | null;
@@ -437,6 +438,42 @@ export interface Progresso {
   hoje: string;
   dias: { dia: string; xp: number }[];
   maior_sequencia: number;
+  vitrine: {
+    obtidos: number;
+    total: number;
+    itens: { id: string; nome: string; grau: GrauCarimbo; obtida_em: string }[];
+  };
+}
+
+export type GrauCarimbo = "bronze" | "prata" | "ouro";
+
+export interface CarimboNovo {
+  id: string;
+  nome: string;
+  grau: GrauCarimbo;
+  moedas: number;
+  obtida_em: string;
+}
+
+// A caderneta (conquistas.caderneta). O secreto ainda não obtido vem sem nome real.
+export interface Caderneta {
+  obtidos: number;
+  total: number;
+  novas: CarimboNovo[];
+  series: {
+    nome: string;
+    feitos: number;
+    qtd: number;
+    itens: {
+      id: string;
+      nome: string;
+      grau: GrauCarimbo;
+      moedas: number;
+      obtida_em: string | null;
+      nota: string | null;
+      pct: number | null;
+    }[];
+  }[];
 }
 
 // A loja: quem decide o que está liberado, o que é dela e o que está em uso é o
