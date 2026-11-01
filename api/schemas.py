@@ -127,6 +127,7 @@ class NotaCartaoIn(BaseModel):
     # 1 = errei; 3, 4, 5 = com esforço, lembrei, fácil. A mesma escala da
     # Revisão de casos (repeticao_espacada.NOTAS_ACERTO).
     qualidade: int = Field(ge=0, le=5)
+    envio: Optional[str] = Field(default=None, max_length=64)
 
 
 class ProvaAlvoIn(BaseModel):

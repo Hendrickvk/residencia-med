@@ -1,4 +1,4 @@
-import type { FiltrosPratica, Questao, ResumoSessao } from "./types";
+import type { FiltrosPratica, Questao, RespostaPayload, ResumoSessao } from "./types";
 
 // Uma sessão de prática só existia na memória da aba: fechar o navegador no
 // meio de 10 casos perdia a fila e o resumo. As respostas já dadas não se
@@ -28,6 +28,46 @@ export interface SessaoSalva {
   marcadas: number[];
   // Tempo já gasto, para o cronômetro do resumo não recomeçar do zero.
   duracaoMs: number;
+  // Identifica a sessão no `envio` de cada resposta. Sessão salva antes de existir
+  // este campo recebe um ao ser lida.
+  sessaoId?: string;
+  // O caso da vez, como estava. Sem isto a retomada voltava ao caso sem alternativa, sem
+  // chute e sem discussão, e o tempo medido recomeçava.
+  caso?: CasoEmAndamento;
+}
+
+export interface CasoEmAndamento {
+  selecionada: string | null;
+  confirmado: boolean;
+  chutando: boolean;
+  decorridoMs: number;
+}
+
+const CASO_VAZIO: CasoEmAndamento = { selecionada: null, confirmado: false, chutando: false, decorridoMs: 0 };
+
+/** O mesmo caso da mesma sessão tem sempre o mesmo `envio`: registrá-lo duas vezes (a aba
+ * caiu logo depois de ir para a fila) não grava duas (`envios_processados`). */
+export function envioDoCaso(sessaoId: string, questaoId: number, idx: number) {
+  return `${sessaoId}:${questaoId}:${idx}`;
+}
+
+/** A resposta que está na tela e ainda não foi gravada: ela é gravada ao passar para o
+ * próximo caso, para o tempo incluir a leitura da discussão. Quem descarta a sessão ou
+ * começa outra já viu o gabarito, e essa resposta não pode sumir. */
+export function respostaPendente(s: SessaoSalva): { envio: string; payload: RespostaPayload } | null {
+  const q = s.questoes[s.idx];
+  const c = s.caso;
+  if (!q || !c?.confirmado || !c.selecionada || !s.sessaoId) return null;
+  const correta = c.selecionada === q.resposta_correta;
+  return {
+    envio: envioDoCaso(s.sessaoId, q.id, s.idx),
+    payload: {
+      questao_id: q.id,
+      alternativa: c.selecionada,
+      confianca: c.chutando ? "chute" : correta ? "seguro" : undefined,
+      tempo_ms: c.decorridoMs,
+    },
+  };
 }
 
 export function salvarSessao(dados: Omit<SessaoSalva, "versao" | "salvoEm">) {
@@ -54,7 +94,7 @@ export function lerSessao(): SessaoSalva | null {
       limparSessao();
       return null;
     }
-    return s;
+    return { ...s, sessaoId: s.sessaoId ?? String(s.salvoEm), caso: s.caso ?? CASO_VAZIO };
   } catch {
     limparSessao();
     return null;

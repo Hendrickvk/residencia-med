@@ -8,6 +8,21 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
 
 ## Pendências
 
+- **Avaliação prática do site publicado (31/10).** Feito e não subido: retomada no ponto
+  exato, flashcards sem sucesso falso, "Rever os casos" no resumo do Praticar, "Questões
+  marcadas" no menu da conta, estados de carregamento e falha (busca, "Virar cartão", prova,
+  resultado), e os textos de pontos, projeção e prazos iguais.
+  **Conteúdo pendente de aprovação:** `backups/correcoes_enunciados_20261031.json` corrige 7
+  enunciados, conferidos contra os cadernos: 326, 368, 279 (O₂ e CO₂ soltos) e 120, 159, 298,
+  266 (tabela achatada; na 298 também 10¹² guardado como 1012). Aplicar com
+  `scripts/corrigir_enunciados.py`, depois do `backup_banco.py`. Só o branch de testes recebeu.
+  Preservei o que é do próprio caderno: "encontra--se", "12,0 g/dL" na bilirrubina indireta,
+  "CKP"/"CKD", "mg/Dl". Na 298, células mescladas viraram repetidas. **Ainda a conferir com o
+  caderno:** saturação de O solta em 252, 318, 458 e 361; "x 106" em 3236; `mm3` e `m2` em cerca
+  de 20 enunciados, legíveis e sem perda.
+  **Limite:** sessão vencida (12 h) com resposta confirmada na tela é apagada sem gravar a
+  resposta. **Hipóteses, não feitas:** abrir o Painel pela ação; destacar a próxima ação no fim
+  da sessão; referências e datas nas discussões, que dependem de fontes verificadas.
 - **Confiabilidade das respostas (31/10, auditoria externa pedida pelo usuário).** Os quatro
   defeitos apontados existiam no código e foram corrigidos, regras no CLAUDE.md (`respostasQueue.ts`).
   A leitura achou mais dois, que o reenvio automático pioraria: prova finalizada aceitava
@@ -16,8 +31,7 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   `fetch` falhando de propósito: rede caída, 500, resposta perdida na volta, aba recarregada e
   tempo esgotado. O pacote de front não tem executor de testes, então essa parte foi
   verificada à mão, e só o contrato da API ficou em teste (`tests/test_reenvio.py`).
-  **Ficou de fora:** cartão continua sem fila (`baralhos/Estudo.tsx`), e a falha some em
-  silêncio; prova com tempo esgotado que não fechou e teve a aba fechada fica aberta para
+  **Ficou de fora:** prova com tempo esgotado que não fechou e teve a aba fechada fica aberta para
   sempre, porque `simulado_em_andamento` não a lista mais, e as respostas dela não vão para o
   histórico; resposta enviada dias depois conta no dia em que chegou, e isso pode quebrar a
   ofensiva de quem ficou sem sinal na virada do dia.

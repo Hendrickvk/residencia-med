@@ -96,8 +96,8 @@ async function processar() {
   processando = false;
 }
 
-export function enfileirarResposta(payload: RespostaPayload) {
-  const item = { envio: crypto.randomUUID(), payload };
+export function enfileirarResposta(payload: RespostaPayload, envio: string = crypto.randomUUID()) {
+  const item = { envio, payload };
   fila.push(item);
   alterarGuardados(contaAtual(), (itens) => [...itens, item]);
   notificar();

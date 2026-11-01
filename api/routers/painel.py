@@ -25,6 +25,7 @@ def obter_painel(usuario=Depends(usuario_atual)):
         "totais": {
             "respostas": total_respostas,
             "acertos": total_acertos,
+            "acertos_no_chute": sum(r["acertos_no_chute"] for r in por_area),
             "pct_acerto_geral": pct_geral,
         },
         "por_area": por_area,

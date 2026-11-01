@@ -58,6 +58,10 @@ export default function Estudo({ baralhoId, nome, cor, onSair }: Props) {
   const [reescritos, setReescritos] = useState<Record<number, { frente: string; verso: string }>>({});
   const [editando, setEditando] = useState(false);
   const [desfazendo, setDesfazendo] = useState(false);
+  const [enviando, setEnviando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+  // O mesmo a cada tentativa do cartão: a falha pode ter sido só na volta, com a nota gravada.
+  const envioDoCartao = useRef<string | null>(null);
 
   const fila = data?.cartoes ?? [];
   const bruto = fila[idx];
@@ -72,16 +76,25 @@ export default function Estudo({ baralhoId, nome, cor, onSair }: Props) {
     zerarGanhos();
   }, []);
 
-  function responder(nota: number) {
-    if (!atual) return;
-    // Fire-and-forget, como o `/respostas` do Praticar: a tela não espera a
-    // rede para ir ao próximo cartão.
-    void avaliarCartao(atual.id, nota)
-      .then((r) => registrarGanho(r.ganho))
-      .catch(() => {});
-    setNotas((n) => [...n, nota]);
-    setVirado(false);
-    setIdx((i) => i + 1);
+  // Espera a confirmação, como a Revisão de casos: o resumo conta as notas, e o "Desfazer"
+  // conta com a última gravada. Se falhar, o cartão fica na tela para tentar de novo.
+  async function responder(nota: number) {
+    if (!atual || enviando) return;
+    setEnviando(true);
+    setErro(null);
+    envioDoCartao.current ??= crypto.randomUUID();
+    try {
+      const r = await avaliarCartao(atual.id, nota, envioDoCartao.current);
+      registrarGanho(r.ganho);
+      envioDoCartao.current = null;
+      setNotas((n) => [...n, nota]);
+      setVirado(false);
+      setIdx((i) => i + 1);
+    } catch {
+      setErro("Não deu para gravar esta nota. Pode ser a conexão. O cartão fica aqui: é só tentar de novo.");
+    } finally {
+      setEnviando(false);
+    }
   }
 
   // Desfazer volta o cartão E o agendamento: o servidor restaura o estado do
@@ -91,6 +104,7 @@ export default function Estudo({ baralhoId, nome, cor, onSair }: Props) {
     if (feitos === 0 || desfazendo) return;
     const anterior = fila[feitos - 1];
     setDesfazendo(true);
+    setErro(null);
     try {
       await desfazerCartao(anterior.id);
       setNotas((n) => n.slice(0, -1));
@@ -99,6 +113,7 @@ export default function Estudo({ baralhoId, nome, cor, onSair }: Props) {
     } catch {
       // Falhou no servidor: não mexe na tela, senão ela veria de volta um
       // cartão que continua agendado como estava.
+      setErro("Não deu para desfazer agora. Pode ser a conexão. Tente de novo.");
     } finally {
       setDesfazendo(false);
     }
@@ -128,7 +143,7 @@ export default function Estudo({ baralhoId, nome, cor, onSair }: Props) {
       }
       if (!virado) return;
       const i = Number(e.key) - 1;
-      if (i >= 0 && i < NOTAS.length) acoes.current.responder(NOTAS[i].valor);
+      if (i >= 0 && i < NOTAS.length) void acoes.current.responder(NOTAS[i].valor);
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -262,8 +277,9 @@ export default function Estudo({ baralhoId, nome, cor, onSair }: Props) {
                   <button
                     key={nota.valor}
                     type="button"
-                    onClick={() => responder(nota.valor)}
-                    className={`flex flex-col items-center gap-0.5 rounded-pill px-3 py-2.5 font-semibold transition duration-hover ease-brand hover:opacity-90 active:scale-[0.97] ${nota.cor}`}
+                    disabled={enviando}
+                    onClick={() => void responder(nota.valor)}
+                    className={`flex flex-col items-center gap-0.5 rounded-pill px-3 py-2.5 font-semibold transition duration-hover ease-brand hover:opacity-90 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60 ${nota.cor}`}
                   >
                     <span className="text-[15px] leading-tight">{nota.rotulo}</span>
                     {/* O prazo vem do servidor, da mesma conta que grava: o
@@ -275,7 +291,22 @@ export default function Estudo({ baralhoId, nome, cor, onSair }: Props) {
                 ))}
               </div>
             )}
+            {virado && prazosIguais(atual.prazos) && (
+              <p className="text-center text-apoio text-muted">
+                O prazo agora é o mesmo, mas a nota fica guardada e muda o tamanho dos próximos intervalos.
+              </p>
+            )}
+            {erro && (
+              <p role="alert" className="text-center text-apoio font-medium text-t1">
+                {erro}
+              </p>
+            )}
           </>
+        )}
+        {!atual && erro && (
+          <p role="alert" className="text-center text-apoio font-medium text-t1">
+            {erro}
+          </p>
         )}
       </div>
 
@@ -286,8 +317,8 @@ export default function Estudo({ baralhoId, nome, cor, onSair }: Props) {
           frenteAtual={atual.frente}
           versoAtual={atual.verso}
           onFechar={() => setEditando(false)}
-          onSalvo={(frente, verso) => {
-            void atualizarCartao(atual.id, frente, verso).catch(() => {});
+          onSalvar={async (frente, verso) => {
+            await atualizarCartao(atual.id, frente, verso);
             setReescritos((r) => ({ ...r, [atual.id]: { frente, verso } }));
             setEditando(false);
           }}
@@ -297,24 +328,45 @@ export default function Estudo({ baralhoId, nome, cor, onSair }: Props) {
   );
 }
 
+// As três notas de acerto com o mesmo prazo, que é o normal nas primeiras revisões.
+function prazosIguais(prazos: Record<string, unknown>) {
+  const acertos = ["3", "4", "5"].map((nota) => JSON.stringify(prazos[nota]));
+  return acertos.every((p) => p === acertos[0]);
+}
+
 function EditarNoEstudo({
-  aberto, frenteAtual, versoAtual, onFechar, onSalvo,
+  aberto, frenteAtual, versoAtual, onFechar, onSalvar,
 }: {
   aberto: boolean;
   frenteAtual: string;
   versoAtual: string;
   onFechar: () => void;
-  onSalvo: (frente: string, verso: string) => void;
+  onSalvar: (frente: string, verso: string) => Promise<void>;
 }) {
   const [frente, setFrente] = useState(frenteAtual);
   const [verso, setVerso] = useState(versoAtual);
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState(false);
+
+  // Só fecha depois de o servidor confirmar. Se falhar, o que ela escreveu continua no campo.
+  async function salvar() {
+    setSalvando(true);
+    setErro(false);
+    try {
+      await onSalvar(frente, verso);
+    } catch {
+      setErro(true);
+    } finally {
+      setSalvando(false);
+    }
+  }
 
   return (
     <Dialog titulo="Editar este cartão" aberto={aberto} onFechar={onFechar}>
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          if (frente.trim() && verso.trim()) onSalvo(frente, verso);
+          if (frente.trim() && verso.trim() && !salvando) void salvar();
         }}
         className="flex flex-col gap-4"
       >
@@ -341,16 +393,21 @@ function EditarNoEstudo({
             className={`${CAMPO} h-auto py-2 leading-normal`}
           />
         </label>
+        {erro && (
+          <p role="alert" className="text-apoio font-medium text-t1">
+            Não deu para salvar. Pode ser a conexão. O que você escreveu continua aqui.
+          </p>
+        )}
         <div className="flex gap-2">
           <button type="button" onClick={onFechar} className={`${BOTAO_SECUNDARIO} flex-1`}>
             Cancelar
           </button>
           <button
             type="submit"
-            disabled={!frente.trim() || !verso.trim()}
+            disabled={salvando || !frente.trim() || !verso.trim()}
             className={`${BOTAO_PRIMARIO} flex-1`}
           >
-            Salvar
+            {salvando ? "Salvando…" : erro ? "Tentar de novo" : "Salvar"}
           </button>
         </div>
       </form>

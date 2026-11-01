@@ -6,6 +6,7 @@ import { formatarMMSS, formatarPctBR } from "../../lib/format";
 import { atraso } from "../../lib/movimento";
 import { CLASSES_NIVEL, NIVEIS, nivelTriagem } from "../../lib/triagem";
 import type { ResumoSessao } from "../../lib/types";
+import { CasosDaSessao } from "./CasosDaSessao";
 
 interface Props {
   resumo: ResumoSessao;
@@ -106,10 +107,13 @@ export default function Resumo({ resumo, onNovaSessao }: Props) {
 
       {erros > 0 && (
         <p className="text-apoio text-ink-2">
-          {erros === 1 ? "O caso que você errou já está" : `Os ${erros} casos que você errou já estão`} na sua revisão
-          espaçada e voltam em 10 minutos.
+          {erros === 1
+            ? "O caso que você errou já está na sua revisão espaçada e volta em 10 minutos."
+            : `Os ${erros} casos que você errou já estão na sua revisão espaçada e voltam em 10 minutos.`}
         </p>
       )}
+
+      <CasosDaSessao respondidas={respondidas} questoes={resumo.questoes ?? []} />
 
       <div>
         <button type="button" onClick={onNovaSessao} className={`group ${BOTAO_PRIMARIO}`}>

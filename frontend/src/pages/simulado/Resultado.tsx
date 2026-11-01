@@ -1,6 +1,8 @@
 import { ArrowRight, ChevronDown, RotateCcw, Share2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { EstadoFalha } from "../../components/EstadoFalha";
+import { TextoEnunciado } from "../../components/TextoEnunciado";
 import { NumeroAnimado } from "../../components/NumeroAnimado";
 import { RecompensaSessao } from "../../components/RecompensaSessao";
 import { TemaDoCaso } from "../../components/TemaDoCaso";
@@ -37,8 +39,10 @@ interface Props {
 const TEMAS_VISIVEIS = 8;
 
 export default function Resultado({ simuladoId, onNovoSimulado }: Props) {
-  const { data: simulado } = useSimulado(simuladoId);
-  const { data: itens } = useItensSimulado(simuladoId);
+  const consultaSimulado = useSimulado(simuladoId);
+  const consultaItens = useItensSimulado(simuladoId);
+  const { data: simulado } = consultaSimulado;
+  const { data: itens } = consultaItens;
   const { data: desempenho } = useDesempenhoSimulado(simuladoId);
   const { data: temas } = useTemasErradosSimulado(simuladoId);
   const { data: me } = useMe();
@@ -77,6 +81,21 @@ export default function Resultado({ simuladoId, onNovoSimulado }: Props) {
       vivo = false;
     };
   }, [dadosCartao]);
+
+  if ((!simulado || !itens) && !consultaSimulado.isLoading && !consultaItens.isLoading) {
+    return (
+      <div className="mx-auto max-w-[680px]">
+        <EstadoFalha
+          mensagem="Não deu para carregar o resultado. Pode ser a conexão. A prova está salva."
+          pausado={consultaSimulado.isPaused || consultaItens.isPaused}
+          onTentarDeNovo={() => {
+            void consultaSimulado.refetch();
+            void consultaItens.refetch();
+          }}
+        />
+      </div>
+    );
+  }
 
   if (!simulado || !itens) {
     return (
@@ -331,7 +350,7 @@ export default function Resultado({ simuladoId, onNovoSimulado }: Props) {
                 {aberto && (
                   <div className="flex animate-entrar flex-col gap-5 border-t border-line-soft p-5 md:px-11 md:py-7">
                     {/* Mesmo recuo lateral do cartão do caso: a linha fica no mesmo comprimento. */}
-                    <p className="leitura-enunciado text-ink">{item.enunciado}</p>
+                    <TextoEnunciado texto={item.enunciado} />
                     {item.tem_imagem && (
                       <ImagemQuestao questaoId={item.id} alt="Imagem da questão" />
                     )}

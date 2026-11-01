@@ -66,6 +66,12 @@ export function NotaProjetada({ nota, simulados, corte, onFazerProva }: Props) {
           <p className="text-apoio text-muted [text-wrap:pretty]">
             A faixa diminui conforme você responde, até cerca de 10 pontos para cada lado: a variação de uma prova só.
           </p>
+          <p className="text-apoio text-muted [text-wrap:pretty]">
+            Vem das suas {nota.respondidas.toLocaleString("pt-BR")} primeiras respostas, com o chute certo valendo meio.
+            Os temas que você já respondeu somam {nota.cobertura}% das questões dos cadernos do INEP; nos outros, a conta
+            usa o seu desempenho na especialidade, na área ou no geral. É uma estimativa do Conduta, ainda não comparada
+            com notas reais de prova.
+          </p>
         </div>
         <div className="flex flex-col gap-3">
           <span className="rotulo text-muted">Provas oficiais feitas</span>

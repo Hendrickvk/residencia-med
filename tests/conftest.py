@@ -1,10 +1,10 @@
 """
 Fixtures compartilhadas dos testes da API.
 
-Os testes rodam num branch do Neon quando `DATABASE_URL_TESTES` existe (em
-`.streamlit/secrets.toml` ou no ambiente); sem ela, no Neon de produção, como
-sempre foi — e o começo da suíte avisa. Nos dois casos todo dado criado aqui é
-marcado com um sufixo `uuid4` (e-mails `pytest_*@teste.local`, áreas
+Os testes só rodam num branch do Neon, em `DATABASE_URL_TESTES` (em
+`.streamlit/secrets.toml` ou no ambiente); sem ela, a suíte se recusa a começar,
+porque a varredura logo abaixo apaga dados e o fallback era o banco de produção.
+Todo dado criado aqui é marcado com um sufixo `uuid4` (e-mails `pytest_*@teste.local`, áreas
 `__pytest_area_*`) e removido no teardown de cada fixture via `ON DELETE
 CASCADE`. Nunca reaproveite dados de produção nem deixe uma fixture sem
 teardown — e todo dado de teste precisa cair num desses dois padrões, que é o
@@ -29,11 +29,10 @@ os.environ["CONDUTA_TESTES"] = "1"
 import db  # noqa: E402
 
 if not db._url_testes():
-    print(
-        "\n[conduta] ATENÇÃO: sem DATABASE_URL_TESTES, os testes rodam no banco de PRODUÇÃO. "
-        "Crie um branch no Neon e ponha a connection string dele em .streamlit/secrets.toml "
-        "como DATABASE_URL_TESTES.",
-        file=sys.stderr,
+    pytest.exit(
+        "Sem DATABASE_URL_TESTES os testes rodariam no banco de PRODUÇÃO. Crie um branch no "
+        "Neon e ponha a connection string dele em .streamlit/secrets.toml como DATABASE_URL_TESTES.",
+        returncode=2,
     )
 
 

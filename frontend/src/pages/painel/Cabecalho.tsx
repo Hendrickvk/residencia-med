@@ -38,8 +38,15 @@ export function Cabecalho({ totais, porArea, respondidasHoje, provaAlvo }: Props
   else if (maiorLacuna) titulo = `${maiorLacuna.area} é a sua maior lacuna.`;
 
   const dias = diasAteProva(provaAlvo);
+  // Com chute certo, o número do Painel são pontos, e não acertos: dizer os dois evita
+  // o "19,5 acertos", que parece erro de conta.
+  const respostas = totais.respostas.toLocaleString("pt-BR");
+  const noChute = totais.acertos_no_chute ?? 0;
+  const acertosInteiros = Number(totais.acertos) + noChute / 2;
   const resumo = [
-    `${totais.acertos.toLocaleString("pt-BR")} acertos em ${totais.respostas.toLocaleString("pt-BR")} questões`,
+    noChute > 0
+      ? `${Number(totais.acertos).toLocaleString("pt-BR")} pontos em ${respostas} questões: ${acertosInteiros.toLocaleString("pt-BR")} acertos, ${noChute} no chute, que vale meio`
+      : `${Number(totais.acertos).toLocaleString("pt-BR")} ${Number(totais.acertos) === 1 ? "acerto" : "acertos"} em ${respostas} ${totais.respostas === 1 ? "questão" : "questões"}`,
     // Sem "de 20": era uma meta fixa, que ninguém escolheu, ao lado da meta de
     // revisão que ela escolhe na Conduta de hoje — duas metas para o mesmo dia.
     `${respondidasHoje} ${respondidasHoje === 1 ? "questão" : "questões"} hoje`,

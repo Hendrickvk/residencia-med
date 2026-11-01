@@ -77,6 +77,48 @@ def test_avaliacao_reenviada_nao_empurra_o_sm2(conta_api, questao_teste):
     assert _contagens(id_conta, questao_teste)["eventos"] == 2
 
 
+def test_nota_de_cartao_reenviada_grava_uma_vez(conta_api):
+    client, id_conta = conta_api
+    pasta = client.post("/cartoes/pastas", json={"nome": "t"}).json()["id"]
+    baralho = client.post("/cartoes/baralhos", json={"nome": "t", "pasta_id": pasta}).json()["id"]
+    cartao = client.post("/cartoes", json={"frente": "f", "verso": "v", "baralho_id": baralho}).json()["id"]
+    corpo = {"qualidade": 4, "envio": uuid.uuid4().hex}
+    assert client.post(f"/cartoes/{cartao}/avaliar", json=corpo).json()["ganho"]
+    repetida = client.post(f"/cartoes/{cartao}/avaliar", json=corpo)
+    assert repetida.status_code == 200 and repetida.json()["repetido"] is True
+    with db.get_conn() as conn:
+        eventos = conn.execute(
+            "SELECT COUNT(*) AS n FROM revisao_cartao_eventos WHERE usuario_id = ? AND cartao_id = ?", (id_conta, cartao),
+        ).fetchone()["n"]
+    assert eventos == 1
+
+
+def test_lista_de_marcadas_segue_sem_gabarito(conta_api, questao_teste):
+    # O acesso novo pelo menu da conta leva à mesma lista: ela continua sem resposta.
+    client, _ = conta_api
+    client.post(f"/questoes/{questao_teste}/marcar")
+    corpo = client.get("/me/marcadas").json()
+    assert corpo["questoes"]
+    for campo in ("resposta_correta", "explicacao", "alternativas"):
+        assert campo not in corpo["questoes"][0]
+
+
+def test_painel_diz_quantos_acertos_foram_no_chute(conta_api, questao_teste):
+    client, _ = conta_api
+    client.post("/respostas", json={"questao_id": questao_teste, "alternativa": "A", "confianca": "chute"})
+    totais = client.get("/painel").json()["totais"]
+    assert totais["respostas"] == 1 and float(totais["acertos"]) == 0.5 and totais["acertos_no_chute"] == 1
+
+
+def test_projecao_diz_a_cobertura():
+    temas = [
+        {"subtopico_id": 1, "especialidade_id": 1, "area_id": 1, "questoes_provas": 30},
+        {"subtopico_id": 2, "especialidade_id": 1, "area_id": 1, "questoes_provas": 70},
+    ]
+    tentativas = [{"area_id": 1, "especialidade_id": 1, "subtopico_id": 1, "pontos": 1}]
+    assert db.projetar_nota(tentativas, temas)["cobertura"] == 30
+
+
 def _prova(client, edicao):
     banca, nome, _ = edicao
     resposta = client.post("/simulados/oficial", json={"banca": banca, "edicao": nome})

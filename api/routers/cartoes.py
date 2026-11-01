@@ -168,9 +168,14 @@ def estudar(baralho_id: int, limite: int = Query(default=40, ge=1, le=200), usua
 
 @router.post("/{cartao_id}/avaliar")
 def avaliar(cartao_id: int, dados: NotaCartaoIn, usuario=Depends(usuario_atual)):
+    # O cliente reenvia quando não sabe se gravou: avaliar duas vezes empurraria o SM-2.
+    if dados.envio and db.envio_ja_registrado(usuario["id"], dados.envio):
+        return {"proxima_revisao": None, "intervalo_dias": None, "ganho": None, "repetido": True}
     estado = sr.avaliar_cartao(cartao_id, dados.qualidade, usuario_id=usuario["id"])
     if estado is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Cartão não encontrado.")
+    if dados.envio:
+        db.registrar_envio(usuario["id"], dados.envio)
     return {
         "proxima_revisao": estado["proxima_revisao"],
         "intervalo_dias": estado["intervalo_dias"],

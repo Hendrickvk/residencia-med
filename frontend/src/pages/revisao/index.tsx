@@ -3,6 +3,7 @@ import { BadgeCheck, RefreshCw, RotateCcw } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { EstadoFalha } from "../../components/EstadoFalha";
+import { TextoEnunciado } from "../../components/TextoEnunciado";
 import { EstadoVazio } from "../../components/EstadoVazio";
 import { Kbd } from "../../components/Kbd";
 import { TemaDoCaso } from "../../components/TemaDoCaso";
@@ -328,7 +329,7 @@ export default function Revisao() {
           </div>
 
           <div className="flex flex-col gap-6 rounded-caso border border-line bg-surface p-6 md:px-11 md:py-9">
-            <p className="leitura-enunciado text-ink">{q.enunciado}</p>
+            <TextoEnunciado texto={q.enunciado} />
             {q.tem_imagem && (
               <ImagemQuestao questaoId={q.id} alt="Imagem do caso" />
             )}
@@ -408,7 +409,11 @@ export default function Revisao() {
                     className={`flex animate-entrar flex-col gap-3 border-t border-line-soft pt-6 max-sm:gap-2 ${ACAO_DA_VEZ}`}
                     style={{ animationDelay: "90ms" }}
                   >
-                    <span className="text-apoio text-muted">Você acertou. Como foi lembrar?</span>
+                    <span className="text-apoio text-muted">
+                      Você acertou. Como foi lembrar?
+                      {new Set(NOTAS_ACERTO.map((op) => JSON.stringify(q.prazos[op.chave]))).size === 1 &&
+                        " O prazo agora é o mesmo, mas a nota fica guardada e muda o tamanho dos próximos intervalos."}
+                    </span>
                     <div className="flex flex-wrap gap-1.5 sm:grid sm:grid-cols-3 sm:gap-2">
                       {NOTAS_ACERTO.map((op) => (
                         <button

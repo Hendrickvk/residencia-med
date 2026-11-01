@@ -11,7 +11,10 @@ export function BuscaGlobal() {
   const [aberto, setAberto] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const termoDebounced = useDebounced(termo, 250);
-  const { data, isFetching } = useBusca(termoDebounced);
+  const { data, isFetching, isError, isPaused, refetch } = useBusca(termoDebounced);
+  // Enquanto ela digita, a consulta ainda é a do termo anterior: sem isto, o painel dizia
+  // "Nenhum resultado" antes de buscar.
+  const aguardando = termo.trim() !== termoDebounced.trim() || (isFetching && !data);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -73,8 +76,17 @@ export function BuscaGlobal() {
         <>
           <div className="fixed inset-0 z-40" onClick={() => setAberto(false)} />
           <div className="absolute right-0 top-11 z-50 max-h-96 w-[26rem] origin-top-right animate-surgir overflow-y-auto overflow-x-hidden rounded-card border border-line bg-surface">
-            {isFetching && !data ? (
-              <div className="p-4 text-apoio text-muted">Buscando…</div>
+            {aguardando ? (
+              <div role="status" className="p-4 text-apoio text-muted">Buscando…</div>
+            ) : !data && isPaused ? (
+              <div role="status" className="p-4 text-apoio text-muted">Sem conexão. A busca continua quando ela voltar.</div>
+            ) : !data && isError ? (
+              <div className="flex items-center justify-between gap-3 p-4 text-apoio text-muted">
+                Não deu para buscar agora.
+                <button type="button" onClick={() => void refetch()} className="font-semibold text-ink underline underline-offset-2">
+                  Tentar de novo
+                </button>
+              </div>
             ) : !temResultados ? (
               <div className="p-4 text-apoio text-muted">Nenhum resultado para "{termo}".</div>
             ) : (

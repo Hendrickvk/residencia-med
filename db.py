@@ -2781,6 +2781,7 @@ def desempenho_dashboard_combinado(*, usuario_id):
                   SELECT a.id AS area_id, a.nome AS area,
                          COUNT(r.id) AS total,
                          SUM(r.pontos) AS acertos,
+                         COUNT(*) FILTER (WHERE r.pontos = 0.5) AS acertos_no_chute,
                          ROUND(100.0 * SUM(r.pontos) / COUNT(r.id), 1) AS pct_acerto
                   FROM r
                   JOIN questoes q ON q.id = r.questao_id
@@ -2906,6 +2907,11 @@ def projetar_nota(tentativas, temas):
         return None
     nota = sum(tema["questoes_provas"] * dominio for tema, dominio, _, _ in _dominio_dos_temas(tentativas, temas))
     nota /= peso_total
+    # Quanto da prova cai em temas que ela já respondeu. Nos outros, o domínio vem da
+    # especialidade, da área ou do geral: é o que a tela precisa dizer junto da nota.
+    com_resposta = sum(
+        tema["questoes_provas"] for tema, _, _, respondidas in _dominio_dos_temas(tentativas, temas) if respondidas
+    )
     # ponytail: margem binomial com todas as respostas; se elas se concentram em
     # poucos temas, sai um pouco estreita. Bootstrap das respostas, se importar.
     margem = 1.96 * math.sqrt(nota * (1 - nota) * (1 / len(tentativas) + 1 / QUESTOES_PROVA_INEP))
@@ -2914,6 +2920,7 @@ def projetar_nota(tentativas, temas):
         "minimo": round(100 * max(0.0, nota - margem), 1),
         "maximo": round(100 * min(1.0, nota + margem), 1),
         "respondidas": len(tentativas),
+        "cobertura": round(100 * com_resposta / peso_total),
     }
 
 

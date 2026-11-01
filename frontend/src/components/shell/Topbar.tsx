@@ -1,4 +1,4 @@
-import { Award, Flame, LogOut, Moon, Sparkles, Store, Sun, Terminal, UserRound } from "lucide-react";
+import { Award, Flag, Flame, LogOut, Moon, Sparkles, Store, Sun, Terminal, UserRound } from "lucide-react";
 import { formatarNumeroBR, textoProva } from "../../lib/format";
 import { nomeExibido } from "../../lib/perfil";
 import { AnelNivel } from "../AnelNivel";
@@ -277,6 +277,14 @@ export function Topbar({ tema, onAlternarTema, me, revisoesHoje, onSair, onRever
                       >
                         <Store size={16} strokeWidth={2} />
                         Loja
+                      </NavLink>
+                      <NavLink
+                        to="/perfil#marcadas"
+                        onClick={() => setContaAberta(false)}
+                        className="flex items-center gap-2.5 rounded-btn px-2.5 py-2 text-corpo text-ink-2 transition duration-hover hover:bg-ground hover:text-ink"
+                      >
+                        <Flag size={16} strokeWidth={2} />
+                        Questões marcadas
                       </NavLink>
                     </div>
 

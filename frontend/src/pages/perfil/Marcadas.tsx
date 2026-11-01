@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { Flag, ImageIcon } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { EstadoFalha } from "../../components/EstadoFalha";
 import { EstadoVazio } from "../../components/EstadoVazio";
 import { api } from "../../lib/api";
@@ -24,6 +25,14 @@ interface Props {
 export function Marcadas({ questoes, isLoading, isError, isPaused, onTentarDeNovo }: Props) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  // Vindo de "Questões marcadas", no menu da conta. Depois de carregar, porque a lista
+  // empurra a seção; num setTimeout pelo mesmo motivo de Lembretes (o AppShell volta ao topo).
+  const { hash } = useLocation();
+  useEffect(() => {
+    if (hash !== "#marcadas" || isLoading) return;
+    const timer = setTimeout(() => document.getElementById("marcadas")?.scrollIntoView({ block: "start" }), 0);
+    return () => clearTimeout(timer);
+  }, [hash, isLoading]);
 
   async function desmarcar(id: number) {
     await api.delete(`/questoes/${id}/marcar`);
@@ -31,7 +40,7 @@ export function Marcadas({ questoes, isLoading, isError, isPaused, onTentarDeNov
   }
 
   return (
-    <section className="flex flex-col gap-4">
+    <section id="marcadas" className="flex scroll-mt-20 flex-col gap-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="text-bloco text-ink">Questões marcadas</h2>

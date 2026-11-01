@@ -660,6 +660,9 @@ acompanha a raridade: o que se repete dezenas de vezes por dia quase não aparec
   (`animate-marcar`), as moedas e "Ver as conquistas". O protótipo tinha um aviso durante a
   sessão; ficou de fora, porque a decisão é sóbria durante o caso. Seu perfil mostra as 3 de
   maior grau.
+- **Tabela no enunciado** (`components/TextoEnunciado.tsx`): título em `--ground`, fios de
+  `--line-soft`, números tabulares. Rola dentro da própria caixa: em 320 px a terceira coluna
+  fica para o lado, e a página não se move.
 - **Ainda por vir** (no protótipo): temas, estampas e efeitos (fase 4), perfil público (fase 5).
 
 ### Página pública (`/`)

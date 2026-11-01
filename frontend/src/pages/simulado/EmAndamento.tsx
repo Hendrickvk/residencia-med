@@ -2,6 +2,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, ArrowRight, BadgeCheck, Flag } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Dialog } from "../../components/Dialog";
+import { TextoEnunciado } from "../../components/TextoEnunciado";
+import { EstadoFalha } from "../../components/EstadoFalha";
 import { ImagemQuestao } from "../../components/ImagemQuestao";
 import { api } from "../../lib/api";
 import { BOTAO_PRIMARIO, BOTAO_SECUNDARIO, PRESSAO } from "../../lib/estilos";
@@ -55,10 +57,36 @@ async function finalizarOuConferir(simuladoId: number) {
 }
 
 export default function EmAndamento({ simuladoId, onFinalizado }: Props) {
-  const { data: simulado, isLoading: carregandoSimulado } = useSimulado(simuladoId);
-  const { data: itens, isLoading: carregandoItens } = useItensSimulado(simuladoId);
+  const consultaSimulado = useSimulado(simuladoId);
+  const consultaItens = useItensSimulado(simuladoId);
+  const { data: simulado } = consultaSimulado;
+  const { data: itens } = consultaItens;
+  const carregando = consultaSimulado.isLoading || consultaItens.isLoading;
+  const pausado = consultaSimulado.isPaused || consultaItens.isPaused;
 
-  if (carregandoSimulado || carregandoItens || !simulado || !itens) {
+  // A ordem de sempre: dado na mão segue; sem ele, pausa e falha. Antes, o esqueleto ficava
+  // para sempre, e ela não sabia se a prova tinha se perdido.
+  if ((!simulado || !itens) && !carregando) {
+    return (
+      <>
+        <BarraFoco>
+          <span className="text-[14.5px] text-ink-2">Simulado</span>
+        </BarraFoco>
+        <div className="mx-auto max-w-[680px]">
+          <EstadoFalha
+            mensagem="Não deu para abrir a prova agora. Pode ser a conexão. Suas respostas estão salvas e o tempo continua correndo."
+            pausado={pausado}
+            onTentarDeNovo={() => {
+              void consultaSimulado.refetch();
+              void consultaItens.refetch();
+            }}
+          />
+        </div>
+      </>
+    );
+  }
+
+  if (!simulado || !itens) {
     return (
       <>
         <BarraFoco>
@@ -302,7 +330,7 @@ function Conteudo({
           </div>
 
           <div className="flex flex-col gap-6 rounded-caso border border-line bg-surface p-6 md:px-11 md:py-9">
-            <p className="leitura-enunciado text-ink">{itemAtual.enunciado}</p>
+            <TextoEnunciado texto={itemAtual.enunciado} />
             {itemAtual.tem_imagem && (
               <ImagemQuestao questaoId={itemAtual.id} alt="Imagem da questão" />
             )}

@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { BadgeCheck, Clock, Dices, Flag, RefreshCw } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { EstadoFalha } from "../../components/EstadoFalha";
+import { TextoEnunciado } from "../../components/TextoEnunciado";
 import { EstadoVazio } from "../../components/EstadoVazio";
 import { Kbd } from "../../components/Kbd";
 import { TemaDoCaso } from "../../components/TemaDoCaso";
@@ -17,7 +18,7 @@ import { formatarMMSS } from "../../lib/format";
 import { zerarGanhos } from "../../lib/ganhos";
 import { rolarParaTopo } from "../../lib/movimento";
 import { enfileirarResposta } from "../../lib/respostasQueue";
-import { limparSessao, salvarSessao, type SessaoSalva } from "../../lib/sessaoSalva";
+import { envioDoCaso, limparSessao, salvarSessao, type SessaoSalva } from "../../lib/sessaoSalva";
 import { seloDasProvas } from "../../lib/simulados";
 import type { FiltrosPratica, Questao, ResumoSessao } from "../../lib/types";
 import { AlternativaLinha, type EstadoAlternativa } from "./AlternativaLinha";
@@ -61,10 +62,10 @@ export default function Sessao({ filtros, nonce, salva, email, onFinalizar, onVo
   // `[]` novo a cada render o faria rodar sem nada ter mudado.
   const fila = useMemo(() => salva?.questoes ?? data?.questoes ?? [], [salva, data]);
   const [idx, setIdx] = useState(salva?.idx ?? 0);
-  const [selecionada, setSelecionada] = useState<string | null>(null);
-  const [confirmado, setConfirmado] = useState(false);
+  const [selecionada, setSelecionada] = useState<string | null>(salva?.caso?.selecionada ?? null);
+  const [confirmado, setConfirmado] = useState(salva?.caso?.confirmado ?? false);
   // "Estou chutando", declarado antes de confirmar (DESIGN_TRIAGEM.md §6).
-  const [chutando, setChutando] = useState(false);
+  const [chutando, setChutando] = useState(salva?.caso?.chutando ?? false);
   const [distribuicao, setDistribuicao] = useState<Record<string, number> | null>(null);
   const [marcadas, setMarcadas] = useState<Set<number>>(() => new Set(salva?.marcadas ?? []));
   // Acerto/erro de cada caso já concluído, para o progresso na barra de foco.
@@ -74,7 +75,8 @@ export default function Sessao({ filtros, nonce, salva, email, onFinalizar, onVo
   const respondidasRef = useRef<ResumoSessao["respondidas"]>(salva?.respondidas ?? []);
   // Retomando, o cronômetro continua de onde parou em vez de zerar.
   const inicioSessaoRef = useRef(Date.now() - (salva?.duracaoMs ?? 0));
-  const { decorridoMs, tempoDecorridoMs } = useCronometro(idx);
+  const { decorridoMs, tempoDecorridoMs } = useCronometro(idx, salva?.caso?.decorridoMs ?? 0);
+  const sessaoId = useRef(salva?.sessaoId ?? crypto.randomUUID());
 
   const questaoAtual = fila[idx];
   const correta = questaoAtual ? selecionada === questaoAtual.resposta_correta : false;
@@ -90,9 +92,11 @@ export default function Sessao({ filtros, nonce, salva, email, onFinalizar, onVo
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data]);
 
-  // Guarda onde ela está a cada caso concluído, e uma vez quando o lote chega —
-  // quem fecha a aba no primeiro caso também tem o que retomar.
-  useEffect(() => {
+  // Guarda onde ela está a cada gesto, e uma vez quando o lote chega — quem fecha a aba
+  // no primeiro caso também tem o que retomar. Por ref, porque a saída da página
+  // (abaixo) precisa do tempo de agora, e não do último gesto.
+  const guardar = useRef(() => {});
+  guardar.current = () => {
     if (!email || fila.length === 0) return;
     salvarSessao({
       email,
@@ -103,13 +107,46 @@ export default function Sessao({ filtros, nonce, salva, email, onFinalizar, onVo
       resultados,
       marcadas: [...marcadas],
       duracaoMs: Date.now() - inicioSessaoRef.current,
+      sessaoId: sessaoId.current,
+      caso: { selecionada, confirmado, chutando, decorridoMs: tempoDecorridoMs() },
     });
-  }, [email, filtros, fila, idx, resultados, marcadas]);
+  };
+  useEffect(() => {
+    guardar.current();
+  }, [email, filtros, fila, idx, resultados, marcadas, selecionada, confirmado, chutando]);
+
+  // O celular mata a aba sem aviso, e `visibilitychange` é o último sinal confiável.
+  useEffect(() => {
+    function aoSair() {
+      if (document.visibilityState === "hidden") guardar.current();
+    }
+    document.addEventListener("visibilitychange", aoSair);
+    window.addEventListener("pagehide", aoSair);
+    return () => {
+      document.removeEventListener("visibilitychange", aoSair);
+      window.removeEventListener("pagehide", aoSair);
+    };
+  }, []);
+
+  // Retomada com a discussão aberta: a distribuição não foi guardada, e vem de novo.
+  const questaoRetomada = salva?.caso?.confirmado ? salva.questoes[salva.idx]?.id : undefined;
+  useEffect(() => {
+    if (questaoRetomada === undefined) return;
+    api
+      .get<Record<string, number>>(`/questoes/${questaoRetomada}/distribuicao`)
+      .then(setDistribuicao)
+      .catch(() => {});
+  }, [questaoRetomada]);
 
   // Sessão encerrada não é sessão para retomar.
   function finalizar() {
+    guardar.current = () => {};
     limparSessao();
-    onFinalizar({ respondidas: respondidasRef.current, duracaoTotalMs: Date.now() - inicioSessaoRef.current });
+    onFinalizar({
+      respondidas: respondidasRef.current,
+      duracaoTotalMs: Date.now() - inicioSessaoRef.current,
+      questoes: fila,
+    });
   }
 
   function confirmar() {
@@ -146,10 +183,15 @@ export default function Sessao({ filtros, nonce, salva, email, onFinalizar, onVo
     if (!questaoAtual || !selecionada) return;
     const tempoMs = tempoDecorridoMs();
     const confianca = chutando ? "chute" : correta ? "seguro" : undefined;
-    enfileirarResposta({ questao_id: questaoAtual.id, alternativa: selecionada, confianca, tempo_ms: tempoMs });
+    enfileirarResposta(
+      { questao_id: questaoAtual.id, alternativa: selecionada, confianca, tempo_ms: tempoMs },
+      envioDoCaso(sessaoId.current, questaoAtual.id, idx),
+    );
     respondidasRef.current.push({
       id: questaoAtual.id,
       correta,
+      alternativa: selecionada,
+      chute: chutando,
       area: questaoAtual.area,
       especialidade: questaoAtual.especialidade,
       tempoMs,
@@ -393,7 +435,7 @@ export default function Sessao({ filtros, nonce, salva, email, onFinalizar, onVo
           <div className="flex flex-col gap-6 rounded-caso border border-line bg-surface p-6 md:px-11 md:py-9">
             {/* Sem limite em ch: o texto vai até a borda das alternativas, e é a coluna
                 de 680px que mantém a linha curta (DESIGN_TRIAGEM.md §5). */}
-            <p className="leitura-enunciado text-ink">{questaoAtual.enunciado}</p>
+            <TextoEnunciado texto={questaoAtual.enunciado} />
             {questaoAtual.tem_imagem && (
               <ImagemQuestao questaoId={questaoAtual.id} alt="Imagem do caso" />
             )}

@@ -5,6 +5,7 @@ import { criarBaralho, criarCartao, criarPasta, listarPastas } from "../lib/cart
 import { corDeFundo } from "../lib/paleta";
 import { BOTAO_PRIMARIO, CAMPO, PRESSAO } from "../lib/estilos";
 import { Dialog } from "./Dialog";
+import { EstadoFalha } from "./EstadoFalha";
 
 const CHAVE_ULTIMO_BARALHO = "conduta:ultimo-baralho";
 
@@ -33,7 +34,7 @@ export function CriarCartao({ questaoId, respostaCorreta }: Props) {
 
   // Só busca os baralhos quando ela abre: no meio de uma sessão de estudo,
   // ninguém paga por uma requisição que talvez não use.
-  const { data } = useQuery({ queryKey: ["pastas"], queryFn: listarPastas, enabled: aberto });
+  const { data, isPaused, refetch, isFetching } = useQuery({ queryKey: ["pastas"], queryFn: listarPastas, enabled: aberto });
   const baralhos = (data?.pastas ?? []).flatMap((p) =>
     p.baralhos.map((b) => ({ ...b, pasta: p.nome, cor: p.cor })),
   );
@@ -104,7 +105,19 @@ export function CriarCartao({ questaoId, respostaCorreta }: Props) {
       </button>
 
       <Dialog titulo="Novo cartão deste caso" aberto={aberto} onFechar={() => setAberto(false)}>
-        {baralhos.length === 0 ? (
+        {!data ? (
+          // Sem resposta ainda não quer dizer sem baralhos: dizer isso a quem tem levaria
+          // a criar outro por engano.
+          isFetching && !isPaused ? (
+            <div role="status" aria-label="Carregando seus baralhos" className="h-[220px] animate-pulse rounded-card bg-line-soft" />
+          ) : (
+            <EstadoFalha
+              mensagem="Não deu para carregar os seus baralhos. Pode ser a conexão."
+              pausado={isPaused}
+              onTentarDeNovo={() => void refetch()}
+            />
+          )
+        ) : baralhos.length === 0 ? (
           // Mandar ela sair para criar um baralho e voltar seria perder o caso
           // que está na tela. O primeiro baralho nasce aqui mesmo.
           <PrimeiroBaralho onCriado={() => queryClient.invalidateQueries({ queryKey: ["pastas"] })} />
@@ -184,11 +197,13 @@ export function CriarCartao({ questaoId, respostaCorreta }: Props) {
 function PrimeiroBaralho({ onCriado }: { onCriado: () => void }) {
   const [nome, setNome] = useState("");
   const [criando, setCriando] = useState(false);
+  const [erro, setErro] = useState(false);
 
   async function criar(e: React.FormEvent) {
     e.preventDefault();
     if (!nome.trim()) return;
     setCriando(true);
+    setErro(false);
     try {
       // Uma pasta genérica junto: pasta é organização, e exigir que ela
       // invente a hierarquia antes do primeiro cartão é pedir demais no meio
@@ -196,6 +211,8 @@ function PrimeiroBaralho({ onCriado }: { onCriado: () => void }) {
       const pasta = await criarPasta("Meus cartões", "ardosia");
       await criarBaralho(pasta.id, nome);
       onCriado();
+    } catch {
+      setErro(true);
     } finally {
       setCriando(false);
     }
@@ -218,6 +235,11 @@ function PrimeiroBaralho({ onCriado }: { onCriado: () => void }) {
           className={CAMPO}
         />
       </label>
+      {erro && (
+        <p role="alert" className="text-apoio font-medium text-t1">
+          Não deu para criar agora. Pode ser a conexão. Tente de novo.
+        </p>
+      )}
       <button type="submit" disabled={criando || !nome.trim()} className={`${BOTAO_PRIMARIO} w-full`}>
         {criando ? "Criando…" : "Criar baralho"}
       </button>

@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useLocation } from "react-router-dom";
 import { useMe } from "../../lib/auth";
 import { BOTAO_PRIMARIO, BOTAO_SECUNDARIO } from "../../lib/estilos";
-import { lerSessao, limparSessao, type SessaoSalva } from "../../lib/sessaoSalva";
+import { enfileirarResposta } from "../../lib/respostasQueue";
+import { lerSessao, limparSessao, respostaPendente, type SessaoSalva } from "../../lib/sessaoSalva";
 import type { FiltrosPratica, ResumoSessao } from "../../lib/types";
 import Configurador from "./Configurador";
 import Resumo from "./Resumo";
@@ -66,6 +67,15 @@ export default function Praticar() {
 
   const entrada = trocouFase ? "animate-entrar" : "";
 
+  // Ela já viu o gabarito do caso que estava aberto: a resposta conta, mesmo sem retomar.
+  function encerrarPendente() {
+    if (!pendente) return;
+    const resposta = respostaPendente(pendente);
+    if (resposta) enfileirarResposta(resposta.payload, resposta.envio);
+    limparSessao();
+    setSalva(null);
+  }
+
   if (fase.tipo === "config") {
     return (
       <div key="config" className={`flex flex-col gap-5 ${entrada}`}>
@@ -88,10 +98,7 @@ export default function Praticar() {
               <button
                 type="button"
                 className={BOTAO_SECUNDARIO}
-                onClick={() => {
-                  limparSessao();
-                  setSalva(null);
-                }}
+                onClick={encerrarPendente}
               >
                 Descartar
               </button>
@@ -100,7 +107,10 @@ export default function Praticar() {
         )}
         <Configurador
           areaInicial={estadoNav?.areaId}
-          onIniciar={(filtros) => setFase({ tipo: "sessao", filtros, nonce: Date.now() })}
+          onIniciar={(filtros) => {
+            encerrarPendente();
+            setFase({ tipo: "sessao", filtros, nonce: Date.now() });
+          }}
         />
       </div>
     );

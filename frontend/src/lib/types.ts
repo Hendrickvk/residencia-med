@@ -98,11 +98,17 @@ export interface RespondidaResumo {
   area: string;
   especialidade: string | null;
   tempoMs: number;
+  // Opcionais: uma sessão salva antes de guardá-las ainda pode ser retomada.
+  alternativa?: string;
+  chute?: boolean;
 }
 
 export interface ResumoSessao {
   respondidas: RespondidaResumo[];
   duracaoTotalMs: number;
+  // O lote da própria sessão, que já trouxe gabarito e discussão: rever não pede nada novo
+  // ao servidor nem gasta a cota.
+  questoes: Questao[];
 }
 
 export interface AreaDesempenho {
@@ -121,7 +127,8 @@ export interface DiaEvolucao {
 }
 
 export interface PainelData {
-  totais: { respostas: number; acertos: number; pct_acerto_geral: number };
+  // `acertos` são pontos: o acerto no chute vale meio. `acertos_no_chute` diz quantos.
+  totais: { respostas: number; acertos: number; acertos_no_chute: number; pct_acerto_geral: number };
   por_area: AreaDesempenho[];
   evolucao_14_dias: DiaEvolucao[];
   respondidas_hoje: number;
@@ -145,6 +152,7 @@ export interface NotaProjetada {
   minimo: number;
   maximo: number;
   respondidas: number; // primeiras respostas que sustentam a projeção
+  cobertura: number; // % das questões dos cadernos em temas que ela já respondeu
 }
 
 // Prova oficial terminada (db.simulados_oficiais_feitos), da mais recente para a mais antiga:
