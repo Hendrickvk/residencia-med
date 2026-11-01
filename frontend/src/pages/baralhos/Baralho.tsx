@@ -122,7 +122,7 @@ export default function Baralho() {
 
       {!isLoading && (isError || isPaused) && !cartoes && (
         <EstadoFalha
-          mensagem="Não deu para carregar este baralho. Pode ser a conexão."
+          mensagem="Não deu para carregar este baralho."
           pausado={isPaused}
           onTentarDeNovo={() => void refetch()}
         />
@@ -130,7 +130,7 @@ export default function Baralho() {
 
       {cartoes?.length === 0 && (
         <EstadoVazio
-          mensagem="Baralho vazio. Um cartão é uma pergunta na frente e a resposta no verso."
+          mensagem="Este baralho ainda não tem cartões."
           cta={{ label: "Escrever o primeiro", onClick: () => setEditando({}) }}
         />
       )}

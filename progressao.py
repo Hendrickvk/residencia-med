@@ -609,7 +609,9 @@ def loja(usuario_id):
                 "itens": sorted(
                     (
                         estado(i) for i in CATALOGO
-                        if i["tipo"] == tipo and (not i.get("aposentado") or i["id"] in compradas)
+                        # A moldura de patente mora na trilha de níveis, em `/progresso`.
+                        if i["tipo"] == tipo and not i.get("de_patente")
+                        and (not i.get("aposentado") or i["id"] in compradas)
                     ),
                     key=lambda i: (not i["liberado"], ITENS[i["id"]].get("nivel", 0)),
                 ),
@@ -694,6 +696,10 @@ def equipar(tipo, item_id, *, usuario_id):
             if not seu:
                 raise CompraRecusada("Este item ainda não é seu.")
             valor = item_id
+            # Escolher a moldura da patente atual é não escolher nada: gravar o id a deixaria
+            # presa aqui quando a próxima patente chegar.
+            if item_id == _MOLDURAS_DE_PATENTE.get(patente_de(nivel_de(linha["xp_total"]))):
+                valor = None
         equipados = {**(linha["equipados"] or {}), tipo: valor}
         conn.execute("UPDATE usuarios SET equipados = ?::jsonb WHERE id = ?", (json.dumps(equipados), usuario_id))
     return loja(usuario_id)
@@ -725,7 +731,10 @@ def resumo(usuario):
 
     return {
         "nivel": progresso_do_xp(usuario["xp_total"]),
-        "patentes": [{"nome": nome, "nivel": inicio} for inicio, nome in PATENTES],
+        "patentes": [
+            {"nome": nome, "nivel": inicio, "moldura": _MOLDURAS_DE_PATENTE.get(nome)}
+            for inicio, nome in PATENTES
+        ],
         # As cinco grandes áreas, mesmo sem XP; outra área só aparece se tiver rendido algo.
         "areas": sorted(
             (

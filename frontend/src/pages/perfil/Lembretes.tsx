@@ -41,7 +41,7 @@ export function Lembretes({ me }: { me: Me | undefined }) {
         Avisar por e-mail quando houver revisão vencida
       </Interruptor>
       <p className="text-apoio text-muted">
-        No máximo um e-mail por dia, às 8h, e só nos dias em que há casos ou cartões para revisar.
+        No máximo um por dia, às 8h, só quando houver revisão.
         {me && ` Vai para ${me.email}.`}
       </p>
       {me && !me.email_confirmado && ligado && (

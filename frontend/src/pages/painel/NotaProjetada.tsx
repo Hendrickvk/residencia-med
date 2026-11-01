@@ -21,7 +21,6 @@ export function NotaProjetada({ nota, simulados, corte, onFazerProva }: Props) {
     <section className="flex flex-col gap-5 rounded-card border border-line bg-surface p-6">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <span className="rotulo text-muted">Nota projetada na prova</span>
-        <span className="text-apoio text-muted">seu domínio em cada tema, com o peso dele no Revalida e no ENAMED</span>
       </div>
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-10">
         <div className="flex flex-col gap-2">
@@ -64,13 +63,11 @@ export function NotaProjetada({ nota, simulados, corte, onFazerProva }: Props) {
             <strong className="font-semibold text-ink">{distanciaDoCorte(Math.round(nota.nota), corte.corte)}</strong>.
           </p>
           <p className="text-apoio text-muted [text-wrap:pretty]">
-            A faixa diminui conforme você responde, até cerca de 10 pontos para cada lado: a variação de uma prova só.
+            A faixa diminui conforme você responde.
           </p>
           <p className="text-apoio text-muted [text-wrap:pretty]">
-            Vem das suas {nota.respondidas.toLocaleString("pt-BR")} primeiras respostas, com o chute certo valendo meio.
-            Os temas que você já respondeu somam {nota.cobertura}% das questões dos cadernos do INEP; nos outros, a conta
-            usa o seu desempenho na especialidade, na área ou no geral. É uma estimativa do Conduta, ainda não comparada
-            com notas reais de prova.
+            Calculada com as suas {nota.respondidas.toLocaleString("pt-BR")} primeiras respostas, nos temas que somam{" "}
+            {nota.cobertura}% das provas do INEP. É uma estimativa, ainda não comparada com notas reais.
           </p>
         </div>
         <div className="flex flex-col gap-3">
@@ -78,8 +75,7 @@ export function NotaProjetada({ nota, simulados, corte, onFazerProva }: Props) {
           {simulados.length === 0 ? (
             <>
               <p className="text-corpo text-ink-2">
-                Nenhuma ainda. Um caderno inteiro no tempo oficial, de uma vez ou em blocos, é a melhor forma de conferir a
-                projeção.
+                Nenhuma ainda.
               </p>
               <button type="button" onClick={onFazerProva} className={`group self-start ${BOTAO_SECUNDARIO}`}>
                 Fazer uma prova oficial

@@ -20,7 +20,6 @@ export function PrioridadesEstudo({ prioridades, onPraticar }: Props) {
     <section className="flex flex-col gap-4 rounded-card border border-line bg-surface p-6">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <span className="rotulo text-muted">Onde você ganha mais pontos</span>
-        <span className="text-apoio text-muted">temas que mais caem no Revalida e no ENAMED, cruzados com o seu acerto</span>
       </div>
       <ol className="grid grid-cols-1 gap-3 lg:grid-cols-3">
         {prioridades.map((p, i) => {
@@ -46,7 +45,7 @@ export function PrioridadesEstudo({ prioridades, onPraticar }: Props) {
                     ? "Você ainda não praticou este tema"
                     : suficiente
                       ? `${formatarPctBR(pct, 0)}% de acerto · ${p.acertos.toLocaleString("pt-BR")} de ${p.respondidas}`
-                      : `Acertou ${p.acertos.toLocaleString("pt-BR")} de ${p.respondidas} · pouca evidência`}
+                      : `Acertou ${p.acertos.toLocaleString("pt-BR")} de ${p.respondidas} · poucas respostas`}
                 </span>
                 {suficiente && (
                   <div className="h-1 overflow-hidden rounded-[2px] bg-line-soft">

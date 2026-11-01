@@ -9,14 +9,12 @@ import { CenaDoTema } from "../../components/Tracos";
 import { ApiError } from "../../lib/api";
 import { useMe } from "../../lib/auth";
 import { temaDaMoldura } from "../../lib/cosmeticos";
-import { BOTAO_SECUNDARIO } from "../../lib/estilos";
+import { BOTAO_PEQUENO, BOTAO_SECUNDARIO } from "../../lib/estilos";
 import { formatarNumeroBR } from "../../lib/format";
 import { nomeExibido } from "../../lib/perfil";
 import { comprarItem, equiparItem, useLoja } from "../../lib/progresso";
 import type { ItemLoja, Loja as DadosLoja, Me } from "../../lib/types";
 
-const BOTAO_PEQUENO =
-  "inline-flex h-9 items-center justify-center gap-1.5 rounded-btn border border-line bg-surface px-3 text-[14px] font-medium text-ink-2 transition duration-hover ease-brand hover:border-muted hover:text-ink active:scale-[0.97] disabled:cursor-not-allowed disabled:text-faint disabled:active:scale-100";
 const BOTAO_PAGAR =
   "inline-flex h-9 items-center justify-center gap-1.5 rounded-btn bg-ink px-3 text-[14px] font-semibold tabular-nums text-onink transition duration-hover ease-brand hover:opacity-90 active:scale-[0.97] disabled:cursor-not-allowed disabled:bg-line disabled:text-faint disabled:active:scale-100";
 
@@ -95,11 +93,7 @@ function RodapeDoItem({ item, saldo, acoes }: { item: ItemLoja; saldo: number; a
           <Lock size={13} strokeWidth={2.5} className="mt-[3px] shrink-0" />
           {item.exige}
         </span>
-        {item.de_patente ? (
-          <span className="text-apoio text-muted">Vem com a patente</span>
-        ) : (
-          <Preco valor={item.preco} className="text-apoio text-muted" />
-        )}
+        <Preco valor={item.preco} className="text-apoio text-muted" />
       </>
     );
   }
@@ -207,7 +201,7 @@ export default function PaginaLoja() {
       setConfirmando(null);
     } catch (e) {
       // A frase do servidor diz o que faltou (nível, saldo). Sem ela, é a conexão.
-      setErro(e instanceof ApiError ? e.message : "Não deu para concluir agora. Pode ser a conexão.");
+      setErro(e instanceof ApiError ? e.message : "Não deu para concluir agora.");
     } finally {
       setOcupado(false);
     }
@@ -235,7 +229,7 @@ export default function PaginaLoja() {
   if (!data) {
     return (
       <EstadoFalha
-        mensagem="Não deu para carregar a loja. Pode ser a conexão."
+        mensagem="Não deu para carregar a loja."
         pausado={isPaused}
         onTentarDeNovo={() => refetch()}
       />
@@ -281,7 +275,7 @@ export default function PaginaLoja() {
           <LinhaConsumivel
             icone={<Zap size={20} strokeWidth={2} />}
             nome="XP em dobro"
-            descricao={`Por ${dobro.minutos} minutos, a partir de quando você comprar. Não dobra as moedas.`}
+            descricao={`Por ${dobro.minutos} minutos, a partir da compra. Não dobra as moedas.`}
             id={dobro.id}
             preco={dobro.preco}
             saldo={data.moedas}

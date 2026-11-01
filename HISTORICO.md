@@ -8,6 +8,11 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
 
 ## Pendências
 
+- **Trilha de níveis e textos (01/11).** As molduras de patente saíram da loja e foram para a
+  Trilha de níveis, em Seu perfil, onde se usa ou tira cada uma. Escolher a da patente atual
+  grava "sem escolha", para ela seguir subindo sozinha com a próxima patente. Decisão do usuário
+  sobre os textos: tirar os apontamentos pequenos ("vem com a patente", "volta na sua revisão em
+  10 min", "pode ser a conexão", os subtítulos dos cartões do Painel) e encurtar os outros.
 - **Molduras novas (01/11).** No ar desde 01/11: patentes em coroa de louros, com
   o reflexo subindo da prata para cima; Flor, Órbita, Dália, Leque e Noite estrelada na loja,
   nos preços e níveis das seis antigas, cada uma com o tema do crachá e do painel do perfil.

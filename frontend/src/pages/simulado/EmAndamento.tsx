@@ -74,7 +74,7 @@ export default function EmAndamento({ simuladoId, onFinalizado }: Props) {
         </BarraFoco>
         <div className="mx-auto max-w-[680px]">
           <EstadoFalha
-            mensagem="Não deu para abrir a prova agora. Pode ser a conexão. Suas respostas estão salvas e o tempo continua correndo."
+            mensagem="Não deu para abrir a prova agora. Suas respostas estão salvas e o tempo continua correndo."
             pausado={pausado}
             onTentarDeNovo={() => {
               void consultaSimulado.refetch();
@@ -146,7 +146,7 @@ function Conteudo({
       const faltam = await esvaziarRespostasSimulado(simuladoId);
       if (faltam > 0) {
         setErroFinalizar(
-          `${faltam} resposta${faltam !== 1 ? "s" : ""} ainda não ${faltam !== 1 ? "chegaram" : "chegou"} ao servidor. A prova segue aberta, e nada se perdeu.`,
+          `${faltam} resposta${faltam !== 1 ? "s" : ""} ainda não ${faltam !== 1 ? "chegaram" : "chegou"} ao servidor. A prova segue aberta.`,
         );
         setDialogoAberto(true);
         setFinalizando(false);
@@ -176,7 +176,7 @@ function Conteudo({
     } catch {
       // Só vai para o resultado com a prova fechada de verdade. Aqui ela segue aberta,
       // com a tela como estava, e dá para tentar de novo.
-      setErroFinalizar("Não deu para finalizar agora. Pode ser a conexão. A prova segue aberta, e nada se perdeu.");
+      setErroFinalizar("Não deu para finalizar agora. A prova segue aberta.");
       setDialogoAberto(true);
       setFinalizando(false);
     }

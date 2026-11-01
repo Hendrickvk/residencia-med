@@ -31,7 +31,6 @@ export function EvolucaoMemoria({ memoria }: { memoria: Memoria }) {
     <section className="flex flex-col gap-5 rounded-card border border-line bg-surface p-6">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <span className="rotulo text-muted">Evolução da memória</span>
-        <span className="text-apoio text-muted">conta os casos que voltaram depois de pelo menos 1 dia</span>
       </div>
       <ResumoSemana
         semana={ultimos_7_dias}
@@ -61,7 +60,7 @@ function ResumoSemana({
       <p className="text-corpo text-ink-2">
         {temHistorico
           ? "Nenhum caso voltou para revisão nos últimos 7 dias."
-          : "A retenção aparece quando os casos que você respondeu voltarem para revisão, a partir do dia seguinte."}
+          : "Os casos que você responder voltam a partir de amanhã."}
       </p>
     );
   }
@@ -106,7 +105,7 @@ function Estagios({ estagios }: { estagios: Memoria["estagios"] }) {
     <div className="flex flex-col gap-3">
       <span className="text-apoio font-semibold text-ink-2">Estágios dos casos</span>
       {total === 0 ? (
-        <p className="text-apoio text-muted">Cada caso que você responder entra aqui.</p>
+        <p className="text-apoio text-muted">Nenhum caso ainda.</p>
       ) : (
         <>
           <div
@@ -149,7 +148,7 @@ function RetencaoSemanas({ semanas }: { semanas: Memoria["semanas"] }) {
           className="flex items-center rounded-card border border-dashed border-line px-4 text-apoio text-muted"
           style={{ minHeight: ALTURA + 44 }}
         >
-          Uma semana entra no gráfico quando pelo menos {MINIMO_AMOSTRA} casos voltarem nela.
+          Ainda sem semanas com {MINIMO_AMOSTRA} casos.
         </p>
       </div>
     );
@@ -217,7 +216,7 @@ function OndeEsquece({ especialidades }: { especialidades: Memoria["especialidad
       <span className="text-apoio font-semibold text-ink-2">Onde você mais esquece</span>
       {lista.length === 0 ? (
         <p className="text-apoio text-muted">
-          Uma especialidade aparece aqui quando pelo menos {MINIMO_AMOSTRA} casos dela voltarem para revisão.
+          Ainda sem especialidades com {MINIMO_AMOSTRA} casos.
         </p>
       ) : (
         <ul className="flex flex-col gap-3">

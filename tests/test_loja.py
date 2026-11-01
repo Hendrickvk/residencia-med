@@ -154,7 +154,6 @@ def test_item_inexistente(usuario_teste):
 def test_sem_escolha_a_moldura_e_a_da_patente(usuario_teste):
     _dar(usuario_teste, xp=NIVEL_10)
     assert progressao.equipados_de(db.obter_usuario(usuario_teste))["moldura"] == "sutura"
-    assert _item(progressao.loja(usuario_teste), "sutura")["em_uso"] is True
 
 
 def test_ciclo_basico_nao_tem_moldura(usuario_teste):
@@ -403,3 +402,35 @@ def test_aposentada_nao_e_prometida_no_proximo_nivel():
         libera = progressao.proximo_desbloqueio(nivel)
         if libera:
             assert not any(progressao.ITENS[i["id"]].get("aposentado") for i in libera["itens"])
+
+
+# --- Trilha de níveis -------------------------------------------------------
+
+def test_moldura_de_patente_nao_aparece_na_loja(usuario_teste):
+    _dar(usuario_teste, xp=progressao.xp_do_nivel(70))
+    ids = {i["id"] for s in progressao.loja(usuario_teste)["secoes"] for i in s["itens"]}
+    assert not ids & set(progressao._MOLDURAS_DE_PATENTE.values())
+
+
+def test_trilha_diz_a_moldura_de_cada_patente(usuario_teste):
+    with db.get_conn() as conn:
+        usuario = conn.execute("SELECT * FROM usuarios WHERE id = ?", (usuario_teste,)).fetchone()
+    patentes = {p["nome"]: p["moldura"] for p in progressao.resumo(usuario)["patentes"]}
+    assert patentes["Ciclo básico"] is None
+    assert patentes["Chefia"] == "chefia"
+
+
+def test_escolher_a_moldura_da_patente_atual_nao_a_deixa_presa(usuario_teste):
+    _dar(usuario_teste, xp=NIVEL_10)
+    progressao.equipar("moldura", "ciclo", usuario_id=usuario_teste)
+    assert obter_me_moldura(usuario_teste) == "ciclo"
+    progressao.equipar("moldura", "sutura", usuario_id=usuario_teste)
+    assert obter_me_moldura(usuario_teste) == "sutura"
+    _dar(usuario_teste, xp=progressao.xp_do_nivel(20))
+    assert obter_me_moldura(usuario_teste) == "residencia"
+
+
+def obter_me_moldura(usuario_id):
+    with db.get_conn() as conn:
+        linha = conn.execute("SELECT * FROM usuarios WHERE id = ?", (usuario_id,)).fetchone()
+    return progressao.equipados_de(linha)["moldura"]

@@ -112,7 +112,7 @@ export function CriarCartao({ questaoId, respostaCorreta }: Props) {
             <div role="status" aria-label="Carregando seus baralhos" className="h-[220px] animate-pulse rounded-card bg-line-soft" />
           ) : (
             <EstadoFalha
-              mensagem="Não deu para carregar os seus baralhos. Pode ser a conexão."
+              mensagem="Não deu para carregar os seus baralhos."
               pausado={isPaused}
               onTentarDeNovo={() => void refetch()}
             />
@@ -170,7 +170,6 @@ export function CriarCartao({ questaoId, respostaCorreta }: Props) {
                 rows={3}
                 className={`${CAMPO} h-auto py-2 leading-normal`}
               />
-              <span className="text-apoio text-muted">Já veio com a conduta correta deste caso.</span>
             </label>
 
             {erro && (
@@ -221,7 +220,7 @@ function PrimeiroBaralho({ onCriado }: { onCriado: () => void }) {
   return (
     <form onSubmit={criar} className="flex flex-col gap-4">
       <p className="text-corpo text-ink-2">
-        Você ainda não tem baralhos. Dê um nome ao primeiro e o cartão já vai para dentro dele.
+        Crie um baralho para guardar este cartão.
       </p>
       <label htmlFor="primeiro-baralho" className="flex flex-col gap-1.5">
         <span className="rotulo text-muted">Nome do baralho</span>
@@ -237,7 +236,7 @@ function PrimeiroBaralho({ onCriado }: { onCriado: () => void }) {
       </label>
       {erro && (
         <p role="alert" className="text-apoio font-medium text-t1">
-          Não deu para criar agora. Pode ser a conexão. Tente de novo.
+          Não deu para criar agora. Tente de novo.
         </p>
       )}
       <button type="submit" disabled={criando || !nome.trim()} className={`${BOTAO_PRIMARIO} w-full`}>

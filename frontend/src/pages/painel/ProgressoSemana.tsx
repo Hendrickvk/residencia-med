@@ -25,7 +25,7 @@ export function ProgressoSemana({ semana, onPraticar }: Props) {
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <span className="rotulo text-muted">O que mudou nesta semana</span>
         <span className="text-apoio text-muted">
-          desde segunda, {dataCurta(semana.inicio)}: questões novas e o domínio estimado antes e agora
+          desde segunda, {dataCurta(semana.inicio)}
         </span>
       </div>
       <p className="text-corpo text-ink-2">

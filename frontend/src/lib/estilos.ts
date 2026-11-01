@@ -8,6 +8,9 @@ export const BOTAO_PRIMARIO =
 export const BOTAO_SECUNDARIO =
   "inline-flex h-11 items-center justify-center gap-2 rounded-btn border border-line bg-surface px-4 text-[15px] font-medium text-ink-2 transition duration-hover ease-brand hover:border-muted hover:text-ink active:scale-[0.97] disabled:cursor-not-allowed disabled:text-faint disabled:active:scale-100";
 
+export const BOTAO_PEQUENO =
+  "inline-flex h-9 items-center justify-center gap-1.5 rounded-btn border border-line bg-surface px-3 text-[14px] font-medium text-ink-2 transition duration-hover ease-brand hover:border-muted hover:text-ink active:scale-[0.97] disabled:cursor-not-allowed disabled:text-faint disabled:active:scale-100";
+
 // Botões pequenos da barra superior e do modo foco.
 export const PRESSAO = "active:scale-[0.94]";
 

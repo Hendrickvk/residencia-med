@@ -441,7 +441,7 @@ export interface AreaProgresso {
 
 export interface Progresso {
   nivel: ProgressoNivel;
-  patentes: { nome: string; nivel: number }[];
+  patentes: { nome: string; nivel: number; moldura: string | null }[];
   areas: AreaProgresso[];
   hoje: string;
   dias: { dia: string; xp: number }[];

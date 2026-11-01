@@ -168,7 +168,6 @@ export function QuadroTriagem({ areas, onAbrir, onPraticar }: Props) {
       )}
 
       <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-apoio text-muted">
-        <span>Classificação pelo aproveitamento:</span>
         {NIVEIS.map((n) => (
           <span key={n.nivel} className="flex items-center gap-1.5">
             <span className={`h-2.5 w-2.5 rounded-[2px] ${CLASSES_NIVEL[n.nivel].cheio}`} aria-hidden="true" />
@@ -176,12 +175,10 @@ export function QuadroTriagem({ areas, onAbrir, onPraticar }: Props) {
           </span>
         ))}
         {/* A escala gira em torno do corte (lib/triagem.ts): o verde começa nele. */}
-        <span>Do verde em diante, no nível do corte do Revalida (cerca de 60%)</span>
-        {/* db._PRIMEIRAS_TENTATIVAS: é o que explica um "14,5 acertos". */}
-        <span>Acerto no chute vale meio</span>
+        <span>Verde: nível do corte do Revalida, cerca de 60%</span>
         {insuficientes.length > 0 && (
           <span className="xl:ml-auto">
-            Amostra insuficiente: {listaNatural(insuficientes.map((a) => a.area))}
+            Poucas respostas: {listaNatural(insuficientes.map((a) => a.area))}
           </span>
         )}
       </div>

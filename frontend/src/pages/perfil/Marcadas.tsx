@@ -44,9 +44,6 @@ export function Marcadas({ questoes, isLoading, isError, isPaused, onTentarDeNov
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="text-bloco text-ink">Questões marcadas</h2>
-          <p className="mt-0.5 text-apoio text-muted">
-            O que você guardou para rever, da mais recente para a mais antiga.
-          </p>
         </div>
         {!!questoes?.length && (
           <button
@@ -69,14 +66,14 @@ export function Marcadas({ questoes, isLoading, isError, isPaused, onTentarDeNov
           que ela nunca marcou nada. */}
       {!isLoading && (isError || isPaused) && !questoes && (
         <EstadoFalha
-          mensagem="Não deu para carregar as suas marcadas. Pode ser a conexão."
+          mensagem="Não deu para carregar as suas marcadas."
           pausado={isPaused}
           onTentarDeNovo={onTentarDeNovo}
         />
       )}
 
       {questoes?.length === 0 && (
-        <EstadoVazio mensagem="Você ainda não marcou nenhuma questão. Durante um caso, a tecla M guarda ele aqui." />
+        <EstadoVazio mensagem="Nenhuma questão marcada. Durante um caso, aperte M para marcar." />
       )}
 
       {!!questoes?.length && (

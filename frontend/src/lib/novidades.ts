@@ -37,6 +37,15 @@ export const ROTULO_TIPO: Record<TipoNovidade, string> = {
 
 export const NOVIDADES: Novidade[] = [
   {
+    id: "2026-11-01b",
+    data: "1 de novembro de 2026",
+    titulo: "Trilha de níveis",
+    itens: [
+      { tipo: "novo", texto: "As molduras de patente agora ficam na Trilha de níveis, em Seu perfil." },
+      { tipo: "corrigido", texto: "Textos mais curtos e diretos em toda a plataforma." },
+    ],
+  },
+  {
     id: "2026-11-01",
     data: "1 de novembro de 2026",
     titulo: "Molduras novas",

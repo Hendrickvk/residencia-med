@@ -13,7 +13,7 @@ function descricao(d: PrevisaoDia, indice: number) {
   const total = d.dentro_meta + d.acima_meta;
   const dia = indice === 0 ? "Hoje" : DIAS_LONGOS[new Date(`${d.dia}T00:00:00`).getDay()];
   const base = `${dia}: ${total} caso${total !== 1 ? "s" : ""}`;
-  return d.acima_meta > 0 ? `${base}, ${d.acima_meta} acima da meta (esperam o dia seguinte)` : base;
+  return d.acima_meta > 0 ? `${base}, ${d.acima_meta} acima da meta (ficam para o dia seguinte)` : base;
 }
 
 // Carga de revisão dos próximos 7 dias contra a meta (repeticao_espacada.previsao_revisoes).
@@ -86,11 +86,11 @@ export function PrevisaoSemana({ dias, meta }: { dias: PrevisaoDia[]; meta: numb
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-apoio text-muted">
           <span className="flex items-center gap-1.5">
             <span className="h-2.5 w-2.5 rounded-[2px] bg-ink" aria-hidden="true" />
-            cabe na meta
+            dentro da meta
           </span>
           <span className="flex items-center gap-1.5">
             <span className="h-2.5 w-2.5 rounded-[2px] bg-t2" aria-hidden="true" />
-            passa da meta e espera o dia seguinte
+            acima da meta
           </span>
         </div>
       )}

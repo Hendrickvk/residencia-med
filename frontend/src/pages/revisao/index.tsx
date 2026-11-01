@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { BadgeCheck, RefreshCw, RotateCcw } from "lucide-react";
+import { BadgeCheck, RotateCcw } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { EstadoFalha } from "../../components/EstadoFalha";
@@ -217,7 +217,7 @@ export default function Revisao() {
     return (
       <div className="mx-auto max-w-[680px]">
         <EstadoFalha
-          mensagem="Não deu para carregar a sua fila de revisão. Pode ser a conexão."
+          mensagem="Não deu para carregar a sua fila de revisão."
           pausado={isPaused}
           onTentarDeNovo={() => refetch()}
         />
@@ -241,7 +241,7 @@ export default function Revisao() {
           <EstadoVazio
             mensagem={`Meta de hoje cumprida: ${hoje.feitas_hoje} caso${hoje.feitas_hoje !== 1 ? "s" : ""} revisado${
               hoje.feitas_hoje !== 1 ? "s" : ""
-            }. Outros ${hoje.excedente} já venceram e podem esperar até amanhã.`}
+            }. Outros ${hoje.excedente} já venceram e ficam para amanhã.`}
             cta={{ label: `Revisar mais ${Math.min(LOTE_EXTRA, hoje.excedente)}`, onClick: revisarMais }}
           />
         </div>
@@ -397,7 +397,7 @@ export default function Revisao() {
 
                 {erroAvaliar && (
                   <p role="alert" className="text-apoio font-medium text-t1">
-                    Não deu para gravar esta avaliação. Pode ser a conexão. O caso fica aqui: é só tentar de novo.
+                    Não deu para salvar a nota. Tente de novo.
                   </p>
                 )}
                 {acertou ? (
@@ -412,7 +412,7 @@ export default function Revisao() {
                     <span className="text-apoio text-muted">
                       Você acertou. Como foi lembrar?
                       {new Set(NOTAS_ACERTO.map((op) => JSON.stringify(q.prazos[op.chave]))).size === 1 &&
-                        " O prazo agora é o mesmo, mas a nota fica guardada e muda o tamanho dos próximos intervalos."}
+                        " O prazo é o mesmo agora. A nota muda os próximos."}
                     </span>
                     <div className="flex flex-wrap gap-1.5 sm:grid sm:grid-cols-3 sm:gap-2">
                       {NOTAS_ACERTO.map((op) => (
@@ -446,17 +446,11 @@ export default function Revisao() {
                     className={`flex animate-entrar flex-wrap items-center justify-between gap-3 ${ACAO_DA_VEZ}`}
                     style={{ animationDelay: "90ms" }}
                   >
-                    <span className="flex items-center gap-2 text-apoio text-ink-2">
-                      <RefreshCw size={16} strokeWidth={2} />
-                      {/* A frase inteira não cabe ao lado do botão no celular. */}
-                      <span className="max-sm:hidden">Volta na sua revisão em {formatarPrazo(q.prazos["1"])}</span>
-                      <span className="sm:hidden">Volta em {formatarPrazo(q.prazos["1"])}</span>
-                    </span>
                     <button
                       type="button"
                       disabled={enviando}
                       onClick={() => void avaliar(1)}
-                      className={`${BOTAO_PRIMARIO} sm:pr-2.5`}
+                      className={`${BOTAO_PRIMARIO} ml-auto sm:pr-2.5`}
                     >
                       Próximo caso
                       <Kbd sobreTinta>Enter</Kbd>

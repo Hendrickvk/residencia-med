@@ -18,7 +18,7 @@ interface Props {
 // casos vencidos no banco. Borda cheia (a tracejada é a do vazio) e sem cor de
 // triagem, que no DESIGN_TRIAGEM.md §2 só codifica nível.
 export function EstadoFalha({
-  mensagem = "Não deu para carregar isto. Pode ser a conexão.",
+  mensagem = "Não deu para carregar isto.",
   ocupado = false,
   pausado = false,
   onTentarDeNovo,

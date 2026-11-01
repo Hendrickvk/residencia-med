@@ -27,7 +27,6 @@ export function PorTipoPergunta({ tipos, onPraticar }: Props) {
     <section className="flex flex-col gap-4 rounded-card border border-line bg-surface p-6">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <span className="rotulo text-muted">Por tipo de pergunta</span>
-        <span className="text-apoio text-muted">o que a questão pede: diagnóstico, exame, conduta ou conceito</span>
       </div>
       {pontoFraco && (
         <p className="text-corpo text-ink-2">
@@ -64,7 +63,7 @@ export function PorTipoPergunta({ tipos, onPraticar }: Props) {
                   )}
                 </span>
                 <span className="flex items-center gap-1 text-apoio text-muted transition-colors duration-hover group-hover:text-ink">
-                  {suficiente ? "Praticar 10" : "Pouca evidência · praticar 10"}
+                  {suficiente ? "Praticar 10" : "Poucas respostas · praticar 10"}
                   <ArrowRight
                     size={14}
                     strokeWidth={2}

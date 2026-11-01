@@ -174,9 +174,9 @@ export function Topbar({ tema, onAlternarTema, me, revisoesHoje, onSair, onRever
                   }`}
                   title={
                     me.ofensiva_dias === 0 && !me.respondeu_hoje
-                      ? "Estude hoje (casos, revisão ou cartões) para começar uma ofensiva"
+                      ? "Estude hoje para começar uma ofensiva"
                       : `Ofensiva de ${me.ofensiva_dias} dia${me.ofensiva_dias !== 1 ? "s" : ""}${
-                          me.respondeu_hoje ? ", mantida hoje" : ": estude hoje para manter (casos, revisão ou cartões)"
+                          me.respondeu_hoje ? ", mantida hoje" : ": estude hoje para manter"
                         }`
                   }
                 >

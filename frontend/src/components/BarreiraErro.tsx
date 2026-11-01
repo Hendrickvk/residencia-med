@@ -34,7 +34,7 @@ export class BarreiraErro extends Component<Props, State> {
         <div className="flex w-full max-w-md flex-col gap-4 rounded-caso border border-line bg-surface p-6">
           <h1 className="text-subtitulo">Esta tela quebrou.</h1>
           <p className="text-corpo text-ink-2">
-            Recarregar costuma resolver. Se voltar a acontecer na mesma tela, me avise o que você estava fazendo.
+            Recarregue a página para continuar.
           </p>
           <button type="button" onClick={() => location.reload()} className={BOTAO_PRIMARIO}>
             Recarregar

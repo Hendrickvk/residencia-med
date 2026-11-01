@@ -43,7 +43,6 @@ export function EvolucaoTriagem({ evolucao }: { evolucao: DiaEvolucao[] }) {
   const cabecalho = (
     <div className="flex items-baseline justify-between gap-3">
       <span className="rotulo text-muted">Acerto nos últimos 14 dias</span>
-      <span className="text-apoio text-muted">faixas da triagem ao fundo</span>
     </div>
   );
 
@@ -51,7 +50,7 @@ export function EvolucaoTriagem({ evolucao }: { evolucao: DiaEvolucao[] }) {
     return (
       <div className="flex flex-col gap-3 rounded-card border border-line bg-surface p-6">
         {cabecalho}
-        <p className="text-corpo text-ink-2">Histórico começa a aparecer no terceiro dia de estudo.</p>
+        <p className="text-corpo text-ink-2">O gráfico aparece no terceiro dia de estudo.</p>
       </div>
     );
   }

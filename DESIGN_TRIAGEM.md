@@ -627,6 +627,12 @@ acompanha a raridade: o que se repete dezenas de vezes por dia quase não aparec
 - **Moeda** (`components/Moeda.tsx`): um círculo em `--ouro` com as cinco barras da marca
   dentro, sempre junto do número. É a única coisa além dos metais das conquistas a usar
   esse tom.
+- **Trilha de níveis** (`pages/progresso/TrilhaNiveis.tsx`, em Seu perfil): as oito patentes
+  ligadas por um fio, com a moldura de cada uma, Usar ou Tirar. É o único lugar das molduras de
+  patente; a loja só vende. No celular corre de lado e abre com a patente atual à vista.
+- **Textos** (decisão do usuário em 01/11): nada de apontamento pequeno explicando o que a tela
+  já mostra ("vem com a patente", "volta na sua revisão", "pode ser a conexão", subtítulo em
+  cartão). Uma frase curta, só quando muda o que a pessoa faz.
 - **Molduras** (`lib/cosmeticos.ts`, prop `moldura` do `Avatar`): traços de SVG em volta do
   avatar, desenhados por id. O servidor só diz o id, nunca o desenho, pelo mesmo motivo de
   `db.normalizar_cor`. A caixa do avatar cresce para caber a moldura (`tamanho / 0,74`), e

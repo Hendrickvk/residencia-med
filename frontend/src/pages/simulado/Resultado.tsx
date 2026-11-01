@@ -86,7 +86,7 @@ export default function Resultado({ simuladoId, onNovoSimulado }: Props) {
     return (
       <div className="mx-auto max-w-[680px]">
         <EstadoFalha
-          mensagem="Não deu para carregar o resultado. Pode ser a conexão. A prova está salva."
+          mensagem="Não deu para carregar o resultado. A prova está salva."
           pausado={consultaSimulado.isPaused || consultaItens.isPaused}
           onTentarDeNovo={() => {
             void consultaSimulado.refetch();
@@ -247,8 +247,7 @@ export default function Resultado({ simuladoId, onNovoSimulado }: Props) {
           <div className="flex flex-col gap-1">
             <h2 className="text-bloco">Temas para revisar</h2>
             <p className="text-apoio text-muted">
-              Com erro ou em branco {nesta}: os de mais erros primeiro e, no empate,
-              os que mais caem no Revalida e no ENAMED.
+              Com erro ou em branco {nesta}.
             </p>
           </div>
           <div className="rounded-caso border border-line bg-surface">
@@ -417,9 +416,8 @@ function LinhaCorte({ corte: c }: { corte: ComparacaoCorte }) {
   if (c.escala === "TRI") {
     return (
       <p className="text-corpo text-ink-2">
-        A nota de corte da 1ª etapa nesta edição foi {corte} pontos, na escala da TRI que o INEP passou a usar, a mesma
-        do ENAMED: ela pesa a dificuldade de cada questão entre todos os candidatos, e só os acertos não dizem se você
-        passaria.
+        A nota de corte da 1ª etapa nesta edição foi {corte} pontos na escala TRI, que pesa a dificuldade de cada questão.
+        Só os acertos não dizem se você passaria.
       </p>
     );
   }

@@ -90,7 +90,7 @@ export default function Baralhos() {
           nenhum baralho. */}
       {!isLoading && (isError || isPaused) && !pastas && (
         <EstadoFalha
-          mensagem="Não deu para carregar os seus baralhos. Pode ser a conexão."
+          mensagem="Não deu para carregar os seus baralhos."
           pausado={isPaused}
           onTentarDeNovo={() => void refetch()}
         />
@@ -98,7 +98,7 @@ export default function Baralhos() {
 
       {pastas?.length === 0 && (
         <EstadoVazio
-          mensagem="Nenhuma pasta ainda. Crie uma por assunto — Ginecologia, Clínica — e dentro dela os baralhos."
+          mensagem="Crie uma pasta por assunto e, dentro dela, seus baralhos."
           cta={{ label: "Criar a primeira", onClick: () => setEditando({}) }}
         />
       )}

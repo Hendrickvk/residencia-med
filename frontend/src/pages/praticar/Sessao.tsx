@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { BadgeCheck, Clock, Dices, Flag, RefreshCw } from "lucide-react";
+import { BadgeCheck, Clock, Dices, Flag } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { EstadoFalha } from "../../components/EstadoFalha";
 import { TextoEnunciado } from "../../components/TextoEnunciado";
@@ -308,7 +308,7 @@ export default function Sessao({ filtros, nonce, salva, email, onFinalizar, onVo
     return (
       <div className="mx-auto max-w-[680px] animate-entrar">
         <EstadoFalha
-          mensagem="Não deu para montar a sessão. Pode ser a conexão."
+          mensagem="Não deu para montar a sessão."
           pausado={isPaused}
           onTentarDeNovo={() => refetch()}
         />
@@ -546,21 +546,6 @@ export default function Sessao({ filtros, nonce, salva, email, onFinalizar, onVo
                   className={`flex animate-entrar flex-wrap items-center justify-between gap-3 ${ACAO_DA_VEZ}`}
                   style={{ animationDelay: "90ms" }}
                 >
-                  {!correta ? (
-                    <span className="flex items-center gap-2 text-apoio text-ink-2">
-                      <RefreshCw size={16} strokeWidth={2} />
-                      <span className="max-sm:hidden">Volta na sua revisão em 10 min</span>
-                      <span className="sm:hidden">Volta em 10 min</span>
-                    </span>
-                  ) : (
-                    chutando && (
-                      <span className="flex items-center gap-2 text-apoio text-ink-2">
-                        <Dices size={16} strokeWidth={2} />
-                        <span className="max-sm:hidden">Acerto no chute: vale meio no Painel</span>
-                        <span className="sm:hidden">Vale meio acerto</span>
-                      </span>
-                    )
-                  )}
                   <button type="button" onClick={concluir} className={`${BOTAO_PRIMARIO} ml-auto sm:pr-2.5`}>
                     Próximo caso
                     <Kbd sobreTinta>Enter</Kbd>

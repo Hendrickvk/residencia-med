@@ -57,7 +57,6 @@ function SecaoEvolucao({ children }: { children: ReactNode }) {
       >
         <span className="flex flex-col gap-1">
           <span className="rotulo text-muted">Evolução</span>
-          <span className="text-apoio text-ink-2">Memória, tipos de pergunta, os últimos 14 dias e as revisões dos próximos 7</span>
         </span>
         <ChevronDown
           size={20}
@@ -96,7 +95,7 @@ export default function Painel() {
   if (!data) {
     return (
       <EstadoFalha
-        mensagem="Não deu para carregar a sua triagem. Pode ser a conexão."
+        mensagem="Não deu para carregar a sua triagem."
         pausado={isPaused}
         onTentarDeNovo={() => refetch()}
       />
@@ -106,7 +105,7 @@ export default function Painel() {
   if (data.totais.respostas === 0) {
     return (
       <EstadoVazio
-        mensagem="Ainda não há respostas para montar a sua triagem. Responda alguns casos e ela aparece aqui."
+        mensagem="Responda alguns casos para ver a sua triagem."
         cta={{ label: "Praticar agora", onClick: () => navigate("/praticar") }}
       />
     );

@@ -132,7 +132,7 @@ export function Identidade({ me }: { me: Me | undefined }) {
           <legend className="rotulo mb-1 text-muted">Cor do avatar</legend>
           <SeletorCor valor={cor} onChange={setCor} tamanho={36} />
           <span className="text-apoio text-muted">
-            Toque numa cor para ver os tons. Aparece atrás da inicial, e enquanto a foto carrega.
+            Toque numa cor para ver os tons.
           </span>
         </fieldset>
 

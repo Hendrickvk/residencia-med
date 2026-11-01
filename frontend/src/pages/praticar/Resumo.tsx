@@ -108,8 +108,8 @@ export default function Resumo({ resumo, onNovaSessao }: Props) {
       {erros > 0 && (
         <p className="text-apoio text-ink-2">
           {erros === 1
-            ? "O caso que você errou já está na sua revisão espaçada e volta em 10 minutos."
-            : `Os ${erros} casos que você errou já estão na sua revisão espaçada e voltam em 10 minutos.`}
+            ? "O caso errado volta em 10 minutos."
+            : `Os ${erros} casos errados voltam em 10 minutos.`}
         </p>
       )}
 

@@ -53,8 +53,7 @@ export default function Configurador({ onIniciado }: Props) {
         <span className="rotulo text-muted">Nova prova</span>
         <h1 className="text-titulo">Simulado</h1>
         <p className="max-w-[60ch] text-corpo text-ink-2">
-          Refaça uma prova oficial inteira ou monte um simulado com os filtros que quiser. Nos dois casos há tempo limite
-          e a correção só aparece no final.
+          Prova oficial ou simulado com os seus filtros, com tempo limite e correção no final.
         </p>
       </div>
 
@@ -238,8 +237,7 @@ function ProvasOficiais({
   return (
     <div className="flex flex-col gap-7">
       <p className="max-w-[64ch] text-corpo text-ink-2">
-        O caderno na ordem original, com 3 minutos por questão, o ritmo das provas oficiais. Faça de uma vez ou em blocos
-        de até 25 questões. As questões anuladas pela banca ficam de fora.
+        O caderno original, com 3 minutos por questão. De uma vez ou em blocos de até 25. Sem as questões anuladas.
       </p>
       {grupos.map((g, gi) => {
         // Posição na cascata de entrada, contínua de uma banca para a outra.
@@ -352,8 +350,7 @@ function EscolhaDaProva({
   return (
     <div className="flex flex-col gap-6">
       <p className="text-corpo text-ink-2">
-        O tempo começa a contar quando você começa e não para se você fechar a aba: dá para continuar depois, até ele
-        acabar.
+        O tempo não para se você fechar a aba. Dá para continuar até ele acabar.
       </p>
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-baseline justify-between gap-x-3">
@@ -369,7 +366,7 @@ function EscolhaDaProva({
       {e.blocos.length > 1 && (
         <div className="flex flex-col gap-1 border-t border-line-soft pt-5">
           <span className="text-corpo font-semibold">Em blocos</span>
-          <p className="text-apoio text-muted">Partes seguidas do caderno, no mesmo ritmo, com o resultado ao fim de cada uma.</p>
+          <p className="text-apoio text-muted">Com o resultado ao fim de cada bloco.</p>
           <ul className="mt-2 flex flex-col divide-y divide-line-soft">
             {e.blocos.map((b) => (
               <li key={b.bloco} className="flex items-center justify-between gap-3 py-2.5">
@@ -532,7 +529,7 @@ function MontarSimulado({ onIniciado }: { onIniciado: (id: number) => void }) {
           <AlertTriangle size={16} strokeWidth={2} className="mt-0.5 shrink-0" />
           <span>
             {erro ??
-              `Só há ${disponiveis} questão(ões) para esse filtro, e você pediu ${numQuestoes}. Ajuste os filtros ou a quantidade.`}
+              `Só há ${disponiveis} nesse filtro, e você pediu ${numQuestoes}.`}
           </span>
         </div>
       )}

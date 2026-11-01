@@ -91,7 +91,7 @@ export default function Estudo({ baralhoId, nome, cor, onSair }: Props) {
       setVirado(false);
       setIdx((i) => i + 1);
     } catch {
-      setErro("Não deu para gravar esta nota. Pode ser a conexão. O cartão fica aqui: é só tentar de novo.");
+      setErro("Não deu para salvar a nota. Tente de novo.");
     } finally {
       setEnviando(false);
     }
@@ -113,7 +113,7 @@ export default function Estudo({ baralhoId, nome, cor, onSair }: Props) {
     } catch {
       // Falhou no servidor: não mexe na tela, senão ela veria de volta um
       // cartão que continua agendado como estava.
-      setErro("Não deu para desfazer agora. Pode ser a conexão. Tente de novo.");
+      setErro("Não deu para desfazer. Tente de novo.");
     } finally {
       setDesfazendo(false);
     }
@@ -197,7 +197,7 @@ export default function Estudo({ baralhoId, nome, cor, onSair }: Props) {
 
         {!isLoading && (isError || isPaused) && !data && (
           <EstadoFalha
-            mensagem="Não deu para montar o estudo. Pode ser a conexão."
+            mensagem="Não deu para montar o estudo."
             pausado={isPaused}
             onTentarDeNovo={() => void refetch()}
           />
@@ -207,8 +207,8 @@ export default function Estudo({ baralhoId, nome, cor, onSair }: Props) {
           <EstadoVazio
             mensagem={
               baralhoId === null
-                ? "Nenhum cartão vencido hoje. Volte quando o próximo prazo chegar."
-                : "Nenhum cartão vencido neste baralho hoje. Volte quando o próximo prazo chegar."
+                ? "Nenhum cartão para hoje."
+                : "Nenhum cartão deste baralho para hoje."
             }
             cta={{ label: "Voltar", onClick: onSair }}
           />
@@ -293,7 +293,7 @@ export default function Estudo({ baralhoId, nome, cor, onSair }: Props) {
             )}
             {virado && prazosIguais(atual.prazos) && (
               <p className="text-center text-apoio text-muted">
-                O prazo agora é o mesmo, mas a nota fica guardada e muda o tamanho dos próximos intervalos.
+                O prazo é o mesmo agora. A nota muda os próximos.
               </p>
             )}
             {erro && (
@@ -395,7 +395,7 @@ function EditarNoEstudo({
         </label>
         {erro && (
           <p role="alert" className="text-apoio font-medium text-t1">
-            Não deu para salvar. Pode ser a conexão. O que você escreveu continua aqui.
+            Não deu para salvar. Tente de novo.
           </p>
         )}
         <div className="flex gap-2">

@@ -11,6 +11,7 @@ import { BOTAO_SECUNDARIO } from "../../lib/estilos";
 import { formatarNumeroBR } from "../../lib/format";
 import { useProgresso } from "../../lib/progresso";
 import type { Progresso } from "../../lib/types";
+import { TrilhaNiveis } from "./TrilhaNiveis";
 
 // O mapa cobre 26 semanas e fecha no sábado desta: como no GitHub e no Anki, cada
 // coluna é uma semana, de domingo a sábado.
@@ -61,7 +62,7 @@ export default function PaginaProgresso() {
   if (!data) {
     return (
       <EstadoFalha
-        mensagem="Não deu para carregar o seu progresso. Pode ser a conexão."
+        mensagem="Não deu para carregar o seu progresso."
         pausado={isPaused}
         onTentarDeNovo={() => refetch()}
       />
@@ -149,9 +150,9 @@ export default function PaginaProgresso() {
                       <span className="text-corpo font-semibold [overflow-wrap:anywhere]">
                         {item.tipo === "moldura" ? "Moldura" : "Título"} {item.nome}
                       </span>
-                      <span className="text-apoio tabular-nums text-muted">
-                        {item.de_patente ? "Vem com a patente" : `${formatarNumeroBR(item.preco)} moedas`}
-                      </span>
+                      {!item.de_patente && (
+                        <span className="text-apoio tabular-nums text-muted">{formatarNumeroBR(item.preco)} moedas</span>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -176,34 +177,14 @@ export default function PaginaProgresso() {
                 ))}
               </div>
             ) : (
-              <p className="text-apoio text-muted">O primeiro sai com o primeiro caso respondido.</p>
+              <p className="text-apoio text-muted">Nenhuma ainda.</p>
             )}
           </div>
 
-          <div className="flex flex-col gap-3">
-            <h3 className="text-bloco">Patentes</h3>
-            {/* Pelo nome maior: em colunas fixas, PRECEPTORIA invadia a coluna vizinha. */}
-            <ol className="grid grid-cols-[repeat(auto-fill,minmax(112px,1fr))] gap-y-4">
-              {patentes.map((p) => {
-                const alcancada = nivel.nivel >= p.nivel;
-                const atual = p.nome === nivel.patente;
-                return (
-                  <li
-                    key={p.nome}
-                    aria-current={atual ? "step" : undefined}
-                    className={`flex flex-col gap-2 border-t-2 pr-2 pt-3 ${
-                      alcancada ? "border-ink" : "border-line"
-                    } ${atual ? "text-ink" : alcancada ? "text-ink-2" : "text-muted"}`}
-                  >
-                    <span className="rotulo text-inherit">{p.nome}</span>
-                    <span className="text-apoio tabular-nums">Nível {p.nivel}</span>
-                  </li>
-                );
-              })}
-            </ol>
-          </div>
         </div>
       </section>
+
+      <TrilhaNiveis me={me} nivel={nivel.nivel} patentes={patentes} />
 
       <section className="flex flex-col gap-3">
         <h2 className="text-bloco">Experiência por área</h2>
@@ -229,7 +210,7 @@ export default function PaginaProgresso() {
           ))}
         </div>
         <p className="text-apoio text-muted">
-          O nível de área mede o quanto você estudou cada uma. Como você está indo nelas continua no{" "}
+          Mede o quanto você estudou. O seu desempenho está no{" "}
           <Link to="/painel" className="font-semibold text-ink underline decoration-line underline-offset-[3px] hover:decoration-ink">
             quadro de triagem do Painel
           </Link>

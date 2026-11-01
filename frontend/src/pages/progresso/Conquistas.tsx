@@ -30,7 +30,7 @@ export default function PaginaConquistas() {
   if (!data) {
     return (
       <EstadoFalha
-        mensagem="Não deu para carregar as conquistas. Pode ser a conexão."
+        mensagem="Não deu para carregar as conquistas."
         pausado={isPaused}
         onTentarDeNovo={() => refetch()}
       />

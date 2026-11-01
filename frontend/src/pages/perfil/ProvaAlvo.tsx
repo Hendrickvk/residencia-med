@@ -60,7 +60,7 @@ export function ProvaAlvo({ me }: { me: Me | undefined }) {
             className={CAMPO}
           />
           <span className="text-apoio text-muted">
-            {contagem ?? "Sem data, a barra superior não mostra contagem."}
+            {contagem}
           </span>
         </label>
 

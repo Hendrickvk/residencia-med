@@ -94,7 +94,6 @@ export function RecompensaSessao({ resumo }: { resumo: ResumoGanhos }) {
 
       <TrocaDePatente
         aberto={antes.patente !== depois.patente && !fechouDialogo}
-        patenteAntes={antes.patente}
         nivel={depois.nivel}
         patente={depois.patente}
         proxima={proxima}
@@ -154,10 +153,9 @@ function ConquistasDaSessao() {
 }
 
 function TrocaDePatente({
-  aberto, patenteAntes, nivel, patente, proxima, onFechar,
+  aberto, nivel, patente, proxima, onFechar,
 }: {
   aberto: boolean;
-  patenteAntes: string;
   nivel: number;
   patente: string;
   proxima: ResumoGanhos["depois"]["proxima_patente"];
@@ -175,9 +173,7 @@ function TrocaDePatente({
             Nível {nivel}. {patente}.
           </h3>
           <p className="text-corpo text-ink-2">
-            {patenteAntes} ficou para trás.
-            {proxima && ` A próxima patente, ${proxima.nome}, vem no nível ${proxima.nivel}.`}
-            {" "}A moldura desta já é sua.
+            {proxima ? `Próxima patente: ${proxima.nome}, no nível ${proxima.nivel}.` : "Você chegou à última patente."}
           </p>
           <div className="mt-auto flex flex-wrap gap-2.5">
             <button type="button" onClick={onFechar} className={BOTAO_PRIMARIO}>

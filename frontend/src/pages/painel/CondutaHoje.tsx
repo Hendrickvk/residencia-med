@@ -28,7 +28,7 @@ interface Passo {
   // pendente: é o que falta fazer; feito: ela já fez hoje; livre: não há nada.
   estado: "pendente" | "feito" | "livre";
   titulo: string;
-  detalhe: string;
+  detalhe?: string;
   acao?: { rotulo: string; onClick: () => void };
 }
 
@@ -58,7 +58,7 @@ export function CondutaHoje({ revisao, cartoesHoje, prioridade, onRevisar, onEst
   }
 
   const casos = (n: number) => `${n} caso${n !== 1 ? "s" : ""}`;
-  const esperam = excedente > 0 ? `outros ${excedente} podem esperar até amanhã` : null;
+  const esperam = excedente > 0 ? `mais ${excedente} para amanhã` : null;
   const passos: Passo[] = [];
 
   if (hoje > 0) {
@@ -86,7 +86,6 @@ export function CondutaHoje({ revisao, cartoesHoje, prioridade, onRevisar, onEst
       icone: Brain,
       estado: "livre",
       titulo: "Nada para revisar hoje",
-      detalhe: "Os casos que você errar voltam para cá.",
     });
   }
 
@@ -163,7 +162,7 @@ export function CondutaHoje({ revisao, cartoesHoje, prioridade, onRevisar, onEst
                 <span className={`text-[15.5px] font-semibold leading-snug ${p.estado === "livre" ? "text-ink-2" : "text-ink"}`}>
                   {p.titulo}
                 </span>
-                <span className="text-apoio text-muted">{p.detalhe}</span>
+                {p.detalhe && <span className="text-apoio text-muted">{p.detalhe}</span>}
               </div>
               {p.acao && (
                 <button
