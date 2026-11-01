@@ -114,23 +114,39 @@ function RodapeDoItem({ item, saldo, acoes }: { item: ItemLoja; saldo: number; a
 function CartaoDoItem({ item, me, saldo, acoes }: { item: ItemLoja; me: Me | undefined; saldo: number; acoes: Acoes }) {
   const tema = item.tipo === "moldura" ? temaDaMoldura(item.id) : null;
   return (
-    <article className="flex min-w-0 flex-col gap-3 rounded-card border border-line bg-surface p-3 max-sm:w-[212px] max-sm:shrink-0 max-sm:snap-start">
-      <div
-        className="relative flex h-[124px] items-center justify-center overflow-hidden rounded-col bg-ground"
-        style={tema?.variaveis as React.CSSProperties | undefined}
-      >
-        {tema && <CenaDoTema tema={tema} />}
-        {item.tipo === "moldura" ? (
-          <span className={tema ? "relative rounded-pill bg-surface p-0.5" : undefined}>
-            <Avatar me={me} tamanho={72} moldura={item.id} />
-          </span>
-        ) : (
+    <article className="flex min-w-0 flex-col gap-3 rounded-card border border-line bg-surface p-3 max-sm:w-[220px] max-sm:shrink-0 max-sm:snap-start">
+      {item.tipo === "moldura" ? (
+        <div className="[container-type:inline-size]">
+          <div
+            className={`relative flex h-[calc(39cqw+56px)] items-center justify-center overflow-hidden rounded-col ${tema ? "bg-surface" : "bg-ground"}`}
+            style={tema?.variaveis as React.CSSProperties | undefined}
+          >
+            {tema ? (
+              <>
+                {/* Um crachá em miniatura. A cena é desenhada com o avatar em (150, 117) de
+                    300 por 104: é por isso que ele fica a 39% da largura, e não no meio. */}
+                <span className="absolute inset-x-0 top-0 aspect-[300/104]" style={{ color: tema.marca }}>
+                  <CenaDoTema tema={tema} />
+                  <span className="absolute left-1/2 top-[3.4cqw] h-[3.3cqw] w-[17cqw] -translate-x-1/2 rounded-pill bg-ground" />
+                  <span className="marca-texto absolute inset-x-0 top-[10.5cqw] text-center text-[5.7cqw]">Conduta</span>
+                </span>
+                <span className="absolute left-1/2 top-[39cqw] -translate-x-1/2 -translate-y-1/2 rounded-pill bg-surface p-0.5">
+                  <Avatar me={me} tamanho={64} moldura={item.id} />
+                </span>
+              </>
+            ) : (
+              <Avatar me={me} tamanho={64} moldura={item.id} />
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="flex h-[124px] items-center justify-center overflow-hidden rounded-col bg-ground">
           <span className="flex flex-col items-center gap-0.5 px-2.5 text-center">
             <span className="text-bloco [overflow-wrap:anywhere]">{nomeExibido(me)}</span>
             <span className="text-apoio text-ink-2">{item.nome}</span>
           </span>
-        )}
-      </div>
+        </div>
+      )}
       {item.tipo === "moldura" && (
         <span className="flex flex-col">
           <span className="text-corpo font-semibold [overflow-wrap:anywhere]">{item.nome}</span>
