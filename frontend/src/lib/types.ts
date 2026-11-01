@@ -441,25 +441,25 @@ export interface Progresso {
   vitrine: {
     obtidos: number;
     total: number;
-    itens: { id: string; nome: string; grau: GrauCarimbo; obtida_em: string }[];
+    itens: { id: string; nome: string; grau: GrauConquista; obtida_em: string }[];
   };
 }
 
-export type GrauCarimbo = "bronze" | "prata" | "ouro";
+export type GrauConquista = "bronze" | "prata" | "ouro";
 
-export interface CarimboNovo {
+export interface ConquistaNova {
   id: string;
   nome: string;
-  grau: GrauCarimbo;
+  grau: GrauConquista;
   moedas: number;
   obtida_em: string;
 }
 
-// A caderneta (conquistas.caderneta). O secreto ainda não obtido vem sem nome real.
-export interface Caderneta {
+// A página de conquistas (conquistas.pagina). A secreta não obtida vem sem nome real.
+export interface PaginaConquistas {
   obtidos: number;
   total: number;
-  novas: CarimboNovo[];
+  novas: ConquistaNova[];
   series: {
     nome: string;
     feitos: number;
@@ -467,7 +467,7 @@ export interface Caderneta {
     itens: {
       id: string;
       nome: string;
-      grau: GrauCarimbo;
+      grau: GrauConquista;
       moedas: number;
       obtida_em: string | null;
       nota: string | null;

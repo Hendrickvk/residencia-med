@@ -39,15 +39,15 @@ export const NOVIDADES: Novidade[] = [
   {
     id: "2026-10-31c",
     data: "31 de outubro de 2026",
-    titulo: "A caderneta de carimbos",
+    titulo: "Conquistas",
     itens: [
       {
         tipo: "novo",
-        texto: "O que você conquista estudando agora vira carimbo, em bronze, prata ou ouro, e cada um rende moedas. Sair da Emergência, passar do corte e terminar uma prova oficial estão entre eles.",
+        texto: "Seu estudo agora rende conquistas, em bronze, prata e ouro, e cada uma paga moedas. Sair da Emergência, passar do corte e terminar uma prova oficial estão entre elas.",
       },
       {
         tipo: "novo",
-        texto: "O que você já fez até aqui conta: os carimbos do seu histórico já estão lá. Abra a Caderneta no menu da conta, e os três maiores aparecem no seu perfil.",
+        texto: "O que você já fez até aqui conta: as conquistas do seu histórico já estão lá. Veja todas em Conquistas, no menu da conta. As três maiores aparecem no seu perfil.",
       },
     ],
   },

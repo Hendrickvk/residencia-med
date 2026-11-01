@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "./api";
 import { queryClient } from "./queryClient";
-import type { Caderneta, CarimboNovo, Loja, Progresso } from "./types";
+import type { ConquistaNova, Loja, PaginaConquistas, Progresso } from "./types";
 
 export function useProgresso() {
   return useQuery({
@@ -17,25 +17,25 @@ export function useLoja() {
   });
 }
 
-export function useCaderneta() {
+export function usePaginaConquistas() {
   return useQuery({
-    queryKey: ["caderneta"],
-    queryFn: () => api.get<Caderneta>("/progresso/conquistas"),
+    queryKey: ["conquistas"],
+    queryFn: () => api.get<PaginaConquistas>("/progresso/conquistas"),
   });
 }
 
-// Carimbo novo é moeda nova: saldo, loja e vitrine precisam saber.
-export function avisarCarimbos() {
+// Conquista nova é moeda nova: saldo, loja e vitrine precisam saber.
+export function avisarConquistas() {
   void queryClient.invalidateQueries({ queryKey: ["me"] });
   void queryClient.invalidateQueries({ queryKey: ["loja"] });
   void queryClient.invalidateQueries({ queryKey: ["progresso"] });
 }
 
-export async function verificarCarimbos() {
-  const { novas } = await api.post<{ novas: CarimboNovo[] }>("/progresso/verificar");
+export async function verificarConquistas() {
+  const { novas } = await api.post<{ novas: ConquistaNova[] }>("/progresso/verificar");
   if (novas.length) {
-    avisarCarimbos();
-    void queryClient.invalidateQueries({ queryKey: ["caderneta"] });
+    avisarConquistas();
+    void queryClient.invalidateQueries({ queryKey: ["conquistas"] });
   }
   return novas;
 }

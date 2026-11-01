@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Avatar } from "../../components/Avatar";
 import { BarraNivel } from "../../components/BarraNivel";
-import { Carimbo } from "../../components/Carimbo";
+import { LinhaConquista } from "../../components/Conquista";
 import { Cracha } from "../../components/Cracha";
 import { EstadoFalha } from "../../components/EstadoFalha";
 import { Moeda } from "../../components/Moeda";
@@ -149,18 +149,18 @@ export default function PaginaProgresso() {
 
           <div className="flex flex-col gap-3">
             <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
-              <h3 className="text-bloco">Carimbos</h3>
+              <h3 className="text-bloco">Conquistas</h3>
               <Link
                 to="/progresso/conquistas"
                 className="text-apoio font-semibold tabular-nums text-ink underline decoration-line underline-offset-[3px] hover:decoration-ink"
               >
-                Ver a caderneta, {vitrine.obtidos} de {vitrine.total}
+                Ver todas, {vitrine.obtidos} de {vitrine.total}
               </Link>
             </div>
             {vitrine.itens.length > 0 ? (
-              <div className="flex flex-wrap items-center gap-x-6 gap-y-5 py-1">
-                {vitrine.itens.map((c, i) => (
-                  <Carimbo key={c.id} nome={c.nome} grau={c.grau} obtidaEm={c.obtida_em} ordem={i} />
+              <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-3">
+                {vitrine.itens.map((c) => (
+                  <LinhaConquista key={c.id} nome={c.nome} grau={c.grau} obtidaEm={c.obtida_em} />
                 ))}
               </div>
             ) : (

@@ -1,4 +1,4 @@
-import { Flame, LogOut, Moon, Sparkles, Stamp, Sun, Terminal, UserRound } from "lucide-react";
+import { Award, Flame, LogOut, Moon, Sparkles, Sun, Terminal, UserRound } from "lucide-react";
 import { formatarNumeroBR, textoProva } from "../../lib/format";
 import { nomeExibido } from "../../lib/perfil";
 import { AnelNivel } from "../AnelNivel";
@@ -267,8 +267,8 @@ export function Topbar({ tema, onAlternarTema, me, revisoesHoje, onSair, onRever
                         onClick={() => setContaAberta(false)}
                         className="flex items-center gap-2.5 rounded-btn px-2.5 py-2 text-corpo text-ink-2 transition duration-hover hover:bg-ground hover:text-ink"
                       >
-                        <Stamp size={16} strokeWidth={2} />
-                        Caderneta
+                        <Award size={16} strokeWidth={2} />
+                        Conquistas
                       </NavLink>
                     </div>
 

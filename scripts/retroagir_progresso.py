@@ -193,10 +193,10 @@ def main():
             ).fetchall()
             for usuario in contas:
                 criadas = retroagir_conta(conn, usuario, areas)
-                # Sem aviso na tela: quem tem o histórico vê os carimbos na caderneta.
-                carimbos = conquistas.carimbar(conn, usuario["id"], conquistas.medir(usuario["id"]), db.agora_br())
+                # Sem aviso na tela: quem tem o histórico as vê na página de conquistas.
+                obtidas = conquistas.conceder(conn, usuario["id"], conquistas.medir(usuario["id"]), db.agora_br())
                 criadas += [{"chave": conquistas.chave(c["id"]), "tipo": "conquista", "xp": 0, "moedas": c["moedas"]}
-                            for c in carimbos]
+                            for c in obtidas]
                 saldo = conn.execute(
                     "SELECT xp_total, moedas FROM usuarios WHERE id = ?", (usuario["id"],),
                 ).fetchone()

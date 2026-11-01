@@ -1,20 +1,20 @@
 import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { BarraNivel } from "../../components/BarraNivel";
-import { Carimbo } from "../../components/Carimbo";
+import { MedalhaConquista } from "../../components/Conquista";
 import { EstadoFalha } from "../../components/EstadoFalha";
 import { Moeda } from "../../components/Moeda";
 import { BOTAO_SECUNDARIO } from "../../lib/estilos";
-import { avisarCarimbos, useCaderneta } from "../../lib/progresso";
+import { dataDaConquista } from "../../lib/format";
+import { avisarConquistas, usePaginaConquistas } from "../../lib/progresso";
 
-// A caderneta: uma ficha de doses, com cada carimbo na sua célula.
 export default function PaginaConquistas() {
-  const { data, isLoading, isPaused, refetch } = useCaderneta();
+  const { data, isLoading, isPaused, refetch } = usePaginaConquistas();
   const temNovas = !!data?.novas.length;
 
-  // Abrir a caderneta também carimba: as moedas entraram, e o saldo precisa saber.
+  // Abrir a página também concede: as moedas entraram, e o saldo precisa saber.
   useEffect(() => {
-    if (temNovas) avisarCarimbos();
+    if (temNovas) avisarConquistas();
   }, [temNovas]);
 
   if (isLoading) {
@@ -30,19 +30,18 @@ export default function PaginaConquistas() {
   if (!data) {
     return (
       <EstadoFalha
-        mensagem="Não deu para carregar a caderneta. Pode ser a conexão."
+        mensagem="Não deu para carregar as conquistas. Pode ser a conexão."
         pausado={isPaused}
         onTentarDeNovo={() => refetch()}
       />
     );
   }
 
-  let ordem = 0;
   return (
     <div className="flex flex-col gap-7">
       <div className="flex flex-wrap items-center justify-between gap-3.5">
         <h1 className="text-titulo tabular-nums">
-          {data.obtidos} de {data.total} carimbos.
+          {data.obtidos} de {data.total} conquistas.
         </h1>
         <Link to="/progresso" className={BOTAO_SECUNDARIO}>
           Ver seu perfil
@@ -61,16 +60,23 @@ export default function PaginaConquistas() {
             {serie.itens.map((item) => (
               <li
                 key={item.id}
-                className="-mb-px -mr-px flex min-h-[164px] min-w-0 flex-col items-center justify-between gap-3 border-b border-r border-line-soft px-3 pb-3.5 pt-[18px] text-center"
+                className="-mb-px -mr-px flex min-h-[164px] min-w-0 flex-col items-center gap-2.5 border-b border-r border-line-soft px-3 pb-3.5 pt-[18px] text-center"
               >
-                <Carimbo nome={item.nome} grau={item.grau} obtidaEm={item.obtida_em} ordem={ordem++} />
-                <div className="flex w-full flex-col items-center gap-1.5">
+                <MedalhaConquista grau={item.grau} obtida={!!item.obtida_em} />
+                <span
+                  className={`text-corpo font-semibold [overflow-wrap:anywhere] ${item.obtida_em ? "text-ink" : "text-ink-2"}`}
+                >
+                  {item.nome}
+                </span>
+                <div className="mt-auto flex w-full flex-col items-center gap-1.5">
                   {item.pct !== null && (
                     <div className="w-[72%]">
                       <BarraNivel pct={item.pct} fina />
                     </div>
                   )}
-                  <span className="text-apoio tabular-nums text-muted">{item.obtida_em ? "Carimbado" : item.nota}</span>
+                  <span className="text-apoio tabular-nums text-muted">
+                    {item.obtida_em ? dataDaConquista(item.obtida_em) : item.nota}
+                  </span>
                   <span
                     className={`flex items-center gap-1 text-apoio font-semibold tabular-nums ${
                       item.obtida_em ? "text-ink" : "text-muted"

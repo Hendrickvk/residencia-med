@@ -14,13 +14,13 @@ def obter_progresso(usuario=Depends(usuario_atual)):
 
 
 @router.get("/conquistas")
-def obter_caderneta(usuario=Depends(usuario_atual)):
-    return conquistas.caderneta(usuario["id"])
+def obter_conquistas(usuario=Depends(usuario_atual)):
+    return conquistas.pagina(usuario["id"])
 
 
 @router.post("/verificar")
 def verificar_conquistas(usuario=Depends(usuario_atual)):
-    """O fim da sessão pergunta o que ela carimbou: as moedas entram aqui, uma vez só."""
+    """O fim da sessão pergunta o que ela conquistou: as moedas entram aqui, uma vez só."""
     return {"novas": conquistas.verificar(usuario["id"])}
 
 

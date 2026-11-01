@@ -1,6 +1,6 @@
 """
-A caderneta (conquistas.py): carimbo pago duas vezes, carimbo secreto vazado e
-carimbo ganho sem ter feito a coisa são o que este arquivo impede.
+As conquistas (conquistas.py): conquista paga duas vezes, secreta vazada e
+conquista ganha sem ter feito a coisa são o que este arquivo impede.
 """
 
 import datetime
@@ -47,7 +47,7 @@ def test_ids_unicos_e_medidas_que_existem():
     assert len(ids) == len(set(ids))
     for c in conquistas.CONQUISTAS:
         assert c["grau"] in conquistas.ORDEM_GRAU and 10 <= c["moedas"] <= 300
-        # Todo carimbo não secreto diz o que falta.
+        # Toda conquista não secreta diz o que falta.
         assert c["secreta"] or c["nota"] or c["dica"]
 
 
@@ -92,7 +92,7 @@ def test_cinco_areas_no_verde_precisam_ser_ao_mesmo_tempo():
     assert conquistas.trajetoria_da_triagem(tentativas)["areas_verdes_max"] == 4
 
 
-def test_prova_em_branco_nao_carimba():
+def test_prova_em_branco_nao_conta():
     feita = {"banca": "USP", "edicao": "2026", "em_blocos": False, "num_questoes": 100, "corte": None}
     assert conquistas.medidas_de_provas([feita], set(), [{"banca": "USP", "edicao": "2026"}])["provas"] == 0
     medidas = conquistas.medidas_de_provas(
@@ -109,7 +109,7 @@ def test_prova_em_blocos_precisa_de_todos_os_blocos_pagos():
     assert conquistas.medidas_de_provas([feita], dois, [])["provas_em_blocos"] == 1
 
 
-def test_carimbo_paga_uma_vez_so_no_razao(usuario_teste, questao_teste):
+def test_conquista_paga_uma_vez_so_no_razao(usuario_teste, questao_teste):
     _responder(usuario_teste, questao_teste, True)
     antes = _saldo(usuario_teste)
     novas = conquistas.verificar(usuario_teste)

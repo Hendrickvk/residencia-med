@@ -4,11 +4,11 @@ import { useMe } from "../lib/auth";
 import { BOTAO_PRIMARIO, BOTAO_SECUNDARIO } from "../lib/estilos";
 import { formatarNumeroBR } from "../lib/format";
 import { resumirGanhos, useGanhos } from "../lib/ganhos";
-import { verificarCarimbos } from "../lib/progresso";
+import { verificarConquistas } from "../lib/progresso";
 import { useRespostasPendentes } from "../lib/respostasQueue";
-import type { CarimboNovo, ResumoGanhos } from "../lib/types";
+import type { ConquistaNova, ResumoGanhos } from "../lib/types";
 import { BarraNivel } from "./BarraNivel";
-import { Carimbo } from "./Carimbo";
+import { LinhaConquista } from "./Conquista";
 import { Cracha } from "./Cracha";
 import { Dialog } from "./Dialog";
 import { Moeda } from "./Moeda";
@@ -72,7 +72,7 @@ export function RecompensaSessao({ resumo }: { resumo: ResumoGanhos }) {
           </div>
         )}
 
-        <CarimbosDaSessao />
+        <ConquistasDaSessao />
 
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-line-soft pt-4">
           {depois.libera ? (
@@ -104,22 +104,22 @@ export function RecompensaSessao({ resumo }: { resumo: ResumoGanhos }) {
   );
 }
 
-// O carimbo sai aqui e não durante o caso, que fica sóbrio. Só pergunta depois de a
+// A conquista sai aqui e não durante o caso, que fica sóbrio. Só pergunta depois de a
 // fila de respostas esvaziar: antes disso a última resposta ainda não conta.
-function CarimbosDaSessao() {
+function ConquistasDaSessao() {
   const livre = useRespostasPendentes() === 0;
-  const [novos, setNovos] = useState<CarimboNovo[]>([]);
+  const [novos, setNovos] = useState<ConquistaNova[]>([]);
 
   useEffect(() => {
     if (!livre) return;
     let ativo = true;
-    verificarCarimbos()
+    verificarConquistas()
       .then((chegaram) => {
         if (!ativo || !chegaram.length) return;
         setNovos((atuais) => [...atuais, ...chegaram.filter((c) => !atuais.some((a) => a.id === c.id))]);
       })
       .catch(() => {
-        // Sem carimbo agora: a caderneta confere de novo ao abrir, e nada se perde.
+        // Sem conquista agora: a página confere de novo ao abrir, e nada se perde.
       });
     return () => {
       ativo = false;
@@ -131,9 +131,9 @@ function CarimbosDaSessao() {
     <div aria-live="polite">
       {novos.length > 0 && (
         <div className="flex flex-col gap-3 border-t border-line-soft pt-4">
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-4">
-            {novos.map((c, i) => (
-              <Carimbo key={c.id} nome={c.nome} grau={c.grau} obtidaEm={c.obtida_em} ordem={i} bate />
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-3">
+            {novos.map((c) => (
+              <LinhaConquista key={c.id} nome={c.nome} grau={c.grau} obtidaEm={c.obtida_em} nova />
             ))}
           </div>
           <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
@@ -144,7 +144,7 @@ function CarimbosDaSessao() {
               to="/progresso/conquistas"
               className="text-apoio font-semibold text-ink underline decoration-line underline-offset-[3px] transition-colors duration-hover hover:decoration-ink"
             >
-              Ver a caderneta
+              Ver as conquistas
             </Link>
           </div>
         </div>

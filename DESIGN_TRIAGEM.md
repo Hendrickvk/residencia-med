@@ -27,11 +27,9 @@ daí:
   São outros hex, não os tokens `t1`–`t5`, e não significam nível; o que continua
   proibido é usar `t1`–`t5` fora do nível. O seletor é um disco radial
   (`components/SeletorCor.tsx`), e cada tom traz o texto que passa 4,5:1 por cima.
-- **Segunda exceção: o metal das conquistas** (decisão do usuário, 31/10/2026, entre
-  carimbo em tinta, carimbo em metal e medalha, no protótipo da Progressão, §6):
-  bronze, prata e ouro pintam o carimbo, a moeda e o trecho da barra de nível que a
-  sessão rendeu. O grau também está na forma do carimbo (borda simples, dupla, e
-  grossa com um fio em volta), então a cor nunca carrega o significado sozinha, e o
+- **Segunda exceção: o metal das conquistas** (decisão do usuário, 31/10/2026, §6):
+  bronze, prata e ouro pintam a medalha, a moeda e o trecho da barra de nível que a
+  sessão rendeu. O grau também está no ícone da medalha, então a cor nunca carrega o significado sozinha, e o
   ouro é mais escuro e mais pardo que o amarelo de "Urgente", para não ser lido como
   nível.
 - No Praticar e na Revisão, cada questão é um **caso** ("Caso 07", "Discussão do
@@ -106,9 +104,9 @@ e mapeados no `tailwind.config.js`. Nenhum hex solto em componente.
 --t5-soft       #E1EAF9    #142540
 --focus         #2D6CD2    #5B8FEA   anel de foco (2px, offset 2px)
 
---bronze        #8A5A2B    #CF9A66   carimbo de bronze (§1, segunda exceção)
---prata         #646C75    #AAB2BA   carimbo de prata
---ouro          #8C6A0F    #D2A94B   carimbo de ouro, moeda, o que a sessão rendeu na barra
+--bronze        #8A5A2B    #CF9A66   medalha de bronze (§1, segunda exceção)
+--prata         #646C75    #AAB2BA   medalha de prata
+--ouro          #8C6A0F    #D2A94B   medalha de ouro, moeda, o que a sessão rendeu na barra
 ```
 
 ### Tipografia
@@ -649,16 +647,17 @@ acompanha a raridade: o que se repete dezenas de vezes por dia quase não aparec
 - **Patentes**: por posto e não por pessoa, para não terem gênero: Ciclo básico,
   Ciclo clínico, Internato, R1, R2, R3, Preceptoria, Chefia.
 - **Voz**: sem "Parabéns!". "Nível 20. R1." diz tudo.
-- **Carimbos** (`components/Carimbo.tsx`, `.carimbo` em `theme.css`): o grau está na forma,
-  e o metal só reforça: traço simples em bronze, traço duplo em prata, cantos e contorno em
-  ouro. Caem um pouco tortos, sempre do mesmo jeito, porque o giro vem da posição. O que
-  ainda não veio é o nome em tracejado. Nenhum t1–t5, nem nos carimbos da série Triagem.
-- **Caderneta** (`/progresso/conquistas`): o título é a contagem ("15 de 44 carimbos."), e
-  cada série é uma ficha de doses, com uma célula por carimbo, o que falta e as moedas. Seis
-  colunas no computador, três em 768, duas no celular.
-- **O carimbo novo cai no bloco do fim da sessão**, com a batida (340ms, depois de 650ms, o
-  tempo de o XP contar), as moedas e "Ver a caderneta". O protótipo tinha um aviso durante a
-  sessão; ficou de fora, porque a decisão é sóbria durante o caso. Seu perfil mostra os 3 de
+- **Medalha de conquista** (`components/Conquista.tsx`): um círculo cheio no metal do grau,
+  com o ícone do grau por cima (Award, Medal, Trophy), então a cor nunca carrega o significado
+  sozinha. A que ainda não veio é o mesmo ícone em linha, sem preenchimento. Nenhum t1–t5, nem
+  na série Triagem. Até 31/10 era um carimbo torto em caixa alta, trocado por decisão do
+  usuário: tirava o ar profissional. A palavra na tela é sempre "conquista".
+- **Conquistas** (`/progresso/conquistas`): o título é a contagem ("15 de 44 conquistas."), e
+  cada série é uma ficha, com uma célula por conquista, o que falta e as moedas. Seis colunas
+  no computador, três em 768, duas no celular.
+- **A conquista nova aparece no bloco do fim da sessão**, com a medalha marcando
+  (`animate-marcar`), as moedas e "Ver as conquistas". O protótipo tinha um aviso durante a
+  sessão; ficou de fora, porque a decisão é sóbria durante o caso. Seu perfil mostra as 3 de
   maior grau.
 - **Ainda por vir** (no protótipo): temas, estampas e efeitos (fase 4), perfil público (fase 5).
 

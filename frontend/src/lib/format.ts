@@ -50,3 +50,11 @@ export function textoProva(provaAlvo: string | null): string | null {
   if (dias < 0) return "A data da prova já passou";
   return `Prova em ${dias} dia${dias !== 1 ? "s" : ""}`;
 }
+
+const MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+
+// O timestamp é o horário de Brasília sem fuso: lido como texto, não muda de dia.
+export function dataDaConquista(iso: string) {
+  const [ano, mes, dia] = iso.slice(0, 10).split("-").map(Number);
+  return `${dia} ${MESES[mes - 1]} ${ano}`;
+}

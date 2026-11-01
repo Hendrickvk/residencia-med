@@ -29,7 +29,8 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   Steam/PlayStation (conquistas por grau, molduras, vitrine). Decisões do usuário:
   sóbria durante o caso e forte nos marcos; perfil público opcional; loja com
   molduras, títulos, temas, estampas e efeitos, além de proteção de ofensiva e XP em
-  dobro; conquistas como carimbo em metal (protótipo no canvas [Conduta
+  dobro; conquistas em metal, primeiro como carimbo e, depois de ver no ar, como medalha
+  sóbria, porque o carimbo tirava o ar profissional (protótipo no canvas [Conduta
   Progressão](https://claude.ai/artifact/XTQLEHosgjB3osSZVYbRo7)). Moeda só vem de
   acerto e de conquista, como ele definiu. **Regras que não são negociáveis, porque
   o jogo não pode sujar o diagnóstico:** errar também dá XP (só acerto renderia
@@ -71,22 +72,20 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   escuro; o caso refeito no mesmo dia não mostra XP e não paga. O pacote de entrada
   cresceu 2,7 KB, mas o empacotador só moveu código entre os dois arquivos que a
   página pública baixa: a soma cresceu 327 bytes. Medir a soma, e não só o `index-*.js`.
-  **Fase 3, o que tem:** `conquistas.py`, 44 carimbos em 8 séries (4.090 moedas no total),
-  `GET /progresso/conquistas`, `POST /progresso/verificar`, `/progresso/conquistas` (a
-  Caderneta, no menu da conta e a partir de Seu perfil), `vitrine` no `GET /progresso`.
+  **Fase 3, o que tem:** `conquistas.py`, 44 conquistas em 8 séries (4.090 moedas no total),
+  `GET /progresso/conquistas`, `POST /progresso/verificar`, `/progresso/conquistas` (no
+  menu da conta e a partir de Seu perfil), `vitrine` no `GET /progresso`.
   Decisões tomadas no caminho, diferentes do plano: **sem tabela `conquistas_usuario`**: ter
-  o carimbo é ter a linha `conquista:{id}` no razão, como na compra; **sem avaliação a cada
-  resposta e sem aviso durante o caso**: o carimbo cai dentro do bloco do fim da sessão,
+  a conquista é ter a linha `conquista:{id}` no razão, como na compra; **sem avaliação a cada
+  resposta e sem aviso durante o caso**: a conquista aparece dentro do bloco do fim da sessão,
   porque a decisão foi "sóbria durante o caso", e a medição custa umas dez idas ao banco;
-  **carimbo é limite sobre uma medida do histórico**, o que torna o histórico retroativo de
+  **conquista é limite sobre uma medida do histórico**, o que torna o histórico retroativo de
   graça e dispensa guardar evento; **prova só conta se pagou XP**, o que já exige 90%
-  respondida (finalizar em branco não carimba); **triagem é percurso, não foto**, por isso
+  respondida (finalizar em branco não conta); **triagem é percurso, não foto**, por isso
   "Saiu da Emergência" é história, e cada área só conta a partir de 20 respostas; **vitrine
   automática**, os 3 de maior grau e mais recentes: escolher à mão fica para a fase 5, quando
   ela for pública. Secreto não obtido sai da API sem nome e sem id, pinado no teste. Ficou
-  fora do plano o carimbo de metas diárias. A batida do carimbo
-  não foi vista em movimento: o painel do navegador estava oculto e congela as animações;
-  o estado final e o quadro inicial foram conferidos.
+  fora do plano a conquista de metas diárias.
   **Ajustes pedidos ao testar a fase 2 (31/10):** a Loja virou aba fixa ao lado de Baralhos
   (o caminho `/progresso/loja` não mudou) e "Seu perfil" no menu abre `/progresso`, com
   "Editar seu perfil" lá e na Loja. As abas Progresso/Loja saíram. **Defeito antigo achado aí:** com a sessão vencida e o app

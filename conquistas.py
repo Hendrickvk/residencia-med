@@ -1,15 +1,15 @@
 """
-Conquistas: a caderneta de carimbos (HISTORICO.md, Gamificação).
+Conquistas (HISTORICO.md, Gamificação).
 
-Cada carimbo é um limite sobre uma medida do histórico: `medir` lê o histórico da
-conta e diz quanto ela tem de cada coisa, e o carimbo sai quando a medida alcança o
+Cada conquista é um limite sobre uma medida do histórico: `medir` lê o histórico da
+conta e diz quanto ela tem de cada coisa, e a conquista sai quando a medida alcança o
 alvo. Por isso não há uma regra por tela nem evento a perder: o que aconteceu antes
 de a conquista existir conta do mesmo jeito (`scripts/retroagir_progresso.py`).
 
-Ter o carimbo é ter a linha `conquista:{id}` no razão, que paga as moedas uma vez só
+Ter a conquista é ter a linha `conquista:{id}` no razão, que paga as moedas uma vez só
 e guarda a data. Como na loja, não há tabela própria.
 
-A avaliação roda no fim da sessão e ao abrir a caderneta, e não a cada resposta: o
+A avaliação roda no fim da sessão e ao abrir a página de conquistas, e não a cada resposta: o
 caso fica sóbrio (DESIGN_TRIAGEM.md §6), e cada resposta não precisa pagar dez idas
 ao banco. Os ids não mudam nunca: estão gravados no razão.
 """
@@ -32,61 +32,61 @@ RESPOSTAS_MINIMAS_PROJECAO = 100
 ORDEM_GRAU = {"bronze": 0, "prata": 1, "ouro": 2}
 
 
-def _carimbo(id, nome, grau, moedas, medida, alvo, nota=None, dica=None, secreta=False):
+def _conquista(id, nome, grau, moedas, medida, alvo, nota=None, dica=None, secreta=False):
     return {"id": id, "nome": nome, "grau": grau, "moedas": moedas, "medida": medida, "alvo": alvo,
             "nota": nota, "dica": dica, "secreta": secreta}
 
 
 def _nivel_area(id, nome, area):
-    return _carimbo(id, nome, "bronze", 25, f"nivel:{area}", 5, nota="Nível {v} de {a}")
+    return _conquista(id, nome, "bronze", 25, f"nivel:{area}", 5, nota="Nível {v} de {a}")
 
 
 SERIES = [
     ("Ofensiva", [
-        _carimbo("ofensiva-3", "Três dias seguidos", "bronze", 15, "ofensiva", 3, nota="{v} de {a} dias"),
-        _carimbo("ofensiva-7", "Sete dias seguidos", "prata", 50, "ofensiva", 7, nota="{v} de {a} dias"),
-        _carimbo("ofensiva-14", "Catorze dias", "prata", 75, "ofensiva", 14, nota="{v} de {a} dias"),
-        _carimbo("ofensiva-30", "Trinta dias", "prata", 100, "ofensiva", 30, nota="{v} de {a} dias"),
-        _carimbo("ofensiva-60", "Sessenta dias", "ouro", 200, "ofensiva", 60, nota="{v} de {a} dias"),
-        _carimbo("ofensiva-100", "Cem dias", "ouro", 300, "ofensiva", 100, nota="{v} de {a} dias"),
+        _conquista("ofensiva-3", "Três dias seguidos", "bronze", 15, "ofensiva", 3, nota="{v} de {a} dias"),
+        _conquista("ofensiva-7", "Sete dias seguidos", "prata", 50, "ofensiva", 7, nota="{v} de {a} dias"),
+        _conquista("ofensiva-14", "Catorze dias", "prata", 75, "ofensiva", 14, nota="{v} de {a} dias"),
+        _conquista("ofensiva-30", "Trinta dias", "prata", 100, "ofensiva", 30, nota="{v} de {a} dias"),
+        _conquista("ofensiva-60", "Sessenta dias", "ouro", 200, "ofensiva", 60, nota="{v} de {a} dias"),
+        _conquista("ofensiva-100", "Cem dias", "ouro", 300, "ofensiva", 100, nota="{v} de {a} dias"),
     ]),
     ("Casos", [
-        _carimbo("casos-1", "Primeiro caso", "bronze", 10, "casos", 1, dica="Responda o primeiro caso"),
-        _carimbo("certos-10", "Dez certos seguidos", "bronze", 20, "certos_seguidos", 10, nota="Melhor: {v} de {a}"),
-        _carimbo("casos-100", "Cem casos", "bronze", 25, "casos", 100, nota="{v} de {a}"),
-        _carimbo("casos-500", "Quinhentos casos", "prata", 75, "casos", 500, nota="{v} de {a}"),
-        _carimbo("casos-1000", "Mil casos", "prata", 100, "casos", 1000, nota="{v} de {a}"),
-        _carimbo("casos-todos", "Todos os casos", "ouro", 300, "banco_pct", 100, nota="{v}% do banco"),
+        _conquista("casos-1", "Primeiro caso", "bronze", 10, "casos", 1, dica="Responda o primeiro caso"),
+        _conquista("certos-10", "Dez certos seguidos", "bronze", 20, "certos_seguidos", 10, nota="Melhor: {v} de {a}"),
+        _conquista("casos-100", "Cem casos", "bronze", 25, "casos", 100, nota="{v} de {a}"),
+        _conquista("casos-500", "Quinhentos casos", "prata", 75, "casos", 500, nota="{v} de {a}"),
+        _conquista("casos-1000", "Mil casos", "prata", 100, "casos", 1000, nota="{v} de {a}"),
+        _conquista("casos-todos", "Todos os casos", "ouro", 300, "banco_pct", 100, nota="{v}% do banco"),
     ]),
     ("Memória", [
-        _carimbo("revisao-1", "Primeira revisão", "bronze", 10, "revisoes", 1, dica="Faça a primeira revisão"),
-        _carimbo("recuperou-10", "Recuperou 10 casos", "bronze", 25, "recuperados", 10, nota="{v} de {a}"),
-        _carimbo("recuperou-50", "Recuperou 50 casos", "prata", 75, "recuperados", 50, nota="{v} de {a}"),
-        _carimbo("recuperou-100", "Recuperou 100 casos", "ouro", 150, "recuperados", 100, nota="{v} de {a}"),
-        _carimbo("consolidou-100", "Consolidou 100 casos", "prata", 75, "consolidados", 100, nota="{v} de {a}"),
-        _carimbo("consolidou-500", "Consolidou 500 casos", "ouro", 250, "consolidados", 500, nota="{v} de {a}"),
+        _conquista("revisao-1", "Primeira revisão", "bronze", 10, "revisoes", 1, dica="Faça a primeira revisão"),
+        _conquista("recuperou-10", "Recuperou 10 casos", "bronze", 25, "recuperados", 10, nota="{v} de {a}"),
+        _conquista("recuperou-50", "Recuperou 50 casos", "prata", 75, "recuperados", 50, nota="{v} de {a}"),
+        _conquista("recuperou-100", "Recuperou 100 casos", "ouro", 150, "recuperados", 100, nota="{v} de {a}"),
+        _conquista("consolidou-100", "Consolidou 100 casos", "prata", 75, "consolidados", 100, nota="{v} de {a}"),
+        _conquista("consolidou-500", "Consolidou 500 casos", "ouro", 250, "consolidados", 500, nota="{v} de {a}"),
     ]),
     ("Triagem", [
-        _carimbo("saiu-emergencia", "Saiu da Emergência", "prata", 75, "saiu_emergencia", 1,
+        _conquista("saiu-emergencia", "Saiu da Emergência", "prata", 75, "saiu_emergencia", 1,
                  dica="Tire uma área de Emergência"),
-        _carimbo("area-verde", "Primeira área no verde", "prata", 50, "areas_verdes_max", 1,
+        _conquista("area-verde", "Primeira área no verde", "prata", 50, "areas_verdes_max", 1,
                  dica="Uma área em 60% ou mais"),
-        _carimbo("acima-corte", "Acima do corte", "ouro", 200, "acima_corte", 1,
+        _conquista("acima-corte", "Acima do corte", "ouro", 200, "acima_corte", 1,
                  dica="Nota projetada acima do corte"),
-        _carimbo("cinco-verde", "Cinco áreas no verde", "ouro", 300, "areas_verdes_max", 5, nota="Melhor: {v} de {a} áreas"),
-        _carimbo("sem-vermelho", "Nenhuma área em vermelho", "prata", 100, "sem_vermelho", 1,
+        _conquista("cinco-verde", "Cinco áreas no verde", "ouro", 300, "areas_verdes_max", 5, nota="Melhor: {v} de {a} áreas"),
+        _conquista("sem-vermelho", "Nenhuma área em vermelho", "prata", 100, "sem_vermelho", 1,
                  dica="As cinco áreas fora de Emergência"),
-        _carimbo("tudo-azul", "Tudo em azul", "ouro", 300, "areas_azuis_max", 5, nota="Melhor: {v} de {a} áreas"),
+        _conquista("tudo-azul", "Tudo em azul", "ouro", 300, "areas_azuis_max", 5, nota="Melhor: {v} de {a} áreas"),
     ]),
     ("Provas oficiais", [
-        _carimbo("prova-1", "Primeira prova", "prata", 50, "provas", 1, dica="Termine uma prova oficial"),
-        _carimbo("prova-blocos", "Prova em blocos", "bronze", 25, "provas_em_blocos", 1,
+        _conquista("prova-1", "Primeira prova", "prata", 50, "provas", 1, dica="Termine uma prova oficial"),
+        _conquista("prova-blocos", "Prova em blocos", "bronze", 25, "provas_em_blocos", 1,
                  dica="Termine todos os blocos de uma prova"),
-        _carimbo("prova-corte", "Acima do corte numa prova", "ouro", 150, "prova_acima_corte", 1,
+        _conquista("prova-corte", "Acima do corte numa prova", "ouro", 150, "prova_acima_corte", 1,
                  dica="Só provas com corte em acertos"),
-        _carimbo("prova-duas-bancas", "Revalida e ENAMED", "prata", 75, "bancas_inep", 2, nota="{v} de {a} bancas"),
-        _carimbo("prova-usp", "USP", "bronze", 25, "banca:USP", 1, dica="Faça a prova da USP"),
-        _carimbo("prova-unicamp", "UNICAMP", "bronze", 25, "banca:UNICAMP", 1, dica="Faça a prova da UNICAMP"),
+        _conquista("prova-duas-bancas", "Revalida e ENAMED", "prata", 75, "bancas_inep", 2, nota="{v} de {a} bancas"),
+        _conquista("prova-usp", "USP", "bronze", 25, "banca:USP", 1, dica="Faça a prova da USP"),
+        _conquista("prova-unicamp", "UNICAMP", "bronze", 25, "banca:UNICAMP", 1, dica="Faça a prova da UNICAMP"),
     ]),
     ("Experiência por área", [
         _nivel_area("area-clinica-5", "Clínica nível 5", "Clínica Médica"),
@@ -94,23 +94,23 @@ SERIES = [
         _nivel_area("area-go-5", "Ginecologia nível 5", "Ginecologia e Obstetrícia"),
         _nivel_area("area-pediatria-5", "Pediatria nível 5", "Pediatria"),
         _nivel_area("area-preventiva-5", "Preventiva nível 5", "Medicina Preventiva e Social"),
-        _carimbo("areas-nivel-10", "Cinco áreas no nível 10", "ouro", 300, "areas_nivel_10", 5, nota="{v} de {a} áreas"),
+        _conquista("areas-nivel-10", "Cinco áreas no nível 10", "ouro", 300, "areas_nivel_10", 5, nota="{v} de {a} áreas"),
     ]),
     ("Cartões", [
-        _carimbo("cartao-1", "Primeiro cartão", "bronze", 10, "cartoes", 1, dica="Revise o primeiro cartão"),
-        _carimbo("cartoes-100", "Cem cartões", "bronze", 25, "cartoes", 100, nota="{v} de {a}"),
-        _carimbo("cartoes-500", "Quinhentos cartões", "prata", 50, "cartoes", 500, nota="{v} de {a}"),
-        _carimbo("cartoes-1000", "Mil cartões", "prata", 75, "cartoes", 1000, nota="{v} de {a}"),
+        _conquista("cartao-1", "Primeiro cartão", "bronze", 10, "cartoes", 1, dica="Revise o primeiro cartão"),
+        _conquista("cartoes-100", "Cem cartões", "bronze", 25, "cartoes", 100, nota="{v} de {a}"),
+        _conquista("cartoes-500", "Quinhentos cartões", "prata", 50, "cartoes", 500, nota="{v} de {a}"),
+        _conquista("cartoes-1000", "Mil cartões", "prata", 75, "cartoes", 1000, nota="{v} de {a}"),
     ]),
     ("Outros", [
-        _carimbo("olho-clinico", "Olho clínico", "prata", 50, "relatos_resolvidos", 1, dica="Um relato de erro resolvido"),
-        _carimbo("de-volta", "De volta ao plantão", "bronze", 25, "maior_ausencia", 30, secreta=True),
-        _carimbo("cem-num-dia", "Cem casos num dia", "prata", 50, "casos_num_dia", 100, secreta=True),
-        _carimbo("todas-as-provas", "Todas as provas", "ouro", 150, "provas_pct", 100, secreta=True),
+        _conquista("olho-clinico", "Olho clínico", "prata", 50, "relatos_resolvidos", 1, dica="Um relato de erro resolvido"),
+        _conquista("de-volta", "De volta ao plantão", "bronze", 25, "maior_ausencia", 30, secreta=True),
+        _conquista("cem-num-dia", "Cem casos num dia", "prata", 50, "casos_num_dia", 100, secreta=True),
+        _conquista("todas-as-provas", "Todas as provas", "ouro", 150, "provas_pct", 100, secreta=True),
     ]),
 ]
 
-CONQUISTAS = [c for _, carimbos in SERIES for c in carimbos]
+CONQUISTAS = [c for _, itens in SERIES for c in itens]
 PORTE = {c["id"]: c for c in CONQUISTAS}
 
 
@@ -152,7 +152,7 @@ def maior_sequencia_certa(corretas):
 def trajetoria_da_triagem(tentativas, areas=None):
     """Percorre as primeiras respostas em ordem, `[(area, pontos)]`, e diz o melhor
     momento de cada marco. É um percurso e não uma foto porque "saiu da Emergência" é
-    uma história, e o carimbo não pode depender do dia em que a conta foi avaliada.
+    uma história, e a conquista não pode depender do dia em que a conta foi avaliada.
     Só as cinco grandes áreas, cada uma a partir de RESPOSTAS_MINIMAS_AREA."""
     areas = areas if areas is not None else db.TAXONOMIA
     placar = {}
@@ -179,7 +179,7 @@ def trajetoria_da_triagem(tentativas, areas=None):
 def medidas_de_provas(feitas, pagas, edicoes):
     """`feitas` vem de `db.simulados_oficiais_feitos` e `pagas` são as chaves de prova
     do razão, e a prova só conta se pagou: o XP já exige 90% respondida, e é isso que
-    impede de ganhar o carimbo finalizando a prova em branco."""
+    impede de ganhar a conquista finalizando a prova em branco."""
     validas = []
     for f in feitas:
         if f["em_blocos"]:
@@ -207,7 +207,7 @@ def medidas_de_provas(feitas, pagas, edicoes):
 # --- Leitura do histórico ---------------------------------------------------
 
 def medir(usuario_id):
-    """Quanto a conta tem de cada coisa que algum carimbo mede."""
+    """Quanto a conta tem de cada coisa que alguma conquista mede."""
     estudo, protegidos = db.dias_de_ofensiva(usuario_id=usuario_id)
     with get_conn() as conn:
         respostas = conn.execute(
@@ -275,11 +275,11 @@ def medir(usuario_id):
     return medidas
 
 
-# --- Carimbar ---------------------------------------------------------------
+# --- Conceder ---------------------------------------------------------------
 
-def carimbar(conn, usuario_id, medidas, agora):
+def conceder(conn, usuario_id, medidas, agora):
     """Paga no razão o que as medidas alcançaram, na transação de quem chama. Devolve
-    os carimbos novos; a chave única cobre duas avaliações ao mesmo tempo."""
+    as conquistas novas; a chave única cobre duas avaliações ao mesmo tempo."""
     obtidas = {r["chave"] for r in conn.execute(
         "SELECT chave FROM progresso_eventos WHERE usuario_id = ? AND tipo = 'conquista'", (usuario_id,),
     ).fetchall()}
@@ -299,7 +299,7 @@ def carimbar(conn, usuario_id, medidas, agora):
 def verificar(usuario_id):
     medidas = medir(usuario_id)
     with get_conn() as conn:
-        return carimbar(conn, usuario_id, medidas, db.agora_br())
+        return conceder(conn, usuario_id, medidas, db.agora_br())
 
 
 def _obtidas(usuario_id):
@@ -319,12 +319,12 @@ def _nota(c, valor):
     return c["dica"]
 
 
-def caderneta(usuario_id):
-    """A caderneta inteira. O carimbo secreto ainda não obtido sai sem nome, sem id e
+def pagina(usuario_id):
+    """A página inteira. A conquista secreta ainda não obtida sai sem nome, sem id e
     sem medida: a resposta é o que qualquer curioso lê no navegador."""
     medidas = medir(usuario_id)
     with get_conn() as conn:
-        novas = carimbar(conn, usuario_id, medidas, db.agora_br())
+        novas = conceder(conn, usuario_id, medidas, db.agora_br())
     obtidas = _obtidas(usuario_id)
 
     def publico(c, ordem):
@@ -333,15 +333,15 @@ def caderneta(usuario_id):
             return {"id": c["id"], "nome": c["nome"], "grau": c["grau"], "moedas": c["moedas"],
                     "obtida_em": quando, "nota": None, "pct": None}
         if c["secreta"]:
-            return {"id": f"secreta-{ordem}", "nome": "Carimbo secreto", "grau": c["grau"], "moedas": c["moedas"],
+            return {"id": f"secreta-{ordem}", "nome": "Conquista secreta", "grau": c["grau"], "moedas": c["moedas"],
                     "obtida_em": None, "nota": "Só aparece quando acontece", "pct": None}
         valor = medidas.get(c["medida"], 0)
         return {"id": c["id"], "nome": c["nome"], "grau": c["grau"], "moedas": c["moedas"], "obtida_em": None,
                 "nota": _nota(c, valor), "pct": min(100, 100 * valor / c["alvo"]) if c["nota"] else None}
 
     series = []
-    for nome, carimbos in SERIES:
-        itens = [publico(c, i) for i, c in enumerate(carimbos)]
+    for nome, grupo in SERIES:
+        itens = [publico(c, i) for i, c in enumerate(grupo)]
         series.append({"nome": nome, "feitos": sum(1 for i in itens if i["obtida_em"]), "qtd": len(itens), "itens": itens})
     return {"obtidos": len(obtidas), "total": len(CONQUISTAS), "series": series, "novas": novas}
 
