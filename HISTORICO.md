@@ -8,7 +8,7 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
 
 ## Pendências
 
-- **Trilha de níveis e textos (01/11).** As molduras de patente saíram da loja e foram para a
+- **Trilha de níveis e textos (no ar desde 01/11).** As molduras de patente saíram da loja e foram para a
   Trilha de níveis, em Seu perfil, onde se usa ou tira cada uma. Escolher a da patente atual
   grava "sem escolha", para ela seguir subindo sozinha com a próxima patente. Decisão do usuário
   sobre os textos: tirar os apontamentos pequenos ("vem com a patente", "volta na sua revisão em
