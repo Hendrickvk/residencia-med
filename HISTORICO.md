@@ -8,7 +8,7 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
 
 ## Pendências
 
-- **Avaliação prática do site publicado (31/10).** Feito e não subido: retomada no ponto
+- **Avaliação prática do site publicado (31/10).** No ar desde 01/11 (o código; o conteúdo abaixo não): retomada no ponto
   exato, flashcards sem sucesso falso, "Rever os casos" no resumo do Praticar, "Questões
   marcadas" no menu da conta, estados de carregamento e falha (busca, "Virar cartão", prova,
   resultado), e os textos de pontos, projeção e prazos iguais.
