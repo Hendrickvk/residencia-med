@@ -93,7 +93,7 @@ function RodapeDoItem({ item, saldo, acoes }: { item: ItemLoja; saldo: number; a
           <Lock size={13} strokeWidth={2.5} className="mt-[3px] shrink-0" />
           {item.exige}
         </span>
-        <Preco valor={item.preco} className="text-apoio text-muted" />
+        <Preco valor={item.preco} className="shrink-0 text-apoio text-muted" />
       </>
     );
   }
@@ -136,8 +136,8 @@ function CartaoDoItem({ item, me, saldo, acoes }: { item: ItemLoja; me: Me | und
       ) : (
         <div className="flex h-[124px] items-center justify-center overflow-hidden rounded-col bg-ground">
           <span className="flex flex-col items-center gap-0.5 px-2.5 text-center">
-            <span className="text-bloco [overflow-wrap:anywhere]">{nomeExibido(me)}</span>
-            <span className="text-apoio text-ink-2">{item.nome}</span>
+            <span className="text-apoio text-ink-2 [overflow-wrap:anywhere]">{nomeExibido(me)}</span>
+            <span className="text-bloco">{item.nome}</span>
           </span>
         </div>
       )}
@@ -147,7 +147,8 @@ function CartaoDoItem({ item, me, saldo, acoes }: { item: ItemLoja; me: Me | und
           {tema && <span className="text-apoio text-muted">Muda também o crachá e o perfil</span>}
         </span>
       )}
-      <div className="mt-auto flex min-h-9 flex-wrap items-center justify-between gap-2">
+      {/* Travado, a exigência quebra ao lado do preço; solto, cada nome longo mudava a disposição do rodapé. */}
+      <div className={`mt-auto flex min-h-9 items-center justify-between gap-2 ${item.liberado || item.seu ? "flex-wrap" : ""}`}>
         <RodapeDoItem item={item} saldo={saldo} acoes={acoes} />
       </div>
     </article>
