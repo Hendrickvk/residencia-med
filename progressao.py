@@ -95,12 +95,19 @@ CATALOGO = (
         for id_ in [_MOLDURAS_DE_PATENTE.get(patente)]
         if id_
     ),
-    {"id": "pontos", "tipo": "moldura", "nome": "Ponteado", "preco": 200, "nivel": 5},
-    {"id": "milimetrado", "tipo": "moldura", "nome": "Milimetrado", "preco": 250, "nivel": 10},
-    {"id": "plantao", "tipo": "moldura", "nome": "Plantão", "preco": 400, "nivel": 15},
-    {"id": "estetoscopio", "tipo": "moldura", "nome": "Estetoscópio", "preco": 500, "nivel": 20},
-    {"id": "monitor", "tipo": "moldura", "nome": "Monitor", "preco": 650, "nivel": 25},
-    {"id": "monitor-ouro", "tipo": "moldura", "nome": "Monitor de ouro", "preco": 1200, "nivel": 40},
+    # Cada uma traz o tema do crachá e do perfil, que também mora no front (lib/cosmeticos.ts).
+    {"id": "flor", "tipo": "moldura", "nome": "Flor", "preco": 200, "nivel": 5},
+    {"id": "orbita", "tipo": "moldura", "nome": "Órbita", "preco": 250, "nivel": 10},
+    {"id": "dalia", "tipo": "moldura", "nome": "Dália", "preco": 400, "nivel": 15},
+    {"id": "leque", "tipo": "moldura", "nome": "Leque", "preco": 650, "nivel": 25},
+    {"id": "noite-estrelada", "tipo": "moldura", "nome": "Noite estrelada", "preco": 1200, "nivel": 40},
+    # Fora de venda desde 01/11. Quem comprou continua vendo e usando: a compra é dela.
+    {"id": "pontos", "tipo": "moldura", "nome": "Ponteado", "preco": 200, "nivel": 5, "aposentado": True},
+    {"id": "milimetrado", "tipo": "moldura", "nome": "Milimetrado", "preco": 250, "nivel": 10, "aposentado": True},
+    {"id": "plantao", "tipo": "moldura", "nome": "Plantão", "preco": 400, "nivel": 15, "aposentado": True},
+    {"id": "estetoscopio", "tipo": "moldura", "nome": "Estetoscópio", "preco": 500, "nivel": 20, "aposentado": True},
+    {"id": "monitor", "tipo": "moldura", "nome": "Monitor", "preco": 650, "nivel": 25, "aposentado": True},
+    {"id": "monitor-ouro", "tipo": "moldura", "nome": "Monitor de ouro", "preco": 1200, "nivel": 40, "aposentado": True},
     {"id": "plantonista", "tipo": "titulo", "nome": "Plantonista", "preco": 100, "nivel": 8},
     {"id": "noite-de-plantao", "tipo": "titulo", "nome": "Noite de plantão", "preco": 150, "nivel": 15},
     {"id": "segunda-opiniao", "tipo": "titulo", "nome": "Segunda opinião", "preco": 250, "nivel": 25},
@@ -152,10 +159,11 @@ def proximo_desbloqueio(nivel):
     """O próximo nível que libera alguma coisa, e o quê: é o que a tela promete
     ("No nível 15 você libera a moldura Plantão"), porque item travado à vista é o
     que dá vontade de chegar lá."""
-    proximo = min((i["nivel"] for i in CATALOGO if i.get("nivel", 0) > nivel), default=None)
+    a_venda = [i for i in CATALOGO if not i.get("aposentado")]
+    proximo = min((i["nivel"] for i in a_venda if i.get("nivel", 0) > nivel), default=None)
     if proximo is None:
         return None
-    itens = [i for i in CATALOGO if i.get("nivel") == proximo]
+    itens = [i for i in a_venda if i.get("nivel") == proximo]
     nomes = [f"{_ROTULO_DO_TIPO[i['tipo']]} {i['nome']}" for i in itens]
     frase = nomes[0] if len(nomes) == 1 else f"{', '.join(nomes[:-1])} e {nomes[-1]}"
     return {
@@ -599,7 +607,10 @@ def loja(usuario_id):
                 # O liberado primeiro. Ser dela não entra na ordem: o item recém-comprado
                 # sairia de baixo do dedo.
                 "itens": sorted(
-                    (estado(i) for i in CATALOGO if i["tipo"] == tipo),
+                    (
+                        estado(i) for i in CATALOGO
+                        if i["tipo"] == tipo and (not i.get("aposentado") or i["id"] in compradas)
+                    ),
                     key=lambda i: (not i["liberado"], ITENS[i["id"]].get("nivel", 0)),
                 ),
             }
@@ -654,6 +665,8 @@ def comprar(item_id, *, usuario_id):
                 raise ItemInexistente(item_id)
             if item.get("de_patente"):
                 raise CompraRecusada("Esta moldura vem com a patente.")
+            if item.get("aposentado"):
+                raise CompraRecusada("Este item saiu da loja.")
             xp_total = conn.execute("SELECT xp_total FROM usuarios WHERE id = ?", (usuario_id,)).fetchone()["xp_total"]
             if not _liberado(item, nivel_de(xp_total), _xp_por_area(conn, usuario_id)):
                 raise CompraRecusada(f"Este item ainda não foi liberado. Pede: {_exigencia(item)}.")

@@ -5,8 +5,10 @@ import { Avatar } from "../../components/Avatar";
 import { EstadoFalha } from "../../components/EstadoFalha";
 import { Moeda } from "../../components/Moeda";
 import { NumeroAnimado } from "../../components/NumeroAnimado";
+import { CenaDoTema } from "../../components/Tracos";
 import { ApiError } from "../../lib/api";
 import { useMe } from "../../lib/auth";
+import { temaDaMoldura } from "../../lib/cosmeticos";
 import { BOTAO_SECUNDARIO } from "../../lib/estilos";
 import { formatarNumeroBR } from "../../lib/format";
 import { nomeExibido } from "../../lib/perfil";
@@ -110,11 +112,18 @@ function RodapeDoItem({ item, saldo, acoes }: { item: ItemLoja; saldo: number; a
 }
 
 function CartaoDoItem({ item, me, saldo, acoes }: { item: ItemLoja; me: Me | undefined; saldo: number; acoes: Acoes }) {
+  const tema = item.tipo === "moldura" ? temaDaMoldura(item.id) : null;
   return (
     <article className="flex min-w-0 flex-col gap-3 rounded-card border border-line bg-surface p-3 max-sm:w-[212px] max-sm:shrink-0 max-sm:snap-start">
-      <div className="flex h-[124px] items-center justify-center overflow-hidden rounded-col bg-ground">
+      <div
+        className="relative flex h-[124px] items-center justify-center overflow-hidden rounded-col bg-ground"
+        style={tema?.variaveis as React.CSSProperties | undefined}
+      >
+        {tema && <CenaDoTema tema={tema} />}
         {item.tipo === "moldura" ? (
-          <Avatar me={me} tamanho={72} moldura={item.id} />
+          <span className={tema ? "relative rounded-pill bg-surface p-0.5" : undefined}>
+            <Avatar me={me} tamanho={72} moldura={item.id} />
+          </span>
         ) : (
           <span className="flex flex-col items-center gap-0.5 px-2.5 text-center">
             <span className="text-bloco [overflow-wrap:anywhere]">{nomeExibido(me)}</span>
@@ -122,7 +131,12 @@ function CartaoDoItem({ item, me, saldo, acoes }: { item: ItemLoja; me: Me | und
           </span>
         )}
       </div>
-      {item.tipo === "moldura" && <span className="text-corpo font-semibold [overflow-wrap:anywhere]">{item.nome}</span>}
+      {item.tipo === "moldura" && (
+        <span className="flex flex-col">
+          <span className="text-corpo font-semibold [overflow-wrap:anywhere]">{item.nome}</span>
+          {tema && <span className="text-apoio text-muted">Muda também o crachá e o perfil</span>}
+        </span>
+      )}
       <div className="mt-auto flex min-h-9 flex-wrap items-center justify-between gap-2">
         <RodapeDoItem item={item} saldo={saldo} acoes={acoes} />
       </div>

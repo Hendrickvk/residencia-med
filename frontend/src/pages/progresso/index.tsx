@@ -6,6 +6,7 @@ import { Cracha } from "../../components/Cracha";
 import { EstadoFalha } from "../../components/EstadoFalha";
 import { Moeda } from "../../components/Moeda";
 import { useMe } from "../../lib/auth";
+import { temaDaMoldura } from "../../lib/cosmeticos";
 import { BOTAO_SECUNDARIO } from "../../lib/estilos";
 import { formatarNumeroBR } from "../../lib/format";
 import { useProgresso } from "../../lib/progresso";
@@ -69,6 +70,7 @@ export default function PaginaProgresso() {
 
   const { nivel, patentes, areas, dias, maior_sequencia: maiorSequencia, vitrine } = data;
   const ofensiva = me?.ofensiva_dias ?? 0;
+  const tema = temaDaMoldura(me?.equipados?.moldura);
 
   return (
     <div className="flex flex-col gap-7">
@@ -84,7 +86,12 @@ export default function PaginaProgresso() {
         </div>
       </div>
 
-      <section className="flex flex-wrap items-start gap-7">
+      {/* Com o tema da moldura, este bloco vira um painel nas cores dela. Só ele: o resto da
+          página, como as telas de estudo, segue o tema do app. */}
+      <section
+        className={`flex flex-wrap items-start gap-7 ${tema ? "rounded-caso border border-line bg-surface p-4 text-ink sm:p-6" : ""}`}
+        style={tema?.variaveis as React.CSSProperties | undefined}
+      >
         <div className="mx-auto w-full max-w-[300px] shrink-0 sm:mx-0">
           <Cracha me={me} nivel={nivel.nivel} patente={nivel.patente} />
         </div>
@@ -175,7 +182,8 @@ export default function PaginaProgresso() {
 
           <div className="flex flex-col gap-3">
             <h3 className="text-bloco">Patentes</h3>
-            <ol className="grid grid-cols-4 gap-y-4 md:grid-cols-8">
+            {/* Pelo nome maior: em colunas fixas, PRECEPTORIA invadia a coluna vizinha. */}
+            <ol className="grid grid-cols-[repeat(auto-fill,minmax(112px,1fr))] gap-y-4">
               {patentes.map((p) => {
                 const alcancada = nivel.nivel >= p.nivel;
                 const atual = p.nome === nivel.patente;

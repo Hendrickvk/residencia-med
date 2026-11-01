@@ -3,6 +3,7 @@ import { desenhoDaMoldura } from "../lib/cosmeticos";
 import type { Me } from "../lib/types";
 import { corCheia } from "../lib/paleta";
 import { inicial } from "../lib/perfil";
+import { Tracos } from "./Tracos";
 
 interface Props {
   me: Me | undefined;
@@ -63,15 +64,7 @@ export function Avatar({ me, tamanho = 36, className = "", moldura }: Props) {
         aria-hidden="true"
         className="absolute inset-0 h-full w-full overflow-visible"
       >
-        {tracos.map((t) => (
-          <path
-            key={t.d}
-            d={t.d}
-            strokeWidth={t.largura}
-            strokeDasharray={t.tracejado}
-            stroke={t.ouro ? "var(--ouro)" : "currentColor"}
-          />
-        ))}
+        <Tracos tracos={tracos} />
       </svg>
       {circulo}
     </span>

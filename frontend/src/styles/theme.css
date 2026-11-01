@@ -106,6 +106,44 @@
       animation-delay: 0ms !important;
       transition-duration: 0.001ms !important;
     }
+    /* Infinita, com duração zerada ela piscaria: o reflexo simplesmente não acende. */
+    .brilho-folha,
+    .moldura-gira,
+    .moldura-gira-contra,
+    .moldura-pisca {
+      animation-name: none !important;
+    }
+  }
+
+  /* As molduras e as cenas da loja. A duração e o centro vêm de lib/cosmeticos.ts. */
+  .moldura-gira {
+    animation: moldura-gira 1s linear infinite;
+  }
+  .moldura-gira-contra {
+    animation: moldura-gira 1s linear infinite reverse;
+  }
+  .moldura-pisca {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: moldura-pisca 1s ease-in-out infinite;
+  }
+  @keyframes moldura-gira {
+    to { transform: rotate(360deg); }
+  }
+  @keyframes moldura-pisca {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.35; transform: scale(0.7); }
+  }
+
+  /* O reflexo que sobe pelos louros (lib/cosmeticos.ts). Passa rápido e descansa. */
+  .brilho-folha {
+    opacity: 0;
+    animation: brilho-folha 5s linear infinite;
+  }
+  @keyframes brilho-folha {
+    0% { opacity: 0; }
+    4% { opacity: 1; }
+    11%, 100% { opacity: 0; }
   }
 
   /* Troca de tema: esmaece a tela inteira em vez de piscar (AppShell). */

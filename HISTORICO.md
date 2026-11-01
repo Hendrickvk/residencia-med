@@ -8,14 +8,21 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
 
 ## Pendências
 
-- **Avaliação prática do site publicado (31/10).** No ar desde 01/11 (o código; o conteúdo abaixo não): retomada no ponto
+- **Molduras novas (01/11).** Feito no localhost, sem commit: patentes em coroa de louros, com
+  o reflexo subindo da prata para cima; Flor, Órbita, Dália, Leque e Noite estrelada na loja,
+  nos preços e níveis das seis antigas, cada uma com o tema do crachá e do painel do perfil.
+  As seis antigas ganharam `aposentado`: saem da vitrine e da promessa do próximo nível, não se
+  compram mais, e quem comprou continua vendo e usando (`tests/test_loja.py`). Não foi visto
+  com movimento reduzido ligado, nem em celular de verdade. Decisão: o tema fica no crachá, no
+  painel do perfil e na prévia da loja, nunca nas telas de estudo.
+- **Avaliação prática do site publicado (31/10).** No ar desde 01/11: retomada no ponto
   exato, flashcards sem sucesso falso, "Rever os casos" no resumo do Praticar, "Questões
   marcadas" no menu da conta, estados de carregamento e falha (busca, "Virar cartão", prova,
   resultado), e os textos de pontos, projeção e prazos iguais.
-  **Conteúdo pendente de aprovação:** `backups/correcoes_enunciados_20261031.json` corrige 7
+  **Conteúdo aplicado em produção em 01/11:** `backups/correcoes_enunciados_20261031.json` corrige 7
   enunciados, conferidos contra os cadernos: 326, 368, 279 (O₂ e CO₂ soltos) e 120, 159, 298,
-  266 (tabela achatada; na 298 também 10¹² guardado como 1012). Aplicar com
-  `scripts/corrigir_enunciados.py`, depois do `backup_banco.py`. Só o branch de testes recebeu.
+  266 (tabela achatada; na 298 também 10¹² guardado como 1012). Backup completo em
+  `conduta_20261101_130308.dump`, texto anterior em `enunciados_20261101_130336.json`.
   Preservei o que é do próprio caderno: "encontra--se", "12,0 g/dL" na bilirrubina indireta,
   "CKP"/"CKD", "mg/Dl". Na 298, células mescladas viraram repetidas. **Ainda a conferir com o
   caderno:** saturação de O solta em 252, 318, 458 e 361; "x 106" em 3236; `mm3` e `m2` em cerca

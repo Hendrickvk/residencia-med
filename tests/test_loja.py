@@ -68,34 +68,34 @@ NIVEL_10 = progressao.xp_do_nivel(10)
 
 def test_compra_desconta_e_o_item_passa_a_ser_dela(usuario_teste):
     _dar(usuario_teste, moedas=500, xp=NIVEL_10)
-    loja = progressao.comprar("milimetrado", usuario_id=usuario_teste)
+    loja = progressao.comprar("orbita", usuario_id=usuario_teste)
     assert loja["moedas"] == 250
-    assert _item(loja, "milimetrado")["seu"] is True
+    assert _item(loja, "orbita")["seu"] is True
     saldo, razao = _saldo(usuario_teste), _soma_razao(usuario_teste)
     assert saldo["moedas"] == razao["moedas"] == 250
 
 
 def test_comprar_duas_vezes_nao_cobra_de_novo(usuario_teste):
     _dar(usuario_teste, moedas=1000, xp=NIVEL_10)
-    progressao.comprar("milimetrado", usuario_id=usuario_teste)
+    progressao.comprar("orbita", usuario_id=usuario_teste)
     with pytest.raises(progressao.CompraRecusada):
-        progressao.comprar("milimetrado", usuario_id=usuario_teste)
+        progressao.comprar("orbita", usuario_id=usuario_teste)
     assert _saldo(usuario_teste)["moedas"] == 750
 
 
 def test_nivel_insuficiente_recusa(usuario_teste):
     _dar(usuario_teste, moedas=5000, xp=NIVEL_10)
     with pytest.raises(progressao.CompraRecusada, match="Nível 15"):
-        progressao.comprar("plantao", usuario_id=usuario_teste)
+        progressao.comprar("dalia", usuario_id=usuario_teste)
     assert _saldo(usuario_teste)["moedas"] == 5000
 
 
 def test_saldo_insuficiente_recusa_e_nao_deixa_o_item(usuario_teste):
     _dar(usuario_teste, moedas=249, xp=NIVEL_10)
     with pytest.raises(progressao.CompraRecusada, match="moedas"):
-        progressao.comprar("milimetrado", usuario_id=usuario_teste)
+        progressao.comprar("orbita", usuario_id=usuario_teste)
     assert _saldo(usuario_teste)["moedas"] == 249
-    assert _item(progressao.loja(usuario_teste), "milimetrado")["seu"] is False
+    assert _item(progressao.loja(usuario_teste), "orbita")["seu"] is False
 
 
 def test_duas_compras_ao_mesmo_tempo_com_saldo_para_uma(usuario_teste):
@@ -113,7 +113,7 @@ def test_duas_compras_ao_mesmo_tempo_com_saldo_para_uma(usuario_teste):
         except progressao.CompraRecusada:
             pass
 
-    fios = [threading.Thread(target=tentar, args=(i,)) for i in ("milimetrado", "pontos")]
+    fios = [threading.Thread(target=tentar, args=(i,)) for i in ("orbita", "flor")]
     for f in fios:
         f.start()
     for f in fios:
@@ -163,19 +163,19 @@ def test_ciclo_basico_nao_tem_moldura(usuario_teste):
 
 def test_equipar_o_que_e_dela(usuario_teste):
     _dar(usuario_teste, moedas=1000, xp=NIVEL_10)
-    progressao.comprar("milimetrado", usuario_id=usuario_teste)
+    progressao.comprar("orbita", usuario_id=usuario_teste)
     progressao.comprar("plantonista", usuario_id=usuario_teste)
-    progressao.equipar("moldura", "milimetrado", usuario_id=usuario_teste)
+    progressao.equipar("moldura", "orbita", usuario_id=usuario_teste)
     progressao.equipar("titulo", "plantonista", usuario_id=usuario_teste)
     assert progressao.equipados_de(db.obter_usuario(usuario_teste)) == {
-        "moldura": "milimetrado", "titulo": "Plantonista",
+        "moldura": "orbita", "titulo": "Plantonista",
     }
 
 
 def test_equipar_item_que_nao_e_dela_recusa(usuario_teste):
     _dar(usuario_teste, moedas=1000, xp=NIVEL_10)
     with pytest.raises(progressao.CompraRecusada):
-        progressao.equipar("moldura", "milimetrado", usuario_id=usuario_teste)
+        progressao.equipar("moldura", "orbita", usuario_id=usuario_teste)
     # A moldura de uma patente que ela ainda não alcançou também não é dela.
     with pytest.raises(progressao.CompraRecusada):
         progressao.equipar("moldura", "residencia", usuario_id=usuario_teste)
@@ -308,7 +308,7 @@ def test_quem_estudou_ontem_nao_gasta_protecao(usuario_teste, questao_teste):
 def test_proximo_desbloqueio_diz_o_que_vem():
     libera = progressao.proximo_desbloqueio(14)
     assert libera["nivel"] == 15
-    assert "a moldura Plantão" in libera["frase"]
+    assert "a moldura Dália" in libera["frase"]
     assert "o título Noite de plantão" in libera["frase"]
     assert progressao.proximo_desbloqueio(999) is None
 
@@ -323,20 +323,20 @@ def test_api_da_loja(conta_api):
     client, id_conta = conta_api
     loja = client.get("/progresso/loja").json()
     assert loja["moedas"] == 0
-    assert _item(loja, "pontos")["liberado"] is False
+    assert _item(loja, "flor")["liberado"] is False
 
     _dar(id_conta, moedas=300, xp=progressao.xp_do_nivel(5))
-    r = client.post("/progresso/loja/pontos/comprar")
+    r = client.post("/progresso/loja/flor/comprar")
     assert r.status_code == 200
     assert r.json()["moedas"] == 100
 
-    assert client.post("/progresso/loja/pontos/comprar").status_code == 409
+    assert client.post("/progresso/loja/flor/comprar").status_code == 409
     assert client.post("/progresso/loja/nao-existe/comprar").status_code == 404
-    assert client.put("/progresso/equipar", json={"tipo": "moldura", "item": "plantao"}).status_code == 409
+    assert client.put("/progresso/equipar", json={"tipo": "moldura", "item": "dalia"}).status_code == 409
 
-    assert client.put("/progresso/equipar", json={"tipo": "moldura", "item": "pontos"}).status_code == 200
+    assert client.put("/progresso/equipar", json={"tipo": "moldura", "item": "flor"}).status_code == 200
     me = client.get("/me").json()
-    assert me["equipados"]["moldura"] == "pontos"
+    assert me["equipados"]["moldura"] == "flor"
     assert me["moedas"] == 100
     assert me["progresso"]["libera"]["nivel"] > 5
 
@@ -344,7 +344,7 @@ def test_api_da_loja(conta_api):
 def test_loja_exige_sessao():
     with TestClient(app) as client:
         assert client.get("/progresso/loja").status_code == 401
-        assert client.post("/progresso/loja/pontos/comprar").status_code == 401
+        assert client.post("/progresso/loja/flor/comprar").status_code == 401
 
 
 def test_retroagir_nao_apaga_as_compras(usuario_teste, questao_teste):
@@ -359,7 +359,7 @@ def test_retroagir_nao_apaga_as_compras(usuario_teste, questao_teste):
     spec.loader.exec_module(retroagir)
 
     _dar(usuario_teste, moedas=500, xp=NIVEL_10)
-    progressao.comprar("milimetrado", usuario_id=usuario_teste)
+    progressao.comprar("orbita", usuario_id=usuario_teste)
     sr.registrar_revisao(questao_teste, 5, usuario_id=usuario_teste, origem="pratica", correta=True, alternativa="A")
     antes = _saldo(usuario_teste)
     with db.get_conn() as conn:
@@ -367,3 +367,39 @@ def test_retroagir_nao_apaga_as_compras(usuario_teste, questao_teste):
         linha = conn.execute("SELECT * FROM usuarios WHERE id = ?", (usuario_teste,)).fetchone()
         retroagir.retroagir_conta(conn, linha, areas)
     assert _saldo(usuario_teste) == antes
+
+
+# --- Fora de venda ----------------------------------------------------------
+
+def _compra_antiga(usuario_id, item_id):
+    """Como ficou no razão quem comprou o item enquanto ele estava à venda."""
+    with db.get_conn() as conn:
+        progressao._lancar(
+            conn, usuario_id=usuario_id, chave=f"compra:{item_id}", tipo="compra", xp=0, moedas=0,
+            area_id=None, agora=db.agora_br(),
+        )
+
+
+def test_moldura_aposentada_sai_da_vitrine_e_nao_vende(usuario_teste):
+    _dar(usuario_teste, moedas=5000, xp=progressao.xp_do_nivel(50))
+    ids = {i["id"] for s in progressao.loja(usuario_teste)["secoes"] for i in s["itens"]}
+    assert "monitor" not in ids and "leque" in ids
+    with pytest.raises(progressao.CompraRecusada):
+        progressao.comprar("monitor", usuario_id=usuario_teste)
+    assert _saldo(usuario_teste)["moedas"] == 5000
+
+
+def test_quem_comprou_a_aposentada_continua_com_ela(usuario_teste):
+    _dar(usuario_teste, xp=progressao.xp_do_nivel(30))
+    _compra_antiga(usuario_teste, "monitor")
+    loja = progressao.equipar("moldura", "monitor", usuario_id=usuario_teste)
+    assert _item(loja, "monitor")["seu"] is True
+    assert _item(loja, "monitor")["em_uso"] is True
+    assert "pontos" not in {i["id"] for s in loja["secoes"] for i in s["itens"]}
+
+
+def test_aposentada_nao_e_prometida_no_proximo_nivel():
+    for nivel in range(1, 70):
+        libera = progressao.proximo_desbloqueio(nivel)
+        if libera:
+            assert not any(progressao.ITENS[i["id"]].get("aposentado") for i in libera["itens"])

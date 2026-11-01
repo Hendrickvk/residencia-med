@@ -37,6 +37,16 @@ export const ROTULO_TIPO: Record<TipoNovidade, string> = {
 
 export const NOVIDADES: Novidade[] = [
   {
+    id: "2026-11-01",
+    data: "1 de novembro de 2026",
+    titulo: "Molduras novas",
+    itens: [
+      { tipo: "novo", texto: "Cada patente agora tem uma coroa de louros, que cresce com você. Da prata para cima, ela brilha." },
+      { tipo: "novo", texto: "Cinco molduras novas na loja: Flor, Órbita, Dália, Leque e Noite estrelada." },
+      { tipo: "novo", texto: "Essas cinco também mudam o seu crachá e o topo do seu perfil. As telas de estudo continuam iguais." },
+    ],
+  },
+  {
     id: "2026-10-31c",
     data: "31 de outubro de 2026",
     titulo: "Conquistas",

@@ -630,8 +630,16 @@ acompanha a raridade: o que se repete dezenas de vezes por dia quase não aparec
 - **Molduras** (`lib/cosmeticos.ts`, prop `moldura` do `Avatar`): traços de SVG em volta do
   avatar, desenhados por id. O servidor só diz o id, nunca o desenho, pelo mesmo motivo de
   `db.normalizar_cor`. A caixa do avatar cresce para caber a moldura (`tamanho / 0,74`), e
-  quem chama reserva esse espaço. Nas molduras de ouro o traço é `--ouro`; o resto é tinta,
-  e por isso elas funcionam em qualquer cor de avatar.
+  quem chama reserva esse espaço. **As da loja** (Flor, Órbita, Dália, Leque, Noite estrelada;
+  decisão do usuário em 01/11) trazem um tema: a cena da faixa do crachá e as cores dele e do
+  painel do perfil, em `temaDaMoldura`. O tema só reescreve os tokens (`--surface`, `--ink`…)
+  naquele bloco, então as telas de estudo nem sabem que ele existe; as cores não mudam com o
+  claro ou escuro do app, e `tests/cosmeticos.test.ts` mede o contraste de cada uma. **As de patente
+  são uma coroa de louros** (decisão do usuário em 01/11, depois de recusar anéis de metal e
+  temas médicos): a coroa cresce com o posto e o metal diz a altura, de grafite a bronze, prata
+  e ouro; a Preceptoria ganha uma folha a mais por nó, e a Chefia, a estrela no topo. Os tons de
+  metal são fixos e não mudam com o tema. Da prata para cima, um reflexo sobe pelos dois ramos
+  a cada 5 s (`brilho-folha`), e com movimento reduzido ele não acende.
 - **Loja** (`/progresso/loja`, no menu da conta e em Seu perfil; fora das abas por decisão do
   usuário, 31/10, depois de testá-la ao lado de Baralhos: as abas são só o que é estudo. O
   lembrete que puxa para ela fica no fim da sessão, quando ela acabou de estudar):
@@ -663,7 +671,7 @@ acompanha a raridade: o que se repete dezenas de vezes por dia quase não aparec
 - **Tabela no enunciado** (`components/TextoEnunciado.tsx`): título em `--ground`, fios de
   `--line-soft`, números tabulares. Rola dentro da própria caixa: em 320 px a terceira coluna
   fica para o lado, e a página não se move.
-- **Ainda por vir** (no protótipo): temas, estampas e efeitos (fase 4), perfil público (fase 5).
+- **Ainda por vir** (no protótipo): estampas e efeitos (fase 4), perfil público (fase 5).
 
 ### Página pública (`/`)
 Desde 26/09 (`pages/Inicio.tsx`). É a única tela de persuasão: quem chega por um
