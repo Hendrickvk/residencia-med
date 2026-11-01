@@ -290,7 +290,7 @@ tema e avatar. O menu do avatar tem e-mail, prova alvo, **Acervo** (links do
 Streamlit, só para `is_admin`) e Sair.
 
 Abaixo de 1024px as abas descem para uma **barra no rodapé** (56px, `--surface`,
-borda superior): seis colunas iguais com ícone e rótulo curto, a contagem no
+borda superior): cinco colunas iguais com ícone e rótulo curto, a contagem no
 canto do ícone (com anel `--surface` que recorta o traço) e o mesmo traço de 2px
 `--ink`, na borda de cima, deslizando até a aba ativa. Some no modo foco, e o
 `main` reserva a altura dela no fim da página. Até 25/09 era um menu em gaveta
@@ -632,8 +632,9 @@ acompanha a raridade: o que se repete dezenas de vezes por dia quase não aparec
   `db.normalizar_cor`. A caixa do avatar cresce para caber a moldura (`tamanho / 0,74`), e
   quem chama reserva esse espaço. Nas molduras de ouro o traço é `--ouro`; o resto é tinta,
   e por isso elas funcionam em qualquer cor de avatar.
-- **Loja** (`/progresso/loja`, aba fixa ao lado de Baralhos por decisão do usuário, 31/10; no
-  rodapé de 320px "Simulado" ocupa 51 dos 53px da coluna, e não há espaço para uma sétima):
+- **Loja** (`/progresso/loja`, no menu da conta e em Seu perfil; fora das abas por decisão do
+  usuário, 31/10, depois de testá-la ao lado de Baralhos: as abas são só o que é estudo. O
+  lembrete que puxa para ela fica no fim da sessão, quando ela acabou de estudar):
   o saldo é o título, com "Editar seu perfil" ao lado. Depois, "Para a ofensiva" em linhas (proteção e XP em dobro, que se
   gastam e não têm prévia) e as seções em ladrilhos, cada um com um palco em `--ground` e o
   rodapé que muda: travado (cadeado + exigência, preço apagado), à venda (preço + "Comprar"),

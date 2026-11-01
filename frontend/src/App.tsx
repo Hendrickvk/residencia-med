@@ -86,7 +86,7 @@ export default function App() {
               caminho para ela é o menu da conta. */}
           <Route path="/perfil" element={<PaginaPerfil />} />
           {/* "Seu perfil" no menu da conta: o crachá e as customizações. Fora do
-              NAV, como a edição; a Loja, logo abaixo, é aba por decisão do usuário. */}
+              NAV, como a edição e a Loja: as abas são só o que é estudo. */}
           <Route path="/progresso" element={<PaginaProgresso />} />
           <Route path="/progresso/loja" element={<PaginaLoja />} />
           <Route path="/progresso/conquistas" element={<PaginaConquistas />} />

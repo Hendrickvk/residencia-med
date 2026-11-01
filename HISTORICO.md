@@ -86,8 +86,9 @@ Streamlit, transcrições) só existe no git, no antigo `contextoconversaclaude.
   automática**, os 3 de maior grau e mais recentes: escolher à mão fica para a fase 5, quando
   ela for pública. Secreto não obtido sai da API sem nome e sem id, pinado no teste. Ficou
   fora do plano a conquista de metas diárias.
-  **Ajustes pedidos ao testar a fase 2 (31/10):** a Loja virou aba fixa ao lado de Baralhos
-  (o caminho `/progresso/loja` não mudou) e "Seu perfil" no menu abre `/progresso`, com
+  **Ajustes pedidos ao testar a fase 2 (31/10):** a Loja foi aba fixa ao lado de Baralhos e,
+  no mesmo dia, saiu para o menu da conta e Seu perfil, para as abas serem só estudo (o
+  caminho `/progresso/loja` não mudou); "Seu perfil" no menu abre `/progresso`, com
   "Editar seu perfil" lá e na Loja. As abas Progresso/Loja saíram. **Defeito antigo achado aí:** com a sessão vencida e o app
   aberto, o 401 do próprio `/me` invalidava a consulta em curso, que recomeçava: 180 chamadas
   em 10 s e nunca o login. Vinha de 23/09, e sessão dura 12 h: toda aba esquecida fazia isso.

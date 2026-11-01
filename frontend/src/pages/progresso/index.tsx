@@ -74,9 +74,14 @@ export default function PaginaProgresso() {
     <div className="flex flex-col gap-7">
       <div className="flex flex-wrap items-center justify-between gap-3.5">
         <h1 className="text-titulo">Seu perfil</h1>
-        <Link to="/perfil" className={BOTAO_SECUNDARIO}>
-          Editar seu perfil
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link to="/progresso/loja" className={BOTAO_SECUNDARIO}>
+            Ver a loja
+          </Link>
+          <Link to="/perfil" className={BOTAO_SECUNDARIO}>
+            Editar seu perfil
+          </Link>
+        </div>
       </div>
 
       <section className="flex flex-wrap items-start gap-7">
